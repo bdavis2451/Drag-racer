@@ -82,7 +82,9 @@
         var c = this.c, b = c.banks[i];
         // pulse strength: more fuel & air under load; a pressurized collector
         // (a bank pulse just before) weakens the next one -> uneven V8 rhythm
-        var a = (0.22 + 0.78 * load) * c.cylVar[i] * (1 - 0.32 * Math.min(1, this.bankP[b]));
+        // every combustion differs a little (a few % cycle to cycle, more at idle)
+        var cov = 1 + (rnd() - 0.5) * (0.05 + 0.07 * Math.max(0, 1 - rpm / 3000));
+        var a = (0.22 + 0.78 * load) * c.cylVar[i] * cov * (1 - 0.3 * Math.min(1, this.bankP[b]));
         this.bankP[b] += 0.7;
         // cam overlap: unsteady idle, occasional misfire
         var idle = Math.max(0, 1 - (rpm - 800) / 2500);
@@ -105,7 +107,8 @@
         var dphi = rpm * 6 / sr * (c.cycle === 360 ? 1 : 1);   // crank degrees per sample
         // pulse rise time: the blowdown is a gas event lasting a millisecond or
         // two whatever the rpm, so at idle each pulse stays crisp
-        var tau = Math.max(1.5, Math.min(c.blowDeg / dphi, c.blowMs * 0.001 * sr));
+        // off throttle the cylinder holds little gas: weaker, softer pulses
+        var tau = Math.max(1.5, Math.min(c.blowDeg / dphi, c.blowMs * 0.001 * sr)) * (1 + 0.7 * (1 - load));
         var invTau = 1 / tau, life = tau * 7;
         var noiseAmt = c.noise * (0.15 + 0.85 * load) * (1 + nos * 0.5);
         var drive = c.drive * (1 + nos * 0.6), norm = 1 / Math.tanh(drive);
@@ -134,7 +137,9 @@
             var h = this.hdr[i].tick(v);
             if (c.banks[i]) col1 += h; else col0 += h;
           }
-          this.bankP[0] *= this.decayP; this.bankP[1] *= this.decayP;
+          // collector pressure fades over ~100 crank degrees, at any rpm
+          var dec = Math.exp(-dphi / 100);
+          this.bankP[0] *= dec; this.bankP[1] *= dec;
           // H/X-pipe crossover mixes the banks
           var m0 = col0 + x * (col1 - col0), m1 = col1 + x * (col0 - col1);
           // turbine: smooths the pulses into a duller, quieter flow
@@ -212,19 +217,19 @@
   };
   //            stock   cat-back straight race(open)
   var EXH = {
-    pipe:     [3.6,     3.4,     3.2,     0.9],    // m, header collector to tailpipe
-    refl:     [-0.22,   -0.38,   -0.6,    -0.55],  // how much the pipe rings
-    damp:     [0.12,    0.22,    0.4,     0.5],
-    mufHz:    [480,     1050,    2600,    5200],
-    bypass:   [0.04,    0.12,    0.35,    0.6],
+    pipe:     [3.6,     3.4,     3.2,     1.6],    // m, header collector to tailpipe
+    refl:     [-0.18,   -0.3,    -0.45,   -0.4],   // how much the pipe rings
+    damp:     [0.025,   0.032,   0.045,   0.055],  // echoes come back low and soft (~180-400 Hz)
+    mufHz:    [480,     1050,    2400,    3600],
+    bypass:   [0.04,    0.12,    0.3,     0.42],
     xpipe:    [0.4,     0.28,    0.08,    0],      // bank crossover on twin-bank engines
     noise:    [0.1,     0.16,    0.24,    0.32],
-    drive:    [0.9,     1.25,    1.8,     2.3],
+    drive:    [0.7,     1.0,     1.5,     1.8],
     crackle:  [0,       0.2,     0.7,     1],
-    makeup:   [2.7,     1.9,     1.25,    1.0]   // keeps stock ~9 dB under straight pipes, not 19
+    makeup:   [2.7,     1.9,     1.25,    0.95]  // keeps stock ~8 dB under straight pipes, not 19
   };
   //            stock manifold, shorty, long-tube, race
-  var HDR = { len: [0.32, 0.45, 0.85, 1.0], refl: [-0.2, -0.32, -0.5, -0.55], damp: [0.25, 0.35, 0.5, 0.55], rad: [0.25, 0.35, 0.5, 0.65] };
+  var HDR = { len: [0.32, 0.45, 0.85, 1.0], refl: [-0.1, -0.14, -0.22, -0.26], damp: [0.06, 0.08, 0.1, 0.12], rad: [0.2, 0.28, 0.38, 0.45] };
 
   function cfgRand(seed) { return function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }; }
 
@@ -255,7 +260,7 @@
       rad: HDR.rad[hd],
       // exhaust valve timing: bigger cams open earlier -> sharper blowdown
       blowDeg: (Lc.sharp ? 22 : Lc.diesel ? 50 : 62) - cam * 7 - hd * 2,
-      blowMs: (Lc.sharp ? 0.9 : 2.0) - cam * 0.15 - hd * 0.05,
+      blowMs: (Lc.sharp ? 1.1 : 2.8) - cam * 0.2 - hd * 0.08,
       noise: EXH.noise[ex] + cam * 0.04 + (Lc.sharp ? 0.15 : 0),
       drive: EXH.drive[ex] + (Lc.diesel ? 0.6 : 0),
       lope: [0, 0.12, 0.25, 0.4, 0.55][cam], misfire: [0, 0, 0.01, 0.03, 0.06][cam],

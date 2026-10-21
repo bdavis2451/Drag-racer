@@ -151,7 +151,7 @@
       v.np = v.node.parameters;
       v.node.connect(v.out);
       // the simulation sets the exhaust tone & level; blowers are a bit louder
-      v.loud = build.blower ? 1.12 : 1;
+      v.loud = build.blower ? 1.0 : 1;
     } else {
       v.filter = c.createBiquadFilter(); v.filter.type = 'lowpass'; v.filter.frequency.value = 400; v.filter.Q.value = 0.9;
       // exhaust pipe resonance ("drone")
