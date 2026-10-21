@@ -109,6 +109,7 @@
       S.fiType !== 'none' ? ['Boost', S.boostSet.toFixed(1) + ' psi ' + DR.FI[S.fiId].name.replace('Factory ', '')] : null,
       ['Weight', kgLb(S.m) + ' (' + Math.round(S.f * 100) + '% front)'],
       ['Drive', S.drive + ', ' + tr.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
+      tr.type === 'auto' ? ['Converter', S.stall + ' stall' + (S.tbrake ? ' + transbrake' : ', foot brake')] : null,
       ['Tires', S.tire.name],
       ['Est. 1/4 mile', est.et >= 90 ? 'crash!' : est.et.toFixed(2) + 's @ ' + Math.round(est.trap), 'good'],
       inst.best && inst.best.q ? ['Best 1/4', inst.best.q.toFixed(3) + 's', 'acc'] : null,
@@ -120,7 +121,7 @@
   UI.Title = function () {
     var s = G.state;
     var c = h('canvas', { width: 300, height: 110, style: { width: 'min(520px, 80vw)', marginBottom: '12px' } });
-    var demo = { carId: 'promod', engine: 'v8_86b', parts: { fi: 'sc_1471', wheeliebar: 'wb1', aero: 'a2' }, color: '#e31b6d', stripe: '#ffffff', rim: '#d0d0d0' };
+    var demo = { carId: 'fox', engine: 'v8_86b', parts: { fi: 'sc_1471', wheeliebar: 'wb1', aero: 'a2', rtires: 'sl_33' }, color: '#e31b6d', stripe: '#ffffff', rim: '#d0d0d0' };
     DR.drawPreview(c, demo, { groundY: 92 });
     return h('div', { class: 'screen title' },
       h('div', { class: 'logo' }, 'PIXEL DRAG'),
@@ -601,6 +602,7 @@
         h('h2', {}, 'Racing'),
         p('1. Optional: hit BURNOUT and hold GAS to heat your tires. Slicks need heat to grip - watch the tire temp meter.'),
         p('2. Hit STAGE. Hold GAS to rev the engine. Keep the RPM in the green launch zone (a 2-step holds it for you).'),
+        p('Automatics: the torque converter decides how high the engine revs on the line (low, medium or high stall). Without a transbrake you are on the foot brake: it can only hold so much, so the game eases off the throttle for you (BRAKES AT LIMIT) and the launch is a bit softer. A transbrake holds full throttle and boost and lets go instantly.'),
         p('3. When the light turns GREEN, tap LAUNCH. Too early = red light and you lose.'),
         p('4. Keep holding GAS. Tap SHIFT when the blue shift light flashes. If the tires spin (SPIN warning / smoke), ease off the gas for a moment.'),
         p('5. Got nitrous? Tap NOS to spray. Big wheelies can flip the car - lift off the gas or install wheelie bars.'),

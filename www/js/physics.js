@@ -129,7 +129,8 @@
     S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly;
 
     // ---- drivetrain
-    S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift; S.trMaxTq = tr.maxTq; S.tbrake = !!tr.tbrake;
+    S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift; S.trMaxTq = tr.maxTq;
+    S.tbrake = tr.type === 'auto' && !!DR.getOption('transbrake', inst).tbrake;
     S.drive = layout.layout || car.drive;
     S.eff = tr.eff * (S.drive === 'AWD' ? 0.94 : 1);
     if (tr.type === 'auto') {
@@ -168,6 +169,7 @@
     S.cda = car.cda + aero.dcda;
     S.cla = aero.cla;
     S.Ip = S.m * S.L * S.L * 0.19;
+    S.brakeHold = 1.15 * S.m * G * S.r;  // wheel torque the foot brake can hold on the line
 
     // ---- tune
     var T = DR.fullTune(inst, S, tuneOverride);
@@ -212,7 +214,7 @@
     var fiDef = S.eng.fi && S.fiId === S.eng.fi.part ? S.eng.fi.boost : Math.min(8, S.maxBoost);
     return {
       boost: fiDef,
-      launchRpm: Math.round((auto ? Math.max(S.idle + 1500, S.tqRpm * 0.7) : S.tqRpm * 0.85) / 100) * 100,
+      launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) : S.tqRpm * 0.85) / 100) * 100,
       psi: S.tire.optP,
       fd: S.car.fd,
       gears: tr.ratios.slice(),
@@ -350,6 +352,7 @@
     this.failAt = opts.failAt || 0; this.failType = opts.failType || '';
     this.splits = {}; this.etStart = null; this.finished = false;
     this.tcCut = 0;
+    this.holdThr = 1; this.brakeLimited = false;
     this.events = [];          // for visuals: 'shift', 'backfire', 'bar', 'land'
     var N0 = S.drive === 'FWD' ? S.m * G * S.f : S.drive === 'AWD' ? S.m * G : S.m * G * (1 - S.f);
     this.N0 = N0;
@@ -416,6 +419,9 @@
       else this.tcCut = Math.max(0, this.tcCut - dt * 5);
       thrIn *= 1 - 0.75 * this.tcCut;
     }
+    // Foot-brake launch (automatic without a transbrake): the driver can only
+    // feed in as much throttle as the brakes can hold against the converter.
+    if (!this.launched && S.trType === 'auto' && !S.tbrake) thrIn = Math.min(thrIn, this.holdThr);
     this.thr += (thrIn - this.thr) * Math.min(1, dt / 0.04);
     var rpm = this.we * W2RPM;
 
@@ -519,6 +525,12 @@
         var K = this.convK();
         var Timp = Math.pow(this.we / K, 2);
         this.we += dt * (Te - Timp) / S.Ie;
+        if (!S.tbrake) {
+          var Thold = Timp * S.TR * Gr * eta;
+          this.brakeLimited = Thold > S.brakeHold * 0.97 && thrIn > 0.1;
+          if (Thold > S.brakeHold) this.holdThr = Math.max(0.1, this.holdThr - dt * 3);
+          else if (Thold < S.brakeHold * 0.9) this.holdThr = Math.min(1, this.holdThr + dt * 1.5);
+        }
       } else {
         this.we += dt * Te / S.Ie;
       }
@@ -534,14 +546,24 @@
       var K2 = this.convK();
       var wT = this.ww * Gr;
       var SR = this.we > 1 ? wT / this.we : 1;
-      var cs = SR < 1 ? 1 - Math.pow(Math.max(SR, 0), 6) : -Math.min(1, Math.pow(SR, 6) - 1);
-      var Timp2 = Math.pow(this.we / K2, 2) * cs;
+      // coupling: 1 at stall, falling to 0 as the turbine catches the engine
+      var P = 12, sp = Math.pow(Math.min(Math.max(SR, 0), 1.2), P - 1);
+      var cs = SR < 1 ? 1 - sp * SR : -Math.min(1, sp * SR - 1);
+      var cap2 = Math.pow(this.we / K2, 2);
+      var Timp2 = cap2 * cs;
       var TR = SR < 0.85 ? S.TR - (S.TR - 1) * Math.max(SR, 0) / 0.85 : 1;
       var Ttur = Timp2 * TR * shiftScale;
-      this.we += dt * (Te - Timp2) / S.Ie;
+      // the converter is a stiff coupling, so both sides are integrated
+      // semi-implicitly using its local slope
+      var dcs = SR < 1.2 ? P * sp : 0;                         // -d(cs)/d(SR)
+      var kE = Math.max(0, cap2 * (2 * cs + dcs * SR) / Math.max(this.we, 1));
+      this.we += dt * (Te - Timp2) / (S.Ie + dt * kE);
       tf = this.tireForce(this.ww, N, mu);
       var Tw = Ttur * Gr * eta;
-      this.ww += dt * (Tw - tf.F * r) / (S.Iw + dt * r * Math.max(tf.dF, 0));
+      var kW = cap2 * dcs * TR * shiftScale * Gr * Gr * eta / Math.max(this.we, 1);
+      // the foot brake takes a moment to release; a transbrake lets go instantly
+      if (!S.tbrake && this.t < 0.18) Tw -= S.brakeHold * (1 - this.t / 0.18);
+      this.ww += dt * (Tw - tf.F * r) / (S.Iw + dt * r * Math.max(tf.dF, 0) + dt * kW);
       if (this.ww < 0) this.ww = 0;
       tf = this.tireForce(this.ww, N, mu);
       Fx = tf.F;
@@ -643,7 +665,9 @@
   Sim.prototype.convK = function () {
     var S = this.S;
     if (!S._K) {
-      var Tst = boostedTorque(S, S.stall, 0);
+      // converters are matched to the combination: it flashes to its rated
+      // stall with this engine's full-boost torque
+      var Tst = boostedTorque(S, S.stall, steadyBoost(S, S.stall));
       S._K = S.stall * RPM2W / Math.sqrt(Math.max(Tst, 20));
     }
     return S._K;

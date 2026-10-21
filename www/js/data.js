@@ -70,8 +70,8 @@ DR.TRANS = {
   a4:       { name: '4-Speed Automatic',         type: 'auto',   ratios: [3.06, 1.63, 1.00, 0.70],       shift: 0.28, maxTq: 550,  eff: 0.87, price: 1800 },
   a6:       { name: '6-Speed Automatic',         type: 'auto',   ratios: [4.03, 2.36, 1.53, 1.15, 0.85, 0.67], shift: 0.22, maxTq: 800,  eff: 0.88, price: 4000 },
   a8:       { name: '8-Speed Automatic',         type: 'auto',   ratios: [4.71, 3.14, 2.10, 1.67, 1.29, 1.00, 0.84, 0.67], shift: 0.14, maxTq: 1100, eff: 0.89, price: 7000 },
-  a3_400:   { name: '3-Speed Turbo 400 (Built)', type: 'auto',   ratios: [2.48, 1.48, 1.00],             shift: 0.20, maxTq: 2000, eff: 0.89, price: 3500, tbrake: true },
-  pg2:      { name: 'Powerglide 2-Speed',        type: 'auto',   ratios: [1.76, 1.00],                   shift: 0.18, maxTq: 2600, eff: 0.90, price: 4500, tbrake: true },
+  a3_400:   { name: '3-Speed Turbo 400 (Built)', type: 'auto',   ratios: [2.48, 1.48, 1.00],             shift: 0.20, maxTq: 2000, eff: 0.89, price: 3500 },
+  pg2:      { name: 'Powerglide 2-Speed',        type: 'auto',   ratios: [1.76, 1.00],                   shift: 0.18, maxTq: 2600, eff: 0.90, price: 4500 },
   dct7:     { name: '7-Speed Dual-Clutch',       type: 'dct',    ratios: [3.36, 2.10, 1.49, 1.13, 0.92, 0.75, 0.63], shift: 0.06, maxTq: 900,  eff: 0.92, price: 12000 },
   seq6:     { name: '6-Speed Sequential',        type: 'seq',    ratios: [2.90, 2.00, 1.50, 1.20, 1.00, 0.86], shift: 0.08, maxTq: 1500, eff: 0.93, price: 14000, adj: true },
   lenco5:   { name: 'Lenco 5-Speed Air-Shift',   type: 'seq',    ratios: [2.39, 1.69, 1.31, 1.12, 1.00], shift: 0.04, maxTq: 4500, eff: 0.94, price: 30000, adj: true }
@@ -107,6 +107,18 @@ DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'dr_275', 'dr_315', 'ets
 //  diff: stock differential   col: default paint
 // ---------------------------------------------------------------------------
 DR.CARS = {
+  // ---- Muscle ----------------------------------------------------------------
+  fox:      { name: 'Fox Stallion \'89',    cat: 'Muscle',  body: 'hatch',    price: 7000,  m: 1420, f: 0.56, wb: 2.55, len: 4.6, h: 0.53, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_50',  trans: 'm5_light', fd: 3.27, tire: 'st_225', diff: 'lsd',  col: '#c01515' },
+  camss:    { name: 'Camero SS \'19',       cat: 'Muscle',  body: 'modern',   price: 36000, m: 1700, f: 0.52, wb: 2.81, len: 4.8, h: 0.51, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_62',  trans: 'a8',       fd: 2.77, tire: 'st_255', diff: 'lsd',  col: '#ffb300' },
+  // ---- Import ----------------------------------------------------------------
+  hachi:    { name: 'Hachi Coupe',          cat: 'Import',  body: 'hatch',    price: 6000,  m: 980,  f: 0.53, wb: 2.40, len: 4.2, h: 0.50, cda: 0.60, drive: 'RWD', ep: 'front', engine: 'i4_16',  trans: 'm5_light', fd: 4.30, tire: 'st_195', diff: 'lsd',  col: '#f4f4f4' },
+  supra:    { name: 'Supremo Mk4',          cat: 'Import',  body: 'sports',   price: 45000, m: 1560, f: 0.53, wb: 2.55, len: 4.5, h: 0.48, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i6_30tt',trans: 'm6',       fd: 3.27, tire: 'st_255', diff: 'lsd',  col: '#ff7a00' }
+};
+DR.CAR_CATS = ['Muscle', 'Import'];
+
+// More cars, ready to add to the game: move an entry from here into DR.CARS
+// above (and give it cat 'Muscle' or 'Import', or add a new category).
+DR.CARS_RESERVE = {
   // ---- Starters / compacts -------------------------------------------------
   ronin:    { name: 'Ronin Hatch',          cat: 'Compact', body: 'hatch',    price: 3000,  m: 1050, f: 0.62, wb: 2.57, len: 4.0, h: 0.52, cda: 0.62, drive: 'FWD', ep: 'front', engine: 'i4_15',  trans: 'm5_light', fd: 4.06, tire: 'st_195', diff: 'open', col: '#d23a3a' },
   bolt:     { name: 'Bolt SX',              cat: 'Compact', body: 'sedan',    price: 3500,  m: 1150, f: 0.62, wb: 2.64, len: 4.4, h: 0.53, cda: 0.66, drive: 'FWD', ep: 'front', engine: 'i4_20',  trans: 'm5_light', fd: 3.94, tire: 'st_195', diff: 'open', col: '#3a7bd2' },
@@ -116,7 +128,6 @@ DR.CARS = {
   cobaltss: { name: 'Cobra SS Compact',     cat: 'Compact', body: 'coupe',    price: 10000, m: 1310, f: 0.62, wb: 2.62, len: 4.6, h: 0.52, cda: 0.64, drive: 'FWD', ep: 'front', engine: 'i4_20t', trans: 'm5_hd',    fd: 3.73, tire: 'st_225', diff: 'lsd',  col: '#f0a020' },
   beetle:   { name: 'Bug Classic',          cat: 'Classic', body: 'beetle',   price: 2500,  m: 820,  f: 0.40, wb: 2.40, len: 4.1, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'rear',  engine: 'f4_16',  trans: 'm4_cl',    fd: 4.37, tire: 'st_195', diff: 'open', col: '#7ec8e3' },
   // ---- JDM -------------------------------------------------------------------
-  hachi:    { name: 'Hachi Coupe',          cat: 'JDM',     body: 'hatch',    price: 6000,  m: 980,  f: 0.53, wb: 2.40, len: 4.2, h: 0.50, cda: 0.60, drive: 'RWD', ep: 'front', engine: 'i4_16',  trans: 'm5_light', fd: 4.30, tire: 'st_195', diff: 'lsd',  col: '#f4f4f4' },
   mira:     { name: 'Mira Roadster',        cat: 'JDM',     body: 'roadster', price: 7500,  m: 1020, f: 0.51, wb: 2.27, len: 3.9, h: 0.46, cda: 0.58, drive: 'RWD', ep: 'front', engine: 'i4_16',  trans: 'm5_light', fd: 4.10, tire: 'st_195', diff: 'lsd',  col: '#c81e1e' },
   silvia:   { name: 'Sylph S14',            cat: 'JDM',     body: 'coupe',    price: 12000, m: 1260, f: 0.56, wb: 2.53, len: 4.5, h: 0.50, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i4_20t', trans: 'm5_light', fd: 4.08, tire: 'st_225', diff: 'lsd',  col: '#9aa8b4' },
   s2k:      { name: 'Ess-2K Roadster',      cat: 'JDM',     body: 'roadster', price: 21000, m: 1270, f: 0.50, wb: 2.40, len: 4.1, h: 0.46, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i4_20hi',trans: 'm6',       fd: 4.10, tire: 'st_225', diff: 'lsd',  col: '#ffcc00' },
@@ -124,7 +135,6 @@ DR.CARS = {
   evo:      { name: 'Lancer EV-9',          cat: 'JDM',     body: 'sedan',    price: 24000, m: 1440, f: 0.60, wb: 2.63, len: 4.5, h: 0.52, cda: 0.70, drive: 'AWD', ep: 'front', engine: 'i4_20t', trans: 'm5_hd',    fd: 4.53, tire: 'st_225', diff: 'lsd',  col: '#f6f6f6' },
   sti:      { name: 'Pleiades WRX',         cat: 'JDM',     body: 'sedan',    price: 22000, m: 1480, f: 0.59, wb: 2.63, len: 4.5, h: 0.53, cda: 0.70, drive: 'AWD', ep: 'front', engine: 'f4_25t', trans: 'm6',       fd: 3.90, tire: 'st_225', diff: 'lsd',  col: '#1d3f9a' },
   r34:      { name: 'Skyrunner R34',        cat: 'JDM',     body: 'coupe',    price: 55000, m: 1560, f: 0.56, wb: 2.66, len: 4.6, h: 0.50, cda: 0.66, drive: 'AWD', ep: 'front', engine: 'i6_26tt',trans: 'm6',       fd: 4.11, tire: 'st_255', diff: 'lsd',  col: '#3757a8' },
-  supra:    { name: 'Supremo Mk4',          cat: 'JDM',     body: 'sports',   price: 45000, m: 1560, f: 0.53, wb: 2.55, len: 4.5, h: 0.48, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i6_30tt',trans: 'm6',       fd: 3.27, tire: 'st_255', diff: 'lsd',  col: '#ff7a00' },
   z35:      { name: 'Zed 350',              cat: 'JDM',     body: 'sports',   price: 14000, m: 1500, f: 0.53, wb: 2.65, len: 4.3, h: 0.49, cda: 0.64, drive: 'RWD', ep: 'front', engine: 'v6_35',  trans: 'm6',       fd: 3.54, tire: 'st_255', diff: 'lsd',  col: '#b0b0b0' },
   gtr:      { name: 'Godzilla R35',         cat: 'JDM',     body: 'coupe',    price: 95000, m: 1820, f: 0.54, wb: 2.78, len: 4.7, h: 0.50, cda: 0.68, drive: 'AWD', ep: 'front', engine: 'v6_38tt',trans: 'dct7',     fd: 3.70, tire: 'st_255', diff: 'lsd',  col: '#d8d8d8' },
   // ---- Euro ------------------------------------------------------------------
@@ -141,11 +151,9 @@ DR.CARS = {
   monte:    { name: 'Monte Carla SS \'87',  cat: 'Classic', body: 'sedan',    price: 8000,  m: 1540, f: 0.56, wb: 2.75, len: 5.1, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_50',  trans: 'a4',       fd: 3.73, tire: 'st_195', diff: 'open', col: '#5a5a5a' },
   gnx:      { name: 'Grand Nation GNX',     cat: 'Classic', body: 'sedan',    price: 32000, m: 1600, f: 0.57, wb: 2.75, len: 5.0, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v6_38t', trans: 'a4',       fd: 3.42, tire: 'st_225', diff: 'lsd',  col: '#0d0d0d' },
   // ---- Modern muscle ----------------------------------------------------------
-  fox:      { name: 'Fox Stallion \'89',    cat: 'Muscle',  body: 'hatch',    price: 7000,  m: 1420, f: 0.56, wb: 2.55, len: 4.6, h: 0.53, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_50',  trans: 'm5_light', fd: 3.27, tire: 'st_225', diff: 'lsd',  col: '#c01515' },
   camaro:   { name: 'Camero Z \'98',        cat: 'Muscle',  body: 'sports',   price: 12000, m: 1580, f: 0.56, wb: 2.57, len: 4.9, h: 0.50, cda: 0.70, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'm6',       fd: 3.42, tire: 'st_255', diff: 'lsd',  col: '#244fa8' },
   cobra03:  { name: 'Stallion Cobra \'03',  cat: 'Muscle',  body: 'coupe',    price: 22000, m: 1650, f: 0.57, wb: 2.57, len: 4.6, h: 0.52, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_46sc',trans: 'm6',       fd: 3.55, tire: 'st_255', diff: 'lsd',  col: '#8a8f99' },
   stang15:  { name: 'Stallion GT \'18',     cat: 'Muscle',  body: 'modern',   price: 32000, m: 1730, f: 0.53, wb: 2.72, len: 4.8, h: 0.52, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_50d', trans: 'm6',       fd: 3.73, tire: 'st_255', diff: 'lsd',  col: '#1c5bd6' },
-  camss:    { name: 'Camero SS \'19',       cat: 'Muscle',  body: 'modern',   price: 36000, m: 1700, f: 0.52, wb: 2.81, len: 4.8, h: 0.51, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_62',  trans: 'a8',       fd: 2.77, tire: 'st_255', diff: 'lsd',  col: '#ffb300' },
   vette5:   { name: 'Corsa C5',             cat: 'Muscle',  body: 'sports',   price: 21000, m: 1470, f: 0.51, wb: 2.65, len: 4.6, h: 0.47, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'm6',       fd: 3.42, tire: 'st_255', diff: 'lsd',  col: '#ffd200' },
   z06:      { name: 'Corsa Z06',            cat: 'Muscle',  body: 'sports',   price: 60000, m: 1440, f: 0.51, wb: 2.69, len: 4.5, h: 0.47, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_70',  trans: 'm6',       fd: 3.42, tire: 'st_305', diff: 'lsd',  col: '#e6e6e6' },
   hellcat:  { name: 'Hellhound SRT',        cat: 'Muscle',  body: 'modern',   price: 68000, m: 2000, f: 0.56, wb: 2.95, len: 5.0, h: 0.54, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_62sc',trans: 'a8',       fd: 2.62, tire: 'st_305', diff: 'lsd',  col: '#4b1a6e' },
@@ -158,7 +166,6 @@ DR.CARS = {
   promod:   { name: 'Pro Mod Camero',       cat: 'Pro',     body: 'promod',   price: 210000,m: 1180, f: 0.48, wb: 2.67, len: 4.9, h: 0.46, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_86b', trans: 'lenco5',   fd: 3.20, tire: 'sl_33',  diff: 'spool',col: '#e31b6d' },
   rail:     { name: 'Rail Dragster',        cat: 'Pro',     body: 'dragster', price: 320000,m: 900,  f: 0.25, wb: 6.4,  len: 8.0, h: 0.42, cda: 0.50, drive: 'RWD', ep: 'mid',   engine: 'bb_94',  trans: 'pg2',      fd: 3.70, tire: 'sl_36',  diff: 'spool',col: '#ffde00' }
 };
-DR.CAR_CATS = ['Compact', 'JDM', 'Euro', 'Muscle', 'Classic', 'Truck', 'Pro'];
 
 // Paint palette for the paint shop
 DR.PAINTS = ['#d23a3a', '#c8102e', '#ff6a00', '#f0a020', '#ffcc00', '#efe14b', '#7cd320', '#2e7d4f', '#2fb3a8',

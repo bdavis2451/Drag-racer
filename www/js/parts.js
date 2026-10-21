@@ -122,11 +122,14 @@
     opt('cl5', 'Pro Multi-Disc Slider Clutch', 9000, { cap: 4500, engage: 0.22 }, 'Holds anything; slips on purpose for smooth launches.')
   ]};
   C.converter = { name: 'Torque Converter', needsConverter: true, options: [
-    opt('stock', 'Stock Converter (2200 stall)', 0, { stall: 2200, tr: 1.9 }),
-    opt('tc1', '3000 Stall Converter', 900, { stall: 3000, tr: 2.0 }, 'Lets the engine rev higher before the car pulls.'),
-    opt('tc2', '3800 Stall Converter', 1500, { stall: 3800, tr: 2.05 }),
-    opt('tc3', '4600 Stall Converter', 2500, { stall: 4600, tr: 2.1 }),
-    opt('tc4', '5500 Stall Pro Converter', 4000, { stall: 5500, tr: 2.15 }, 'For big power with big tires.')
+    opt('stock', 'Stock Converter (2200 stall)', 0, { stall: 2200, tr: 1.9 }, 'Tight street converter. Soft launches, little wheelspin.'),
+    opt('tcl', 'Low Stall Converter (2800)', 800, { stall: 2800, tr: 1.95 }, 'A little more RPM on the hit. Good for mild builds and street tires.'),
+    opt('tcm', 'Medium Stall Converter (3800)', 1500, { stall: 3800, tr: 2.05 }, 'Gets the engine into its powerband before the car moves. Needs more grip.'),
+    opt('tch', 'High Stall Converter (5000)', 2600, { stall: 5000, tr: 2.15 }, 'Flashes high on the hit and spools big turbos. For big power and slicks.')
+  ]};
+  C.transbrake = { name: 'Transbrake', needsConverter: true, options: [
+    opt('stock', 'None (Foot Brake)', 0, { tbrake: false }, 'The foot brake can only hold so much torque, so you have to ease into the throttle on the line, and the launch is softer.'),
+    opt('tb1', 'Transbrake', 1200, { tbrake: true }, 'Locks the transmission so you can hold full throttle (and boost) on the line. Releases instantly at the launch.')
   ]};
   C.flywheel = { name: 'Flywheel / Flexplate', options: [
     opt('stock', 'Stock Flywheel', 0, { fly: 1 }),
@@ -197,7 +200,7 @@
   DR.PART_GROUPS = [
     { id: 'engine', name: 'Engine',        cats: ['engine', 'intake', 'exhaust', 'headers', 'cams', 'heads', 'internals', 'fuelsys', 'fueltype', 'ecu'] },
     { id: 'power',  name: 'Power Adders',  cats: ['fi', 'ic', 'launch', 'nitrous', 'nosctrl'] },
-    { id: 'drive',  name: 'Drivetrain',    cats: ['trans', 'clutch', 'converter', 'flywheel', 'driveshaft', 'diff', 'layout'] },
+    { id: 'drive',  name: 'Drivetrain',    cats: ['trans', 'clutch', 'converter', 'transbrake', 'flywheel', 'driveshaft', 'diff', 'layout'] },
     { id: 'susp',   name: 'Suspension',    cats: ['springs', 'shocks', 'rearsusp', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',cats: ['rtires', 'wheels', 'ftires'] },
     { id: 'body',   name: 'Weight',        cats: ['weight'] }
@@ -287,7 +290,7 @@
     var x = DR.TRANS[t];
     var kind = { manual: 'Manual', auto: 'Automatic', seq: 'Sequential', dct: 'Dual-clutch' }[x.type];
     return kind + ', ' + x.ratios.length + ' gears, ' + Math.round(x.shift * 1000) + ' ms shifts, holds ' + x.maxTq + ' Nm' +
-      (x.adj ? '. Adjustable gear ratios.' : '.') + (x.tbrake ? ' Transbrake.' : '');
+      (x.adj ? '. Adjustable gear ratios.' : '.');
   }
   function tireDesc(t) {
     var x = DR.TIRES[t];

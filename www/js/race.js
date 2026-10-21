@@ -336,6 +336,7 @@
       if (sim.launched && sim.slip > Sx.tslip * 2.2 && !sim.finished && sim.v > 0.5) lines.push('<span class="warn">WHEELSPIN!</span>');
       if (sim.wheelie && sim.th > 0.05) lines.push('<span class="acc">WHEELIE ' + Math.round(sim.th * 57.3) + '°</span>');
       if (sim.nosOn) lines.push('<span style="color:#c89bff">NITROUS!</span>');
+      if (!sim.launched && Sx.trType === 'auto') lines.push(Sx.tbrake ? '<span class="acc">TRANSBRAKE ON</span>' : sim.brakeLimited ? '<span class="warn">BRAKES AT LIMIT</span>' : '<span class="dim">FOOT BRAKE</span>');
       if (sim.tcCut > 0.2) lines.push('<span class="dim">TRACTION CTRL</span>');
       infoEl.innerHTML = lines.join('<br>');
       // tire temperature meter until the launch

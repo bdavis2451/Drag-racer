@@ -6,8 +6,9 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
 
 ## Features
 
-- **43 cars** in 7 classes: compacts, JDM, Euro, muscle, classics, trucks and pro drag cars.
-  Every car has its own weight, weight distribution, wheelbase, center-of-gravity height,
+- **4 cars to start:** two muscle cars (Fox Stallion '89, Camero SS '19) and two imports
+  (Hachi Coupe, Supremo Mk4). 39 more cars are written and waiting in `DR.CARS_RESERVE` in
+  `www/js/data.js`; moving one into `DR.CARS` adds it to the dealership. Every car has its own weight, weight distribution, wheelbase, center-of-gravity height,
   aerodynamics, drivetrain (RWD/FWD/AWD) and engine location (front/mid/rear).
 - **32 swappable engines**, from a 1.0L three-cylinder up to an 8.6L billet Pro Mod V8.
   They include rotaries, a diesel, V10s and V12s.
@@ -18,7 +19,7 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
     superchargers, intercoolers, 2-step and anti-lag, and nitrous up to a 650 shot with a
     progressive controller.
   - **Drivetrain:** transmissions (manual, automatic, Powerglide, DCT, sequential, Lenco),
-    clutches, torque converters, flywheels, driveshafts, diffs, and RWD/AWD conversions.
+    clutches, low/medium/high stall torque converters, transbrakes, flywheels, driveshafts, diffs, and RWD/AWD conversions.
   - **Suspension:** springs, coilovers, adjustable shocks, traction bars, ladder bars,
     4-links, wheelie bars and wings.
   - **Tires & wheels:** street tires, drag radials, slicks, beadlocks and front runners.
@@ -74,7 +75,7 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 
 | Path | What it is |
 |---|---|
-| `www/js/data.js` | **Cars, engines, transmissions, tires.** Add a car or engine here. |
+| `www/js/data.js` | **Cars, engines, transmissions, tires.** Add a car (or enable one from the reserve list) or an engine here. |
 | `www/js/parts.js` | **Every upgrade part** and what it does. |
 | `www/js/physics.js` | The physics engine: tires, engine, clutch, converter, weight transfer, wheelies. |
 | `www/js/game.js` | Money, saving, buying and selling, and the **career ladder opponents**. |
