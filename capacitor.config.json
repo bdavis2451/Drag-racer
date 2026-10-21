@@ -1,0 +1,8 @@
+{
+  "appId": "com.pixeldrag.game",
+  "appName": "Pixel Drag",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#16171c"
+  }
+}
