@@ -190,6 +190,9 @@
     v.tire = 0;
     // turbo whistle / blower whine
     v.wo = c.createOscillator(); v.wo.type = build.blower ? 'triangle' : 'sine'; v.wg = c.createGain(); v.wg.gain.value = 0; v.wo.connect(v.wg); v.wg.connect(v.bus);
+    // turbo whoosh: airflow noise through the compressor (shares the noise source)
+    v.tw = c.createBiquadFilter(); v.tw.type = 'bandpass'; v.tw.Q.value = 2.2; v.tw.frequency.value = 2000;
+    v.twg = c.createGain(); v.twg.gain.value = 0; v.en.connect(v.tw); v.tw.connect(v.twg); v.twg.connect(v.bus);
     // straight-cut gear whine (sequential / Lenco boxes)
     v.go = c.createOscillator(); v.go.type = 'triangle'; v.gg = c.createGain(); v.gg.gain.value = 0; v.go.connect(v.gg); v.gg.connect(v.bus);
     [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { if (n) n.start(); });
@@ -262,8 +265,20 @@
       v.gg.gain.setTargetAtTime(v.vol * (0.004 + thr * 0.01) * Math.min(1, rpm / 4000), t, k);
     }
     if (fiType === 'turbo') {
-      v.wo.frequency.setTargetAtTime(1800 + boost * 90, t, 0.1);
-      v.wg.gain.setTargetAtTime(v.vol * Math.min(0.06, boost * 0.003), t, 0.1);
+      // The turbo is a spinning shaft: it takes time to spool up, winds down
+      // slowly after a lift, and its whistle rises in pitch and volume with
+      // shaft speed. A tone plus an airy whoosh, sitting under the engine.
+      var dt = Math.min(0.1, Math.max(0.001, t - (v.tLast || t)));
+      var flow = Math.min(1, (boost || 0) / 25) * 0.75 + Math.min(1, rpm / 7000) * thr * 0.25;
+      v.spool = v.spool || 0;
+      v.spool += (flow - v.spool) * Math.min(1, dt / (flow > v.spool ? 0.45 : 1.1));
+      var sp = v.spool;
+      v.wo.frequency.setTargetAtTime(2400 + sp * 5200, t, 0.05);
+      v.wg.gain.setTargetAtTime(v.vol * 0.02 * sp * sp, t, 0.08);
+      v.tw.frequency.setTargetAtTime(1600 + sp * 3600, t, 0.05);
+      v.twg.gain.setTargetAtTime(v.vol * 0.12 * sp * sp * (0.3 + 0.7 * thr), t, 0.08);
+      // lifting with boost up: blow-off valve
+      if (v.lastThr - thr > 0.5 && sp > 0.3 && t > (v.bovT || 0)) { A.burst(0.5, 2600, 0.7, v.vol * 0.07 * sp, 'highpass'); v.bovT = t + 0.8; }
     } else if (fiType && fiType !== 'none') {
       v.wo.frequency.setTargetAtTime(500 + rpm * 0.4, t, 0.05);
       v.wg.gain.setTargetAtTime(v.vol * (0.012 + 0.028 * thr), t, 0.1);
@@ -275,7 +290,7 @@
         A.burst(0.05 + Math.random() * 0.05, 250 + Math.random() * 450, 1, v.vol * (0.25 + v.crackle * 0.25), 'lowpass', 0.05 + i * (0.05 + Math.random() * 0.06));
       v.popT = t + 0.6;
     }
-    v.lastThr = thr;
+    v.lastThr = thr; v.tLast = t;
   };
 
   A.burst = function (dur, freq, q, gain, type, delay) {
@@ -286,7 +301,7 @@
     s.connect(f); f.connect(g); g.connect(A.master); s.start(t); s.stop(t + dur + 0.05);
   };
   A.pop = function () { A.burst(0.08, 300 + Math.random() * 200, 1, 0.5, 'lowpass'); };
-  A.blowoff = function () { A.burst(0.35, 3000, 0.8, 0.12, 'highpass'); };
+  A.blowoff = function () { A.burst(0.45, 2600, 0.7, 0.07, 'highpass'); };
   A.boom = function () { A.burst(0.9, 120, 0.7, 0.9, 'lowpass'); };
   A.beep = function (freq, dur) {
     if (!A.ctx || !A.on) return;

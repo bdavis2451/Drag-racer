@@ -73,7 +73,8 @@
         this.muf = [[new OnePole(c.mufHz, sr), new OnePole(c.mufHz, sr)], [new OnePole(c.mufHz * 1.04, sr), new OnePole(c.mufHz * 1.04, sr)]];
         this.turb = [new OnePole(c.turboHz || 400, sr), new OnePole(c.turboHz || 400, sr)];
         this.bankP = [0, 0];
-        this.prevY = [0, 0]; this.dc = [0, 0];
+        this.prevY = [0, 0]; this.dc = [0, 0]; this.dc2 = [0, 0];
+        this.hpK = 1 - Math.exp(-2 * Math.PI * 55 / sr);
         this.knock = 0; this.tick = 0; this.nz = 0;
         this.decayP = Math.exp(-1 / (sr * 0.0045));
       }
@@ -81,7 +82,7 @@
         var c = this.c, b = c.banks[i];
         // pulse strength: more fuel & air under load; a pressurized collector
         // (a bank pulse just before) weakens the next one -> uneven V8 rhythm
-        var a = (0.3 + 0.7 * load) * c.cylVar[i] * (1 - 0.32 * Math.min(1, this.bankP[b]));
+        var a = (0.22 + 0.78 * load) * c.cylVar[i] * (1 - 0.32 * Math.min(1, this.bankP[b]));
         this.bankP[b] += 0.7;
         // cam overlap: unsteady idle, occasional misfire
         var idle = Math.max(0, 1 - (rpm - 800) / 2500);
@@ -102,9 +103,11 @@
         var c = this.c, n = c.angles.length, sr = sampleRate, i;
         var rpm = Math.max(200, P.rpm[0]), load = P.load[0], cut = P.cut[0] > 0.5, nos = P.nos[0];
         var dphi = rpm * 6 / sr * (c.cycle === 360 ? 1 : 1);   // crank degrees per sample
-        var tau = Math.max(1.5, c.blowDeg / dphi);              // pulse rise time in samples
+        // pulse rise time: the blowdown is a gas event lasting a millisecond or
+        // two whatever the rpm, so at idle each pulse stays crisp
+        var tau = Math.max(1.5, Math.min(c.blowDeg / dphi, c.blowMs * 0.001 * sr));
         var invTau = 1 / tau, life = tau * 7;
-        var noiseAmt = c.noise * (0.4 + 0.6 * load) * (1 + nos * 0.5);
+        var noiseAmt = c.noise * (0.15 + 0.85 * load) * (1 + nos * 0.5);
         var drive = c.drive * (1 + nos * 0.6), norm = 1 / Math.tanh(drive);
         var x = c.xpipe, turbo = c.turbo ? Math.min(1, 0.45 + P.boost[0] * 0.02) : 0;
         for (var s = 0; s < L.length; s++) {
@@ -152,9 +155,12 @@
           var r0 = o0 + c.rad * (o0 - this.prevY[0]), r1 = o1 + c.rad * (o1 - this.prevY[1]);
           this.prevY[0] = o0; this.prevY[1] = o1;
           // remove DC, then soft-clip for grit
-          this.dc[0] += (r0 - this.dc[0]) * 0.002; this.dc[1] += (r1 - this.dc[1]) * 0.002;
-          r0 = Math.tanh((r0 - this.dc[0]) * c.gain * drive) * norm;
-          r1 = Math.tanh((r1 - this.dc[1]) * c.gain * drive) * norm;
+          // high-pass ~55 Hz (12 dB/oct): the long pipe's sub-bass boom isn't what you hear
+          this.dc[0] += (r0 - this.dc[0]) * this.hpK; this.dc[1] += (r1 - this.dc[1]) * this.hpK;
+          r0 -= this.dc[0]; r1 -= this.dc[1];
+          this.dc2[0] += (r0 - this.dc2[0]) * this.hpK; this.dc2[1] += (r1 - this.dc2[1]) * this.hpK;
+          r0 = Math.tanh((r0 - this.dc2[0]) * c.gain * drive) * norm;
+          r1 = Math.tanh((r1 - this.dc2[1]) * c.gain * drive) * norm;
           L[s] = r0 * c.panA + r1 * (1 - c.panA);
           R[s] = r1 * c.panA + r0 * (1 - c.panA);
         }
@@ -209,7 +215,7 @@
     pipe:     [3.6,     3.4,     3.2,     0.9],    // m, header collector to tailpipe
     refl:     [-0.22,   -0.38,   -0.6,    -0.55],  // how much the pipe rings
     damp:     [0.12,    0.22,    0.4,     0.5],
-    mufHz:    [380,     950,     2600,    5200],
+    mufHz:    [480,     1050,    2600,    5200],
     bypass:   [0.04,    0.12,    0.35,    0.6],
     xpipe:    [0.4,     0.28,    0.08,    0],      // bank crossover on twin-bank engines
     noise:    [0.1,     0.16,    0.24,    0.32],
@@ -230,10 +236,10 @@
     var hdrLen = [], cylVar = [];
     for (i = 0; i < n; i++) {
       var len = HDR.len[hd];
-      if (hd === 0) len *= 0.8 + r() * 0.45;                     // cast manifolds: runners differ
+      if (hd === 0) len *= 0.94 + r() * 0.12;                    // cast manifolds: runners differ a little
       if (Lc.unequal && hd < 2) len = Lc.banks[i] ? 0.95 : 0.35; // boxer: the classic rumble
       hdrLen.push(len);
-      cylVar.push(0.92 + r() * 0.16);                            // no two cylinders are identical
+      cylVar.push(0.98 + r() * 0.04);                            // no two cylinders are quite identical
     }
     var twin = !!Lc.twin;
     var pipe = EXH.pipe[ex];
@@ -249,6 +255,7 @@
       rad: HDR.rad[hd],
       // exhaust valve timing: bigger cams open earlier -> sharper blowdown
       blowDeg: (Lc.sharp ? 22 : Lc.diesel ? 50 : 62) - cam * 7 - hd * 2,
+      blowMs: (Lc.sharp ? 0.9 : 2.0) - cam * 0.15 - hd * 0.05,
       noise: EXH.noise[ex] + cam * 0.04 + (Lc.sharp ? 0.15 : 0),
       drive: EXH.drive[ex] + (Lc.diesel ? 0.6 : 0),
       lope: [0, 0.12, 0.25, 0.4, 0.55][cam], misfire: [0, 0, 0.01, 0.03, 0.06][cam],
