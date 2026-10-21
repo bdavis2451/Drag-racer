@@ -226,11 +226,16 @@
         you.sim.launch(); phase = 'race'; actLabel.textContent = 'SHIFT';
       }
       // finish conditions
-      var allDone = racers.every(function (r) { return r.sim.finished || r.sim.crashed || r.sim.blown || r.sim.broke || (r.sim.launched && r.sim.t > 40); });
+      // show the timeslip once everyone has slowed down in the shutdown area
+      var allDone = racers.every(function (r) {
+        var s = r.sim;
+        if (s.finished) return s.v < 9 || s.time - s.finishTime > 6;
+        return s.crashed || s.blown || s.broke || (s.launched && s.t > 40);
+      });
       var playerOut = you.sim.finished || you.sim.crashed || you.sim.blown || you.sim.broke;
       if (allDone || (playerOut && opp && opp.sim.launched && clock - greenAt > 25)) {
         doneT += dt;
-        if (doneT > 1.6 && !resultShown) { resultShown = true; showResult(); }
+        if (doneT > 0.6 && !resultShown) { resultShown = true; showResult(); }
       }
     }
 
@@ -272,7 +277,7 @@
       var spin = r.burn ? 60 : sim.ww;
       r.wheelAng += spin * dt;
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
-      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad });
+      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock });
       // smoke from the drive tires
       var rearX = frontX - (spr.padL + spr.lenPx - spr.wheelR.x) / DR.PPM;
       var smoky = r.burn > 0.3 || (sim.launched && !sim.finished && sim.slip > r.S.tslip * 2 && sim.v < 70);

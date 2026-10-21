@@ -183,7 +183,7 @@
       ctx.fillRect(padL + 6, wTop + 1, 1, topAt(7) - wTop);
       ctx.fillStyle = css(shade(base, -0.3)); ctx.fillRect(padL - 2, wTop, look.wing === 2 ? 12 : 9, 2);
     }
-    var spr = { canvas: cv, w: W, h: H, padL: padL, lenPx: lenPx, groundY: groundY, wheelR: wheelR, wheelF: wheelF,
+    var spr = { canvas: cv, w: W, h: H, padL: padL, lenPx: lenPx, groundY: groundY, wheelR: wheelR, wheelF: wheelF, tail: { x: padL, y: tailY },
       exhaust: { x: padL - 1, y: groundY - Math.round(6 * u) }, rail: !!B.rail, bar: look.bar, look: look };
     spriteCache[key] = spr;
     return spr;
@@ -222,6 +222,7 @@
     var rx = spr.wheelR.x, ground = spr.groundY;
     ctx.save();
     ctx.translate(Math.round(gx), Math.round(gy));
+    if (opts.chute > 0) drawChute(ctx, spr, opts.chute, opts.t || 0);
     ctx.rotate(-pitch);
     // wheelie bars: bolted to the chassis, the tail wheel touches down when
     // pitch reaches the tuned bar angle.
@@ -234,11 +235,33 @@
     }
     var bodyLift = opts.squat ? opts.squat : 0;
     ctx.drawImage(spr.canvas, Math.round(-rx), Math.round(-ground - 1 + bodyLift));
+    if (opts.brake > 0.05) {
+      // brake lights
+      var lx = Math.round(spr.tail.x - rx), ly = Math.round(spr.tail.y - ground - 1 + bodyLift);
+      ctx.fillStyle = '#ff6060'; ctx.fillRect(lx, ly, 2, 2);
+      ctx.globalAlpha = 0.35 * opts.brake; ctx.fillStyle = '#ff2020'; ctx.fillRect(lx - 2, ly - 1, 3, 4);
+      ctx.globalAlpha = 1;
+    }
     var look = spr.look;
     drawWheel(ctx, 0, -spr.wheelR.r, spr.wheelR.r, wheelAng, look.rim, look.slick);
     drawWheel(ctx, spr.wheelF.x - rx, -spr.wheelF.r, spr.wheelF.r, wheelAng * spr.wheelR.r / spr.wheelF.r, look.rim, false);
     ctx.restore();
   };
+
+  // Parachute trailing behind the car. k: 0..1 how far it has deployed.
+  function drawChute(ctx, spr, k, t) {
+    var rearX = -(spr.wheelR.x - spr.padL), attachY = -Math.round(spr.wheelR.r * 1.6);
+    var dist = 6 + 16 * k, cx = Math.round(rearX - dist), size = 2 + 5 * k;
+    var cy = attachY - Math.round(2 + 2 * k + Math.sin(t * 9) * k);
+    ctx.fillStyle = '#2a2a2a';
+    for (var i = 0; i <= dist; i += 1) ctx.fillRect(Math.round(rearX - i), Math.round(attachY + (cy - attachY) * (i / dist)), 1, 1);
+    // canopy seen from the side: a fat rounded disc with stripes
+    for (var dy = -size; dy <= size; dy++) {
+      var w = Math.round(Math.sqrt(Math.max(0, size * size - dy * dy)) * 0.55) + 1;
+      ctx.fillStyle = (Math.floor((dy + size) / 2) % 2) ? '#f2f2f2' : '#d23a3a';
+      ctx.fillRect(cx - w, cy + dy, w, 1);
+    }
+  }
 
   // Where the exhaust tip is in screen space for particles.
   DR.exhaustPos = function (spr, gx, gy, pitch) {

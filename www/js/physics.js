@@ -351,7 +351,7 @@
     this.crashed = false; this.blown = false; this.broke = false;
     this.failAt = opts.failAt || 0; this.failType = opts.failType || '';
     this.splits = {}; this.etStart = null; this.finished = false;
-    this.tcCut = 0;
+    this.tcCut = 0; this.brake = 0;
     this.holdThr = 1; this.brakeLimited = false;
     this.events = [];          // for visuals: 'shift', 'backfire', 'bar', 'land'
     var N0 = S.drive === 'FWD' ? S.m * G * S.f : S.drive === 'AWD' ? S.m * G : S.m * G * (1 - S.f);
@@ -535,11 +535,20 @@
         this.we += dt * Te / S.Ie;
       }
     } else if (this.finished) {
-      // Past the finish: off throttle, clutch in, brakes + chute
+      // Shutdown area: the driver lifts at the stripe, coasts for a moment,
+      // then gets on the brakes. Fast cars throw the parachute.
+      var since = this.time - this.finishTime;
       this.we += (idleW * 1.4 - this.we) * Math.min(1, dt * 3);
-      this.v = Math.max(0, this.v - dt * (this.v > 40 ? 9 : 7));
+      this.brake = since > 0.45 ? Math.min(1, (since - 0.45) / 0.5) : 0;
+      if (this.chute === undefined) this.chute = this.trap > 140 ? 0 : -1;
+      if (this.chute >= 0 && since > 0.6) this.chute = Math.min(1, this.chute + dt * 2.5);
+      var vv = this.v * this.v;
+      var dec = 0.5 * DR.RHO * (S.cda + Math.max(0, this.chute) * 3.2) * vv / m + S.crr * G + this.brake * 6.5;
+      this.v = Math.max(0, this.v - dt * dec);
+      this.x += this.v * dt;
       this.ww = this.v / r;
-      this.a = -8;
+      this.a += (-dec - this.a) * Math.min(1, dt / 0.05);
+      this.slip = 0;
     } else if (S.trType === 'auto') {
       var shiftScale = 1;
       if (this.shifting) shiftScale = 0.55;
