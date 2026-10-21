@@ -466,6 +466,7 @@
     function run() {
       A.init(); A.resume();
       if (voice) return;
+      if (A.wkPending) { A.whenReady(run); return; }
       voice = A.engine(S.eng, 0.8, A.buildOf(S));
       var t0 = performance.now();
       sweep.p = 0;

@@ -121,7 +121,7 @@
     }
 
     function ensureVoices() {
-      if (voices.length || !A.ctx) return;
+      if (voices.length || !A.ctx || A.wkPending) return;
       you.voice = A.engine(S.eng, 1, A.buildOf(S));
       if (opp) opp.voice = A.engine(opp.S.eng, 0.45, A.buildOf(opp.S));
       voices = [you.voice, opp && opp.voice];

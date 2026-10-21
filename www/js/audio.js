@@ -4,7 +4,7 @@
 // ===========================================================================
 (function () {
   var DR = globalThis.DR;
-  var A = DR.Audio = { ctx: null, on: true, master: null, voices: [] };
+  var A = DR.Audio = { ctx: null, on: true, master: null, voices: [], WK_GAIN: 0.5 };
 
   A.init = function () {
     if (A.ctx || !A.on) return;
@@ -143,22 +143,33 @@
     v.lope = CAM_LOPE[build.cam] * (layout === 'v8' || layout === 'v6' ? 1 : 0.6);
     v.crackle = Math.max(EXHAUST.crackle[ex] * (build.turbo ? 0.5 : 1), build.antilag ? 0.8 : 0);
     v.out = c.createGain(); v.out.gain.value = 0; v.out.connect(A.master);
-    v.filter = c.createBiquadFilter(); v.filter.type = 'lowpass'; v.filter.frequency.value = 400; v.filter.Q.value = 0.9;
-    // exhaust pipe resonance ("drone")
-    v.body = c.createBiquadFilter(); v.body.type = 'peaking'; v.body.frequency.value = EXHAUST.droneHz[ex];
-    v.body.Q.value = 1.1; v.body.gain.value = EXHAUST.drone[ex] * (build.turbo ? 0.5 : 1);
-    v.shaper = c.createWaveShaper(); v.shaper.curve = gritCurve(P.grit + EXHAUST.grit[ex] + HEADERS.grit[hd]); v.shaper.oversample = '2x';
-    v.pre = c.createGain(); v.pre.gain.value = 3;
-    // engine pulses -> drive -> tone filter -> pipe resonance -> lope (cam) -> out
-    v.lopeG = c.createGain(); v.lopeG.gain.value = 1;
-    v.osc = c.createOscillator(); v.osc.setPeriodicWave(engineWave(layout, HEADERS.sharp[hd]));
-    v.osc.connect(v.pre); v.pre.connect(v.shaper); v.shaper.connect(v.filter); v.filter.connect(v.body); v.body.connect(v.lopeG); v.lopeG.connect(v.out);
-    // big cams: the idle surges and stumbles (amplitude wobble at half the cycle rate)
-    v.lfo = c.createOscillator(); v.lfo.type = 'triangle'; v.lfoG = c.createGain(); v.lfoG.gain.value = 0;
-    v.lfo.connect(v.lfoG); v.lfoG.connect(v.lopeG.gain);
-    // low "chest" thump at the crank rate for big engines
-    v.sub = c.createOscillator(); v.sub.type = 'sine'; v.subG = c.createGain(); v.subG.gain.value = 0;
-    v.sub.connect(v.subG); v.subG.connect(v.out);
+    v.wk = A.wk && !A.forceSynth;
+    if (v.wk) {
+      // physically modelled engine & exhaust on the audio thread (enginesim.js)
+      v.node = new AudioWorkletNode(c, 'pd-engine', { numberOfInputs: 0, outputChannelCount: [2] });
+      v.node.port.postMessage(A.engineConfig(eng, build));
+      v.np = v.node.parameters;
+      v.node.connect(v.out);
+      // the simulation sets the exhaust tone & level; blowers are a bit louder
+      v.loud = build.blower ? 1.12 : 1;
+    } else {
+      v.filter = c.createBiquadFilter(); v.filter.type = 'lowpass'; v.filter.frequency.value = 400; v.filter.Q.value = 0.9;
+      // exhaust pipe resonance ("drone")
+      v.body = c.createBiquadFilter(); v.body.type = 'peaking'; v.body.frequency.value = EXHAUST.droneHz[ex];
+      v.body.Q.value = 1.1; v.body.gain.value = EXHAUST.drone[ex] * (build.turbo ? 0.5 : 1);
+      v.shaper = c.createWaveShaper(); v.shaper.curve = gritCurve(P.grit + EXHAUST.grit[ex] + HEADERS.grit[hd]); v.shaper.oversample = '2x';
+      v.pre = c.createGain(); v.pre.gain.value = 3;
+      // engine pulses -> drive -> tone filter -> pipe resonance -> lope (cam) -> out
+      v.lopeG = c.createGain(); v.lopeG.gain.value = 1;
+      v.osc = c.createOscillator(); v.osc.setPeriodicWave(engineWave(layout, HEADERS.sharp[hd]));
+      v.osc.connect(v.pre); v.pre.connect(v.shaper); v.shaper.connect(v.filter); v.filter.connect(v.body); v.body.connect(v.lopeG); v.lopeG.connect(v.out);
+      // big cams: the idle surges and stumbles (amplitude wobble at half the cycle rate)
+      v.lfo = c.createOscillator(); v.lfo.type = 'triangle'; v.lfoG = c.createGain(); v.lfoG.gain.value = 0;
+      v.lfo.connect(v.lfoG); v.lfoG.connect(v.lopeG.gain);
+      // low "chest" thump at the crank rate for big engines
+      v.sub = c.createOscillator(); v.sub.type = 'sine'; v.subG = c.createGain(); v.subG.gain.value = 0;
+      v.sub.connect(v.subG); v.subG.connect(v.out);
+    }
     // exhaust breath: noise around the firing note (also the nitrous hiss)
     v.en = noiseSrc(); v.ef = c.createBiquadFilter(); v.ef.type = 'bandpass'; v.ef.Q.value = 0.8; v.ef.frequency.value = 300;
     v.eg = c.createGain(); v.eg.gain.value = 0; v.en.connect(v.ef); v.ef.connect(v.eg); v.eg.connect(v.out);
@@ -181,7 +192,7 @@
     v.wo = c.createOscillator(); v.wo.type = build.blower ? 'triangle' : 'sine'; v.wg = c.createGain(); v.wg.gain.value = 0; v.wo.connect(v.wg); v.wg.connect(v.bus);
     // straight-cut gear whine (sequential / Lenco boxes)
     v.go = c.createOscillator(); v.go.type = 'triangle'; v.gg = c.createGain(); v.gg.gain.value = 0; v.go.connect(v.gg); v.gg.connect(v.bus);
-    [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { n.start(); });
+    [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { if (n) n.start(); });
     A.voices.push(v);
     return v;
   };
@@ -202,22 +213,38 @@
     var wob = 1 + (Math.random() - 0.5) * (0.006 + lope * 0.12);
     var cycle = rpm / 60 * v.cyclesPerRev * wob;            // engine cycles per second
     var fire = cycle * P.amps.length;                        // firing pulses per second
-    v.osc.frequency.setTargetAtTime(cycle, t, k);
-    v.lfo.frequency.setTargetAtTime(cycle * 0.5, t, k);
-    v.lfoG.gain.setTargetAtTime(lope, t, k);
-    v.sub.frequency.setTargetAtTime(cycle * 2, t, k);
-    v.subG.gain.setTargetAtTime((P.bright < 0.9 ? 0.35 : 0.06) * (0.4 + thr * 0.6), t, k);
-    // darker at low rpm & off throttle, opens up with load; nitrous gets harsh
-    var bright = v.bright * (1 + nos * 0.25);
-    v.filter.frequency.setTargetAtTime(Math.min(9000, (fire * 1.4 + 150 + thr * 900 + rpm * 0.06) * bright), t, k);
-    v.pre.gain.setTargetAtTime((1.2 + thr * 2.3) * (P.drive || 1) * (1 + nos * 0.6) * (1 + (Math.random() - 0.5) * 0.06), t, k);
-    v.inf.frequency.setTargetAtTime(Math.min(5000, fire * 2.2 + 300), t, k);
-    v.ing.gain.setTargetAtTime(thr * (v.b.turbo ? 0.03 : 0.07) * (rpm / 6000), t, k);
-    v.ef.frequency.setTargetAtTime(nos ? 3500 : Math.min(6000, fire * 1.2 * bright + 100), t, k);
-    v.eg.gain.setTargetAtTime((0.05 + thr * 0.12) * EXHAUST.breath[v.b.exhaust] * (v.b.turbo ? 0.6 : 1) + nos * 0.12, t, k);
-    // the rev limiter chops the sound
-    var level = v.vol * v.loud * (0.17 + thr * 0.27) * (1 + nos * 0.18) * (st.cut && thr > 0.5 ? 0.35 : 1);
-    v.out.gain.setTargetAtTime(level, t, st.cut ? 0.008 : k);
+    if (v.wk) {
+      var pt = t + 0.02;
+      v.np.get('rpm').setTargetAtTime(rpm, t, 0.02);
+      v.np.get('load').setTargetAtTime(Math.min(1, thr * (1 + nos * 0.2)), t, 0.03);
+      v.np.get('cut').setValueAtTime(st.cut && thr > 0.5 ? 1 : 0, pt);
+      v.np.get('nos').setValueAtTime(nos, pt);
+      v.np.get('boost').setValueAtTime(boost || 0, pt);
+    } else {
+      v.osc.frequency.setTargetAtTime(cycle, t, k);
+      v.lfo.frequency.setTargetAtTime(cycle * 0.5, t, k);
+      v.lfoG.gain.setTargetAtTime(lope, t, k);
+      v.sub.frequency.setTargetAtTime(cycle * 2, t, k);
+      v.subG.gain.setTargetAtTime((P.bright < 0.9 ? 0.35 : 0.06) * (0.4 + thr * 0.6), t, k);
+      // darker at low rpm & off throttle, opens up with load; nitrous gets harsh
+      var bright = v.bright * (1 + nos * 0.25);
+      v.filter.frequency.setTargetAtTime(Math.min(9000, (fire * 1.4 + 150 + thr * 900 + rpm * 0.06) * bright), t, k);
+      v.pre.gain.setTargetAtTime((1.2 + thr * 2.3) * (P.drive || 1) * (1 + nos * 0.6) * (1 + (Math.random() - 0.5) * 0.06), t, k);
+      v.ef.frequency.setTargetAtTime(nos ? 3500 : Math.min(6000, fire * 1.2 * bright + 100), t, k);
+      v.eg.gain.setTargetAtTime((0.05 + thr * 0.12) * EXHAUST.breath[v.b.exhaust] * (v.b.turbo ? 0.6 : 1) + nos * 0.12, t, k);
+      // the rev limiter chops the sound
+      var level = v.vol * v.loud * (0.17 + thr * 0.27) * (1 + nos * 0.18) * (st.cut && thr > 0.5 ? 0.35 : 1);
+      v.out.gain.setTargetAtTime(level, t, st.cut ? 0.008 : k);
+    }
+    // intake roar under load, nitrous hiss
+    var fireHz = rpm / 60 * v.cyclesPerRev * P.amps.length;
+    v.inf.frequency.setTargetAtTime(Math.min(5000, fireHz * 2.2 + 300), t, k);
+    v.ing.gain.setTargetAtTime(thr * (v.b.turbo ? 0.03 : 0.07) * (rpm / 6000) * (v.wk ? 0.5 : 1), t, k);
+    if (v.wk) {
+      v.ef.frequency.setTargetAtTime(3500, t, k);
+      v.eg.gain.setTargetAtTime(nos * 0.1, t, k);
+      v.out.gain.setTargetAtTime(v.vol * v.loud * A.WK_GAIN, t, k);
+    }
     // tires: slip is how hard the tires are spinning (0 = hooked, 1 = full
     // burnout). Fade in/out smoothly so a quick chirp doesn't click.
     var want = Math.min(1, Math.max(0, slip || 0));
@@ -242,7 +269,7 @@
       v.wg.gain.setTargetAtTime(v.vol * (0.012 + 0.028 * thr), t, 0.1);
     }
     // lift off at high rpm with a free-flowing exhaust: crackles and pops
-    if (v.crackle && v.lastThr - thr > 0.4 && rpm > 3200 && t > v.popT) {
+    if (!v.wk && v.crackle && v.lastThr - thr > 0.4 && rpm > 3200 && t > v.popT) {
       var n = Math.round(2 + v.crackle * 5);
       for (var i = 0; i < n; i++) if (Math.random() < 0.4 + v.crackle * 0.5)
         A.burst(0.05 + Math.random() * 0.05, 250 + Math.random() * 450, 1, v.vol * (0.25 + v.crackle * 0.25), 'lowpass', 0.05 + i * (0.05 + Math.random() * 0.06));
@@ -272,7 +299,7 @@
 
   A.stopAll = function () {
     A.voices.forEach(function (v) {
-      try { [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { n.stop(); }); v.bus.disconnect(); } catch (e) { /* already stopped */ }
+      try { if (v.node) v.node.port.postMessage('stop'); [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { if (n) n.stop(); }); v.bus.disconnect(); } catch (e) { /* already stopped */ }
     });
     A.voices = [];
   };
