@@ -114,6 +114,9 @@
         this.kick = { v: 0, b: 0 };
         this.inHp = 0; this.bayHp = 0;
         this.accPh = 0; this.bPh = 0; this.inFlow = 0;
+        this.bk = { t: new Float32Array(8).fill(-1), a: new Float32Array(8), f: new Float32Array(8), big: new Uint8Array(8), bank: new Uint8Array(8), next: 0 };
+        this.pend = []; this.bnPrev = 0;
+        this.bangLp = [new OnePole(c.bangHz, sr), new OnePole(c.bangHz, sr)];
       }
       fire(i, load, cut, nos, rpm) {
         var c = this.c, b = c.banks[i];
@@ -136,10 +139,12 @@
         if (rnd() < c.misfire * idle) a *= 0.15;
         if (cut) a *= 0.08 + 0.1 * rnd();                 // ignition cut: no combustion
         a *= 1 + nos * 0.3;
-        // lifting off at speed: unburnt fuel lights in the hot pipe
-        var popNow = load < 0.12 && rpm > 2600 && rnd() < c.crackle * 0.022;
-        this.pop[i] = popNow ? 1 : 0;
-        if (popNow) a = 1.1 + rnd() * 0.9;
+        // unburnt fuel lighting off in the hot exhaust: crackles when lifting
+        // at speed; big bangs on the rev limiter, 2-step, anti-lag and
+        // sequential shift cuts
+        this.pop[i] = 0;
+        if (load < 0.12 && rpm > 2600 && rnd() < c.crackle * 0.05) this.bang(0.3 + rnd() * 0.45, false, b);
+        if (cut && rnd() < c.bangChance) this.bang(0.75 + rnd() * 0.6, true, b);
         this.amp[i] = a; this.t[i] = 0;
         // each power stroke kicks the crank a little: firing timing wobbles,
         // most at idle where the flywheel spins slowly
@@ -147,9 +152,26 @@
         this.spd = 1 + (rnd() - 0.5) * jit;
         if (c.knock) this.knock = Math.max(this.knock, c.knock * (0.3 + 0.7 * load));
       }
+      // A pop at the tailpipe: a sharp crack, a low thump body, then a few
+      // smaller sizzling pops trailing behind.
+      bang(amp, big, bank) {
+        var k = this.bk, sr = sampleRate;
+        k.t[k.next] = 0; k.a[k.next] = amp; k.big[k.next] = big ? 1 : 0;
+        k.f[k.next] = (big ? 55 : 95) + rnd() * (big ? 35 : 70);
+        k.bank[k.next] = this.c.panA !== 0.5 ? bank : 2;
+        k.next = (k.next + 1) % k.t.length;
+        var tails = big ? 1 + (rnd() * 3 | 0) : (rnd() < 0.45 ? 1 : 0);
+        for (var j = 0; j < tails && this.pend.length < 8; j++) this.pend.push([(0.012 + rnd() * 0.07) * sr, amp * (0.25 + rnd() * 0.35), bank]);
+      }
       process(inputs, outputs, P) {
+        // a bug must never silence the engine for the rest of the race:
+        // drop this block and carry on
+        try { this.render(outputs, P); } catch (e) { this.c && this.setup(this.c); }
+        return this.alive;
+      }
+      render(outputs, P) {
         var out = outputs[0], L = out[0], R = out[1] || out[0];
-        if (!this.c) { return this.alive; }
+        if (!this.c) return;
         var c = this.c, n = c.angles.length, sr = sampleRate, i;
         var rpm = Math.max(200, P.rpm[0]), load = P.load[0], cut = P.cut[0] > 0.5, nos = P.nos[0];
         var dphi = rpm * 6 / sr * (c.cycle === 360 ? 1 : 1);   // crank degrees per sample
@@ -270,10 +292,33 @@
           }
           this.bayHp += (bay - this.bayHp) * 0.004;
           bay -= this.bayHp;
-          L[s] = r0 * c.panA + r1 * (1 - c.panA) + bay;
-          R[s] = r1 * c.panA + r0 * (1 - c.panA) + bay;
+          // ---- pops & bangs at the tailpipe(s)
+          var bg0 = 0, bg1 = 0;
+          if (this.pend.length) {
+            var due = null;
+            for (var q = this.pend.length - 1; q >= 0; q--) {
+              if (--this.pend[q][0] <= 0) { (due || (due = [])).push(this.pend[q]); this.pend.splice(q, 1); }
+            }
+            if (due) for (q = 0; q < due.length; q++) this.bang(due[q][1], false, due[q][2]);
+          }
+          var K = this.bk, wn = rnd() * 2 - 1, crackN = wn - this.bnPrev; this.bnPrev = wn;
+          for (var j = 0; j < 8; j++) {
+            var bt = K.t[j];
+            if (bt < 0) continue;
+            var tb = bt / sr, big = K.big[j];
+            var att = Math.min(1, bt / (0.00025 * sr));
+            var thump = Math.sin(6.2832 * K.f[j] * tb * (1 + 0.6 * Math.exp(-tb / 0.006))) * Math.exp(-tb / (big ? 0.04 : 0.014));
+            var crack = crackN * Math.exp(-tb / (big ? 0.007 : 0.0028));
+            var bv = K.a[j] * att * (thump * (big ? 1.1 : 0.6) + crack * (big ? 1.3 : 1.0));
+            if (K.bank[j] === 0) bg0 += bv; else if (K.bank[j] === 1) bg1 += bv; else { bg0 += bv; bg1 += bv; }
+            K.t[j] = tb > (big ? 0.3 : 0.09) ? -1 : bt + 1;
+          }
+          bg0 = this.bangLp[0].tick(bg0); bg1 = this.bangLp[1].tick(bg1);
+          bg0 = Math.tanh(bg0 * 1.4) * c.bangLvl; bg1 = Math.tanh(bg1 * 1.4) * c.bangLvl;
+          L[s] = r0 * c.panA + r1 * (1 - c.panA) + bay + bg0 * c.panA + bg1 * (1 - c.panA);
+          R[s] = r1 * c.panA + r0 * (1 - c.panA) + bay + bg1 * c.panA + bg0 * (1 - c.panA);
         }
-        return this.alive;
+        return;
       }
     }
     registerProcessor('pd-engine', EngineProc);
@@ -371,6 +416,10 @@
       // idle pulse strength: free-flowing exhausts and big cams idle louder
       idleBase: Math.min(0.45, [0.22, 0.25, 0.32, 0.35][ex] + cam * 0.025),
       crackle: Math.max(EXH.crackle[ex] * (build.turbo ? 0.4 : 1), build.antilag ? 0.7 : 0),
+      // chance per cut firing that the unburnt charge bangs in the pipe
+      bangChance: Math.min(0.9, [0.05, 0.12, 0.28, 0.4][ex] + (build.twostep ? 0.22 : 0) + (build.antilag ? 0.3 : 0)),
+      bangLvl: [0.4, 0.6, 0.85, 1.0][ex] * (build.turbo ? 0.8 : 1) * (0.75 + 0.25 * Math.min(1, eng.disp / 5)),
+      bangHz: [1600, 3200, 8000, 14000][ex],   // mufflers soften the crack
       turbo: !!build.turbo, turboHz: 330,
       knock: Lc.diesel ? 0.35 : 0,
       panA: twin ? 0.68 : 0.5,
@@ -380,21 +429,21 @@
       inHz: [650, 1000, 1500, 2400][build.intake] * (Lc.sharp ? 1.3 : 1),
       inNoiseHz: [900, 1300, 1700, 2300][build.intake],
       inRoar: [0.6, 0.8, 1.0, 1.25][build.intake],
-      inLevel: [0.3, 0.46, 0.64, 0.9][build.intake] * Math.sqrt(Math.min(2, eng.disp / 4)) *
+      inLevel: [0.12, 0.18, 0.25, 0.36][build.intake] * Math.sqrt(Math.min(2, eng.disp / 4)) *
         (build.turbo ? 0.35 : build.blower ? 0.5 : 1),
       hissLvl: build.turbo ? 0.004 : 0.008,
       // valvetrain: hydraulic lifters barely tick, solid rollers chatter
       valveHz: 4300 + (eng.cyl < 6 ? 600 : 0),
-      valveLvl: Lc.sharp ? 0 : [0.02, 0.022, 0.028, 0.04, 0.075][cam] * (Lc.diesel ? 1.5 : 1),
+      valveLvl: Lc.sharp ? 0 : [0.008, 0.009, 0.011, 0.016, 0.03][cam] * (Lc.diesel ? 1.5 : 1),
       // combustion thump through the block (diesels clatter)
       blockHz: Lc.diesel ? 1500 : 1100 - Math.min(300, eng.disp * 30),
-      blockLvl: Lc.diesel ? 0.2 : 0.05,
-      accLvl: 0.007,
+      blockLvl: Lc.diesel ? 0.12 : 0.02,
+      accLvl: 0.0035,
       // superchargers: whine at rotor speed x lobes, belt-driven from the crank
       blowerType: build.blowerType || '',
       blowerRatio: { roots: 1.7, screw: 2.2, cent: 3.4 }[build.blowerType] || 0,
       blowerLobes: { roots: 6, screw: 5, cent: 11 }[build.blowerType] || 0,
-      blowerLvl: { roots: 0.2, screw: 0.14, cent: 0.12 }[build.blowerType] || 0,
+      blowerLvl: { roots: 0.13, screw: 0.09, cent: 0.08 }[build.blowerType] || 0,
       blowerGrit: build.blowerType === 'roots' ? 0.9 : 0.4,
       // bigger engines move more gas per pulse and are louder
       gain: 1.15 * Math.pow(eng.disp / 3, 0.6) * EXH.makeup[ex]

@@ -38,6 +38,7 @@
       var verb = ctx.createConvolver(); verb.buffer = ir;
       var wet = ctx.createGain(); wet.gain.value = 0.16;
       A.master.connect(verb); verb.connect(wet); wet.connect(comp);
+      A.verbIn = verb;   // distant cars send extra signal here
     } catch (e) { /* no reverb on this device */ }
   };
   A.resume = function () { if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); };
@@ -122,7 +123,8 @@
       cam: stage(parts.cams, ['stock', 'c1', 'c2', 'c3', 'c4']),
       turbo: fi === 'turbo',
       blower: fi === 'roots' || fi === 'screw' || fi === 'cent',
-      antilag: S.twostep === 2
+      antilag: S.twostep === 2,
+      twostep: S.twostep > 0
     };
   };
 
@@ -181,7 +183,11 @@
     // the voice's place in the stereo field (the opponent sits in the other lane)
     v.pan = c.createStereoPanner ? c.createStereoPanner() : null;
     v.bus = c.createGain(); v.bus.gain.value = 1;
-    if (v.pan) { v.bus.connect(v.pan); v.pan.connect(A.master); } else v.bus.connect(A.master);
+    // distance: air absorbs highs, and far cars are heard more via echoes
+    v.air = c.createBiquadFilter(); v.air.type = 'lowpass'; v.air.frequency.value = 18000; v.air.Q.value = 0.5;
+    v.bus.connect(v.air);
+    if (v.pan) { v.air.connect(v.pan); v.pan.connect(A.master); } else v.air.connect(A.master);
+    if (A.verbIn) { v.send = c.createGain(); v.send.gain.value = 0; v.air.connect(v.send); v.send.connect(A.verbIn); }
     v.out.disconnect(); v.out.connect(v.bus);
     // tires: a wavering tonal squeal plus a low roar, mixed by tire compound
     v.tn = noiseSrc();
@@ -207,7 +213,9 @@
     if (!v || !A.ctx) return;
     st = st || {};
     var t = A.ctx.currentTime, k = 0.04, P = v.P;
-    rpm = Math.max(300, rpm);
+    // Doppler: a car closing on the camera sounds higher, one pulling away lower
+    var dop = st.doppler || 1;
+    rpm = Math.max(300, rpm) * dop;
     var nos = st.nos ? 1 : 0;
     // cam lope: strongest at idle, gone by ~3500 rpm. Lifting off at speed
     // gives a softer overrun burble.
@@ -261,7 +269,10 @@
     v.rg.gain.setTargetAtTime(tAmt * (1.1 - tone * 0.6) * 0.36, t, 0.05);
     // where the car is: stereo position and distance from the camera
     if (v.pan) v.pan.pan.setTargetAtTime(st.pan || 0, t, 0.1);
-    v.bus.gain.setTargetAtTime(st.near != null ? st.near : 1, t, 0.1);
+    var near = st.near != null ? st.near : 1;
+    v.bus.gain.setTargetAtTime(near, t, 0.1);
+    v.air.frequency.setTargetAtTime(Math.max(1500, Math.min(18000, 18000 * Math.pow(near, 1.6))), t, 0.1);
+    if (v.send) v.send.gain.setTargetAtTime(0.35 * (1 - near), t, 0.1);
     if (st.gearWhine) {
       v.go.frequency.setTargetAtTime(rpm / 60 * 21, t, k);
       v.gg.gain.setTargetAtTime(v.vol * (0.004 + thr * 0.01) * Math.min(1, rpm / 4000), t, k);
@@ -275,7 +286,7 @@
       v.spool = v.spool || 0;
       v.spool += (flow - v.spool) * Math.min(1, dt / (flow > v.spool ? 0.45 : 1.1));
       var sp = v.spool;
-      v.wo.frequency.setTargetAtTime(2400 + sp * 5200, t, 0.05);
+      v.wo.frequency.setTargetAtTime((2400 + sp * 5200) * dop, t, 0.05);
       v.wg.gain.setTargetAtTime(v.vol * 0.02 * sp * sp, t, 0.08);
       v.tw.frequency.setTargetAtTime(1600 + sp * 3600, t, 0.05);
       v.twg.gain.setTargetAtTime(v.vol * 0.12 * sp * sp * (0.3 + 0.7 * thr), t, 0.08);

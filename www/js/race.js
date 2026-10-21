@@ -275,12 +275,21 @@
       return DR.clamp((slipV - gripV * 1.4) / 10, 0, 1);
     }
     function soundState(r) {
-      var st = { nos: r.sim.nosOn, cut: r.sim.cut, tire: r.S.tire.kind, gearWhine: r.S.trType === 'seq' };
+      var seqShift = r.sim.shifting && (r.S.trType === 'seq' || r.S.trType === 'dct');
+      var st = { nos: r.sim.nosOn, cut: r.sim.cut || seqShift, tire: r.S.tire.kind, gearWhine: r.S.trType === 'seq' };
       if (r !== you) {
-        // the other car: placed by how far ahead or behind it is, fading with distance
-        var dx = r.sim.x + r.off - (you.sim.x + you.off);
-        st.pan = DR.clamp(dx / 40, -0.6, 0.6);
-        st.near = 1 / (1 + (dx / 30) * (dx / 30));
+        // The camera rides along with your car, about 10 m off the track.
+        // The other car is placed by where it is, gets quieter (1/distance)
+        // and duller with distance, and its pitch shifts with how fast it is
+        // closing on or pulling away from the camera (Doppler).
+        var D = 10, dx = r.sim.x + r.off - (you.sim.x + you.off);
+        var dist = Math.sqrt(dx * dx + D * D);
+        var vr = dx / dist * (r.sim.v - you.sim.v);          // > 0: moving away
+        var dop = DR.clamp(343 / (343 + vr), 0.75, 1.3);
+        r.dop = r.dop ? r.dop + (dop - r.dop) * 0.2 : dop;
+        st.doppler = r.dop;
+        st.pan = DR.clamp(dx / 40, -0.7, 0.7);
+        st.near = DR.clamp(D / dist, 0.04, 1);
       }
       return st;
     }
@@ -322,7 +331,7 @@
         var isYou = r === you;
         ev.forEach(function (e) {
           if (e === 'shift' && r.S.fiType === 'turbo' && isYou) A.blowoff();
-          if (e === 'backfire' && isYou && Math.random() < 0.3) A.pop();
+          if (e === 'backfire' && isYou && !(r.voice && r.voice.wk) && Math.random() < 0.3) A.pop();
           if (e === 'bar' && isYou) note('WHEELIE BARS!');
           if (e === 'crash') { if (isYou) { A.boom(); note('YOU FLIPPED IT!'); } else note(r.label + ' FLIPPED!'); }
           if (e === 'blown') { A.boom(); if (isYou) note('ENGINE BLEW UP!'); else note(r.label + ' BLEW UP!'); }
