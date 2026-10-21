@@ -32,7 +32,9 @@ jobs:
         run: npm ci
 
       - name: Physics sanity check
-        run: node tools/simtest.js ronin fox promod
+        run: |
+          node tools/simtest.js
+          node tools/career.js
 
       - name: Copy the game into the Android project
         run: npx cap sync android
