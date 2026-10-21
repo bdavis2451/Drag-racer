@@ -117,6 +117,8 @@
         this.bk = { t: new Float32Array(8).fill(-1), a: new Float32Array(8), f: new Float32Array(8), big: new Uint8Array(8), bank: new Uint8Array(8), next: 0 };
         this.pend = []; this.bnPrev = 0;
         this.bangLp = [new OnePole(c.bangHz, sr), new OnePole(c.bangHz, sr)];
+        this.ring0 = new SVF(c.ringHz, 3.5, sr); this.ring1 = new SVF(c.ringHz * 1.06, 3.5, sr);
+        this.ringIn0 = 0; this.ringIn1 = 0;
       }
       fire(i, load, cut, nos, rpm) {
         var c = this.c, b = c.banks[i];
@@ -301,18 +303,29 @@
             }
             if (due) for (q = 0; q < due.length; q++) this.bang(due[q][1], false, due[q][2]);
           }
-          var K = this.bk, wn = rnd() * 2 - 1, crackN = wn - this.bnPrev; this.bnPrev = wn;
+          // texture noise is darkened (no hiss)
+          this.bnPrev += (rnd() * 2 - 1 - this.bnPrev) * 0.25;
+          var K = this.bk, wn = this.bnPrev;
           for (var j = 0; j < 8; j++) {
             var bt = K.t[j];
             if (bt < 0) continue;
             var tb = bt / sr, big = K.big[j];
-            var att = Math.min(1, bt / (0.00025 * sr));
-            var thump = Math.sin(6.2832 * K.f[j] * tb * (1 + 0.6 * Math.exp(-tb / 0.006))) * Math.exp(-tb / (big ? 0.04 : 0.014));
-            var crack = crackN * Math.exp(-tb / (big ? 0.007 : 0.0028));
-            var bv = K.a[j] * att * (thump * (big ? 1.1 : 0.6) + crack * (big ? 1.3 : 1.0));
+            // the pop itself: one pressure wave, a sharp push then a pull
+            // (an N-wave a few ms long), not a burst of noise
+            var w = big ? 0.0042 : 0.0024, nw = 0;
+            if (tb < w) { var u = tb / w; nw = Math.sin(6.2832 * u) * (1 - u) * (u < 0.08 ? u / 0.08 : 1); }
+            // big bangs: a low thump of hot gas leaving the pipe
+            var thump = Math.sin(6.2832 * K.f[j] * tb * (1 + 0.5 * Math.exp(-tb / 0.005))) * Math.exp(-tb / (big ? 0.035 : 0.01)) * Math.min(1, tb / 0.0006);
+            var grit = wn * Math.exp(-tb / (big ? 0.0035 : 0.0015));
+            var pulse = K.a[j] * nw;
+            var bv = pulse * 1.4 + K.a[j] * (thump * (big ? 0.9 : 0.35) + grit * 0.3);
+            // the pulse rings the tailpipe briefly: the "pap" of a pop
+            if (K.bank[j] === 1) this.ringIn1 += pulse; else this.ringIn0 += pulse;
             if (K.bank[j] === 0) bg0 += bv; else if (K.bank[j] === 1) bg1 += bv; else { bg0 += bv; bg1 += bv; }
-            K.t[j] = tb > (big ? 0.3 : 0.09) ? -1 : bt + 1;
+            K.t[j] = tb > (big ? 0.3 : 0.08) ? -1 : bt + 1;
           }
+          bg0 += this.ring0.bp(this.ringIn0) * 1.6; bg1 += this.ring1.bp(this.ringIn1 + (this.c.panA === 0.5 ? this.ringIn0 : 0)) * 1.6;
+          this.ringIn0 = 0; this.ringIn1 = 0;
           bg0 = this.bangLp[0].tick(bg0); bg1 = this.bangLp[1].tick(bg1);
           bg0 = Math.tanh(bg0 * 1.4) * c.bangLvl; bg1 = Math.tanh(bg1 * 1.4) * c.bangLvl;
           L[s] = r0 * c.panA + r1 * (1 - c.panA) + bay + bg0 * c.panA + bg1 * (1 - c.panA);
@@ -419,7 +432,8 @@
       // chance per cut firing that the unburnt charge bangs in the pipe
       bangChance: Math.min(0.9, [0.05, 0.12, 0.28, 0.4][ex] + (build.twostep ? 0.22 : 0) + (build.antilag ? 0.3 : 0)),
       bangLvl: [0.4, 0.6, 0.85, 1.0][ex] * (build.turbo ? 0.8 : 1) * (0.75 + 0.25 * Math.min(1, eng.disp / 5)),
-      bangHz: [1600, 3200, 8000, 14000][ex],   // mufflers soften the crack
+      bangHz: [1200, 2200, 3800, 5200][ex],    // mufflers soften the crack
+      ringHz: 240 + 600 / Math.max(1, eng.disp),  // tailpipe ring: deeper on big engines
       turbo: !!build.turbo, turboHz: 330,
       knock: Lc.diesel ? 0.35 : 0,
       panA: twin ? 0.68 : 0.5,
