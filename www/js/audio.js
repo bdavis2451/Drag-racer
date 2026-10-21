@@ -1,5 +1,5 @@
 // ===========================================================================
-// AUDIO — a small WebAudio synth: engine note follows RPM & cylinder count,
+// AUDIO — a small WebAudio synth: engine note follows RPM, layout and parts,
 // plus tire squeal, turbo whistle, blow-off and backfire pops.
 // ===========================================================================
 (function () {
@@ -11,10 +11,34 @@
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     try { A.ctx = new AC(); } catch (e) { return; }
-    A.master = A.ctx.createGain(); A.master.gain.value = 0.5; A.master.connect(A.ctx.destination);
     var len = A.ctx.sampleRate * 1.5, buf = A.ctx.createBuffer(1, len, A.ctx.sampleRate), d = buf.getChannelData(0);
     for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     A.noise = buf;
+    A.buildMaster(A.ctx);
+  };
+
+  // master bus: everything -> gentle compressor -> speakers, plus a small
+  // send into a short "open strip" reverb so it sounds like it's outdoors
+  // between walls and grandstands instead of inside the speaker.
+  A.buildMaster = function (ctx) {
+    var comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 3; comp.attack.value = 0.005; comp.release.value = 0.2;
+    comp.connect(ctx.destination);
+    A.master = ctx.createGain(); A.master.gain.value = 0.55; A.master.connect(comp);
+    try {
+      var rate = ctx.sampleRate, n = Math.floor(rate * 0.9), ir = ctx.createBuffer(2, n, rate);
+      for (var ch = 0; ch < 2; ch++) {
+        var x = ir.getChannelData(ch), lp = 0;
+        for (var i = 0; i < n; i++) {
+          var t = i / rate, early = (Math.abs(t - 0.023 - ch * 0.004) < 0.0015 || Math.abs(t - 0.061 + ch * 0.006) < 0.0015) ? 0.5 : 0;
+          lp += ((Math.random() * 2 - 1) - lp) * 0.35;            // darker tail
+          x[i] = (lp * Math.exp(-t / 0.22) + early * (Math.random() * 2 - 1)) * (t < 0.012 ? 0 : 1);
+        }
+      }
+      var verb = ctx.createConvolver(); verb.buffer = ir;
+      var wet = ctx.createGain(); wet.gain.value = 0.16;
+      A.master.connect(verb); verb.connect(wet); wet.connect(comp);
+    } catch (e) { /* no reverb on this device */ }
   };
   A.resume = function () { if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); };
   A.setOn = function (on) { A.on = on; if (!on) A.stopAll(); };
@@ -138,12 +162,26 @@
     // exhaust breath: noise around the firing note (also the nitrous hiss)
     v.en = noiseSrc(); v.ef = c.createBiquadFilter(); v.ef.type = 'bandpass'; v.ef.Q.value = 0.8; v.ef.frequency.value = 300;
     v.eg = c.createGain(); v.eg.gain.value = 0; v.en.connect(v.ef); v.ef.connect(v.eg); v.eg.connect(v.out);
-    // tires
-    v.tn = noiseSrc(); v.tf = c.createBiquadFilter(); v.tf.type = 'bandpass'; v.tf.frequency.value = 1400; v.tf.Q.value = 2.5;
-    v.tg = c.createGain(); v.tg.gain.value = 0; v.tn.connect(v.tf); v.tf.connect(v.tg); v.tg.connect(A.master);
+    // intake roar under load (shares the exhaust noise source)
+    v.inf = c.createBiquadFilter(); v.inf.type = 'bandpass'; v.inf.Q.value = 1.3; v.inf.frequency.value = 900;
+    v.ing = c.createGain(); v.ing.gain.value = 0; v.en.connect(v.inf); v.inf.connect(v.ing); v.ing.connect(v.out);
+    // the voice's place in the stereo field (the opponent sits in the other lane)
+    v.pan = c.createStereoPanner ? c.createStereoPanner() : null;
+    v.bus = c.createGain(); v.bus.gain.value = 1;
+    if (v.pan) { v.bus.connect(v.pan); v.pan.connect(A.master); } else v.bus.connect(A.master);
+    v.out.disconnect(); v.out.connect(v.bus);
+    // tires: a wavering tonal squeal plus a low roar, mixed by tire compound
+    v.tn = noiseSrc();
+    v.tf = c.createBiquadFilter(); v.tf.type = 'bandpass'; v.tf.frequency.value = 1150; v.tf.Q.value = 6;
+    v.tg = c.createGain(); v.tg.gain.value = 0; v.tn.connect(v.tf); v.tf.connect(v.tg); v.tg.connect(v.bus);
+    v.rf = c.createBiquadFilter(); v.rf.type = 'lowpass'; v.rf.frequency.value = 650; v.rf.Q.value = 0.7;
+    v.rg = c.createGain(); v.rg.gain.value = 0; v.tn.connect(v.rf); v.rf.connect(v.rg); v.rg.connect(v.bus);
+    v.tire = 0;
     // turbo whistle / blower whine
-    v.wo = c.createOscillator(); v.wo.type = build.blower ? 'triangle' : 'sine'; v.wg = c.createGain(); v.wg.gain.value = 0; v.wo.connect(v.wg); v.wg.connect(A.master);
-    [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo].forEach(function (n) { n.start(); });
+    v.wo = c.createOscillator(); v.wo.type = build.blower ? 'triangle' : 'sine'; v.wg = c.createGain(); v.wg.gain.value = 0; v.wo.connect(v.wg); v.wg.connect(v.bus);
+    // straight-cut gear whine (sequential / Lenco boxes)
+    v.go = c.createOscillator(); v.go.type = 'triangle'; v.gg = c.createGain(); v.gg.gain.value = 0; v.go.connect(v.gg); v.gg.connect(v.bus);
+    [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { n.start(); });
     A.voices.push(v);
     return v;
   };
@@ -155,9 +193,13 @@
     var t = A.ctx.currentTime, k = 0.04, P = v.P;
     rpm = Math.max(300, rpm);
     var nos = st.nos ? 1 : 0;
-    // cam lope: strongest at idle, gone by ~3500 rpm
-    var lope = v.lope * Math.max(0, 1 - (rpm - 900) / 2600) * (1 - thr * 0.5);
-    var wob = lope ? 1 + (Math.random() - 0.5) * lope * 0.12 : 1;
+    // cam lope: strongest at idle, gone by ~3500 rpm. Lifting off at speed
+    // gives a softer overrun burble.
+    var overrun = thr < 0.15 && rpm > 1800 ? Math.min(1, (rpm - 1800) / 3000) : 0;
+    var lope = Math.max(v.lope * Math.max(0, 1 - (rpm - 900) / 2600) * (1 - thr * 0.5), overrun * 0.22);
+    // every combustion is a little different, so a real engine never holds a
+    // perfectly steady pitch
+    var wob = 1 + (Math.random() - 0.5) * (0.006 + lope * 0.12);
     var cycle = rpm / 60 * v.cyclesPerRev * wob;            // engine cycles per second
     var fire = cycle * P.amps.length;                        // firing pulses per second
     v.osc.frequency.setTargetAtTime(cycle, t, k);
@@ -168,13 +210,30 @@
     // darker at low rpm & off throttle, opens up with load; nitrous gets harsh
     var bright = v.bright * (1 + nos * 0.25);
     v.filter.frequency.setTargetAtTime(Math.min(9000, (fire * 1.4 + 150 + thr * 900 + rpm * 0.06) * bright), t, k);
-    v.pre.gain.setTargetAtTime((1.2 + thr * 2.3) * (P.drive || 1) * (1 + nos * 0.6), t, k);
+    v.pre.gain.setTargetAtTime((1.2 + thr * 2.3) * (P.drive || 1) * (1 + nos * 0.6) * (1 + (Math.random() - 0.5) * 0.06), t, k);
+    v.inf.frequency.setTargetAtTime(Math.min(5000, fire * 2.2 + 300), t, k);
+    v.ing.gain.setTargetAtTime(thr * (v.b.turbo ? 0.03 : 0.07) * (rpm / 6000), t, k);
     v.ef.frequency.setTargetAtTime(nos ? 3500 : Math.min(6000, fire * 1.2 * bright + 100), t, k);
     v.eg.gain.setTargetAtTime((0.05 + thr * 0.12) * EXHAUST.breath[v.b.exhaust] * (v.b.turbo ? 0.6 : 1) + nos * 0.12, t, k);
     // the rev limiter chops the sound
     var level = v.vol * v.loud * (0.17 + thr * 0.27) * (1 + nos * 0.18) * (st.cut && thr > 0.5 ? 0.35 : 1);
     v.out.gain.setTargetAtTime(level, t, st.cut ? 0.008 : k);
-    v.tg.gain.setTargetAtTime(v.vol * Math.min(0.35, Math.max(0, slip - 0.15) * 0.25), t, 0.03);
+    // tires: slip is how hard the tires are spinning (0 = hooked, 1 = full
+    // burnout). Fade in/out smoothly so a quick chirp doesn't click.
+    var want = Math.min(1, Math.max(0, slip || 0));
+    v.tire += (want - v.tire) * (want > v.tire ? 0.35 : 0.12);
+    var kind = st.tire || 'Street', tone = kind === 'Slick' ? 0.25 : kind === 'Drag Radial' ? 0.55 : 1;
+    var tAmt = Math.pow(v.tire, 1.4);
+    v.tf.frequency.setTargetAtTime((kind === 'Street' ? 1050 : 850) + (Math.random() - 0.5) * 160 + tAmt * 150, t, 0.03);
+    v.tg.gain.setTargetAtTime(tAmt * tone * 0.6, t, 0.05);
+    v.rg.gain.setTargetAtTime(tAmt * (1.1 - tone * 0.6) * 0.36, t, 0.05);
+    // where the car is: stereo position and distance from the camera
+    if (v.pan) v.pan.pan.setTargetAtTime(st.pan || 0, t, 0.1);
+    v.bus.gain.setTargetAtTime(st.near != null ? st.near : 1, t, 0.1);
+    if (st.gearWhine) {
+      v.go.frequency.setTargetAtTime(rpm / 60 * 21, t, k);
+      v.gg.gain.setTargetAtTime(v.vol * (0.004 + thr * 0.01) * Math.min(1, rpm / 4000), t, k);
+    }
     if (fiType === 'turbo') {
       v.wo.frequency.setTargetAtTime(1800 + boost * 90, t, 0.1);
       v.wg.gain.setTargetAtTime(v.vol * Math.min(0.06, boost * 0.003), t, 0.1);
@@ -213,7 +272,7 @@
 
   A.stopAll = function () {
     A.voices.forEach(function (v) {
-      try { [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo].forEach(function (n) { n.stop(); }); v.out.disconnect(); v.tg.disconnect(); v.wg.disconnect(); } catch (e) { /* already stopped */ }
+      try { [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { n.stop(); }); v.bus.disconnect(); } catch (e) { /* already stopped */ }
     });
     A.voices = [];
   };

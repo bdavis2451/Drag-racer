@@ -123,7 +123,7 @@
     function ensureVoices() {
       if (voices.length || !A.ctx) return;
       you.voice = A.engine(S.eng, 1, A.buildOf(S));
-      if (opp) opp.voice = A.engine(opp.S.eng, 0.3, A.buildOf(opp.S));
+      if (opp) opp.voice = A.engine(opp.S.eng, 0.45, A.buildOf(opp.S));
       voices = [you.voice, opp && opp.voice];
     }
 
@@ -262,8 +262,27 @@
       drawHud();
       handleEvents();
       racers.forEach(function (r) {
-        if (r.voice) A.update(r.voice, r.sim.rpm(), Math.max(r.sim.thr, r.burn * 0.9), r.sim.boost, Math.max(r.sim.slip * 3, r.burn * 1.4), r.S.fiType, { nos: r.sim.nosOn, cut: r.sim.cut });
+        if (r.voice) A.update(r.voice, r.sim.rpm(), Math.max(r.sim.thr, r.burn * 0.9), r.sim.boost, tireSpin(r), r.S.fiType, soundState(r));
       });
+    }
+
+    // 0..1: how hard the drive tires are spinning beyond normal grip slip
+    function tireSpin(r) {
+      if (r.burn) return r.burn;
+      var sim = r.sim;
+      if (!sim.launched || sim.finished) return 0;
+      var slipV = Math.max(0, sim.ww * r.S.r - sim.v), gripV = r.S.tslip * Math.max(sim.v, 2.5);
+      return DR.clamp((slipV - gripV * 1.4) / 10, 0, 1);
+    }
+    function soundState(r) {
+      var st = { nos: r.sim.nosOn, cut: r.sim.cut, tire: r.S.tire.kind, gearWhine: r.S.trType === 'seq' };
+      if (r !== you) {
+        // the other car: placed by how far ahead or behind it is, fading with distance
+        var dx = r.sim.x + r.off - (you.sim.x + you.off);
+        st.pan = DR.clamp(dx / 40, -0.6, 0.6);
+        st.near = 1 / (1 + (dx / 30) * (dx / 30));
+      }
+      return st;
     }
 
     function drawRacer(r, camX, dt) {
