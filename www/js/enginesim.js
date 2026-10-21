@@ -46,6 +46,19 @@
     OnePole.prototype.set = function (fc, sr) { this.k = 1 - Math.exp(-2 * Math.PI * fc / sr); };
     OnePole.prototype.tick = function (x) { this.y += (x - this.y) * this.k; return this.y; };
 
+    // Topology-preserving state-variable filter (stable when tuned on the fly);
+    // used as a band-pass resonator for ringing parts of the engine.
+    function SVF(fc, q, sr) { this.ic1 = 0; this.ic2 = 0; this.set(fc, q, sr); }
+    SVF.prototype.set = function (fc, q, sr) {
+      var g = Math.tan(Math.PI * Math.min(fc, sr * 0.45) / sr), k = 1 / q;
+      this.a1 = 1 / (1 + g * (g + k)); this.a2 = g * this.a1; this.a3 = g * this.a2;
+    };
+    SVF.prototype.bp = function (x) {
+      var v3 = x - this.ic2, v1 = this.a1 * this.ic1 + this.a2 * v3, v2 = this.ic2 + this.a2 * this.ic1 + this.a3 * v3;
+      this.ic1 = 2 * v1 - this.ic1; this.ic2 = 2 * v2 - this.ic2;
+      return v1;
+    };
+
     var seed = 22222;
     function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
 
@@ -76,7 +89,31 @@
         this.prevY = [0, 0]; this.dc = [0, 0]; this.dc2 = [0, 0];
         this.hpK = 1 - Math.exp(-2 * Math.PI * 55 / sr);
         this.knock = 0; this.tick = 0; this.nz = 0; this.mk = 0; this.spd = 1; this.spdS = 1;
-        this.decayP = Math.exp(-1 / (sr * 0.0045));
+        // Everything else in the cycle, timed from each cylinder's exhaust
+        // valve opening (EVO): combustion ~140 deg before it, the exhaust valve
+        // closes ~230 deg after, the intake gulps ~250 deg after and the
+        // intake valve closes ~450 deg after. Types: 0 exhaust, 1 intake,
+        // 2 valve closing, 3 combustion.
+        var ev = [];
+        for (i = 0; i < n; i++) {
+          var a0 = c.angles[i], m = c.cycle;
+          function at(d) { return ((a0 + d) % m + m) % m; }
+          ev.push([a0, 0, i]);
+          ev.push([at(c.rotary ? 140 : 250), 1, i]);
+          if (!c.rotary) { ev.push([at(230), 2, i]); ev.push([at(450), 2, i]); }
+          ev.push([at(-140), 3, i]);
+        }
+        this.ev = ev;
+        this.tin = new Float32Array(n).fill(-1); this.ain = new Float32Array(n);
+        this.inPipe = new Pipe(sr, c.inRunner, -0.3, 0.08);
+        this.inLp = [new OnePole(c.inHz, sr), new OnePole(c.inHz, sr)];
+        this.inNz = new SVF(c.inNoiseHz, 0.9, sr);
+        this.hiss = new SVF(3800, 2.2, sr);
+        this.valve = new SVF(c.valveHz, 9, sr); this.valve2 = new SVF(c.valveHz * 1.63, 11, sr);
+        this.block1 = new SVF(c.blockHz, 7, sr); this.block2 = new SVF(c.blockHz * 2.1, 9, sr);
+        this.kick = { v: 0, b: 0 };
+        this.inHp = 0; this.bayHp = 0;
+        this.accPh = 0; this.bPh = 0; this.inFlow = 0;
       }
       fire(i, load, cut, nos, rpm) {
         var c = this.c, b = c.banks[i];
@@ -130,6 +167,13 @@
           this.muf[1][0].set(c.mufHz * 1.04 * mk, sr); this.muf[1][1].set(c.mufHz * 1.04 * mk, sr);
         }
         var drive = c.drive * (1 + nos * 0.6), norm = 1 / Math.tanh(drive);
+        // intake gulps last longer than exhaust blowdown (a few ms)
+        var tauIn = Math.max(2, Math.min(70 / dphi, 0.0045 * sr)), invTauIn = 1 / tauIn, lifeIn = tauIn * 6;
+        var inLvl = c.inLevel * (0.35 + 0.65 * load);
+        var hissLvl = c.hissLvl * (1 - load) * Math.min(1, rpm / 900) * (rpm < 2500 ? 1 : 0.5);
+        var accHz = rpm / 60 * 2.7 * 12, accAmp = Math.min(1, rpm / 3000);
+        var bHz = rpm / 60 * c.blowerRatio * c.blowerLobes;
+        var bAmp = c.blowerLvl ? c.blowerLvl * (0.3 + 0.7 * load) * (c.blowerType === 'cent' ? Math.pow(Math.min(1, rpm / c.red), 2) * 1.6 : Math.min(1, rpm / 2500)) : 0;
         var x = c.xpipe, turbo = c.turbo ? Math.min(1, 0.45 + P.boost[0] * 0.02) : 0;
         for (var s = 0; s < L.length; s++) {
           var prev = this.phase;
@@ -137,9 +181,20 @@
           this.phase += dphi * this.spdS;
           var wrapped = this.phase >= c.cycle;
           if (wrapped) this.phase -= c.cycle;
-          for (i = 0; i < n; i++) {
-            var a = c.angles[i];
-            if (wrapped ? (a > prev || a <= this.phase) : (a > prev && a <= this.phase)) this.fire(i, load, cut, nos, rpm);
+          var kv = 0, kb = 0;
+          for (var e = 0; e < this.ev.length; e++) {
+            var E = this.ev[e], a = E[0];
+            if (!(wrapped ? (a > prev || a <= this.phase) : (a > prev && a <= this.phase))) continue;
+            i = E[2];
+            if (E[1] === 0) this.fire(i, load, cut, nos, rpm);
+            else if (E[1] === 1) {                       // intake gulp: bigger with the throttle open
+              this.ain[i] = (0.08 + 0.92 * Math.pow(load, 0.8)) * c.cylVar[i] * (0.9 + 0.2 * rnd());
+              this.tin[i] = 0;
+            } else if (E[1] === 2) {                     // valve seating: impact grows with rpm
+              kv += c.valveLvl * (0.35 + Math.min(1.2, rpm / 6500)) * (0.75 + 0.5 * rnd());
+            } else if (!cut) {                           // combustion thump through the block
+              kb += c.blockLvl * (0.25 + 0.75 * load) * (0.8 + 0.4 * rnd());
+            }
           }
           // turbulence: filtered noise (rasp rather than white hiss)
           this.nz += (rnd() * 2 - 1 - this.nz) * 0.35;
@@ -185,8 +240,38 @@
           this.dc2[0] += (r0 - this.dc2[0]) * this.hpK; this.dc2[1] += (r1 - this.dc2[1]) * this.hpK;
           r0 = Math.tanh((r0 - this.dc2[0]) * c.gain * drive) * norm;
           r1 = Math.tanh((r1 - this.dc2[1]) * c.gain * drive) * norm;
-          L[s] = r0 * c.panA + r1 * (1 - c.panA);
-          R[s] = r1 * c.panA + r0 * (1 - c.panA);
+          // ---- engine bay: intake, valvetrain, block, accessories, blower
+          var ins = 0, flow = 0;
+          for (i = 0; i < n; i++) {
+            var ti = this.tin[i];
+            if (ti >= 0) {
+              var ui = ti * invTauIn, pv = this.ain[i] * ui * Math.exp(1 - ui);
+              ins -= pv; flow += pv;
+              this.tin[i] = ti + 1 > lifeIn ? -1 : ti + 1;
+            }
+          }
+          this.inFlow += (flow - this.inFlow) * 0.01;
+          var ip = this.inPipe.tick(ins);
+          ip = this.inLp[1].tick(this.inLp[0].tick(ip));
+          this.inHp += (ip - this.inHp) * this.hpK;
+          var bay = (ip - this.inHp) * inLvl;
+          bay += this.inNz.bp(rnd() * 2 - 1) * this.inFlow * inLvl * c.inRoar;    // air rushing in
+          bay += this.hiss.bp(rnd() * 2 - 1) * hissLvl;                          // throttle plate hiss
+          bay += this.valve.bp(kv) * 6 + this.valve2.bp(kv) * 3;                // valve & lifter tick
+          bay += this.block1.bp(kb) * 5 + this.block2.bp(kb) * 3;               // combustion thump
+          this.accPh += accHz / sr; if (this.accPh > 1) this.accPh -= 1;
+          bay += Math.sin(2 * Math.PI * this.accPh) * c.accLvl * accAmp;        // alternator / belts
+          if (c.blowerLvl) {
+            this.bPh += bHz / sr; if (this.bPh > 1) this.bPh -= 1;
+            var ph = 2 * Math.PI * this.bPh, w;
+            if (c.blowerType === 'cent') w = Math.sin(ph) + 0.25 * Math.sin(2 * ph);
+            else w = Math.sin(ph) + 0.55 * Math.sin(2 * ph) + (c.blowerType === 'roots' ? 0.32 : 0.18) * Math.sin(3 * ph);
+            bay += w * (1 + this.nz * c.blowerGrit) * bAmp;
+          }
+          this.bayHp += (bay - this.bayHp) * 0.004;
+          bay -= this.bayHp;
+          L[s] = r0 * c.panA + r1 * (1 - c.panA) + bay;
+          R[s] = r1 * c.panA + r0 * (1 - c.panA) + bay;
         }
         return this.alive;
       }
@@ -289,6 +374,28 @@
       turbo: !!build.turbo, turboHz: 330,
       knock: Lc.diesel ? 0.35 : 0,
       panA: twin ? 0.68 : 0.5,
+      rotary: !!Lc.sharp, red: eng.red,
+      // intake: stock airbox (muffled) -> cold-air -> ported -> race manifold
+      inRunner: [0.42, 0.42, 0.36, 0.3][build.intake],
+      inHz: [650, 1000, 1500, 2400][build.intake] * (Lc.sharp ? 1.3 : 1),
+      inNoiseHz: [900, 1300, 1700, 2300][build.intake],
+      inRoar: [0.6, 0.8, 1.0, 1.25][build.intake],
+      inLevel: [0.3, 0.46, 0.64, 0.9][build.intake] * Math.sqrt(Math.min(2, eng.disp / 4)) *
+        (build.turbo ? 0.35 : build.blower ? 0.5 : 1),
+      hissLvl: build.turbo ? 0.004 : 0.008,
+      // valvetrain: hydraulic lifters barely tick, solid rollers chatter
+      valveHz: 4300 + (eng.cyl < 6 ? 600 : 0),
+      valveLvl: Lc.sharp ? 0 : [0.02, 0.022, 0.028, 0.04, 0.075][cam] * (Lc.diesel ? 1.5 : 1),
+      // combustion thump through the block (diesels clatter)
+      blockHz: Lc.diesel ? 1500 : 1100 - Math.min(300, eng.disp * 30),
+      blockLvl: Lc.diesel ? 0.2 : 0.05,
+      accLvl: 0.007,
+      // superchargers: whine at rotor speed x lobes, belt-driven from the crank
+      blowerType: build.blowerType || '',
+      blowerRatio: { roots: 1.7, screw: 2.2, cent: 3.4 }[build.blowerType] || 0,
+      blowerLobes: { roots: 6, screw: 5, cent: 11 }[build.blowerType] || 0,
+      blowerLvl: { roots: 0.2, screw: 0.14, cent: 0.12 }[build.blowerType] || 0,
+      blowerGrit: build.blowerType === 'roots' ? 0.9 : 0.4,
       // bigger engines move more gas per pulse and are louder
       gain: 1.15 * Math.pow(eng.disp / 3, 0.6) * EXH.makeup[ex]
     };

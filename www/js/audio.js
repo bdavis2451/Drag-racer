@@ -116,6 +116,8 @@
     var fi = S.fiType;
     return {
       exhaust: stage(parts.exhaust, ['stock', 'e1', 'e2', 'e3']),
+      intake: stage(parts.intake, ['stock', 'i1', 'i2', 'i3']),
+      blowerType: fi === 'roots' || fi === 'screw' || fi === 'cent' ? fi : '',
       headers: stage(parts.headers, ['stock', 'h1', 'h2', 'h3']),
       cam: stage(parts.cams, ['stock', 'c1', 'c2', 'c3', 'c4']),
       turbo: fi === 'turbo',
@@ -242,7 +244,7 @@
     // intake roar under load, nitrous hiss
     var fireHz = rpm / 60 * v.cyclesPerRev * P.amps.length;
     v.inf.frequency.setTargetAtTime(Math.min(5000, fireHz * 2.2 + 300), t, k);
-    v.ing.gain.setTargetAtTime(thr * (v.b.turbo ? 0.03 : 0.07) * (rpm / 6000) * (v.wk ? 0.5 : 1), t, k);
+    v.ing.gain.setTargetAtTime(v.wk ? 0 : thr * (v.b.turbo ? 0.03 : 0.07) * (rpm / 6000), t, k);
     if (v.wk) {
       v.ef.frequency.setTargetAtTime(3500, t, k);
       v.eg.gain.setTargetAtTime(nos * 0.1, t, k);
@@ -279,7 +281,7 @@
       v.twg.gain.setTargetAtTime(v.vol * 0.12 * sp * sp * (0.3 + 0.7 * thr), t, 0.08);
       // lifting with boost up: blow-off valve
       if (v.lastThr - thr > 0.5 && sp > 0.3 && t > (v.bovT || 0)) { A.burst(0.5, 2600, 0.7, v.vol * 0.07 * sp, 'highpass'); v.bovT = t + 0.8; }
-    } else if (fiType && fiType !== 'none') {
+    } else if (fiType && fiType !== 'none' && !v.wk) {
       v.wo.frequency.setTargetAtTime(500 + rpm * 0.4, t, 0.05);
       v.wg.gain.setTargetAtTime(v.vol * (0.012 + 0.028 * thr), t, 0.1);
     }
