@@ -75,7 +75,7 @@
         this.bankP = [0, 0];
         this.prevY = [0, 0]; this.dc = [0, 0]; this.dc2 = [0, 0];
         this.hpK = 1 - Math.exp(-2 * Math.PI * 55 / sr);
-        this.knock = 0; this.tick = 0; this.nz = 0;
+        this.knock = 0; this.tick = 0; this.nz = 0; this.mk = 0; this.spd = 1; this.spdS = 1;
         this.decayP = Math.exp(-1 / (sr * 0.0045));
       }
       fire(i, load, cut, nos, rpm) {
@@ -84,7 +84,14 @@
         // (a bank pulse just before) weakens the next one -> uneven V8 rhythm
         // every combustion differs a little (a few % cycle to cycle, more at idle)
         var cov = 1 + (rnd() - 0.5) * (0.05 + 0.07 * Math.max(0, 1 - rpm / 3000));
-        var a = (0.22 + 0.78 * load) * c.cylVar[i] * cov * (1 - 0.3 * Math.min(1, this.bankP[b]));
+        var a = (c.idleBase + (1 - c.idleBase) * load) * c.cylVar[i] * cov * (1 - 0.3 * Math.min(1, this.bankP[b]));
+        // overrun (off throttle at speed): lean, ragged combustion - firings
+        // vary a lot and some barely burn, which turns a buzz into a burble
+        var over = (1 - load) * Math.max(0, Math.min(1, (rpm - 1400) / 2200));
+        if (over > 0) {
+          a *= 1 - over * 0.55 * rnd();
+          if (rnd() < over * 0.18) a *= 0.25;
+        }
         this.bankP[b] += 0.7;
         // cam overlap: unsteady idle, occasional misfire
         var idle = Math.max(0, 1 - (rpm - 800) / 2500);
@@ -97,6 +104,10 @@
         this.pop[i] = popNow ? 1 : 0;
         if (popNow) a = 1.1 + rnd() * 0.9;
         this.amp[i] = a; this.t[i] = 0;
+        // each power stroke kicks the crank a little: firing timing wobbles,
+        // most at idle where the flywheel spins slowly
+        var jit = 0.006 + 0.03 * Math.max(0, 1 - (rpm - 700) / 2300) + over * 0.012;
+        this.spd = 1 + (rnd() - 0.5) * jit;
         if (c.knock) this.knock = Math.max(this.knock, c.knock * (0.3 + 0.7 * load));
       }
       process(inputs, outputs, P) {
@@ -111,11 +122,19 @@
         var tau = Math.max(1.5, Math.min(c.blowDeg / dphi, c.blowMs * 0.001 * sr)) * (1 + 0.7 * (1 - load));
         var invTau = 1 / tau, life = tau * 7;
         var noiseAmt = c.noise * (0.15 + 0.85 * load) * (1 + nos * 0.5);
+        // off throttle the exhaust note goes darker and softer
+        var mk = 0.55 + 0.45 * Math.min(1, load * 1.5 + Math.max(0, 1 - rpm / 1600));
+        if (Math.abs(mk - (this.mk || 0)) > 0.02) {
+          this.mk = mk;
+          this.muf[0][0].set(c.mufHz * mk, sr); this.muf[0][1].set(c.mufHz * mk, sr);
+          this.muf[1][0].set(c.mufHz * 1.04 * mk, sr); this.muf[1][1].set(c.mufHz * 1.04 * mk, sr);
+        }
         var drive = c.drive * (1 + nos * 0.6), norm = 1 / Math.tanh(drive);
         var x = c.xpipe, turbo = c.turbo ? Math.min(1, 0.45 + P.boost[0] * 0.02) : 0;
         for (var s = 0; s < L.length; s++) {
           var prev = this.phase;
-          this.phase += dphi;
+          this.spdS += (this.spd - this.spdS) * 0.002;
+          this.phase += dphi * this.spdS;
           var wrapped = this.phase >= c.cycle;
           if (wrapped) this.phase -= c.cycle;
           for (i = 0; i < n; i++) {
@@ -264,6 +283,8 @@
       noise: EXH.noise[ex] + cam * 0.04 + (Lc.sharp ? 0.15 : 0),
       drive: EXH.drive[ex] + (Lc.diesel ? 0.6 : 0),
       lope: [0, 0.12, 0.25, 0.4, 0.55][cam], misfire: [0, 0, 0.01, 0.03, 0.06][cam],
+      // idle pulse strength: free-flowing exhausts and big cams idle louder
+      idleBase: Math.min(0.45, [0.22, 0.25, 0.32, 0.35][ex] + cam * 0.025),
       crackle: Math.max(EXH.crackle[ex] * (build.turbo ? 0.4 : 1), build.antilag ? 0.7 : 0),
       turbo: !!build.turbo, turboHz: 330,
       knock: Lc.diesel ? 0.35 : 0,
