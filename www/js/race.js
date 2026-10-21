@@ -45,7 +45,7 @@
     var ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
     var segs = []; var bar = h('div', { class: 'bar' });
     for (var i = 0; i < 24; i++) { var sg = h('i'); segs.push(sg); bar.appendChild(sg); }
-    var gearEl = h('div', { class: 'gear' }, 'N'), readEl = h('div', { class: 'read' });
+    var gearEl = h('div', { class: 'gear' }, '1'), readEl = h('div', { class: 'read' });
     var shiftEl = h('div', { class: 'shiftlight' }, 'SHIFT');
     var msgEl = h('div', { class: 'msg' }), subEl = h('div', { class: 'sub' });
     var infoEl = h('div', { class: 'info' });
@@ -322,7 +322,7 @@
         segs[i].style.outline = (!sim.launched && Math.abs(i - lz) <= 1) ? '2px solid #fff' : '';
       }
       shiftEl.className = 'shiftlight' + (shiftOn ? ' on' : '');
-      if (sim.gear !== lastGear || !sim.launched) { gearEl.textContent = sim.launched ? String(sim.gear + 1) : 'N'; lastGear = sim.gear; }
+      if (sim.gear !== lastGear) { gearEl.textContent = String(sim.gear + 1); lastGear = sim.gear; }
       var mph = sim.v * 2.23694;
       readEl.innerHTML = UI.speed(mph) + '<br>' + Math.round(rpm) + ' RPM' + (Sx.fiType !== 'none' ? '<br>' + sim.boost.toFixed(1) + ' PSI' : '');
       // info top-left
