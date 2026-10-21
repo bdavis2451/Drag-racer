@@ -122,8 +122,8 @@
 
     function ensureVoices() {
       if (voices.length || !A.ctx) return;
-      you.voice = A.engine(S.eng, 1);
-      if (opp) opp.voice = A.engine(opp.S.eng, 0.3);
+      you.voice = A.engine(S.eng, 1, A.buildOf(S));
+      if (opp) opp.voice = A.engine(opp.S.eng, 0.3, A.buildOf(opp.S));
       voices = [you.voice, opp && opp.voice];
     }
 
@@ -262,7 +262,7 @@
       drawHud();
       handleEvents();
       racers.forEach(function (r) {
-        if (r.voice) A.update(r.voice, r.sim.rpm(), Math.max(r.sim.thr, r.burn * 0.9), r.sim.boost, Math.max(r.sim.slip * 3, r.burn * 1.4), r.S.fiType);
+        if (r.voice) A.update(r.voice, r.sim.rpm(), Math.max(r.sim.thr, r.burn * 0.9), r.sim.boost, Math.max(r.sim.slip * 3, r.burn * 1.4), r.S.fiType, { nos: r.sim.nosOn, cut: r.sim.cut });
       });
     }
 

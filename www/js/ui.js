@@ -466,7 +466,7 @@
     function run() {
       A.init(); A.resume();
       if (voice) return;
-      voice = A.engine(S.eng, 0.8);
+      voice = A.engine(S.eng, 0.8, A.buildOf(S));
       var t0 = performance.now();
       sweep.p = 0;
       (function tick() {
@@ -476,7 +476,7 @@
         A.update(voice, rpm, 1, DR.steadyBoost(S, rpm), 0, S.fiType);
         draw();
         if (t < 1) raf = requestAnimationFrame(tick);
-        else { A.update(voice, S.idle, 0, 0, 0, S.fiType); A.pop(); setTimeout(function () { A.stopAll(); voice = null; }, 400); }
+        else { A.update(voice, S.idle, 0, 0, 0, S.fiType); setTimeout(function () { A.stopAll(); voice = null; }, 900); }
       })();
     }
     UI.cleanup = function () { cancelAnimationFrame(raf); A.stopAll(); voice = null; };
