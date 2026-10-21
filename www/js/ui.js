@@ -466,7 +466,7 @@
     function run() {
       A.init(); A.resume();
       if (voice) return;
-      voice = A.engine(S.eng.cyl, 0.8);
+      voice = A.engine(S.eng, 0.8);
       var t0 = performance.now();
       sweep.p = 0;
       (function tick() {
