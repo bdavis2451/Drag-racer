@@ -119,7 +119,7 @@
     var fi = S.fiType;
     return {
       exhaust: stage(parts.exhaust, ['stock', 'e1', 'e2', 'e3']),
-      intake: stage(parts.intake, ['stock', 'i1', 'i2', 'i3']),
+      intake: Math.max(stage(parts.airfilter, ['stock', 'af1', 'af2', 'af3']), stage(parts.intake, ['stock', 'i1', 'i2', 'i3'])),
       blowerType: fi === 'roots' || fi === 'screw' || fi === 'cent' ? fi : '',
       headers: stage(parts.headers, ['stock', 'h1', 'h2', 'h3']),
       cam: stage(parts.cams, ['stock', 'c1', 'c2', 'c3', 'c4']),

@@ -329,8 +329,10 @@
       S.nosHp ? gst('W/ NITROUS', Math.round(dy.peakHp + S.nosHp) + ' hp', 'acc') : null,
       S.fiType !== 'none' ? gst('BOOST', S.boostSet.toFixed(1) + ' psi') : null,
       gst('LIMITER', S.red + ' rpm' + (S.ecu === 0 ? ' (stock)' : ''), S.red > S.mech ? 'bad' : ''),
-      gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst('BOTTOM END', S.beLimit + ' rpm', S.red > S.beLimit ? 'bad' : ''),
-      gst('SAFE POWER', Math.round(S.safeHp) + ' hp', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),
+      gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst('BOTTOM END', S.beLimit + ' rpm (' + DR.catName(S.beWeak).toLowerCase() + ')', S.red > S.beLimit ? 'bad' : ''),
+      gst('SAFE POWER', Math.round(S.safeHp) + ' hp (' + DR.catName(S.safeWeak).toLowerCase() + ')', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),
+      gst('FUEL', Math.round(S.fuelW / DR.HP) + ' hp (' + (S.fuelInj < S.fuelPump ? 'injectors' : S.fuelPump < S.fuelInj ? 'pump' : 'stock') + ')', S.fuelW < dy.peakHp * DR.HP * 1.001 ? 'bad' : ''),
+      S.fiType !== 'none' && !S.diesel ? gst('IGNITION', S.sparkPsi + ' psi', S.boostSet > S.sparkPsi ? 'bad' : '') : null,
       UI.riskBox(S));
     function delta(v, p0) { if (p0 == null) return ''; var d = Math.round(v - p0); return d ? ' (' + (d > 0 ? '+' : '') + d + ')' : ''; }
     draw();

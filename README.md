@@ -16,22 +16,34 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
   Head, cam, intake, header, exhaust and ECU upgrades unlock each engine's own headroom: power and
   the rpm of peak power climb together (a Fox 5.0 on stock E7 heads has far more to gain than an LS3).
   They include rotaries, a diesel, V10s and V12s.
-- **Deep, menu-based upgrades** across 31 categories:
-  - **Engine:** intake, exhaust, headers, cams, heads, internals, fuel system, fuel type
-    (pump/E85/race gas/methanol) and ECU.
-  - **Rev limits:** cams/springs and internals set how high the engine can safely spin.
-    The ECU sets the limiter: stock keeps the factory limit, a flash tune raises it to a
-    safe level, and a standalone makes it fully adjustable (over-revving floats the
-    valves and risks the engine).
+- **Deep, menu-based upgrades** across 49 categories in nine shop groups:
+  - **Bolt-ons:** air filter, intake manifold, throttle body, headers and exhaust.
+  - **Top end:** cylinder heads, cams and the valvetrain. Bigger cams float stock
+    valve springs sooner, so they need springs to match.
+  - **Bottom end:** pistons, connecting rods, crankshaft, block and oiling. The weakest
+    part sets the safe power and the oiling and rotating parts set the safe rpm. Boost
+    pistons (low compression) and NA pistons (high compression) trade power for knock
+    margin.
+  - **Fuel & spark:** injectors and fuel pump (the smaller one sets the power the fuel
+    system feeds), fuel type (pump/E85/race gas/methanol), ignition (stock coils misfire
+    at high boost or a big nitrous shot) and the ECU. Stock keeps the factory limiter, a
+    flash tune raises it to a safe level, a standalone makes it fully adjustable.
   - **Power adders:** turbos from 54 mm to twin 98 mm, roots, twin-screw and centrifugal
-    superchargers, intercoolers, 2-step and anti-lag, and nitrous up to a 650 shot with a
-    progressive controller.
+    superchargers, intercoolers, wastegates and boost control (a bolt-on turbo's internal
+    gate only holds 70% of its boost), blow-off valves (hold boost through a shift),
+    2-step and anti-lag, and nitrous up to a 650 shot with a progressive controller and a
+    bottle heater.
   - **Drivetrain:** transmissions (manual, automatic, Powerglide, DCT, sequential, Lenco),
-    clutches, low/medium/high stall torque converters, transbrakes, flywheels, driveshafts, diffs, and RWD/AWD conversions.
+    clutches, low/medium/high stall torque converters, transbrakes, flywheels, driveshafts,
+    diffs, rear ends and axles (factory axles snap under big launch torque), and RWD/AWD
+    conversions.
   - **Suspension:** springs, coilovers, adjustable shocks, traction bars, ladder bars,
-    4-links, wheelie bars and wings.
-  - **Tires & wheels:** street tires, drag radials, slicks, beadlocks and front runners.
-  - **Weight reduction:** up to a tube chassis.
+    4-links, tubular front ends, chassis stiffening up to a roll cage (a flexy unibody
+    wastes anti-squat), wheelie bars and wings.
+  - **Wheels & tires:** street tires, drag radials, slicks, beadlocks, front runners and
+    lightweight brakes.
+  - **Weight:** weight reduction up to a tube chassis, and battery relocation.
+  - The shop and install bay flag the parts holding a build back with a red "!".
 - **Tuning:** boost, launch RPM, launch throttle, throttle ramp, traction control,
   shift point, final drive, individual gear ratios, tire pressure, spring rates,
   shock rebound and compression, anti-squat, wheelie-bar height, and nitrous delay and ramp.
@@ -44,8 +56,9 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
     pressure and temperature effects (burnouts heat the tires).
   - **Chassis:** weight transfer through the suspension, real wheelie physics (too much
     and you flip), and wheelie bars that unload the tires when they hit.
-- **Parts can break:** too much power for the internals, boost past the fuel's knock limit,
-  or more torque than the gearbox can hold can blow up the engine or gearbox mid-race.
+- **Parts can break:** too much power for the bottom end, boost past the fuel's knock limit,
+  or more torque than the gearbox or axles can hold can blow up the engine, break the
+  gearbox or snap an axle mid-race.
   Repairs cost money.
 - **Game modes:**
   - **Career (Underground 2 style):** 5 stages of 1/4 mile, 1/8 mile, night street,

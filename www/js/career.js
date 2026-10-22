@@ -54,7 +54,7 @@
   // has its own unlocked level.
   DR.partLevel = function (price) { return !price ? 0 : price <= 700 ? 1 : price <= 1300 ? 2 : price <= 4500 ? 3 : price <= 12000 ? 4 : 5; };
   DR.groupOf = function (cat) {
-    for (var i = 0; i < DR.PART_GROUPS.length; i++) if (DR.PART_GROUPS[i].cats.indexOf(cat) >= 0) return DR.PART_GROUPS[i].id;
+    for (var i = 0; i < DR.PART_GROUPS.length; i++) if (DR.PART_GROUPS[i].cats.indexOf(cat) >= 0) return DR.PART_GROUPS[i].unlock || DR.PART_GROUPS[i].id;
     return 'engine';
   };
   DR.LEVEL_NAMES = ['Stock', 'Street', 'Sport', 'Pro', 'Race', 'Pro Mod'];
@@ -190,7 +190,7 @@
   G.unlockAll = function () {
     var c = C();
     c.stage = DR.STAGES.length - 1;
-    DR.PART_GROUPS.forEach(function (g) { c.perf[g.id] = 5; });
+    DR.PART_GROUPS.forEach(function (g) { c.perf[g.unlock || g.id] = 5; });
     DR.VISUAL.forEach(function (slot) { c.vis[slot.id] = 3; });
     Object.keys(DR.CARS).forEach(function (id) { c.cars[id] = 1; });
     G.state.money = Math.max(G.state.money, 5000000);
@@ -291,8 +291,7 @@
     }
     if (p[0] === 'perf') {
       if (p[1] === 'all') return 'All performance parts up to ' + DR.LEVEL_NAMES[+p[2]] + ' level';
-      var g = DR.PART_GROUPS.filter(function (x) { return x.id === p[1]; })[0];
-      return (g ? g.name : p[1]) + ' parts: ' + DR.LEVEL_NAMES[+p[2]] + ' level';
+      return (DR.UNLOCK_NAMES[p[1]] || p[1]) + ' parts: ' + DR.LEVEL_NAMES[+p[2]] + ' level';
     }
     if (p[0] === 'vis') {
       var s = DR.visSlot(p[1]);
@@ -305,7 +304,7 @@
     var c = C(), p = u.split(':');
     if (p[0] === 'car') c.cars[p[1]] = 1;
     else if (p[0] === 'perf') {
-      if (p[1] === 'all') DR.PART_GROUPS.forEach(function (g) { c.perf[g.id] = Math.max(c.perf[g.id] || 1, +p[2]); });
+      if (p[1] === 'all') DR.PART_GROUPS.forEach(function (g) { var u = g.unlock || g.id; c.perf[u] = Math.max(c.perf[u] || 1, +p[2]); });
       else c.perf[p[1]] = Math.max(c.perf[p[1]] || 1, +p[2]);
     } else if (p[0] === 'vis') c.vis[p[1]] = Math.max(c.vis[p[1]] || 0, +p[2]);
   }

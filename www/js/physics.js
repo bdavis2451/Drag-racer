@@ -32,6 +32,8 @@
     // past the mechanical limit the valves float: power falls away fast
     if (S.mech && rpm > S.mech) Tna *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
     var be = Math.min(boost, S.knock) + Math.max(0, boost - S.knock) * 0.35;
+    // past what the ignition can light, cylinders misfire
+    if (S.sparkPsi != null && boost > S.sparkPsi) be -= (boost - S.sparkPsi) * 0.7;
     var T = Tna * (1 + be / 14.7 * S.icEff);
     if (S.fiType === 'roots' || S.fiType === 'screw' || S.fiType === 'cent')
       T -= S.paras * S.Tpk * (boost / 14.7) * Math.min(1, rpm / S.ref) * 1.2;
@@ -111,9 +113,12 @@
     var car = DR.CARS[inst.carId];
     var engId = inst.engine || car.engine, e = DR.ENGINES[engId];
     var o = function (cat) { return DR.getOption(cat, inst); };
-    var intake = o('intake'), exh = o('exhaust'), hdr = o('headers'), cams = o('cams'), heads = o('heads');
-    var intl = o('internals'), fsys = o('fuelsys'), fuel = o('fueltype'), ecu = o('ecu');
-    var ic = o('ic'), launch = o('launch'), nos = o('nitrous'), nosc = o('nosctrl');
+    var air = o('airfilter'), intake = o('intake'), tb = o('throttle'), exh = o('exhaust'), hdr = o('headers');
+    var cams = o('cams'), heads = o('heads'), vtrain = o('valvetrain');
+    var pist = o('pistons'), rods = o('rods'), crank = o('crank'), block = o('block'), oil = o('oiling');
+    var inj = o('injectors'), pump = o('fuelpump'), fuel = o('fueltype'), ign = o('ignition'), ecu = o('ecu');
+    var ic = o('ic'), gate = o('wastegate'), bov = o('bov'), launch = o('launch'), nos = o('nitrous'), nosc = o('nosctrl'), nheat = o('nosheat');
+    var axle = o('rearend'), chas = o('chassis'), fsus = o('frontsusp'), brakes = o('brakes'), batt = o('battery');
     var trId = DR.partId('trans', inst), tr = DR.TRANS[trId];
     var clutch = o('clutch'), conv = o('converter'), fly = o('flywheel'), shaft = o('driveshaft'), diff = o('diff');
     var layout = o('layout'), springs = o('springs'), shocks = o('shocks'), rs = o('rearsusp'), bar = o('wheeliebar');
@@ -126,14 +131,16 @@
     // Power goes from stock towards bg x stock and the power peak from pk
     // towards bp; the torque peak follows. The curve's peak torque is then
     // solved so the NA-equivalent peak power lands on that target.
-    var B = clamp((intake.bw || 0) + (exh.bw || 0) + (hdr.bw || 0) + (cams.bw || 0) + (heads.bw || 0) + (ecu.bw || 0), 0, 1);
+    var B = clamp([air, intake, tb, exh, hdr, cams, heads, ecu].reduce(function (a, p) { return a + (p.bw || 0); }, 0), 0, 1);
     var bg = e.bg || 1.3, bp = e.bp || e.pk + 1000;
     var pkB = e.pk + (bp - e.pk) * B;
     var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
-    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, knock: fuel.knock };
+    // compression: high-comp pistons make more power but knock sooner
+    var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crKnock = -3 * (pist.cr || 0);
+    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, knock: fuel.knock + (e.diesel ? 0 : crKnock) };
     var S = engineCore(e, mods, 1);
     var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
-    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul) / shapePeak(S);
+    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) / shapePeak(S);
     S.breathing = B;
     S.carId = inst.carId; S.car = car; S.engId = engId; S.eng = e;
     S.name = car.name;
@@ -141,8 +148,10 @@
     // ---- rev limits: the hardware sets how high the engine can safely
     // spin (valvetrain & bottom end), the ECU sets where the limiter is
     S.factoryRed = e.red;
-    S.vtLimit = e.red + 400 + (cams.vt || 0);
-    S.beLimit = e.red + 800 + (intl.be || 0);
+    S.vtLimit = e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0);
+    S.beLimit = e.red + Math.min(pist.be, rods.be, crank.be, oil.be);
+    var beBy = [['pistons', pist.be], ['rods', rods.be], ['crank', crank.be], ['oiling', oil.be]].sort(function (a, b) { return a[1] - b[1]; });
+    S.beWeak = beBy[0][0];
     S.mech = Math.min(S.vtLimit, S.beLimit);
     var safeRed = Math.max(e.red, S.mech - 200);
     if (ecu.ecu >= 2) {
@@ -152,15 +161,30 @@
     else S.red = e.red;
     S.red = Math.round(S.red / 50) * 50;
     S.limit = S.red;
-    S.safeHp = e.safe * intl.safe;
+    // the bottom end is as strong as its weakest part
+    var holdBy = [['pistons', pist.hold], ['rods', rods.hold], ['crank', crank.hold], ['block', block.hold]].sort(function (a, b) { return a[1] - b[1]; });
+    S.safeHp = e.safe * holdBy[0][1];
+    S.safeWeak = holdBy[0][0];
     var stockFuelHp = Math.max(e.hp * 1.35 + 60, 300);
-    S.fuelW = (fsys.fuel || stockFuelHp) * (e.diesel ? 1 : fuel.ff) * DR.HP;
+    S.fuelInj = inj.fuel || stockFuelHp; S.fuelPump = pump.fuel || stockFuelHp;
+    S.fuelW = Math.min(S.fuelInj, S.fuelPump) * (e.diesel ? 1 : fuel.ff) * DR.HP;
+    // ignition: the factory coils light factory boost plus a few psi (about
+    // 10 psi on an engine that never had a turbo)
+    S.sparkPsi = e.diesel ? 99 : (e.fi ? e.fi.boost + 6 : 10) + (ign.spark || 0);
+    S.sparkNos = e.diesel ? 9999 : 150 + (ign.spark || 0) * 15;
+    // a bolt-on turbo's wastegate sets how much of its boost you can use
+    var fiU = DR.FI[fiId];
+    if (fiU.type === 'turbo' && fiU.price) { S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2; S.lag *= gate.spoolK; }
+    S.bovT = fiU.type === 'turbo' ? (fiU.price ? bov.bov : Math.max(0.3, bov.bov)) : 0.15;
     S.ecu = ecu.ecu;
     S.twostep = launch.twostep;
-    S.nosW = nos.nos * DR.HP;
-    S.nosHp = nos.nos;
+    S.nosHp = Math.round(nos.nos * (nos.nos ? nheat.nosk : 1));
+    S.nosRated = nos.nos;
+    S.nosCut = S.nosHp > S.sparkNos;
+    if (S.nosCut) S.nosHp = Math.round(S.sparkNos + (S.nosHp - S.sparkNos) * 0.4);   // spark blows out
+    S.nosW = S.nosHp * DR.HP;
     S.prog = nosc.prog && nos.nos > 0;
-    S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly;
+    S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly * (crank.ie || 1);
 
     // ---- drivetrain
     S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift; S.trMaxTq = tr.maxTq;
@@ -176,13 +200,16 @@
       S.slider = clutch.id === 'cl5';
     }
     S.dgrip = diff.dgrip;
+    // axles: the factory ones hold a margin over the factory engine
+    var stockTq = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.25;
+    S.axleTq = axle.axle || Math.max(500, stockTq * 1.8);
 
     // ---- tires & rotating mass
     S.tireId = tireId; S.tire = tire;
     S.r = tire.r;
     S.tslip = tire.slip; S.tfall = tire.fall;
     S.bead = !!wheels.bead;
-    var wheelMass = 22 + wheels.wm;
+    var wheelMass = 22 + wheels.wm + brakes.bkg * 0.5;
     var Iaxle = tire.m * tire.r * tire.r * 0.75 + wheelMass * Math.pow(tire.r * 0.55, 2) + 0.9 * shaft.shaft;
     S.Iw = Iaxle * (S.drive === 'AWD' ? 1.8 : 1);
 
@@ -191,9 +218,9 @@
     var chassis = (car.m - stockEng.w) * (1 - wt.wr);
     var chassisFront = (car.m * car.f - stockEng.w * share) * (1 - wt.wr);
     var fiW = (fiId !== 'none' && DR.FI[fiId].price) ? DR.FI[fiId].w : 0;
-    var extraRear = (tire.m - stockTire.m) + wheels.wm + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0);
-    var extraFront = ftires.fm + (S.drive === 'AWD' && car.drive !== 'AWD' ? 60 : 0) + fiW * share;
-    var extraMid = (S.drive === 'AWD' && car.drive !== 'AWD' ? 30 : 0);
+    var extraRear = (tire.m - stockTire.m) + wheels.wm + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batt.bat + Math.min(0, batt.batkg);
+    var extraFront = ftires.fm + (S.drive === 'AWD' && car.drive !== 'AWD' ? 60 : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batt.bat + Math.max(0, batt.batkg);
+    var extraMid = (S.drive === 'AWD' && car.drive !== 'AWD' ? 30 : 0) + chas.kg;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
     S.f = clamp(front / S.m, 0.2, 0.72);
@@ -223,7 +250,7 @@
     // rebound damping, bump stops and droop limits under a body that heaves
     // and pitches (see Sim.step). Ride height moves the CG, the drag and the
     // travel left before the bump stops.
-    S.as = rs.adjA ? T.antiSquat : rs.as;
+    S.as = (rs.adjA ? T.antiSquat : rs.as) * chas.stiff;
     var rideF = springs.adjS ? T.rideF / 1000 : -(springs.low || 0), rideR = springs.adjS ? T.rideR / 1000 : -(springs.low || 0);
     S.rideF = rideF; S.rideR = rideR;
     S.h += 0.9 * (rideF + rideR) / 2;
@@ -378,6 +405,44 @@
     return t;
   };
 
+  // The parts holding a build back right now: { cat: why }. The shop and
+  // install bay flag these.
+  DR.bottlenecks = function (S) {
+    var out = {}, r = S.risk, hp = S.peakHp + S.nosHp;
+    if (hp > S.safeHp) out[S.safeWeak] = 'Can\'t take ' + Math.round(hp) + ' hp';
+    if (S.red > S.vtLimit) out.valvetrain = 'Valves float past ' + S.vtLimit + ' rpm';
+    if (S.red > S.beLimit) out[S.beWeak] = out[S.beWeak] || 'Not safe past ' + S.beLimit + ' rpm';
+    if (S.fuelW < S.peakHp * DR.HP * 1.001) {
+      if (S.fuelInj <= S.fuelPump) out.injectors = 'Maxed out';
+      if (S.fuelPump <= S.fuelInj) out.fuelpump = 'Maxed out';
+    }
+    if ((S.fiType !== 'none' && S.boostSet > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
+    if (S.fiType !== 'none' && S.boostSet > S.knock + 0.5) out.fueltype = 'Knocking at ' + S.boostSet + ' psi';
+    if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) out.fi = 'Out of breath';
+    if (r.axle > 0.005) out.rearend = 'Axles may snap';
+    if (r.trans > 0.005) out.trans = 'Too much torque';
+    var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
+    if (S.clCap && tqNm > S.clCap) out.clutch = 'Slipping';
+    return out;
+  };
+
+  // Fits the cheapest axles and ignition a build needs (rival builds).
+  DR.fitSupport = function (inst) {
+    for (var pass = 0; pass < 2; pass++) {
+      var S = DR.buildSpec(inst), r = S.risk;
+      if (!r.axle && !(S.fiType !== 'none' && S.boostSet > S.sparkPsi) && !S.nosCut) break;
+      if (r.axle > 0) {
+        var ax = DR.PART_CATS.rearend.options, hit = r.hit;
+        for (var i = 1; i < ax.length; i++) if (ax[i].axle >= hit * 1.05 || i === ax.length - 1) { inst.parts.rearend = ax[i].id; break; }
+      }
+      if ((S.fiType !== 'none' && S.boostSet > S.sparkPsi) || S.nosCut) {
+        var ig = DR.PART_CATS.ignition.options, cur = DR.partId('ignition', inst);
+        for (var j = 0; j < ig.length; j++) if (ig[j].id === cur) { inst.parts.ignition = ig[Math.min(ig.length - 1, j + 1)].id; break; }
+      }
+    }
+    return inst;
+  };
+
   // ---------------------------------------------------------------- dyno
   DR.dyno = function (S) {
     var pts = [], peakHp = 0, peakTq = 0, peakHpRpm = 0;
@@ -400,16 +465,23 @@
   DR.riskOf = function (S) {
     var r = { engine: 0, trans: 0, notes: [] };
     var over = (S.peakHp + S.nosHp) / S.safeHp;
-    if (over > 1) { r.engine += Math.min(0.85, (over - 1) * 1.6); r.notes.push('Power is ' + Math.round(over * 100) + '% of what the internals can take'); }
+    var WEAK = { pistons: 'pistons', rods: 'connecting rods', crank: 'crankshaft', block: 'block', oiling: 'oiling' };
+    if (over > 1) { r.engine += Math.min(0.85, (over - 1) * 1.6); r.notes.push('Power is ' + Math.round(over * 100) + '% of what the ' + (WEAK[S.safeWeak] || 'internals') + ' can take'); }
     if (S.red > S.mech) {
       r.engine += Math.min(0.7, (S.red - S.mech) / 1000 * 0.8);
-      r.notes.push('Rev limiter is ' + (S.red - S.mech) + ' rpm past the ' + (S.vtLimit <= S.beLimit ? 'valvetrain (valve float)' : 'bottom end'));
+      r.notes.push('Rev limiter is ' + (S.red - S.mech) + ' rpm past the ' + (S.vtLimit <= S.beLimit ? 'valvetrain (valve float)' : WEAK[S.beWeak] || 'bottom end'));
     }
+    if (S.boostSet > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + S.boostSet + ' psi - misfiring past ' + S.sparkPsi + ' psi');
     if (S.boostSet > S.knock + 0.5) { r.engine += Math.min(0.6, (S.boostSet - S.knock) * 0.05); r.notes.push('Boost is past the knock limit of the fuel (' + S.knock + ' psi)'); }
-    if (S.fuelW < (S.peakHp * DR.HP) * 1.001) r.notes.push('Fuel system is maxed out - power is limited');
+    if (S.fuelW < (S.peakHp * DR.HP) * 1.001) r.notes.push((S.fuelInj < S.fuelPump ? 'Injectors are' : S.fuelPump < S.fuelInj ? 'Fuel pump is' : 'Fuel system is') + ' maxed out - power is limited');
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     if (tqNm > S.trMaxTq) { r.trans = Math.min(0.75, (tqNm / S.trMaxTq - 1) * 1.1); r.notes.push('Torque exceeds what the transmission can hold'); }
+    // axles take the launch hit: torque x converter multiplication
+    var hit = tqNm * (S.trType === 'auto' ? Math.min(1.4, S.TR / 1.5) : 1) * (S.slider ? 0.9 : 1);
+    r.axle = 0; r.hit = hit;
+    if (hit > S.axleTq) { r.axle = Math.min(0.7, (hit / S.axleTq - 1) * 1.2); r.notes.push('Launch torque is ' + Math.round(hit / S.axleTq * 100) + '% of what the axles hold'); }
+    if (S.nosCut) r.notes.push('Ignition blows out the spark on a ' + S.nosRated + ' shot - get a stronger ignition');
     if (S.clCap && tqNm > S.clCap) r.notes.push('Clutch will slip - consider an upgrade');
     r.engine = Math.min(0.9, r.engine);
     return r;
@@ -510,7 +582,7 @@
 
     // -------- failures scheduled for this run
     if (this.failAt && this.launched && !dead && this.t >= this.failAt) {
-      if (this.failType === 'trans') { this.broke = true; this.events.push('broke'); }
+      if (this.failType === 'trans' || this.failType === 'axle') { this.broke = true; this.brokeWhat = this.failType; this.events.push('broke'); }
       else { this.blown = true; this.events.push('blown'); }
       dead = true;
     }
@@ -550,7 +622,8 @@
         target = Math.max(target, S.boostSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
       }
       if (this.shifting && S.twostep === 2) target = Math.max(target, this.boost);
-      var tau = target > this.boost ? S.lag * Math.sqrt(S.spoolHi / Math.max(rpm, 1500)) : 0.15;
+      // throttle shut for a shift: a blow-off valve keeps the turbo spinning
+      var tau = target > this.boost ? S.lag * Math.sqrt(S.spoolHi / Math.max(rpm, 1500)) : (this.shifting || this.sinceShift < 0.2 ? (S.bovT || 0.15) : 0.15);
       this.boost += (target - this.boost) * Math.min(1, dt / tau);
     } else if (S.fiType !== 'none') {
       this.boost = steadyBoost(S, rpm) * thrB;

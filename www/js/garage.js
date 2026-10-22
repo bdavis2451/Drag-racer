@@ -46,9 +46,63 @@
       case 'heads':
         r(2, 7, 20, 10, M2); r(2, 7, 20, 1, M1); r(2, 16, 20, 1, M4);
         for (k = 0; k < 4; k++) { disc(5 + k * 5, 12, 2, BK); r(4 + k * 5, 11, 1, 1, ac); } break;
-      case 'internals':
+      case 'pistons':
         r(6, 3, 12, 7, M1); r(6, 5, 12, 1, M3); r(6, 7, 12, 1, M3); r(7, 10, 10, 3, M2);
         r(11, 11, 2, 9, ac); r(9, 19, 6, 3, ac); disc(12, 20, 1, M4); break;
+      case 'rods':
+        ring(12, 5, 4, 2, M2); r(11, 8, 3, 9, ac); r(11, 8, 1, 9, DR.shadeHex(ac, 0.3)); ring(12, 18, 5, 3, M2); r(6, 18, 13, 1, M4); r(7, 21, 2, 2, M3); r(15, 21, 2, 2, M3); break;
+      case 'crank':
+        r(1, 11, 4, 2, M2); r(19, 11, 4, 2, M2);
+        for (k = 0; k < 4; k++) { r(4 + k * 4, k % 2 ? 6 : 12, 3, 6, ac); r(4 + k * 4, k % 2 ? 6 : 12, 3, 1, DR.shadeHex(ac, 0.3)); r(7 + k * 4, 10, 1, 4, M1); }
+        disc(3, 12, 1, M3); break;
+      case 'block':
+        r(3, 6, 18, 13, M3); r(3, 6, 18, 1, M2); r(3, 18, 18, 1, M4);
+        for (k = 0; k < 4; k++) disc(6 + k * 4, 11, 1, BK);
+        r(5, 15, 14, 2, ac); r(1, 9, 2, 6, M4); r(21, 9, 2, 6, M4); break;
+      case 'oiling':
+        r(6, 4, 9, 13, M3); r(6, 4, 9, 1, M2); r(8, 1, 5, 3, ac); r(15, 8, 4, 2, M2); r(18, 8, 2, 8, M2);
+        x.fillStyle = '#d8a520'; x.fillRect(18, 17, 2, 2); x.fillRect(18, 20, 2, 2); r(4, 18, 13, 3, M4); break;
+      case 'valvetrain':
+        r(10, 1, 4, 3, M1); r(11, 4, 2, 16, M2);
+        for (k = 0; k < 5; k++) { r(7, 6 + k * 2, 10, 1, ac); }
+        r(6, 4, 12, 2, M1); r(8, 19, 8, 3, M3); r(7, 22, 10, 1, M4); break;
+      case 'airfilter':
+        for (k = 0; k < 7; k++) r(8 + k, 5 - (k > 3 ? 0 : 0), 1, 14, k % 2 ? ac : DR.shadeHex(ac, -0.35));
+        r(7, 4, 9, 1, M1); r(7, 19, 9, 1, M1); r(16, 9, 6, 6, M2); r(16, 9, 6, 1, M1); r(4, 8, 3, 8, M3); break;
+      case 'throttle':
+        disc(11, 12, 8, M2); disc(11, 12, 6, BK); r(6, 11, 11, 2, ac); r(10, 7, 2, 10, DR.shadeHex(ac, -0.3)); r(19, 6, 4, 4, M3); r(18, 8, 2, 2, M1); break;
+      case 'injectors':
+        for (k = 0; k < 3; k++) { r(4 + k * 7, 3, 4, 3, M2); r(4 + k * 7, 6, 4, 9, ac); r(4 + k * 7, 6, 1, 9, DR.shadeHex(ac, 0.3)); r(5 + k * 7, 15, 2, 3, M3); x.fillStyle = 'rgba(120,200,255,0.8)'; x.fillRect(5 + k * 7, 19, 1, 2); x.fillRect(6 + k * 7, 20, 1, 2); }
+        break;
+      case 'fuelpump':
+        r(7, 4, 10, 16, M3); r(7, 4, 10, 1, M2); r(8, 6, 8, 5, ac); r(10, 1, 4, 3, M2); r(10, 20, 4, 3, M2); r(17, 12, 5, 2, '#3a4a8a'); r(2, 12, 5, 2, '#3a4a8a'); break;
+      case 'ignition':
+        r(4, 3, 7, 13, M4); r(4, 3, 7, 1, M3); r(5, 5, 5, 3, ac); r(6, 16, 3, 3, M2); r(7, 19, 1, 3, M1);
+        r(14, 3, 5, 9, '#d8d8d8'); r(15, 12, 3, 4, M2); r(16, 16, 1, 4, M1);
+        x.fillStyle = '#ffe86a'; x.fillRect(18, 19, 2, 1); x.fillRect(19, 20, 2, 1); x.fillRect(17, 21, 2, 1); break;
+      case 'wastegate':
+        disc(12, 9, 6, M2); disc(12, 9, 3, ac); r(10, 15, 5, 6, M3); r(8, 20, 9, 2, M4); r(17, 12, 5, 2, M2); r(2, 16, 8, 2, M3); break;
+      case 'bov':
+        r(7, 6, 10, 11, M2); r(7, 6, 10, 1, M1); r(9, 3, 6, 3, ac); r(10, 17, 4, 4, M3); r(8, 21, 8, 2, M4);
+        x.fillStyle = 'rgba(220,230,240,.6)'; x.fillRect(18, 9, 2, 1); x.fillRect(20, 7, 2, 1); x.fillRect(19, 12, 3, 1); break;
+      case 'nosheat':
+        r(8, 6, 8, 16, ac); r(8, 6, 2, 16, DR.shadeHex(ac, 0.35)); r(9, 4, 6, 2, ac); r(10, 1, 4, 3, M2);
+        r(7, 10, 10, 6, '#3a3e47'); r(7, 12, 10, 1, '#ff5a2a'); r(7, 14, 10, 1, '#ff5a2a'); break;
+      case 'rearend':
+        disc(12, 12, 6, M3); disc(12, 12, 4, M2); disc(12, 12, 1, ac); r(1, 11, 5, 3, M2); r(18, 11, 5, 3, M2); r(0, 9, 2, 7, ac); r(22, 9, 2, 7, ac); break;
+      case 'chassis':
+        r(3, 4, 2, 17, ac); r(19, 4, 2, 17, ac); r(3, 4, 18, 2, ac); r(5, 12, 14, 2, DR.shadeHex(ac, -0.3));
+        for (k = 0; k < 7; k++) r(5 + k * 2, 6 + k, 2, 1, M2); r(2, 20, 20, 2, M3); break;
+      case 'frontsusp':
+        r(3, 10, 18, 3, ac); r(3, 10, 18, 1, DR.shadeHex(ac, 0.3)); r(5, 6, 2, 4, M2); r(17, 6, 2, 4, M2);
+        r(1, 13, 6, 2, M3); r(17, 13, 6, 2, M3); disc(2, 17, 2, M4); disc(21, 17, 2, M4); break;
+      case 'brakes':
+        disc(11, 12, 9, M2); ring(11, 12, 9, 7, M1); disc(11, 12, 3, M3);
+        for (k = 0; k < 6; k++) { var a4 = k * Math.PI / 3; r(Math.round(11 + Math.cos(a4) * 5), Math.round(12 + Math.sin(a4) * 5), 1, 1, M4); }
+        r(17, 4, 5, 9, ac); r(17, 4, 5, 1, DR.shadeHex(ac, 0.3)); break;
+      case 'battery':
+        r(3, 7, 18, 13, M4); r(3, 7, 18, 2, ac); r(5, 4, 4, 3, '#d23a3a'); r(15, 4, 4, 3, M2);
+        DR.pixText(x, '+', 6, 12, '#ff6060', 1); DR.pixText(x, '-', 16, 12, '#c4c8d0', 1); break;
       case 'fuelsys':
         r(9, 2, 6, 4, ac); r(10, 6, 4, 12, M2); r(10, 6, 1, 12, M1); r(11, 18, 2, 3, M3); r(7, 9, 10, 2, M3);
         x.fillStyle = 'rgba(120,200,255,0.8)'; x.fillRect(10, 21, 1, 2); x.fillRect(12, 21, 1, 2); x.fillRect(11, 22, 1, 2); break;
@@ -214,7 +268,7 @@
     var dmg = null;
     if (inst.damage) {
       var cost = G.repairCost(inst);
-      dmg = h('div', { class: 'gdmg warnbox' }, (inst.damage.engine ? 'ENGINE BLOWN! ' : 'TRANSMISSION BROKEN! ') + 'Repair: ' + DR.money(cost) + ' ',
+      dmg = h('div', { class: 'gdmg warnbox' }, (inst.damage.engine ? 'ENGINE BLOWN! ' : inst.damage.axle ? 'BROKEN AXLE! ' : 'TRANSMISSION BROKEN! ') + 'Repair: ' + DR.money(cost) + ' ',
         btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'));
     }
     var spare = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length;
@@ -240,7 +294,7 @@
       stat('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
       inst.best && inst.best.q ? stat('BEST 1/4', inst.best.q.toFixed(3) + 's', 'acc') : null,
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
-      S.risk.engine > 0.001 || S.risk.trans > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(Math.max(S.risk.engine, S.risk.trans) * 100) + '% failure risk') : null,
+      S.risk.engine > 0.001 || S.risk.trans > 0.001 || S.risk.axle > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(Math.max(S.risk.engine, S.risk.trans, S.risk.axle) * 100) + '% failure risk') : null,
       h('div', { class: 'gsmall acc' }, UI.careerLine().textContent.replace('Career: ', '')),
       h('div', { class: 'gsmall dim' }, 'Record ' + G.state.stats.wins + 'W / ' + (G.state.stats.races - G.state.stats.wins) + 'L'));
     var sel = h('div', { class: 'gsel' },
@@ -259,17 +313,19 @@
   function firstCat(group, inst) { return group.cats.filter(function (c) { return DR.partApplies(c, inst) || c === 'clutch' || c === 'converter'; })[0]; }
   UI.Shop = function (jump) {
     var inst = G.car();
-    if (jump) { shopCat = jump; shopGroup = DR.groupOf(jump) || shopGroup; DR.PART_GROUPS.forEach(function (g) { if (g.cats.indexOf(jump) >= 0) shopGroup = g.id; }); }
-    var group = groupById(shopGroup);
+    // jump only when arriving (a refresh replays the same argument)
+    if (jump && !UI.refreshing) { shopCat = jump; DR.PART_GROUPS.forEach(function (g) { if (g.cats.indexOf(jump) >= 0) shopGroup = g.id; }); }
+    var group = groupById(shopGroup), weak = DR.bottlenecks(G.spec(inst));
     if (group.cats.indexOf(shopCat) < 0) shopCat = firstCat(group, inst);
     var rail = h('div', { class: 'srail' }, DR.PART_GROUPS.map(function (g) {
-      return h('div', { class: 'srail-i' + (g.id === shopGroup ? ' on' : ''), onclick: function () { shopGroup = g.id; shopCat = firstCat(g, inst); UI.refresh(); } },
-        iconEl(g.cats[0] === 'engine' ? 'engine' : g.cats[0], 2, '', 26), h('span', {}, g.name));
+      var hot = g.cats.some(function (c) { return weak[c]; });
+      return h('div', { class: 'srail-i' + (g.id === shopGroup ? ' on' : '') + (hot ? ' hot' : ''), onclick: function () { shopGroup = g.id; shopCat = firstCat(g, inst); UI.refresh(); } },
+        iconEl(g.icon || g.cats[0], 2, '', 26), h('span', {}, g.name));
     }), h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Body); } }, iconEl('aero', 4, '', 26), h('span', {}, 'Body Kits')),
       h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Paint); } }, iconEl('fueltype', 1, '', 26), h('span', {}, 'Paint')));
     var chips = h('div', { class: 'schips' }, group.cats.map(function (c) {
       var fits = DR.partApplies(c, inst);
-      return btn(DR.catName(c), function () { shopCat = c; UI.refresh(); }, 'chip' + (c === shopCat ? ' on' : '') + (fits ? '' : ' nofit'));
+      return btn((weak[c] ? '! ' : '') + DR.catName(c), function () { shopCat = c; UI.refresh(); }, 'chip' + (c === shopCat ? ' on' : '') + (fits ? '' : ' nofit') + (weak[c] ? ' hot' : ''));
     }));
     var curId = DR.partId(shopCat, inst);
     var grid = h('div', { class: 'pgrid' });
@@ -286,7 +342,7 @@
           installed ? h('span', { class: 'tag g' }, 'ON CAR') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
-    var note = !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
+    var note = weak[shopCat] && DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, 'Holding your build back: ' + weak[shopCat] + '.') : !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
     return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts, shopCat); }, 'small blue')),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, storeHead(), chips, note, grid)));
   };
@@ -316,6 +372,14 @@
       fits ? UI.statsGrid([
         ['Power', deltaRow(S0.peakHp + S0.nosHp, S1.peakHp + S1.nosHp, ' hp')],
         S0.red !== S1.red ? ['Rev limiter', deltaRow(S0.red, S1.red, ' rpm')] : null,
+        Math.round(S0.safeHp) !== Math.round(S1.safeHp) ? ['Safe power', deltaRow(S0.safeHp, S1.safeHp, ' hp')] : null,
+        S0.beLimit !== S1.beLimit ? ['Bottom end', deltaRow(S0.beLimit, S1.beLimit, ' rpm')] : null,
+        S0.vtLimit !== S1.vtLimit ? ['Valve float', deltaRow(S0.vtLimit, S1.vtLimit, ' rpm')] : null,
+        Math.round(S0.fuelW) !== Math.round(S1.fuelW) ? ['Fuel feeds', deltaRow(S0.fuelW / DR.HP, S1.fuelW / DR.HP, ' hp')] : null,
+        S0.sparkPsi !== S1.sparkPsi && S1.fiType !== 'none' ? ['Ignition', deltaRow(S0.sparkPsi, S1.sparkPsi, ' psi')] : null,
+        S0.maxBoost !== S1.maxBoost && S0.fiId === S1.fiId ? ['Max boost', deltaRow(S0.maxBoost, S1.maxBoost, ' psi', 1)] : null,
+        Math.round(S0.axleTq) !== Math.round(S1.axleTq) ? ['Axles hold', deltaRow(S0.axleTq, S1.axleTq, ' Nm')] : null,
+        Math.abs(S0.f - S1.f) > 0.002 ? ['Front weight', deltaRow(S0.f * 100, S1.f * 100, '%', 1, true)] : null,
         ['Weight', deltaRow(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)],
         ['Price', DR.money(opt.price), 'good'],
         owned ? ['In your parts', '×' + owned, 'acc'] : null
@@ -323,7 +387,7 @@
       fits ? UI.riskBox(S1) : null,
       cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory.') : null,
       G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : null,
-      locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + groupById(DR.groupOf(cat)).name.toLowerCase() + ' parts unlock as you win career races.') :
+      locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock as you win career races.') :
         h('div', { class: 'row', style: { flexWrap: 'wrap' } },
           btn('Buy ' + DR.money(opt.price), function () { buy(false); }, 'go' + (G.canAfford(opt.price) ? '' : ' disabled')),
           fits && !installed && owned ? btn('Install Yours', function () {
@@ -421,8 +485,8 @@
   // ---------------------------------------------------------------- INSTALL BAY
   var bayCat = 'intake';
   UI.Parts = function (jump) {
-    var inst = G.car(), S = G.spec(inst);
-    if (jump) bayCat = jump;
+    var inst = G.car(), S = G.spec(inst), weak = DR.bottlenecks(S);
+    if (jump && !UI.refreshing) bayCat = jump;
     var cv = h('canvas', { class: 'preview' });
     DR.drawPreview(cv, inst);
     var list = h('div', { class: 'list bay-list' });
@@ -435,7 +499,8 @@
         var id = DR.partId(c, inst), opt = DR.getOption(c, inst, id), stock = id === DR.stockPart(c, inst);
         list.appendChild(h('div', { class: 'item' + (c === bayCat ? ' sel' : '') + (applies ? '' : ' locked'), onclick: function () { bayCat = c; UI.refresh(); } },
           iconEl(c, stock ? 0 : lvlOf(opt.price), id, 28),
-          h('div', { class: 'name' }, h('div', { class: 'pix small' }, DR.catName(c)), h('div', { class: stock ? 'dim' : 'acc' }, opt.name)),
+          h('div', { class: 'name' }, h('div', { class: 'pix small' }, DR.catName(c)), h('div', { class: stock ? 'dim' : 'acc' }, opt.name),
+            weak[c] && applies ? h('div', { class: 'bad', style: { fontSize: '14px' } }, '! ' + weak[c]) : null),
           spare ? h('span', { class: 'badge' }, String(spare)) : null));
       });
     });

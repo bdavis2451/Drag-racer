@@ -71,7 +71,8 @@
     UI.app.appendChild(fn(arg));
     UI.cur = { fn: fn, arg: arg };
   };
-  UI.refresh = function () { if (UI.cur) UI.show(UI.cur.fn, UI.cur.arg); };
+  // UI.refreshing: the screen is being redrawn in place, not opened
+  UI.refresh = function () { if (UI.cur) { UI.refreshing = true; try { UI.show(UI.cur.fn, UI.cur.arg); } finally { UI.refreshing = false; } } };
   // Back (Android back button, browser back, Escape): close the top dialog,
   // otherwise press the screen's own back / quit button.
   UI.goBack = function () {
@@ -129,6 +130,7 @@
     var r = S.risk, out = [];
     if (r.engine > 0.001) out.push(h('div', { class: 'warnbox' }, 'Engine failure risk: ' + Math.round(r.engine * 100) + '% per run'));
     if (r.trans > 0.001) out.push(h('div', { class: 'warnbox' }, 'Transmission failure risk: ' + Math.round(r.trans * 100) + '% per run'));
+    if (r.axle > 0.001) out.push(h('div', { class: 'warnbox' }, 'Broken axle risk: ' + Math.round(r.axle * 100) + '% per run'));
     r.notes.forEach(function (n) { out.push(h('div', { class: 'dim', style: { fontSize: '16px' } }, '• ' + n)); });
     return out;
   }
@@ -214,7 +216,8 @@
         h('h2', {}, 'Building'),
         p('Spend your winnings in the Parts Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod, colour-coded grey, green, blue, purple and orange) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
         p('Bought parts go into your inventory. Fit them in the garage under Install Parts: the old part comes off and goes back on the shelf, so you can swap it back, move it to another car or sell it for half price. Engine parts are built for one engine; swapping engines takes its parts off with it. Use the arrows in the garage to switch cars.'),
-        p('Watch the risk warnings: too much power for your internals, boost past your fuel\'s knock limit or more torque than the gearbox can hold can break parts mid-race. Repairs cost money!'),
+        p('Watch the risk warnings: too much power for your weakest bottom-end part (pistons, rods, crank or block), boost past your fuel\'s knock limit, or more torque than the gearbox or axles can hold can break parts mid-race. Repairs cost money!'),
+        p('Builds are only as strong as their weakest part. The shop marks the parts holding you back with a red "!": maxed-out injectors or pump, an ignition that misfires under boost, valve springs that float, axles that will snap.'),
         h('h2', {}, 'Tuning'),
         p('Grip comes from tire compound, tire pressure (each tire has an ideal psi), tire temperature and weight transfer. Ladder bars / 4-links, springs and shocks change how hard the car hits the tires. Gearing, launch RPM, boost, and throttle management decide whether you hook or go up in smoke.'),
         p('Use the Dyno to see your power curve. There are no predicted times: make a Test & Tune pass (free) to see whether a change helped.'),

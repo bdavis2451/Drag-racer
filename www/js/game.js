@@ -9,7 +9,7 @@
 
   G.defaults = function () {
     return {
-      v: 3, money: 6000, cars: [], active: null, uid: 1,
+      v: 4, money: 6000, cars: [], active: null, uid: 1,
       career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [], inv: [],
       settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, volume: 1 },
       started: false
@@ -20,9 +20,10 @@
     var s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
     var d = G.defaults();
-    if (!s || (s.v !== 1 && s.v !== 2 && s.v !== 3)) { G.state = d; return; }
+    if (!s || (s.v !== 1 && s.v !== 2 && s.v !== 3 && s.v !== 4)) { G.state = d; return; }
     if (s.v === 1) migrate1(s);
     if (s.v === 2) migrate2(s);
+    if (s.v === 3) migrate3(s);
     for (var k in d) if (s[k] == null) s[k] = d[k];
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
     G.state = s;
@@ -45,6 +46,21 @@
     s.career = G.careerDefaults();
     (s.cars || []).forEach(function (c) { if (!c.vis) c.vis = {}; s.career.cars[c.carId] = 1; });
     s.v = 3;
+  }
+
+  // v3 -> v4: the parts catalog was split up (intake, internals, fuel
+  // system, valvetrain...). Installed and spare parts become their new parts.
+  function migrate3(s) {
+    (s.cars || []).forEach(function (c) { c.parts = DR.expandParts(c.parts || {}); });
+    var inv = [];
+    (s.inv || []).forEach(function (it) {
+      var one = {}; one[it.cat] = it.id;
+      var ex = DR.expandParts(one), cats = Object.keys(ex);
+      if (cats.length === 1 && ex[it.cat] === it.id) { inv.push(it); return; }
+      cats.forEach(function (k, j) { inv.push({ uid: s.uid++, cat: k, id: ex[k], price: Math.round((it.price || 0) / cats.length / 10) * 10, eng: it.eng }); });
+    });
+    s.inv = inv;
+    s.v = 4;
   }
 
   G.save = function () { try { localStorage.setItem(KEY, JSON.stringify(G.state)); } catch (e) { /* storage unavailable */ } };
@@ -122,7 +138,8 @@
       if (item.cat === 'clutch' || item.cat === 'flywheel') return 'Needs a manual gearbox';
       if (item.cat === 'converter' || item.cat === 'transbrake') return 'Needs an automatic';
       if (item.cat === 'ic' || item.cat === 'launch') return 'Needs a turbo or supercharger';
-      if (item.cat === 'nosctrl') return 'Needs a nitrous kit';
+      if (item.cat === 'wastegate' || item.cat === 'bov') return 'Needs a turbo';
+      if (item.cat === 'nosctrl' || item.cat === 'nosheat') return 'Needs a nitrous kit';
       return 'Does not fit this car';
     }
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
@@ -148,7 +165,7 @@
     if (cat === 'trans') delete inst.tune.gears;
     if (cat === 'rtires') delete inst.tune.psi;
     if (cat === 'rearsusp') delete inst.tune.antiSquat;
-    if (cat === 'cams' || cat === 'internals' || cat === 'ecu') delete inst.tune.shiftRpm;
+    if (['cams', 'valvetrain', 'pistons', 'rods', 'crank', 'oiling', 'ecu'].indexOf(cat) >= 0) delete inst.tune.shiftRpm;
   }
   function setPart(inst, cat, id) {
     if (cat === 'engine') {
@@ -160,6 +177,7 @@
       stash(inst, cat);
       if (id === DR.stockPart(cat, inst)) delete inst.parts[cat]; else inst.parts[cat] = id;
       if (cat === 'trans' && inst.damage && inst.damage.trans) inst.damage = null;
+      if (cat === 'rearend' && inst.damage && inst.damage.axle) inst.damage = null;
     }
     clearTune(inst, cat);
   }
@@ -204,6 +222,7 @@
   G.repairCost = function (inst) {
     if (!inst.damage) return 0;
     if (inst.damage.engine) return Math.round((DR.ENGINES[inst.engine].price * 0.35 + 800) / 50) * 50;
+    if (inst.damage.axle) return 600;
     if (inst.damage.trans) return Math.round((DR.TRANS[DR.partId('trans', inst)].price * 0.4 + 500) / 50) * 50;
     return 0;
   };
@@ -216,8 +235,10 @@
   // ---------------------------------------------------------------- rivals
   // An opponent: car + parts + tune + driver skill.
   function O(name, carId, engine, parts, tune, skill, color) {
-    return { name: name, carId: carId, engine: engine || DR.CARS[carId].engine, parts: parts || {}, tune: tune || {}, skill: skill, color: color };
+    return DR.fitSupport({ name: name, carId: carId, engine: engine || DR.CARS[carId].engine, parts: DR.expandParts(parts || {}, true), tune: tune || {}, skill: skill, color: color });
   }
+  // Rival builds are written with the older combined parts (internals,
+  // fuelsys...); O() expands them and adds the support parts they need.
   var BOLT = { intake: 'i1', exhaust: 'e1' };
   function P(a, b) { var o = {}, k; for (k in a) o[k] = a[k]; for (k in b) o[k] = b[k]; return o; }
 

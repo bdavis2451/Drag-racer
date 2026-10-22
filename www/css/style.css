@@ -255,6 +255,9 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .schips .chip { flex: none; font-size: 8px; min-height: 28px; padding: 5px 8px; }
 .schips .chip.on { background: #c99a00; color: #111; }
 .schips .chip.nofit { opacity: .55; }
+.schips .chip.hot { box-shadow: inset 0 -3px 0 #ff4a3a; color: #ffb0a8; }
+.schips .chip.hot.on { color: #3a0800; }
+.srail-i.hot::after { content: ''; position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; background: #ff4a3a; box-shadow: 0 0 0 1px #111; }
 .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
 .pcard { --lc: #c4c8d0; background: #22242c; background: linear-gradient(180deg, color-mix(in srgb, var(--lc) 22%, #22242c), #22242c 55%); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px var(--lc); padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; position: relative; }
 .pcard:active { filter: brightness(1.2); }
