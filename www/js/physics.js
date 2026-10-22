@@ -415,6 +415,18 @@
     this.launchW = Math.max(this.we, this.S.idle * RPM2W * 1.3); this.firstLock = false;
   };
 
+  // Standing burnout in the box: the line lock holds the non-driven wheels
+  // and the drive tires are free to spin on the wet pad. AWD cars can't.
+  Sim.prototype.burnout = function (on) {
+    if (on && this.S.drive === 'AWD') return false;
+    if (!!on === !!this.burnMode) return !!on;
+    this.burnMode = !!on;
+    this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = 0.15; this.locked = false;
+    this.firstLock = !!on;            // no launch clutch feathering while doing a burnout
+    if (!on) { this.ww = 0; this.slip = 0; this.firstLock = false; }
+    return !!on;
+  };
+
   Sim.prototype.shiftUp = function () {
     var S = this.S;
     if (!this.launched || this.shifting || this.gear >= S.ratios.length - 1 || this.crashed || this.blown) return false;
@@ -451,23 +463,24 @@
     }
     // Foot-brake launch (automatic without a transbrake): the driver can only
     // feed in as much throttle as the brakes can hold against the converter.
-    if (!this.launched && S.trType === 'auto' && !S.tbrake) thrIn = Math.min(thrIn, this.holdThr);
+    var pre = !this.launched && !this.burnMode;     // sitting on the brakes / transbrake
+    if (pre && S.trType === 'auto' && !S.tbrake) thrIn = Math.min(thrIn, this.holdThr);
     this.thr += (thrIn - this.thr) * Math.min(1, dt / 0.04);
     var rpm = this.we * W2RPM;
 
     // -------- ignition cuts: rev limiter, 2-step, sequential shift cut
-    var limit = (!this.launched && S.twostep) ? S.tune.launchRpm : S.limit;
+    var limit = (pre && S.twostep) ? S.tune.launchRpm : S.limit;
     if (rpm > limit) this.cut = true; else if (rpm < limit - (this.launched ? 120 : 60)) this.cut = false;
     var seqCut = this.shifting && (S.trType === 'seq' || S.trType === 'dct');
     var firing = !this.cut && !seqCut;
-    if (this.cut && !this.launched && S.twostep && Math.random() < dt * 25) this.events.push('backfire');
+    if (this.cut && pre && S.twostep && Math.random() < dt * 25) this.events.push('backfire');
 
     // -------- boost
     var thrB = this.thr;
     if (S.fiType === 'turbo') {
       var sf = clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1);
       var target = S.boostSet * sf * thrB;
-      if (!this.launched && S.twostep && thrB > 0.5) {
+      if (pre && S.twostep && thrB > 0.5) {
         var build = clamp((S.tune.launchRpm - S.spoolLo * 0.5) / (S.spoolHi * 0.85 - S.spoolLo * 0.5), 0.15, 1);
         target = Math.max(target, S.boostSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
       }
@@ -540,13 +553,19 @@
     var loadSens = Math.pow(Math.max(N, 100) / this.N0, -0.08);
     var mu = S.tire.mu * this.track * S.pf * this.tempFactor() * S.dgrip * loadSens;
     if (this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
+    if (this.burnMode) mu *= 0.5;                  // water in the burnout box
     this.mu = mu;
 
     // -------- drivetrain
     var r = S.r, eta = S.eff;
     var Gr = S.ratios[this.gear] * S.fd;
     var Fx = 0, tf;
-    var held = !this.launched || this.finished && this.v < 0.5;
+    var held = pre || this.finished && this.v < 0.5;
+    if (this.burnMode) {
+      this.v = 0;
+      if (thrIn < 0.1) this.ww *= Math.exp(-dt * 4);           // on the brake between hits
+      if (thrIn < 0.25 && S.trType !== 'auto') this.clT = 0;   // clutch in until the revs come up
+    }
 
     if (held && !this.launched) {
       // On the line: brakes / transbrake hold the car
@@ -601,7 +620,7 @@
       var Tw = Ttur * Gr * eta;
       var kW = cap2 * dcs * TR * shiftScale * Gr * Gr * eta / Math.max(this.we, 1);
       // the foot brake takes a moment to release; a transbrake lets go instantly
-      if (!S.tbrake && this.t < 0.18) Tw -= S.brakeHold * (1 - this.t / 0.18);
+      if (!S.tbrake && this.launched && this.t < 0.18) Tw -= S.brakeHold * (1 - this.t / 0.18);
       this.ww += dt * (Tw - tf.F * r) / (S.Iw + dt * r * Math.max(tf.dF, 0) + dt * kW);
       if (this.ww < 0) this.ww = 0;
       tf = this.tireForce(this.ww, N, mu);
@@ -679,6 +698,12 @@
         this.F = Fx;
         var slipV = Math.max(0, this.ww * r - this.v);
         this.tireT += Math.abs(Fx) * slipV * dt * 3.5e-5 * (30 / S.tire.m);
+      }
+    } else if (this.burnMode) {
+      this.v = 0; this.a = 0; this.x = 0;
+      if (tf) {
+        this.slip = Math.max(0, tf.s); this.F = Fx;
+        this.tireT += Math.abs(Fx) * this.ww * r * dt * 1.1e-4 * (30 / S.tire.m);
       }
     } else if (!this.launched) { this.slip = 0; this.a = 0; }
     this.tireT -= (this.tireT - 25) * 0.006 * dt;

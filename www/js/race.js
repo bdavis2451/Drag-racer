@@ -106,12 +106,15 @@
       if (phase !== 'pre') return;
       phase = 'burnout'; phaseT = 0;
       stageBar.innerHTML = '';
-      setMsg('', 'HOLD GAS to spin the tires. Watch the temp meter, then hit STAGE.');
+      var lineLock = you.sim.burnout(true);
+      setMsg('', lineLock ? 'HOLD GAS to spin the tires. Watch the temp meter, then hit STAGE.'
+        : 'AWD: all four wheels are on the brakes. HOLD GAS to scrub some heat in, then hit STAGE.');
     }
     function startStaging() {
       if (phase !== 'pre' && phase !== 'burnout') return;
       phase = 'roll'; phaseT = 0; stageBar.innerHTML = ''; setMsg('', '');
-      if (opp) opp.sim.tireT = Math.max(opp.sim.tireT, opp.burnTarget);   // they did their burnout
+      you.sim.burnout(false); you.burn = 0;
+      if (opp) { opp.sim.burnout(false); opp.burn = 0; opp.sim.tireT = Math.max(opp.sim.tireT, opp.burnTarget); }   // they did their burnout
       actLabel.textContent = 'LAUNCH'; actBtn.classList.remove('go');
     }
 
@@ -154,9 +157,8 @@
         if (act) startStaging();
         var thr = playerThrottle();
         stepIdle(dt, thr);
-        var heat = DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr;
-        you.sim.tireT += heat * dt;
-        you.burn = thr;
+        if (you.sim.burnMode) you.burn = burnAmt(you);
+        else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.burn = thr * 0.5; }
         oppBurn(dt);
       } else if (phase === 'roll') {
         racers.forEach(function (r) { r.off = Math.min(0, BOX_X + (phaseT / 1.6) * -BOX_X); r.burn = 0; });
@@ -175,10 +177,12 @@
       if (!opp) return;
       opp.burnT += dt;
       if (opp.sim.tireT < opp.burnTarget && opp.burnT < 6) {
-        opp.sim.tireT += DR.clamp(opp.S.peakHp / 250, 0.7, 2.6) * 8 * dt; opp.burn = 1;
-        stepSim(opp, dt, 1, true);
-      } else { opp.burn = 0; stepSim(opp, dt, 0, true); }
+        if (opp.sim.burnout(true)) { stepSim(opp, dt, opp.burnT < 0.4 ? opp.burnT / 0.4 : 0.85, true); opp.burn = burnAmt(opp); }
+        else { opp.sim.tireT += DR.clamp(opp.S.peakHp / 250, 0.7, 2.6) * 8 * dt; opp.burn = 1; stepSim(opp, dt, 1, true); }
+      } else { opp.sim.burnout(false); opp.burn = 0; stepSim(opp, dt, 0, true); }
     }
+    // 0..1 how hard the drive tires are really spinning in the box
+    function burnAmt(r) { return DR.clamp((r.sim.ww * r.S.r - 2) / 10, 0, 1); }
 
     function stepIdle(dt, thr) {
       stepSim(you, dt, thr, true);
@@ -302,7 +306,7 @@
       var gx = frontPx - (spr.padL + spr.lenPx - spr.wheelR.x);
       var pitch = sim.th + sim.phi * 1.6;
       // wheel rotation
-      var spin = r.burn ? 60 : sim.ww;
+      var spin = r.burn && !sim.burnMode ? 60 : sim.ww;
       r.wheelAng += spin * dt;
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
       DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock });
