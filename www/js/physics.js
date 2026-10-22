@@ -11,10 +11,17 @@
   DR.clamp = clamp;
 
   // ---------------------------------------------------------------- torque curve
+  // Normalised NA torque: a rounded rise to the torque peak, easing off so
+  // power peaks at pkRpm; past the power peak POWER (not torque) falls away
+  // gently, like a real engine running out of breath towards the limiter.
   function shape(S, rpm) {
     var x = rpm / S.tqRpm, s;
     if (x < 1) s = 1 - S.lowK * (1 - x) * (1 - x);
-    else s = 1 - S.highK * (x - 1) * (x - 1);
+    else if (rpm <= S.pkRpm) s = 1 - S.highK * (x - 1) * (x - 1);
+    else {
+      var xp = S.pkRpm / S.tqRpm, sp = 1 - S.highK * (xp - 1) * (xp - 1), d = (rpm - S.pkRpm) / S.pkRpm;
+      s = sp * S.pkRpm * (1 - 1.8 * d * d) / rpm;
+    }
     return Math.max(0.05, s);
   }
 
@@ -28,7 +35,9 @@
     var T = Tna * (1 + be / 14.7 * S.icEff);
     if (S.fiType === 'roots' || S.fiType === 'screw' || S.fiType === 'cent')
       T -= S.paras * S.Tpk * (boost / 14.7) * Math.min(1, rpm / S.ref) * 1.2;
-    if (S.flowW) T = Math.min(T, Math.max(Tna, S.flowW / w));
+    // past what the compressor can flow it chokes and heats the charge:
+    // power falls away instead of holding flat (small turbos run out up top)
+    if (S.flowW && T * w > S.flowW) T = Math.max(Tna, S.flowW * (1 - 0.12 * Math.min(1, (T * w - S.flowW) / S.flowW)) / w);
     T = Math.min(T, S.fuelW / w);
     return T;
   }
@@ -42,6 +51,12 @@
   }
   DR.steadyBoost = steadyBoost;
 
+  // Peak of the NA torque curve's power for Tpk = 1 (calibration helper).
+  function shapePeak(S) {
+    var best = 0, top = Math.max(S.red, S.pkRpm + 800);
+    for (var rpm = 1000; rpm <= top; rpm += 50) { var p = shape(S, rpm) * rpm * RPM2W; if (p > best) best = p; }
+    return best;
+  }
   // Cache of NA peak torque per engine so stock engines hit their rated hp.
   var tpkCache = {};
   function stockTpk(engId) {
@@ -61,10 +76,10 @@
   // Engine fundamentals shared by the spec builder and the stock calibration.
   function engineCore(e, mods, Tpk) {
     var S = {};
-    var shift = mods.rpm || 0;
-    S.tqRpm = e.tq + shift * 0.7;
-    S.pkRpm = e.pk + shift;
-    S.ref = e.red + shift;                 // where the engine "breathes" to (sets blower curves)
+    // breathing upgrades move the torque and power peaks (buildSpec)
+    S.tqRpm = mods.tq || e.tq;
+    S.pkRpm = mods.pk || e.pk;
+    S.ref = Math.max(e.red, S.pkRpm + 300);  // where the engine "breathes" to (sets blower curves)
     S.red = e.red;                         // rev limiter; buildSpec sets the real one
     S.idle = e.diesel ? 700 : 900;
     S.lowK = 0.45 + (mods.low || 0);
@@ -107,15 +122,19 @@
     var fiId = DR.partId('fi', inst);
     var stockEng = DR.ENGINES[car.engine];
 
-    var tqMul = intake.tq * exh.tq * hdr.tq * cams.tq * heads.tq * ecu.tq * (e.diesel ? 1 : fuel.fmul);
-    var mods = {
-      rpm: (intake.rpm || 0) + (exh.rpm || 0) + (hdr.rpm || 0) + (cams.rpm || 0) + (heads.rpm || 0),
-      low: (intake.low || 0) + (cams.low || 0),
-      fi: fiId,
-      ic: ic.ic || 0,
-      knock: fuel.knock
-    };
-    var S = engineCore(e, mods, stockTpk(engId) * tqMul);
+    // ---- breathing: B (0..1) of the engine's race headroom is unlocked.
+    // Power goes from stock towards bg x stock and the power peak from pk
+    // towards bp; the torque peak follows. The curve's peak torque is then
+    // solved so the NA-equivalent peak power lands on that target.
+    var B = clamp((intake.bw || 0) + (exh.bw || 0) + (hdr.bw || 0) + (cams.bw || 0) + (heads.bw || 0) + (ecu.bw || 0), 0, 1);
+    var bg = e.bg || 1.3, bp = e.bp || e.pk + 1000;
+    var pkB = e.pk + (bp - e.pk) * B;
+    var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
+    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, knock: fuel.knock };
+    var S = engineCore(e, mods, 1);
+    var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
+    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul) / shapePeak(S);
+    S.breathing = B;
     S.carId = inst.carId; S.car = car; S.engId = engId; S.eng = e;
     S.name = car.name;
     S.diesel = !!e.diesel;

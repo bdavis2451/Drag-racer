@@ -33,36 +33,41 @@
   // Engine-part prices are multiplied by DR.enginePriceMul(engine).
   var C = {};
 
+  // Breathing parts. bw: the share of the engine's race-build headroom the
+  // part unlocks (all race parts together = 1, see ENGINES bg / bp): power
+  // AND the rpm of peak power move up together, and how much depends on the
+  // engine (a Fox 5.0 on stock E7 heads gains far more than an LS3).
+  // low: lost low-end torque (big cams).
   C.intake = { name: 'Intake', engineScaled: true, options: [
-    opt('stock', 'Stock Intake', 0, { tq: 1 }),
-    opt('i1', 'Cold Air Intake', 300, { tq: 1.03 }, '+3% power.'),
-    opt('i2', 'Ported Intake + Big Throttle Body', 900, { tq: 1.05, rpm: 100 }, '+5% power, breathes better up top.'),
-    opt('i3', 'Race Intake Manifold', 2200, { tq: 1.08, rpm: 300, low: 0.04 }, '+8% power, moves the powerband higher.')
+    opt('stock', 'Stock Intake', 0, { bw: 0 }),
+    opt('i1', 'Cold Air Intake', 300, { bw: 0.03 }, 'A small breathing gain.'),
+    opt('i2', 'Ported Intake + Big Throttle Body', 900, { bw: 0.07 }, 'More airflow, mostly up top.'),
+    opt('i3', 'Race Intake Manifold', 2200, { bw: 0.12, low: 0.04 }, 'Big runners for high rpm. Gives up a little low-end.')
   ]};
   C.exhaust = { name: 'Exhaust', engineScaled: true, options: [
-    opt('stock', 'Stock Exhaust', 0, { tq: 1 }),
-    opt('e1', 'Cat-Back Exhaust', 600, { tq: 1.03 }, '+3% power.'),
-    opt('e2', 'Straight Pipes', 1100, { tq: 1.05 }, '+5% power. Loud.'),
-    opt('e3', 'Race Exhaust (Open)', 2000, { tq: 1.07, rpm: 150 }, '+7% power.')
+    opt('stock', 'Stock Exhaust', 0, { bw: 0 }),
+    opt('e1', 'Cat-Back Exhaust', 600, { bw: 0.02 }, 'A little less back pressure.'),
+    opt('e2', 'Straight Pipes', 1100, { bw: 0.05 }, 'Less back pressure. Loud.'),
+    opt('e3', 'Race Exhaust (Open)', 2000, { bw: 0.07 }, 'No restriction at all.')
   ]};
   C.headers = { name: 'Headers / Manifold', engineScaled: true, options: [
-    opt('stock', 'Stock Manifolds', 0, { tq: 1 }),
-    opt('h1', 'Shorty Headers', 500, { tq: 1.02 }, '+2% power.'),
-    opt('h2', 'Long-Tube Headers', 1200, { tq: 1.05, rpm: 100 }, '+5% power.'),
-    opt('h3', 'Race Headers / Tubular Manifold', 2400, { tq: 1.07, rpm: 250 }, '+7% power, more top end.')
+    opt('stock', 'Stock Manifolds', 0, { bw: 0 }),
+    opt('h1', 'Shorty Headers', 500, { bw: 0.03 }, 'Better than cast manifolds.'),
+    opt('h2', 'Long-Tube Headers', 1200, { bw: 0.07 }, 'Real gains through the mid-range and up top.'),
+    opt('h3', 'Race Headers / Tubular Manifold', 2400, { bw: 0.10 }, 'Big primaries for high rpm and big boost.')
   ]};
   C.cams = { name: 'Camshafts & Valvetrain', engineScaled: true, options: [
-    opt('stock', 'Stock Cams', 0, { tq: 1 }),
-    opt('c1', 'Stage 1 Cams', 800, { tq: 1.04, rpm: 250, vt: 300, low: 0.05 }, '+4% power. Valvetrain safe to +300 rpm.'),
-    opt('c2', 'Stage 2 Cams + Springs', 1600, { tq: 1.08, rpm: 500, vt: 600, low: 0.12 }, '+8% power, power peak +500 rpm. Valvetrain safe to +600 rpm. Loses some low-end.'),
-    opt('c3', 'Stage 3 Race Cams', 3000, { tq: 1.13, rpm: 900, vt: 1000, low: 0.22 }, '+13% power, power peak +900 rpm. Valvetrain safe to +1000 rpm. Lumpy idle.'),
-    opt('c4', 'Solid Roller Race Valvetrain', 6000, { tq: 1.17, rpm: 1300, vt: 1500, low: 0.30 }, '+17% power, power peak +1300 rpm. Valvetrain safe to +1500 rpm. All top end.')
+    opt('stock', 'Stock Cams', 0, { bw: 0 }),
+    opt('c1', 'Stage 1 Cams', 800, { bw: 0.08, vt: 300, low: 0.05 }, 'Mild cams. Valvetrain safe to +300 rpm.'),
+    opt('c2', 'Stage 2 Cams + Springs', 1600, { bw: 0.16, vt: 600, low: 0.12 }, 'Moves the power peak up. Valvetrain safe to +600 rpm. Loses some low-end.'),
+    opt('c3', 'Stage 3 Race Cams', 3000, { bw: 0.25, vt: 1000, low: 0.22 }, 'Big power up top. Valvetrain safe to +1000 rpm. Lumpy idle.'),
+    opt('c4', 'Solid Roller Race Valvetrain', 6000, { bw: 0.33, vt: 1500, low: 0.30 }, 'All top end. Valvetrain safe to +1500 rpm.')
   ]};
   C.heads = { name: 'Cylinder Heads', engineScaled: true, options: [
-    opt('stock', 'Stock Heads', 0, { tq: 1 }),
-    opt('hd1', 'Ported & Polished Heads', 1200, { tq: 1.05 }, '+5% power.'),
-    opt('hd2', 'CNC Ported Heads', 3000, { tq: 1.09, rpm: 150 }, '+9% power.'),
-    opt('hd3', 'Billet Race Heads', 8000, { tq: 1.14, rpm: 300 }, '+14% power.')
+    opt('stock', 'Stock Heads', 0, { bw: 0 }),
+    opt('hd1', 'Ported & Polished Heads', 1200, { bw: 0.10 }, 'Cleaned-up ports flow more air.'),
+    opt('hd2', 'CNC Ported Heads', 3000, { bw: 0.20 }, 'Big airflow gains; the peak moves up.'),
+    opt('hd3', 'Billet Race Heads', 8000, { bw: 0.30 }, 'Race-port heads. The biggest single gain.')
   ]};
   C.internals = { name: 'Engine Internals', engineScaled: true, options: [
     opt('stock', 'Stock Internals', 0, { safe: 1 }),
@@ -85,10 +90,10 @@
     opt('meth', 'Methanol', 2500, { knock: 50, fmul: 1.06, ff: 0.62 }, '+6% power, 50 psi safe. Needs 60% more fuel flow.')
   ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
-    opt('stock', 'Stock ECU', 0, { tq: 1, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
-    opt('ecu1', 'Street Tune Flash', 600, { tq: 1.04, ecu: 1 }, '+4% power. Raises the rev limiter as far as your engine parts safely allow (up to +800 rpm).'),
-    opt('ecu2', 'Standalone ECU', 2000, { tq: 1.06, ecu: 2 }, '+6% power. Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
-    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { tq: 1.08, ecu: 3 }, '+8% power. Adjustable rev limiter and traction control.')
+    opt('stock', 'Stock ECU', 0, { bw: 0, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
+    opt('ecu1', 'Street Tune Flash', 600, { bw: 0.03, ecu: 1 }, 'Better fuel and timing. Raises the rev limiter as far as your engine parts safely allow (up to +800 rpm).'),
+    opt('ecu2', 'Standalone ECU', 2000, { bw: 0.05, ecu: 2 }, 'Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
+    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { bw: 0.08, ecu: 3 }, 'Adjustable rev limiter and traction control.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
     opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler; aftermarket kits have none.'),

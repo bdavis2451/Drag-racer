@@ -14,46 +14,57 @@ DR.EIGHTH = 201.168;        // m
 DR.FT = 0.3048;
 
 // ---------------------------------------------------------------------------
-// ENGINES
+// ENGINES (stock figures are the published ratings of the real engine)
 //  hp      : stock crank hp (with stock forced induction if any)
 //  pk      : rpm of peak hp        tq : rpm of peak torque
 //  red     : redline rpm           w  : weight kg
 //  safe    : hp the stock internals survive
 //  fi      : factory forced induction {part, boost}
+//  bg, bp  : the race-build potential. With every breathing upgrade
+//            (intake, exhaust, headers, cams, heads, ECU) the engine makes
+//            bg x its stock power (naturally aspirated equivalent) with the
+//            power peak at bp rpm. Engines with poor stock heads and cams
+//            (Fox 5.0, 454, 350) have far more to gain than modern ones.
 // ---------------------------------------------------------------------------
 DR.ENGINES = {
-  i3_10:   { name: '1.0L I3',                   cyl: 3,  disp: 1.0, hp: 75,   pk: 6000, tq: 3800, red: 6500, w: 75,  price: 800,   safe: 160 },
-  f4_16:   { name: '1.6L Air-Cooled Flat-4',    cyl: 4,  disp: 1.6, hp: 60,   pk: 4600, tq: 2800, red: 5200, w: 95,  price: 900,   safe: 150 },
-  i4_15:   { name: '1.5L I4 SOHC',              cyl: 4,  disp: 1.5, hp: 110,  pk: 6200, tq: 4500, red: 7000, w: 105, price: 1200,  safe: 220 },
-  i4_16:   { name: '1.6L I4 DOHC',              cyl: 4,  disp: 1.6, hp: 128,  pk: 6600, tq: 5200, red: 7600, w: 110, price: 2000,  safe: 240 },
-  i4_18:   { name: '1.8L I4 DOHC Hi-Cam',       cyl: 4,  disp: 1.8, hp: 195,  pk: 7800, tq: 6200, red: 8400, w: 120, price: 4500,  safe: 330 },
-  i4_20:   { name: '2.0L I4 DOHC',              cyl: 4,  disp: 2.0, hp: 160,  pk: 6500, tq: 4500, red: 7200, w: 125, price: 2500,  safe: 300 },
-  i4_20hi: { name: '2.0L I4 High-Rev',          cyl: 4,  disp: 2.0, hp: 240,  pk: 8300, tq: 7000, red: 9000, w: 120, price: 9000,  safe: 380 },
-  i4_20t:  { name: '2.0L I4 Turbo',             cyl: 4,  disp: 2.0, hp: 250,  pk: 6000, tq: 3800, red: 7000, w: 135, price: 7000,  safe: 480, fi: { part: 'fi_oem_s', boost: 15 } },
-  f4_25t:  { name: '2.5L Boxer-4 Turbo',        cyl: 4,  disp: 2.5, hp: 300,  pk: 6000, tq: 4000, red: 6800, w: 150, price: 8000,  safe: 460, fi: { part: 'fi_oem_s', boost: 15 } },
-  rot_13t: { name: '1.3L Twin-Rotor Turbo',     cyl: 2,  disp: 1.3, hp: 255,  pk: 6500, tq: 5000, red: 8500, w: 110, price: 9000,  safe: 420, fi: { part: 'fi_oem_tt', boost: 10 }, rotary: true },
-  i6_30:   { name: '3.0L I6 DOHC',              cyl: 6,  disp: 3.0, hp: 225,  pk: 6200, tq: 4300, red: 7000, w: 175, price: 4000,  safe: 450 },
-  i6_32:   { name: '3.2L I6 High-Rev',          cyl: 6,  disp: 3.2, hp: 333,  pk: 7900, tq: 4900, red: 8000, w: 180, price: 9000,  safe: 480 },
-  i6_26tt: { name: '2.6L I6 Twin-Turbo',        cyl: 6,  disp: 2.6, hp: 280,  pk: 6800, tq: 4400, red: 8000, w: 220, price: 14000, safe: 650, fi: { part: 'fi_oem_tt', boost: 12 } },
-  i6_30tt: { name: '3.0L I6 Twin-Turbo',        cyl: 6,  disp: 3.0, hp: 320,  pk: 5600, tq: 4000, red: 6800, w: 230, price: 15000, safe: 900, fi: { part: 'fi_oem_tt', boost: 12 } },
-  v6_35:   { name: '3.5L V6 DOHC',              cyl: 6,  disp: 3.5, hp: 287,  pk: 6200, tq: 4800, red: 7000, w: 165, price: 3500,  safe: 420 },
-  v6_38t:  { name: '3.8L V6 Turbo',             cyl: 6,  disp: 3.8, hp: 245,  pk: 4400, tq: 3000, red: 5500, w: 200, price: 6000,  safe: 520, fi: { part: 'fi_oem_s', boost: 15 } },
-  v6_38tt: { name: '3.8L V6 Twin-Turbo',        cyl: 6,  disp: 3.8, hp: 565,  pk: 6800, tq: 3300, red: 7100, w: 210, price: 28000, safe: 900, fi: { part: 'fi_oem_tt', boost: 14 } },
-  f6_38tt: { name: '3.8L Flat-6 Twin-Turbo',    cyl: 6,  disp: 3.8, hp: 540,  pk: 6500, tq: 2500, red: 7200, w: 205, price: 30000, safe: 850, fi: { part: 'fi_oem_tt', boost: 15 } },
-  v8_46sc: { name: '4.6L V8 Supercharged',      cyl: 8,  disp: 4.6, hp: 390,  pk: 6000, tq: 3500, red: 6500, w: 215, price: 9000,  safe: 650, fi: { part: 'fi_oem_sc', boost: 12 } },
-  v8_50:   { name: '5.0L V8 Pushrod',           cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 6250, w: 205, price: 2500,  safe: 450 },
-  v8_50d:  { name: '5.0L V8 DOHC',              cyl: 8,  disp: 5.0, hp: 460,  pk: 7000, tq: 4600, red: 7500, w: 200, price: 9000,  safe: 750 },
-  v8_57:   { name: '5.7L V8 Pushrod',           cyl: 8,  disp: 5.7, hp: 345,  pk: 5600, tq: 4000, red: 6200, w: 190, price: 5000,  safe: 650 },
-  v8_62:   { name: '6.2L V8 Pushrod',           cyl: 8,  disp: 6.2, hp: 430,  pk: 5900, tq: 4600, red: 6600, w: 192, price: 8000,  safe: 750 },
-  v8_70:   { name: '7.0L V8 Pushrod',           cyl: 8,  disp: 7.0, hp: 505,  pk: 6300, tq: 4800, red: 7100, w: 200, price: 15000, safe: 800 },
-  v8_62sc: { name: '6.2L Hemi Supercharged',    cyl: 8,  disp: 6.2, hp: 707,  pk: 6000, tq: 4800, red: 6200, w: 260, price: 25000, safe: 1000, fi: { part: 'fi_oem_sc', boost: 11.6 } },
-  hemi_70: { name: '7.0L Hemi V8 (426)',        cyl: 8,  disp: 7.0, hp: 425,  pk: 5000, tq: 4000, red: 6000, w: 290, price: 20000, safe: 800 },
-  bb_74:   { name: '7.4L Big Block V8 (454)',   cyl: 8,  disp: 7.4, hp: 390,  pk: 4800, tq: 3400, red: 5800, w: 300, price: 7000,  safe: 750 },
-  bb_94:   { name: '9.4L Big Block V8 (572)',   cyl: 8,  disp: 9.4, hp: 720,  pk: 6000, tq: 4500, red: 6800, w: 290, price: 25000, safe: 1400 },
-  v10_84:  { name: '8.4L V10',                  cyl: 10, disp: 8.4, hp: 645,  pk: 6200, tq: 5000, red: 6400, w: 230, price: 28000, safe: 900 },
-  v12_65:  { name: '6.5L V12',                  cyl: 12, disp: 6.5, hp: 770,  pk: 8500, tq: 6750, red: 8900, w: 235, price: 60000, safe: 1000 },
-  d_67:    { name: '6.7L I6 Turbo Diesel',      cyl: 6,  disp: 6.7, hp: 400,  pk: 2800, tq: 1600, red: 3400, w: 510, price: 15000, safe: 1200, fi: { part: 'fi_oem_vgt', boost: 30 }, diesel: true },
-  v8_86b:  { name: '8.6L Billet Pro Mod V8',    cyl: 8,  disp: 8.6, hp: 1250, pk: 7800, tq: 6500, red: 8800, w: 220, price: 95000, safe: 4500 }
+  i3_10:   { name: '1.0L I3 (Geo G10)',           cyl: 3,  disp: 1.0, hp: 55,   pk: 5700, tq: 3300, red: 6000, w: 70,  price: 800,   safe: 120, bg: 1.85, bp: 7600 },
+  f4_16:   { name: '1.6L Air-Cooled Flat-4',      cyl: 4,  disp: 1.6, hp: 60,   pk: 4400, tq: 2800, red: 5000, w: 95,  price: 900,   safe: 150, bg: 1.9,  bp: 6600 },
+  i4_15:   { name: '1.5L I4 SOHC (D15)',          cyl: 4,  disp: 1.5, hp: 102,  pk: 5900, tq: 4900, red: 6800, w: 100, price: 1200,  safe: 220, bg: 1.5,  bp: 8000 },
+  i4_16:   { name: '1.6L I4 DOHC (4A-GE)',        cyl: 4,  disp: 1.6, hp: 128,  pk: 6600, tq: 5200, red: 7600, w: 110, price: 2000,  safe: 240, bg: 1.5,  bp: 8800 },
+  i4_18:   { name: '1.8L I4 DOHC VTEC (B18C)',    cyl: 4,  disp: 1.8, hp: 195,  pk: 8000, tq: 7500, red: 8400, w: 120, price: 4500,  safe: 330, bg: 1.25, bp: 9200 },
+  i4_20:   { name: '2.0L I4 DOHC',                cyl: 4,  disp: 2.0, hp: 150,  pk: 6500, tq: 5500, red: 6800, w: 125, price: 2500,  safe: 300, bg: 1.45, bp: 8000 },
+  i4_20hi: { name: '2.0L I4 High-Rev (F20C)',     cyl: 4,  disp: 2.0, hp: 240,  pk: 8300, tq: 7500, red: 9000, w: 120, price: 9000,  safe: 380, bg: 1.2,  bp: 9500 },
+  i4_20t:  { name: '2.0L I4 Turbo',               cyl: 4,  disp: 2.0, hp: 250,  pk: 6000, tq: 3800, red: 7000, w: 135, price: 7000,  safe: 480, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.3, bp: 7800 },
+  i4_20tev:{ name: '2.0L I4 Turbo (4G63)',        cyl: 4,  disp: 2.0, hp: 286,  pk: 6500, tq: 3500, red: 7000, w: 140, price: 9000,  safe: 520, fi: { part: 'fi_oem_s', boost: 19 }, bg: 1.3, bp: 8000 },
+  f4_25t:  { name: '2.5L Boxer-4 Turbo (EJ257)',  cyl: 4,  disp: 2.5, hp: 300,  pk: 6000, tq: 4000, red: 7000, w: 150, price: 8000,  safe: 460, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.25, bp: 7600 },
+  rot_13t: { name: '1.3L Twin-Rotor Turbo (13B)', cyl: 2,  disp: 1.3, hp: 255,  pk: 6500, tq: 5000, red: 8000, w: 110, price: 9000,  safe: 420, fi: { part: 'fi_oem_tt', boost: 10 }, rotary: true, bg: 1.35, bp: 9000 },
+  i6_30:   { name: '3.0L I6 DOHC (2JZ-GE)',       cyl: 6,  disp: 3.0, hp: 220,  pk: 5800, tq: 4800, red: 6800, w: 175, price: 4000,  safe: 450, bg: 1.4,  bp: 7500 },
+  i6_32:   { name: '3.2L I6 High-Rev (S54)',      cyl: 6,  disp: 3.2, hp: 333,  pk: 7900, tq: 4900, red: 8000, w: 180, price: 9000,  safe: 480, bg: 1.2,  bp: 8600 },
+  i6_26tt: { name: '2.6L I6 Twin-Turbo (RB26)',   cyl: 6,  disp: 2.6, hp: 280,  pk: 6800, tq: 4400, red: 8000, w: 220, price: 14000, safe: 650, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.3, bp: 8500 },
+  i6_30tt: { name: '3.0L I6 Twin-Turbo (2JZ-GTE)', cyl: 6, disp: 3.0, hp: 320,  pk: 5600, tq: 4000, red: 6800, w: 230, price: 15000, safe: 900, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.35, bp: 7800 },
+  v6_35:   { name: '3.5L V6 DOHC (VQ35)',         cyl: 6,  disp: 3.5, hp: 287,  pk: 6200, tq: 4800, red: 6600, w: 165, price: 3500,  safe: 420, bg: 1.3,  bp: 7600 },
+  v6_38t:  { name: '3.8L V6 Turbo (Buick)',       cyl: 6,  disp: 3.8, hp: 245,  pk: 4400, tq: 3000, red: 5500, w: 200, price: 6000,  safe: 520, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.45, bp: 6200 },
+  v6_38gnx:{ name: '3.8L V6 Turbo (GNX)',         cyl: 6,  disp: 3.8, hp: 276,  pk: 4400, tq: 3000, red: 5500, w: 205, price: 8500,  safe: 560, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.45, bp: 6200 },
+  v6_38tt: { name: '3.8L V6 Twin-Turbo (VR38)',   cyl: 6,  disp: 3.8, hp: 565,  pk: 6800, tq: 3300, red: 7100, w: 210, price: 28000, safe: 900, fi: { part: 'fi_oem_tt', boost: 14 }, bg: 1.2, bp: 7600 },
+  f6_38tt: { name: '3.8L Flat-6 Twin-Turbo',      cyl: 6,  disp: 3.8, hp: 530,  pk: 6250, tq: 2500, red: 7000, w: 205, price: 30000, safe: 850, fi: { part: 'fi_oem_tt', boost: 15 }, bg: 1.2, bp: 7800 },
+  v8_46sc: { name: '4.6L V8 Supercharged (Terminator)', cyl: 8, disp: 4.6, hp: 390, pk: 6000, tq: 3500, red: 6500, w: 215, price: 9000, safe: 650, fi: { part: 'fi_oem_sc', boost: 12 }, bg: 1.3, bp: 7200 },
+  v8_305:  { name: '5.0L Small Block 305',        cyl: 8,  disp: 5.0, hp: 180,  pk: 4000, tq: 2400, red: 5200, w: 210, price: 1800,  safe: 380, bg: 2.2,  bp: 6800 },
+  v8_50:   { name: '5.0L V8 Pushrod (302 HO)',    cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 6250, w: 205, price: 2500,  safe: 450, bg: 2.2,  bp: 7200 },
+  v8_50d:  { name: '5.0L V8 DOHC (Coyote)',       cyl: 8,  disp: 5.0, hp: 460,  pk: 7000, tq: 4600, red: 7500, w: 200, price: 9000,  safe: 750, bg: 1.3,  bp: 8000 },
+  v8_283:  { name: '4.6L Small Block 283',        cyl: 8,  disp: 4.6, hp: 220,  pk: 4800, tq: 3000, red: 5500, w: 240, price: 2500,  safe: 400, bg: 2.0,  bp: 6800 },
+  sbc350:  { name: '5.7L Small Block 350',        cyl: 8,  disp: 5.7, hp: 295,  pk: 4800, tq: 3200, red: 5800, w: 250, price: 3000,  safe: 520, bg: 2.0,  bp: 7000 },
+  v8_57tbi:{ name: '5.7L V8 TBI (truck)',         cyl: 8,  disp: 5.7, hp: 210,  pk: 4000, tq: 2800, red: 5000, w: 250, price: 2000,  safe: 450, bg: 2.4,  bp: 6800 },
+  v8_57:   { name: '5.7L V8 Pushrod (LS1)',       cyl: 8,  disp: 5.7, hp: 345,  pk: 5600, tq: 4000, red: 6200, w: 190, price: 5000,  safe: 650, bg: 1.55, bp: 7200 },
+  v8_62:   { name: '6.2L V8 Pushrod (LS3)',       cyl: 8,  disp: 6.2, hp: 430,  pk: 5900, tq: 4600, red: 6600, w: 192, price: 8000,  safe: 750, bg: 1.45, bp: 7200 },
+  v8_70:   { name: '7.0L V8 Pushrod (LS7)',       cyl: 8,  disp: 7.0, hp: 505,  pk: 6300, tq: 4800, red: 7100, w: 200, price: 15000, safe: 800, bg: 1.3,  bp: 7400 },
+  v8_62sc: { name: '6.2L Hemi Supercharged',      cyl: 8,  disp: 6.2, hp: 707,  pk: 6000, tq: 4800, red: 6200, w: 260, price: 25000, safe: 1000, fi: { part: 'fi_oem_sc', boost: 11.6 }, bg: 1.25, bp: 7000 },
+  hemi_70: { name: '7.0L Hemi V8 (426)',          cyl: 8,  disp: 7.0, hp: 425,  pk: 5000, tq: 4000, red: 6000, w: 290, price: 20000, safe: 800, bg: 1.5,  bp: 7000 },
+  bb_74:   { name: '7.4L Big Block V8 (454 LS6)', cyl: 8,  disp: 7.4, hp: 450,  pk: 5600, tq: 3600, red: 6000, w: 300, price: 7000,  safe: 750, bg: 1.6,  bp: 6800 },
+  bb_94:   { name: '9.4L Big Block V8 (572)',     cyl: 8,  disp: 9.4, hp: 720,  pk: 6000, tq: 4500, red: 6800, w: 290, price: 25000, safe: 1400, bg: 1.25, bp: 7200 },
+  v10_84:  { name: '8.4L V10',                    cyl: 10, disp: 8.4, hp: 645,  pk: 6200, tq: 5000, red: 6400, w: 230, price: 28000, safe: 900, bg: 1.25, bp: 7200 },
+  v12_65:  { name: '6.5L V12',                    cyl: 12, disp: 6.5, hp: 770,  pk: 8500, tq: 6750, red: 8700, w: 235, price: 60000, safe: 1000, bg: 1.12, bp: 9000 },
+  d_67:    { name: '6.7L I6 Turbo Diesel (Cummins)', cyl: 6, disp: 6.7, hp: 400, pk: 2800, tq: 1600, red: 3200, w: 510, price: 15000, safe: 1200, fi: { part: 'fi_oem_vgt', boost: 30 }, diesel: true, bg: 1.4, bp: 3600 },
+  v8_86b:  { name: '8.6L Billet Pro Mod V8',      cyl: 8,  disp: 8.6, hp: 1250, pk: 7800, tq: 6500, red: 8800, w: 220, price: 95000, safe: 4500, bg: 1.15, bp: 8600 }
 };
 
 // ---------------------------------------------------------------------------
@@ -131,7 +142,7 @@ DR.CARS = {
   silvia:   { name: 'Nissan Silvia S14', alias: 'Sylph S14', real: '1995-98 Nissan Silvia / 240SX coupe (S14)',            cat: 'JDM',     body: 'coupe',    price: 12000, m: 1260, f: 0.56, wb: 2.53, len: 4.5, h: 0.50, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i4_20t', trans: 'm5_light', fd: 4.08, tire: 'st_225', diff: 'lsd',  col: '#9aa8b4' },
   s2k:      { name: 'Honda S2000', alias: 'Ess-2K Roadster', real: '1999-03 Honda S2000 (AP1)',      cat: 'JDM',     body: 'roadster', price: 21000, m: 1270, f: 0.50, wb: 2.40, len: 4.1, h: 0.46, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i4_20hi',trans: 'm6',       fd: 4.10, tire: 'st_225', diff: 'lsd',  col: '#ffcc00' },
   rx7:      { name: 'Mazda RX-7 FD', alias: 'Rotor-7 FD', real: '1992-02 Mazda RX-7 (FD3S)',           cat: 'JDM',     body: 'sports',   price: 30000, m: 1300, f: 0.50, wb: 2.43, len: 4.3, h: 0.45, cda: 0.58, drive: 'RWD', ep: 'front', engine: 'rot_13t',trans: 'm5_light', fd: 4.10, tire: 'st_255', diff: 'lsd',  col: '#d01818' },
-  evo:      { name: 'Mitsubishi Lancer Evo IX', alias: 'Lancer EV-9', real: '2005-07 Mitsubishi Lancer Evolution IX sedan',          cat: 'JDM',     body: 'sedan',    price: 24000, m: 1440, f: 0.60, wb: 2.63, len: 4.5, h: 0.52, cda: 0.70, drive: 'AWD', ep: 'front', engine: 'i4_20t', trans: 'm5_hd',    fd: 4.53, tire: 'st_225', diff: 'lsd',  col: '#f6f6f6' },
+  evo:      { name: 'Mitsubishi Lancer Evo IX', alias: 'Lancer EV-9', real: '2005-07 Mitsubishi Lancer Evolution IX sedan',          cat: 'JDM',     body: 'sedan',    price: 24000, m: 1440, f: 0.60, wb: 2.63, len: 4.5, h: 0.52, cda: 0.70, drive: 'AWD', ep: 'front', engine: 'i4_20tev', trans: 'm5_hd',    fd: 4.53, tire: 'st_225', diff: 'lsd',  col: '#f6f6f6' },
   sti:      { name: 'Subaru WRX STI', alias: 'Pleiades WRX', real: '2004-07 Subaru Impreza WRX STI sedan (GD)',         cat: 'JDM',     body: 'sedan',    price: 22000, m: 1480, f: 0.59, wb: 2.63, len: 4.5, h: 0.53, cda: 0.70, drive: 'AWD', ep: 'front', engine: 'f4_25t', trans: 'm6',       fd: 3.90, tire: 'st_225', diff: 'lsd',  col: '#1d3f9a' },
   r34:      { name: 'Nissan Skyline GT-R R34', alias: 'Skyrunner R34', real: '1999-02 Nissan Skyline GT-R coupe (BNR34)',        cat: 'JDM',     body: 'coupe',    price: 55000, m: 1560, f: 0.56, wb: 2.66, len: 4.6, h: 0.50, cda: 0.66, drive: 'AWD', ep: 'front', engine: 'i6_26tt',trans: 'm6',       fd: 4.11, tire: 'st_255', diff: 'lsd',  col: '#3757a8' },
   z35:      { name: 'Nissan 350Z', alias: 'Zed 350', real: '2003-08 Nissan 350Z coupe (Z33)',              cat: 'JDM',     body: 'sports',   price: 14000, m: 1500, f: 0.53, wb: 2.65, len: 4.3, h: 0.49, cda: 0.64, drive: 'RWD', ep: 'front', engine: 'v6_35',  trans: 'm6',       fd: 3.54, tire: 'st_255', diff: 'lsd',  col: '#b0b0b0' },
@@ -141,14 +152,14 @@ DR.CARS = {
   p911:     { name: 'Porsche 911 Turbo', alias: 'Stuttgart 9T Turbo', real: '2007-12 Porsche 911 Turbo coupe (997)',   cat: 'Euro',    body: 'sports',   price: 140000,m: 1640, f: 0.39, wb: 2.45, len: 4.5, h: 0.47, cda: 0.62, drive: 'AWD', ep: 'rear',  engine: 'f6_38tt',trans: 'dct7',     fd: 3.44, tire: 'st_305', diff: 'lsd',  col: '#e0d6b8' },
   lambo:    { name: 'Lamborghini Aventador SVJ', alias: 'Toro V12 Ultimo', real: '2018-22 Lamborghini Aventador SVJ',      cat: 'Euro',    body: 'supercar', price: 380000,m: 1650, f: 0.43, wb: 2.70, len: 4.8, h: 0.44, cda: 0.65, drive: 'AWD', ep: 'mid',   engine: 'v12_65', trans: 'dct7',     fd: 3.20, tire: 'st_305', diff: 'lsd',  col: '#7cd320' },
   // ---- Classic muscle -------------------------------------------------------
-  nova:     { name: 'Chevrolet Nova SS \'68', alias: 'Nova-Star \'68', real: '1968-72 Chevrolet Nova SS coupe',       cat: 'Classic', body: 'muscle',   price: 16000, m: 1500, f: 0.55, wb: 2.82, len: 4.8, h: 0.54, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'a4',       fd: 3.08, tire: 'st_225', diff: 'open', col: '#2e7d4f' },
+  nova:     { name: 'Chevrolet Nova SS \'68', alias: 'Nova-Star \'68', real: '1968-72 Chevrolet Nova SS coupe',       cat: 'Classic', body: 'muscle',   price: 16000, m: 1500, f: 0.55, wb: 2.82, len: 4.8, h: 0.54, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'sbc350',  trans: 'a4',       fd: 3.08, tire: 'st_225', diff: 'open', col: '#2e7d4f' },
   chevelle: { name: 'Chevrolet Chevelle SS \'70', alias: 'Chevalier SS \'70', real: '1970 Chevrolet Chevelle SS 454 coupe',    cat: 'Classic', body: 'muscle',   price: 38000, m: 1700, f: 0.56, wb: 2.84, len: 5.0, h: 0.55, cda: 0.85, drive: 'RWD', ep: 'front', engine: 'bb_74',  trans: 'm4_cl',    fd: 3.55, tire: 'st_225', diff: 'lsd',  col: '#151515' },
   charger:  { name: 'Dodge Charger R/T \'69', alias: 'Chargemaster \'69', real: '1969 Dodge Charger R/T',    cat: 'Classic', body: 'muscle',   price: 55000, m: 1790, f: 0.56, wb: 2.97, len: 5.3, h: 0.55, cda: 0.88, drive: 'RWD', ep: 'front', engine: 'hemi_70',trans: 'a3_400',   fd: 3.55, tire: 'st_225', diff: 'lsd',  col: '#b31b1b' },
   cuda:     { name: 'Plymouth Hemi \'Cuda \'70', alias: 'Barracudo \'70', real: '1970-71 Plymouth Hemi \'Cuda',       cat: 'Classic', body: 'muscle',   price: 62000, m: 1680, f: 0.56, wb: 2.75, len: 4.8, h: 0.54, cda: 0.84, drive: 'RWD', ep: 'front', engine: 'hemi_70',trans: 'm4_cl',    fd: 3.54, tire: 'st_225', diff: 'lsd',  col: '#ff6a00' },
-  belair:   { name: 'Chevrolet Bel Air \'57', alias: 'Bel-Aire \'57', real: '1957 Chevrolet Bel Air 2-door hardtop',        cat: 'Classic', body: 'classic',  price: 21000, m: 1580, f: 0.55, wb: 2.92, len: 5.0, h: 0.58, cda: 0.92, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'a4',       fd: 3.36, tire: 'st_195', diff: 'open', col: '#2fb3a8' },
-  willys:   { name: 'Willys Gasser \'41', alias: 'Willis Gasser \'41', real: '1941 Willys coupe, gasser build (nose-up straight axle)',   cat: 'Classic', body: 'gasser',   price: 28000, m: 1180, f: 0.52, wb: 2.64, len: 4.3, h: 0.66, cda: 0.88, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'm4_cl',    fd: 4.11, tire: 'st_225', diff: 'lsd',  col: '#efe14b' },
-  monte:    { name: 'Chevrolet Monte Carlo SS \'87', alias: 'Monte Carla SS \'87', real: '1983-88 Chevrolet Monte Carlo SS',  cat: 'Classic', body: 'sedan',    price: 8000,  m: 1540, f: 0.56, wb: 2.75, len: 5.1, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_50',  trans: 'a4',       fd: 3.73, tire: 'st_195', diff: 'open', col: '#5a5a5a' },
-  gnx:      { name: 'Buick GNX \'87', alias: 'Grand Nation GNX', real: '1987 Buick GNX (Grand National)',     cat: 'Classic', body: 'sedan',    price: 32000, m: 1600, f: 0.57, wb: 2.75, len: 5.0, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v6_38t', trans: 'a4',       fd: 3.42, tire: 'st_225', diff: 'lsd',  col: '#0d0d0d' },
+  belair:   { name: 'Chevrolet Bel Air \'57', alias: 'Bel-Aire \'57', real: '1957 Chevrolet Bel Air 2-door hardtop',        cat: 'Classic', body: 'classic',  price: 21000, m: 1580, f: 0.55, wb: 2.92, len: 5.0, h: 0.58, cda: 0.92, drive: 'RWD', ep: 'front', engine: 'v8_283',  trans: 'a4',       fd: 3.36, tire: 'st_195', diff: 'open', col: '#2fb3a8' },
+  willys:   { name: 'Willys Gasser \'41', alias: 'Willis Gasser \'41', real: '1941 Willys coupe, gasser build (nose-up straight axle)',   cat: 'Classic', body: 'gasser',   price: 28000, m: 1180, f: 0.52, wb: 2.64, len: 4.3, h: 0.66, cda: 0.88, drive: 'RWD', ep: 'front', engine: 'sbc350',  trans: 'm4_cl',    fd: 4.11, tire: 'st_225', diff: 'lsd',  col: '#efe14b' },
+  monte:    { name: 'Chevrolet Monte Carlo SS \'87', alias: 'Monte Carla SS \'87', real: '1983-88 Chevrolet Monte Carlo SS',  cat: 'Classic', body: 'sedan',    price: 8000,  m: 1540, f: 0.56, wb: 2.75, len: 5.1, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_305',  trans: 'a4',       fd: 3.73, tire: 'st_195', diff: 'open', col: '#5a5a5a' },
+  gnx:      { name: 'Buick GNX \'87', alias: 'Grand Nation GNX', real: '1987 Buick GNX (Grand National)',     cat: 'Classic', body: 'sedan',    price: 32000, m: 1600, f: 0.57, wb: 2.75, len: 5.0, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v6_38gnx', trans: 'a4',       fd: 3.42, tire: 'st_225', diff: 'lsd',  col: '#0d0d0d' },
   // ---- Modern muscle ----------------------------------------------------------
   camaro:   { name: 'Chevrolet Camaro Z28 \'98', alias: 'Camero Z \'98', real: '1998-02 Chevrolet Camaro Z28 (4th gen)',        cat: 'Muscle',  body: 'sports',   price: 12000, m: 1580, f: 0.56, wb: 2.57, len: 4.9, h: 0.50, cda: 0.70, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'm6',       fd: 3.42, tire: 'st_255', diff: 'lsd',  col: '#244fa8' },
   cobra03:  { name: 'Ford Mustang SVT Cobra \'03', alias: 'Stallion Cobra \'03', real: '2003-04 Ford Mustang SVT Cobra \'Terminator\' (SN95)',  cat: 'Muscle',  body: 'coupe',    price: 22000, m: 1650, f: 0.57, wb: 2.57, len: 4.6, h: 0.52, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_46sc',trans: 'm6',       fd: 3.55, tire: 'st_255', diff: 'lsd',  col: '#8a8f99' },
@@ -158,7 +169,7 @@ DR.CARS = {
   hellcat:  { name: 'Dodge Challenger Hellcat', alias: 'Hellhound SRT', real: '2015-23 Dodge Challenger SRT Hellcat',        cat: 'Muscle',  body: 'modern',   price: 68000, m: 2000, f: 0.56, wb: 2.95, len: 5.0, h: 0.54, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_62sc',trans: 'a8',       fd: 2.62, tire: 'st_305', diff: 'lsd',  col: '#4b1a6e' },
   viper:    { name: 'Dodge Viper ACR', alias: 'Serpent ACR', real: '2016-17 Dodge Viper ACR (VX)',          cat: 'Muscle',  body: 'supercar', price: 110000,m: 1560, f: 0.50, wb: 2.51, len: 4.5, h: 0.45, cda: 0.66, drive: 'RWD', ep: 'front', engine: 'v10_84', trans: 'm6',       fd: 3.55, tire: 'st_305', diff: 'lsd',  col: '#c8102e' },
   // ---- Trucks -----------------------------------------------------------------
-  hauler:   { name: 'Chevrolet C1500', alias: 'Workhorse 1500', real: '1988-98 Chevrolet C1500 regular cab (GMT400)',       cat: 'Truck',   body: 'truck',    price: 9000,  m: 2150, f: 0.57, wb: 3.58, len: 5.8, h: 0.68, cda: 1.15, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'a4',       fd: 3.42, tire: 'st_255', diff: 'open', col: '#2b4d2b' },
+  hauler:   { name: 'Chevrolet C1500', alias: 'Workhorse 1500', real: '1988-98 Chevrolet C1500 regular cab (GMT400)',       cat: 'Truck',   body: 'truck',    price: 9000,  m: 2150, f: 0.57, wb: 3.58, len: 5.8, h: 0.68, cda: 1.15, drive: 'RWD', ep: 'front', engine: 'v8_57tbi',  trans: 'a4',       fd: 3.42, tire: 'st_255', diff: 'open', col: '#2b4d2b' },
   lightning:{ name: 'Ford F-150 Lightning', alias: 'Lightning SVX', real: '1999-04 Ford F-150 SVT Lightning',        cat: 'Truck',   body: 'truck',    price: 26000, m: 2050, f: 0.57, wb: 3.06, len: 5.3, h: 0.65, cda: 1.05, drive: 'RWD', ep: 'front', engine: 'v8_46sc',trans: 'a4',       fd: 3.55, tire: 'st_305', diff: 'lsd',  col: '#d4d4d4' },
   diesel:   { name: 'Ram 2500 Cummins', alias: 'Heavy Duty 2500 Diesel', real: '2010-18 Ram 2500 Cummins 6.7 crew cab',cat: 'Truck',  body: 'truck',    price: 48000, m: 3300, f: 0.60, wb: 3.80, len: 6.1, h: 0.75, cda: 1.30, drive: 'AWD', ep: 'front', engine: 'd_67',   trans: 'a6',       fd: 3.42, tire: 'st_305', diff: 'lsd',  col: '#8b0000' },
   // ---- Pro / Race ---------------------------------------------------------------

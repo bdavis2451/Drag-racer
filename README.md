@@ -12,7 +12,9 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
   until they get one. See [docs/CAR_ART.md](docs/CAR_ART.md) for which real model each
   sprite should be drawn from. Every car has its own weight, weight distribution, wheelbase, center-of-gravity height,
   aerodynamics, drivetrain (RWD/FWD/AWD) and engine location (front/mid/rear).
-- **32 swappable engines**, from a 1.0L three-cylinder up to an 8.6L billet Pro Mod V8.
+- **38 swappable engines** with their real stock ratings, from a 1.0L three-cylinder up to an 8.6L billet Pro Mod V8.
+  Head, cam, intake, header, exhaust and ECU upgrades unlock each engine's own headroom: power and
+  the rpm of peak power climb together (a Fox 5.0 on stock E7 heads has far more to gain than an LS3).
   They include rotaries, a diesel, V10s and V12s.
 - **Deep, menu-based upgrades** across 31 categories:
   - **Engine:** intake, exhaust, headers, cams, heads, internals, fuel system, fuel type
