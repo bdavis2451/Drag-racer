@@ -62,8 +62,11 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
     for a small bonus; collect all ten.
   - **Street races:** bet your money, 1/8 mile at night with less grip.
   - **Test & Tune:** free practice runs.
-- **Garage tools:** a dyno with power, torque and boost curves; a paint shop; a dealership;
-  and a garage that holds several cars.
+- **Garage (Pixel Car Racer style):** your car in a lit garage bay with the menu down the
+  side and arrows to switch cars. The **Parts Shop** sells colour-coded part cards into
+  your inventory; **Install Parts** fits them, puts removed parts back on the shelf and
+  sells spares. Body Shop cards preview a part before you buy it, and bought kit stays
+  free to refit. Plus a dyno, a paint shop and a dealership.
 - **On the strip:** a Christmas tree (sportsman or pro), reaction times, a full timeslip
   (60 ft, 330 ft, 1/8, 1000 ft, 1/4, trap speeds), a synthesized engine sound, tire smoke,
   flames, and nitrous purge.
@@ -99,6 +102,7 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 | `www/js/physics.js` | The physics engine: tires, engine, clutch, converter, weight transfer, wheelies. |
 | `www/js/game.js` | Money, saving, buying and selling, and the **rival pool**. |
 | `www/js/career.js` | **Career stages, events, sponsors, unlocks, cosmetic parts and the star rating.** |
+| `www/js/garage.js` | **Garage bay, Parts Shop, Install Parts, Body Shop and the part icons.** |
 | `www/js/carshow.js` | **Car shows (booths, crowd, podium) and magazine covers.** |
 | `www/js/render.js` | The scene: sky, track, grandstands, the tree, tire smoke, flames and the day/night lighting pass. |
 | `www/js/cars.js` | **Car sprites**, built from swappable parts (see below), plus wheels, brakes and tires. |

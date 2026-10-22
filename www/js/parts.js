@@ -223,6 +223,7 @@
     return 'stock';
   };
   DR.partId = function (cat, inst) {
+    if (cat === 'engine') return inst.engine || DR.stockPart(cat, inst);
     return (inst.parts && inst.parts[cat]) || DR.stockPart(cat, inst);
   };
 
@@ -234,7 +235,7 @@
       for (i = 0; i < ids.length; i++) {
         var e = DR.ENGINES[ids[i]];
         list.push({ id: ids[i], name: e.name, price: ids[i] === car.engine ? 0 : e.price,
-          desc: e.hp + ' hp stock, ' + e.w + ' kg' + (e.fi ? ', factory boosted' : '') + (e.diesel ? ', diesel' : '') + '. Removes current engine parts (50% refund).' });
+          desc: e.hp + ' hp stock, ' + e.w + ' kg' + (e.fi ? ', factory boosted' : '') + (e.diesel ? ', diesel' : '') + '. Your current engine parts come off with the old engine.' });
       }
       return list;
     }

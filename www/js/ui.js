@@ -119,6 +119,9 @@
     ]);
   }
 
+  UI.statsGrid = statsGrid; UI.carStats = carStats; UI.fmtHp = fmtHp; UI.kgLb = kgLb;
+  UI.careerLine = function () { return careerLine(); };
+
   // ------------------------------------------------------------ TITLE
   UI.Title = function () {
     var s = G.state;
@@ -155,35 +158,6 @@
     });
     return h('div', { class: 'screen' }, top('Pick your first car', function () { UI.show(UI.Title); }),
       h('div', { class: 'content' }, h('p', { class: 'dim' }, 'Every legend starts somewhere. Pick a cheap starter - you get it for free, plus $6,000 cash for parts.'), grid));
-  };
-
-  // ------------------------------------------------------------ GARAGE (hub)
-  UI.Garage = function () {
-    var inst = G.car(), S = G.spec(inst);
-    var cv = previewCanvas(inst, 320, 140);
-    var dmg = null;
-    if (inst.damage) {
-      var cost = G.repairCost(inst);
-      dmg = h('div', { class: 'warnbox' }, (inst.damage.engine ? 'ENGINE BLOWN! ' : 'TRANSMISSION BROKEN! ') + 'Repair: ' + DR.money(cost) + ' ',
-        btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'));
-    }
-    var menu = h('div', { class: 'menu-grid' },
-      btn('⚑ Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'),
-      btn('Upgrade', function () { UI.show(UI.Shop); }, 'blue'),
-      btn('Tune', function () { UI.show(UI.Tune); }),
-      btn('Dyno', function () { UI.show(UI.Dyno); }),
-      btn('Body Shop', function () { UI.show(UI.Body); }, 'blue'),
-      btn('Paint', function () { UI.show(UI.Paint); }),
-      btn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }, 'blue'),
-      btn('My Cars', function () { UI.show(UI.Cars); }),
-      btn('Dealer', function () { UI.show(UI.Dealer); }));
-    return h('div', { class: 'screen' }, top('GARAGE', function () { UI.show(UI.Title); }, h('div', { class: 'row', style: { gap: '6px' } },
-        btn('?', function () { UI.show(UI.Help, UI.Garage); }, 'small back'), btn('⚙', function () { UI.show(UI.Settings, UI.Garage); }, 'small back'))),
-      h('div', { class: 'content' }, h('div', { class: 'garage' },
-        h('div', { class: 'view' }, cv, h('div', { class: 'pix acc', style: { textAlign: 'center' } }, DR.CARS[inst.carId].name), dmg, menu),
-        h('div', { class: 'side panel' }, carStats(inst, S), riskBox(S),
-          careerLine(),
-          h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Record: ' + G.state.stats.wins + ' W / ' + (G.state.stats.races - G.state.stats.wins) + ' L')))));
   };
 
   function careerLine() {
@@ -316,86 +290,6 @@
         btn('1/4 Mile', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1 }); }, 'primary'),
         btn('1/8 Mile', function () { DR.Race.start({ mode: 'test', dist: DR.EIGHTH, theme: 'strip', grip: 1 }); }, 'primary'),
         btn('Street 1/8 (night)', function () { DR.Race.start({ mode: 'test', dist: DR.EIGHTH, theme: 'street', grip: 0.85 }); })));
-  }
-
-  // ------------------------------------------------------------ SHOP
-  var shopGroup = 'engine', shopCat = 'intake';
-  UI.Shop = function () {
-    var inst = G.car();
-    var groupTabs = h('div', { class: 'tabs' }, DR.PART_GROUPS.map(function (g) {
-      return btn(g.name, function () { shopGroup = g.id; shopCat = g.cats.filter(function (c) { return DR.partApplies(c, inst); })[0]; UI.refresh(); }, shopGroup === g.id ? 'on' : '');
-    }));
-    var group = DR.PART_GROUPS.filter(function (g) { return g.id === shopGroup; })[0];
-    var cats = h('div', { class: 'list' });
-    group.cats.forEach(function (c) {
-      if (!DR.partApplies(c, inst)) return;
-      var cur = DR.getOption(c, inst);
-      cats.appendChild(h('div', { class: 'item' + (c === shopCat ? ' sel' : ''), onclick: function () { shopCat = c; UI.refresh(); } },
-        h('div', { class: 'name' }, h('div', { class: 'pix small' }, DR.catName(c)), h('div', { class: 'dim' }, cur.name))));
-    });
-    if (!DR.partApplies(shopCat, inst)) shopCat = group.cats.filter(function (c) { return DR.partApplies(c, inst); })[0];
-    var opts = DR.partOptions(shopCat, inst), curId = DR.partId(shopCat, inst);
-    var olist = h('div', { class: 'list' });
-    opts.forEach(function (o) {
-      var installed = o.id === curId, locked = !installed && !G.partUnlocked(shopCat, o.price);
-      olist.appendChild(h('div', { class: 'item' + (installed ? ' sel' : '') + (locked ? ' locked' : ''), onclick: function () { openPart(inst, shopCat, o.id); } },
-        h('div', { class: 'name' }, o.name, h('div', { class: 'dim', style: { fontSize: '14px' } }, DR.LEVEL_NAMES[DR.partLevel(o.price)] + ' level')),
-        installed ? h('span', { class: 'tag g' }, 'INSTALLED') : locked ? h('span', { class: 'tag' }, '🔒 LOCKED') : h('span', { class: 'price' }, o.price ? DR.money(o.price) : 'FREE')));
-    });
-    return h('div', { class: 'screen' }, top('UPGRADE SHOP', function () { UI.show(UI.Garage); }),
-      h('div', { class: 'content' }, groupTabs, h('div', { class: 'split' },
-        h('div', { class: 'left' }, cats),
-        h('div', { class: 'right' }, h('h2', {}, DR.catName(shopCat)), olist))));
-  };
-
-  function hypothetical(inst, cat, id) {
-    var copy = JSON.parse(JSON.stringify(inst));
-    if (cat === 'engine') { DR.ENGINE_BOUND.forEach(function (c) { delete copy.parts[c]; }); copy.engine = id; delete copy.tune.boost; delete copy.tune.launchRpm; delete copy.tune.shiftRpm; delete copy.tune.revLimit; }
-    else {
-      if (id === DR.stockPart(cat, copy)) delete copy.parts[cat]; else copy.parts[cat] = id;
-      if (cat === 'fi') delete copy.tune.boost;
-      if (cat === 'trans') delete copy.tune.gears;
-      if (cat === 'rtires') delete copy.tune.psi;
-      if (cat === 'rearsusp') delete copy.tune.antiSquat;
-    }
-    return copy;
-  }
-
-  function openPart(inst, cat, id) {
-    var close = UI.modal(partDetail(inst, cat, id, function () { close(); }));
-  }
-
-  function partDetail(inst, cat, id, close) {
-    var opt = DR.getOption(cat, inst, id), cur = DR.partId(cat, inst);
-    var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
-    var e0 = G.estimate(inst, DR.QUARTER), e1 = G.estimate(copy, DR.QUARTER);
-    function d(a, b, unit, dec, lowerBetter) {
-      var diff = b - a, cls = Math.abs(diff) < Math.pow(10, -(dec || 0)) / 2 ? 'dim' : ((diff < 0) === !!lowerBetter ? 'good' : 'bad');
-      return h('span', { class: cls }, a.toFixed(dec || 0) + ' → ' + b.toFixed(dec || 0) + unit);
-    }
-    var refund = G.tradeIn(cat, inst);
-    if (cat === 'engine') DR.ENGINE_BOUND.forEach(function (c) { refund += Math.round((DR.getOption(c, inst).price || 0) * 0.5); });
-    var net = (opt.price || 0) - refund;
-    return h('div', { class: 'panel col' },
-      h('div', { class: 'pix acc' }, opt.name),
-      opt.desc ? h('div', {}, opt.desc) : null,
-      statsGrid([
-        ['Power', d(S0.peakHp + S0.nosHp, S1.peakHp + S1.nosHp, ' hp')],
-        S0.red !== S1.red ? ['Rev limiter', d(S0.red, S1.red, ' rpm')] : null,
-        ['Weight', d(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)],
-        ['Est. 1/4', d(Math.min(e0.et, 99), Math.min(e1.et, 99), 's', 2, true)],
-        ['Price', DR.money(opt.price || 0)],
-        refund ? ['Trade-in', '+' + DR.money(refund), 'good'] : null
-      ]),
-      riskBox(S1),
-      id === cur ? h('div', { class: 'okbox' }, 'Installed on this car.') :
-        !G.partUnlocked(cat, opt.price) ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[DR.partLevel(opt.price)] + '-level ' + DR.PART_GROUPS.filter(function (g) { return g.id === DR.groupOf(cat); })[0].name.toLowerCase() + ' parts unlock as you win career races.') :
-        btn(net > 0 ? 'Buy & Install (' + DR.money(net) + ')' : 'Install (+' + DR.money(-net) + ')', function () {
-          var r = G.buyPart(cat, id);
-          UI.toast(r.msg);
-          if (r.ok) { A.cash(); close(); UI.refresh(); }
-        }, 'go' + (G.state.money + refund < (opt.price || 0) ? ' disabled' : '')),
-      btn('Close', function () { close(); }, 'small'));
   }
 
   // ------------------------------------------------------------ TUNE
@@ -602,66 +496,6 @@
     return h('div', { class: 'screen' }, top('MY CARS', function () { UI.show(UI.Garage); }), h('div', { class: 'content' }, grid));
   };
 
-  // ------------------------------------------------------------ BODY SHOP
-  // Cosmetic parts. Every part adds to the visual rating (stars), which
-  // sponsors and showcase races look at. Tiers unlock through the career.
-  var bodySlot = 'fbumper', neonPick = null;
-  function visOptions(slot) {
-    var out = [{ value: 0, name: 'Stock / None', price: 0, stars: 0, tier: 0 }];
-    if (slot.styles) slot.tiers.forEach(function (list, t) { list.forEach(function (st) { out.push({ value: st, name: DR.RIM_NAMES[st], price: slot.prices[t], stars: slot.stars[t], tier: t + 1 }); }); });
-    else slot.tiers.forEach(function (x, t) { if (x) out.push({ value: slot.id === 'neon' ? 'neon' : t + 1, name: x[0], price: x[1], stars: x[2], tier: t + 1 }); });
-    if (slot.extra) for (var k in slot.extra) { var x = slot.extra[k]; out.push({ value: k, name: x[0], price: x[1], stars: x[2], tier: x[3] }); }
-    return out;
-  }
-  UI.Body = function () {
-    var inst = G.car();
-    if (!inst.vis) inst.vis = {};
-    var slot = DR.visSlot(bodySlot);
-    var cv = h('canvas', { class: 'preview', width: 320, height: 140, style: { width: '100%' } });
-    DR.drawPreview(cv, inst);
-    var stars = DR.starRating(inst);
-    var meter = h('div', { class: 'stars' });
-    for (var i = 1; i <= 10; i++) meter.appendChild(h('span', { class: stars >= i ? 'on' : stars > i - 1 ? 'half' : '' }, '★'));
-    var slots = h('div', { class: 'list' });
-    DR.VISUAL.forEach(function (sl) {
-      var cur = inst.vis[sl.id], curName = 'Stock';
-      visOptions(sl).forEach(function (o) { if (o.value && (o.value === cur || (sl.id === 'neon' && cur))) curName = o.name; });
-      slots.appendChild(h('div', { class: 'item' + (sl.id === bodySlot ? ' sel' : ''), onclick: function () { bodySlot = sl.id; UI.refresh(); } },
-        h('div', { class: 'name' }, h('div', { class: 'pix small' }, sl.name), h('div', { class: 'dim' }, curName))));
-    });
-    var list = h('div', { class: 'list' });
-    visOptions(slot).forEach(function (o) {
-      var cur = inst.vis[slot.id], installed = slot.id === 'neon' ? (!!cur === !!o.value) : (cur || 0) === o.value;
-      var locked = o.tier && !G.visUnlocked(slot.id, o.tier);
-      list.appendChild(h('div', { class: 'item' + (installed ? ' sel' : '') + (locked ? ' locked' : '') },
-        h('div', { class: 'name' }, o.name, h('div', { class: 'dim', style: { fontSize: '14px' } }, o.tier ? 'Tier ' + o.tier + ' • +' + DR.starText(o.stars) : 'Removes the part')),
-        installed ? h('span', { class: 'tag g' }, 'INSTALLED') : locked ? h('span', { class: 'tag' }, '🔒 WIN RACES') : h('span', { class: 'price' }, o.price ? DR.money(o.price) : 'FREE'),
-        installed || locked ? null : btn(o.price ? 'Buy' : 'Fit', function () {
-          if (!G.canAfford(o.price)) return UI.toast('Not enough money');
-          G.pay(o.price); inst.spent += o.price;
-          if (o.value) inst.vis[slot.id] = slot.id === 'neon' ? (neonPick || slot.colors[0]) : o.value; else delete inst.vis[slot.id];
-          G.save(); if (o.price) A.cash();
-          UI.toast(o.value ? o.name + ' fitted!' : 'Back to stock');
-          UI.afterStars(G.noteStars());
-          G.checkContracts().forEach(function (m) { UI.toast(m); });
-          UI.refresh();
-        }, 'small ' + (o.price ? 'go' : ''))));
-    });
-    var extra = null;
-    if (slot.id === 'neon') {
-      extra = h('div', {}, h('h3', {}, 'NEON COLOR' + (inst.vis.neon ? ' (free to change)' : '')), h('div', { class: 'swatches' }, slot.colors.map(function (c) {
-        return h('div', { class: 'sw' + ((inst.vis.neon || neonPick || slot.colors[0]) === c ? ' on' : ''), style: { background: c }, onclick: function () {
-          neonPick = c; if (inst.vis.neon) { inst.vis.neon = c; G.save(); } UI.refresh();
-        } });
-      })));
-    }
-    if (slot.id === 'vinyl' || slot.id === 'finish') extra = h('p', { class: 'dim' }, slot.id === 'vinyl' ? 'Vinyls use your stripe color from the Paint Shop when you have one.' : 'Finishes change how the paint catches the light.');
-    return h('div', { class: 'screen' }, top('BODY SHOP', function () { UI.show(UI.Garage); }),
-      h('div', { class: 'content' }, h('div', { class: 'split' },
-        h('div', { class: 'left', style: { width: '42%' } }, cv, h('div', { class: 'row', style: { justifyContent: 'space-between', margin: '6px 0' } }, h('span', { class: 'pix acc' }, 'VISUAL RATING'), meter), slots),
-        h('div', { class: 'right' }, h('h2', {}, slot.name), list, extra))));
-  };
-
   // ------------------------------------------------------------ PAINT
   UI.Paint = function () {
     var inst = G.car();
@@ -737,7 +571,8 @@
         h('h2', {}, 'Car Shows & Covers'),
         p('Park your car at a booth at a car show. Your rating, how rare and loud the build is, and the show itself decide how many people stop by. You earn a little per visitor, and the three most-visited cars take the podium and the prize money. Show judges get bored of the same build: change something up between entries. Each new star level also puts your car on the cover of Pixel Tuner, with a small bonus.'),
         h('h2', {}, 'Building'),
-        p('Spend your winnings in the Upgrade Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
+        p('Spend your winnings in the Parts Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod, colour-coded grey, green, blue, purple and orange) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
+        p('Bought parts go into your inventory. Fit them in the garage under Install Parts: the old part comes off and goes back on the shelf, so you can swap it back, move it to another car or sell it for half price. Engine parts are built for one engine; swapping engines takes its parts off with it. Use the arrows in the garage to switch cars.'),
         p('Watch the risk warnings: too much power for your internals, boost past your fuel\'s knock limit or more torque than the gearbox can hold can break parts mid-race. Repairs cost money!'),
         h('h2', {}, 'Tuning'),
         p('Grip comes from tire compound, tire pressure (each tire has an ideal psi), tire temperature and weight transfer. Ladder bars / 4-links, springs and shocks change how hard the car hits the tires. Gearing, launch RPM, boost, and throttle management decide whether you hook or go up in smoke.'),

@@ -10,7 +10,7 @@
   G.defaults = function () {
     return {
       v: 3, money: 6000, cars: [], active: null, uid: 1,
-      career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [],
+      career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [], inv: [],
       settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold' },
       started: false
     };
@@ -97,37 +97,105 @@
   };
 
   // ---------------------------------------------------------------- parts
-  // Returns {ok, msg}. Trade-in: 40% of the replaced part's price comes back.
-  G.tradeIn = function (cat, inst) {
-    var cur = DR.getOption(cat, inst);
-    return Math.round((cur.price || 0) * 0.4 / 10) * 10;
+  // Parts work like a real garage: the shop sells parts into your inventory
+  // (G.state.inv) and you fit them to a car in the garage. Taking a part off
+  // puts it back on the shelf, so it can go on another car or be sold.
+  // Engine parts (intake, cams, turbos...) are made for one engine.
+  //   item: { uid, cat, id, price, eng }
+  G.isEngineBound = function (cat) { return DR.ENGINE_BOUND.indexOf(cat) >= 0; };
+  G.partName = function (item) {
+    if (item.cat === 'engine') return DR.ENGINES[item.id].name;
+    if (item.cat === 'trans') return DR.TRANS[item.id].name;
+    if (item.cat === 'rtires') return DR.TIRES[item.id].name;
+    if (item.cat === 'fi') return DR.FI[item.id].name;
+    var inst = G.car(), ctx = { carId: inst.carId, engine: item.eng || inst.engine, parts: {}, tune: {} };
+    var opts = DR.partOptions(item.cat, ctx);
+    for (var i = 0; i < opts.length; i++) if (opts[i].id === item.id) return opts[i].name.replace(' (Factory)', '');
+    return item.id;
   };
-  G.buyPart = function (cat, optId) {
-    var inst = G.car();
-    var opt = DR.getOption(cat, inst, optId);
-    if (DR.partId(cat, inst) === optId) return { ok: false, msg: 'Already installed' };
-    var refund = G.tradeIn(cat, inst), price = opt.price || 0;
-    if (cat === 'engine') {
-      DR.ENGINE_BOUND.forEach(function (c) { refund += Math.round((DR.getOption(c, inst).price || 0) * 0.5); });
+  // '' when the item can go on this car, otherwise why not.
+  G.partFitIssue = function (item, inst) {
+    if (G.isEngineBound(item.cat) && item.eng !== inst.engine) return 'Made for the ' + DR.ENGINES[item.eng].name;
+    if (!DR.partApplies(item.cat, inst)) {
+      if (item.cat === 'clutch' || item.cat === 'flywheel') return 'Needs a manual gearbox';
+      if (item.cat === 'converter' || item.cat === 'transbrake') return 'Needs an automatic';
+      if (item.cat === 'ic' || item.cat === 'launch') return 'Needs a turbo or supercharger';
+      if (item.cat === 'nosctrl') return 'Needs a nitrous kit';
+      return 'Does not fit this car';
     }
-    if (G.state.money + refund < price) return { ok: false, msg: 'Not enough money' };
-    G.state.money += refund - price;
-    inst.spent += price - refund;
+    if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
+    return '';
+  };
+  G.invFor = function (cat) { return G.state.inv.filter(function (it) { return it.cat === cat; }); };
+  G.ownedCount = function (cat, id) { return G.state.inv.filter(function (it) { return it.cat === cat && it.id === id; }).length; };
+  G.partSellValue = function (item) { return Math.round((item.price || 0) * 0.5 / 10) * 10; };
+
+  // Moves the part installed in `cat` to the inventory (if it is not stock).
+  function stash(inst, cat) {
+    var id = DR.partId(cat, inst);
+    if (id === DR.stockPart(cat, inst)) return null;
+    var opt = DR.getOption(cat, inst, id);
+    var item = { uid: G.state.uid++, cat: cat, id: id, price: opt.price || 0, eng: G.isEngineBound(cat) ? inst.engine : undefined };
+    G.state.inv.push(item);
+    inst.spent = Math.max(0, inst.spent - item.price);
+    return item;
+  }
+  function clearTune(inst, cat) {
+    if (cat === 'engine') { delete inst.tune.boost; delete inst.tune.launchRpm; delete inst.tune.shiftRpm; delete inst.tune.revLimit; }
+    if (cat === 'fi') delete inst.tune.boost;
+    if (cat === 'trans') delete inst.tune.gears;
+    if (cat === 'rtires') delete inst.tune.psi;
+    if (cat === 'rearsusp') delete inst.tune.antiSquat;
+    if (cat === 'cams' || cat === 'internals' || cat === 'ecu') delete inst.tune.shiftRpm;
+  }
+  function setPart(inst, cat, id) {
     if (cat === 'engine') {
-      DR.ENGINE_BOUND.forEach(function (c) { delete inst.parts[c]; });
-      inst.engine = optId;
-      delete inst.tune.boost; delete inst.tune.launchRpm; delete inst.tune.shiftRpm;
+      DR.ENGINE_BOUND.forEach(function (c) { stash(inst, c); delete inst.parts[c]; });
+      stash(inst, 'engine');
+      inst.engine = id;
       if (inst.damage && inst.damage.engine) inst.damage = null;
     } else {
-      if (optId === DR.stockPart(cat, inst)) delete inst.parts[cat]; else inst.parts[cat] = optId;
-      if (cat === 'fi') delete inst.tune.boost;
-      if (cat === 'trans') { delete inst.tune.gears; if (inst.damage && inst.damage.trans) inst.damage = null; }
-      if (cat === 'rtires') delete inst.tune.psi;
-      if (cat === 'rearsusp') delete inst.tune.antiSquat;
-      if (cat === 'cams' || cat === 'internals') delete inst.tune.shiftRpm;
+      stash(inst, cat);
+      if (id === DR.stockPart(cat, inst)) delete inst.parts[cat]; else inst.parts[cat] = id;
+      if (cat === 'trans' && inst.damage && inst.damage.trans) inst.damage = null;
     }
+    clearTune(inst, cat);
+  }
+
+  G.buyPart = function (cat, id) {
+    var inst = G.car(), opt = DR.getOption(cat, inst, id), price = opt.price || 0;
+    if (!G.canAfford(price)) return null;
+    G.pay(price);
+    var item = { uid: G.state.uid++, cat: cat, id: id, price: price, eng: G.isEngineBound(cat) ? inst.engine : undefined };
+    G.state.inv.push(item); G.save();
+    return item;
+  };
+  G.installPart = function (inst, uid) {
+    var inv = G.state.inv, item = null;
+    for (var i = 0; i < inv.length; i++) if (inv[i].uid === uid) { item = inv[i]; inv.splice(i, 1); break; }
+    if (!item) return { ok: false, msg: 'Part not found' };
+    var why = G.partFitIssue(item, inst);
+    if (why) { inv.push(item); return { ok: false, msg: why }; }
+    setPart(inst, item.cat, item.id);
+    inst.spent += item.price;
     G.save();
-    return { ok: true, msg: 'Installed ' + opt.name };
+    return { ok: true, msg: 'Installed ' + G.partName(item) };
+  };
+  // Back to the factory part; the old one goes on the shelf.
+  G.removePart = function (inst, cat) {
+    if (DR.partId(cat, inst) === DR.stockPart(cat, inst)) return false;
+    if (cat === 'engine') setPart(inst, 'engine', DR.CARS[inst.carId].engine);
+    else { stash(inst, cat); delete inst.parts[cat]; clearTune(inst, cat); }
+    G.save();
+    return true;
+  };
+  G.sellPart = function (uid) {
+    var inv = G.state.inv;
+    for (var i = 0; i < inv.length; i++) if (inv[i].uid === uid) {
+      var v = G.partSellValue(inv[i]);
+      inv.splice(i, 1); G.earn(v); return v;
+    }
+    return 0;
   };
 
   // ---------------------------------------------------------------- damage

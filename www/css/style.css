@@ -207,3 +207,73 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .card.locked { opacity: .55; }
 .warn { color: #ff9a4d; }
 .showbar { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-family: 'Press Start 2P', monospace; font-size: 10px; background: rgba(0,0,0,.65); padding: 6px 10px; white-space: nowrap; pointer-events: none; }
+
+/* ---------------------------------------------------------------- garage hub (PCR style) */
+.gwrap { position: relative; flex: 1; overflow: hidden; background: #0d0e12; }
+.gwrap canvas.bay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; }
+.gmenu { position: absolute; left: 8px; top: 8px; bottom: 8px; width: 148px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; scrollbar-width: none; }
+.gmenu::-webkit-scrollbar { display: none; }
+.gbtn { justify-content: flex-start; min-height: 30px; font-size: 9px; padding: 6px 8px; background: rgba(28,30,37,.88); position: relative; flex: none; }
+.gbtn.race { background: #b52a2a; font-size: 12px; min-height: 40px; justify-content: center; }
+.gbtn.shop, .btn.shop { background: #c25a12; }
+.gbtn.blue { background: #2a62b5; }
+.gbtn.purple { background: #6a3bb0; }
+.badge { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: #ffcc00; color: #111; font-family: 'Press Start 2P', monospace; font-size: 8px; padding: 3px 4px; box-shadow: 0 0 0 2px #000; }
+.item .badge { position: static; transform: none; }
+.gside { position: absolute; right: 8px; top: 8px; width: 214px; max-height: calc(100% - 70px); overflow-y: auto; background: rgba(14,15,19,.82); box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #3b3f4c; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+.gst { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 18px; }
+.gst .k { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--dim); }
+.gst .stars { font-size: 13px; }
+.gsmall { font-size: 15px; line-height: 1.15; margin-top: 3px; }
+.gsel { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(14,15,19,.85); box-shadow: 0 0 0 2px #000; padding: 5px 8px; max-width: calc(100% - 16px); }
+.gsel .arrow { min-width: 40px; font-size: 14px; background: #c99a00; color: #111; }
+.gname { text-align: center; min-width: 150px; }
+.gname .dim { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gdmg { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
+
+/* ---------------------------------------------------------------- parts shop */
+.shopwrap { flex: 1; display: flex; min-height: 0; }
+.srail { width: 112px; flex: none; background: #101116; border-right: 2px solid #000; overflow-y: auto; scrollbar-width: none; }
+.srail::-webkit-scrollbar { display: none; }
+.srail-i { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px; cursor: pointer; font-family: 'Press Start 2P', monospace; font-size: 7px; text-align: center; color: var(--dim); border-left: 3px solid transparent; line-height: 1.4; }
+.srail-i.on { background: #22242c; color: var(--accent); border-left-color: var(--accent); }
+.smain { flex: 1; min-width: 0; overflow-y: auto; padding: 8px 10px; }
+.schips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+.schips::-webkit-scrollbar { display: none; }
+.schips .chip { flex: none; font-size: 8px; min-height: 28px; padding: 5px 8px; }
+.schips .chip.on { background: #c99a00; color: #111; }
+.schips .chip.nofit { opacity: .55; }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.pcard { --lc: #c4c8d0; background: #22242c; background: linear-gradient(180deg, color-mix(in srgb, var(--lc) 22%, #22242c), #22242c 55%); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px var(--lc); padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; position: relative; }
+.pcard:active { filter: brightness(1.2); }
+.pcard.locked { filter: grayscale(.8) brightness(.7); }
+.pcard.inst { box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 2px var(--lc); }
+.pic { display: flex; justify-content: center; padding: 4px 0; }
+.pic canvas, canvas.picon { image-rendering: pixelated; flex: none; }
+.plvl { font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--lc, var(--dim)); letter-spacing: 1px; text-transform: uppercase; }
+.pname { font-size: 17px; line-height: 1.05; min-height: 36px; }
+.pfoot { display: flex; justify-content: space-between; align-items: center; gap: 4px; flex-wrap: wrap; }
+.l0 { --lc: #8a8f99; } .l1 { --lc: #c4c8d0; } .l2 { --lc: #46e07a; } .l3 { --lc: #4da3ff; } .l4 { --lc: #b06bff; } .l5 { --lc: #ff9a2e; }
+.pmodal .pic.big { background: radial-gradient(circle, color-mix(in srgb, var(--lc) 35%, transparent), transparent 70%); padding: 6px; }
+.pmodal .row .btn { flex: 1; }
+
+/* ---------------------------------------------------------------- install bay */
+.bay-left { display: flex; flex-direction: column; gap: 6px; }
+.bay-left canvas.preview { width: 100%; background: #222; box-shadow: 0 0 0 2px #000; }
+.bay-quick { justify-content: space-around; font-size: 19px; }
+.bay-h { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--dim); margin: 6px 0 0; }
+.bay-list .item { min-height: 36px; padding: 3px 8px; }
+.slot { display: flex; align-items: center; gap: 10px; background: #22242c; background: linear-gradient(90deg, color-mix(in srgb, var(--lc) 18%, #22242c), #22242c 70%); box-shadow: 0 0 0 2px #000, inset 3px 0 0 var(--lc); padding: 8px; }
+.item.inv { box-shadow: 0 0 0 2px #000, inset 3px 0 0 var(--lc); }
+.gain { display: inline-flex; gap: 8px; font-size: 16px; }
+@media (max-height: 420px) {
+  .gmenu { width: 132px; gap: 4px; }
+  .gbtn { min-height: 27px; font-size: 8px; padding: 3px 7px; }
+  .gbtn.race { min-height: 36px; font-size: 11px; }
+  .gside { width: 190px; padding: 6px 8px; }
+  .gst { font-size: 16px; }
+  .pgrid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+}
+.bodyhead { position: relative; }
+.bodyhead canvas.preview { width: 100%; max-height: 42vh; object-fit: cover; background: #222; box-shadow: 0 0 0 2px #000; display: block; }
+.bodystars { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.7); padding: 4px 8px; display: flex; gap: 8px; align-items: center; box-shadow: 0 0 0 2px #000; }
