@@ -152,6 +152,7 @@
     S.beLimit = e.red + Math.min(pist.be, rods.be, crank.be, oil.be);
     var beBy = [['pistons', pist.be], ['rods', rods.be], ['crank', crank.be], ['oiling', oil.be]].sort(function (a, b) { return a[1] - b[1]; });
     S.beWeak = beBy[0][0];
+    S.partRpm = { pistons: e.red + pist.be, rods: e.red + rods.be, crank: e.red + crank.be, oiling: e.red + oil.be };
     S.mech = Math.min(S.vtLimit, S.beLimit);
     var safeRed = Math.max(e.red, S.mech - 200);
     if (ecu.ecu >= 2) {
@@ -165,6 +166,7 @@
     var holdBy = [['pistons', pist.hold], ['rods', rods.hold], ['crank', crank.hold], ['block', block.hold]].sort(function (a, b) { return a[1] - b[1]; });
     S.safeHp = e.safe * holdBy[0][1];
     S.safeWeak = holdBy[0][0];
+    S.partHold = { pistons: e.safe * pist.hold, rods: e.safe * rods.hold, crank: e.safe * crank.hold, block: e.safe * block.hold };
     var stockFuelHp = Math.max(e.hp * 1.35 + 60, 300);
     S.fuelInj = inj.fuel || stockFuelHp; S.fuelPump = pump.fuel || stockFuelHp;
     S.fuelW = Math.min(S.fuelInj, S.fuelPump) * (e.diesel ? 1 : fuel.ff) * DR.HP;
@@ -174,7 +176,10 @@
     S.sparkNos = e.diesel ? 9999 : 150 + (ign.spark || 0) * 15;
     // a bolt-on turbo's wastegate sets how much of its boost you can use
     var fiU = DR.FI[fiId];
-    if (fiU.type === 'turbo' && fiU.price) { S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2; S.lag *= gate.spoolK; }
+    if (fiU.type === 'turbo') {
+      if (fiU.price) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // factory turbos come with a gate sized for them
+      S.lag *= gate.spoolK;
+    }
     S.bovT = fiU.type === 'turbo' ? (fiU.price ? bov.bov : Math.max(0.3, bov.bov)) : 0.15;
     S.ecu = ecu.ecu;
     S.twostep = launch.twostep;
@@ -476,7 +481,8 @@
     if (S.fuelW < (S.peakHp * DR.HP) * 1.001) r.notes.push((S.fuelInj < S.fuelPump ? 'Injectors are' : S.fuelPump < S.fuelInj ? 'Fuel pump is' : 'Fuel system is') + ' maxed out - power is limited');
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
-    if (tqNm > S.trMaxTq) { r.trans = Math.min(0.75, (tqNm / S.trMaxTq - 1) * 1.1); r.notes.push('Torque exceeds what the transmission can hold'); }
+    // gearbox ratings carry a little margin: trouble starts 5% past them
+    if (tqNm > S.trMaxTq * 1.05) { r.trans = Math.min(0.75, (tqNm / S.trMaxTq - 1.05) * 1.1); r.notes.push('Torque exceeds what the transmission can hold'); }
     // axles take the launch hit: torque x converter multiplication
     var hit = tqNm * (S.trType === 'auto' ? Math.min(1.4, S.TR / 1.5) : 1) * (S.slider ? 0.9 : 1);
     r.axle = 0; r.hit = hit;

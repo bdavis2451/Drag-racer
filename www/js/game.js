@@ -121,6 +121,13 @@
   // Engine parts (intake, cams, turbos...) are made for one engine.
   //   item: { uid, cat, id, price, eng }
   G.isEngineBound = function (cat) { return DR.ENGINE_BOUND.indexOf(cat) >= 0; };
+  // The catalog entry for an inventory item (as it would be on this car).
+  G.itemOption = function (item) {
+    var inst = G.car(), ctx = { carId: inst.carId, engine: item.eng || inst.engine, parts: {}, tune: {} };
+    var opts = DR.partOptions(item.cat, ctx);
+    for (var i = 0; i < opts.length; i++) if (opts[i].id === item.id) return opts[i];
+    return null;
+  };
   G.partName = function (item) {
     if (item.cat === 'engine') return DR.ENGINES[item.id].name;
     if (item.cat === 'trans') return DR.TRANS[item.id].name;
@@ -159,15 +166,16 @@
     inst.spent = Math.max(0, inst.spent - item.price);
     return item;
   }
-  function clearTune(inst, cat) {
+  function clearTune(inst, cat, fiWas) {
     if (cat === 'engine') { delete inst.tune.boost; delete inst.tune.launchRpm; delete inst.tune.shiftRpm; delete inst.tune.revLimit; }
-    if (cat === 'fi') delete inst.tune.boost;
+    if (cat === 'fi' && (fiWas === 'none' || DR.partId('fi', inst) === 'none')) delete inst.tune.boost;
     if (cat === 'trans') delete inst.tune.gears;
     if (cat === 'rtires') delete inst.tune.psi;
     if (cat === 'rearsusp') delete inst.tune.antiSquat;
-    if (['cams', 'valvetrain', 'pistons', 'rods', 'crank', 'oiling', 'ecu'].indexOf(cat) >= 0) delete inst.tune.shiftRpm;
+    if (['heads', 'cams', 'valvetrain', 'pistons', 'rods', 'crank', 'oiling', 'ecu'].indexOf(cat) >= 0) delete inst.tune.shiftRpm;
   }
   function setPart(inst, cat, id) {
+    var fiWas = DR.partId('fi', inst);
     if (cat === 'engine') {
       DR.ENGINE_BOUND.forEach(function (c) { stash(inst, c); delete inst.parts[c]; });
       stash(inst, 'engine');
@@ -179,7 +187,7 @@
       if (cat === 'trans' && inst.damage && inst.damage.trans) inst.damage = null;
       if (cat === 'rearend' && inst.damage && inst.damage.axle) inst.damage = null;
     }
-    clearTune(inst, cat);
+    clearTune(inst, cat, fiWas);
   }
 
   G.buyPart = function (cat, id) {
@@ -205,7 +213,7 @@
   G.removePart = function (inst, cat) {
     if (DR.partId(cat, inst) === DR.stockPart(cat, inst)) return false;
     if (cat === 'engine') setPart(inst, 'engine', DR.CARS[inst.carId].engine);
-    else { stash(inst, cat); delete inst.parts[cat]; clearTune(inst, cat); }
+    else { var fiWas = DR.partId('fi', inst); stash(inst, cat); delete inst.parts[cat]; clearTune(inst, cat, fiWas); }
     G.save();
     return true;
   };

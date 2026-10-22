@@ -52,7 +52,6 @@
   // ---------------------------------------------------------------- performance levels
   // Performance parts are grouped into levels 1-5 by price; each shop group
   // has its own unlocked level.
-  DR.partLevel = function (price) { return !price ? 0 : price <= 700 ? 1 : price <= 1300 ? 2 : price <= 4500 ? 3 : price <= 12000 ? 4 : 5; };
   DR.groupOf = function (cat) {
     for (var i = 0; i < DR.PART_GROUPS.length; i++) if (DR.PART_GROUPS[i].cats.indexOf(cat) >= 0) return DR.PART_GROUPS[i].unlock || DR.PART_GROUPS[i].id;
     return 'engine';
@@ -210,8 +209,7 @@
   G.markCarSeen = function (id) { var s = seenCars(); if (!s[id]) { s[id] = 1; G.save(); } };
   G.newCarCount = function (cat) { return Object.keys(DR.CARS).filter(function (id) { return (!cat || DR.CARS[id].cat === cat) && G.isNewCar(id); }).length; };
   G.carUnlocked = function (carId) { return !!C().cars[carId] || (DR.CAR_STAGE[carId] != null && DR.CAR_STAGE[carId] <= C().stage); };
-  G.partUnlocked = function (cat, price) {
-    var lvl = DR.partLevel(price);
+  G.partUnlocked = function (cat, lvl) {
     return lvl <= 1 || lvl <= (C().perf[DR.groupOf(cat)] || 1);
   };
   G.visUnlocked = function (slot, tier) { return tier <= (C().vis[slot] || 0); };

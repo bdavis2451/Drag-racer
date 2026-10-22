@@ -79,7 +79,7 @@
     opt('stock', 'Stock Heads', 0, { bw: 0 }),
     opt('hd1', 'Ported & Polished Heads', 1200, { bw: 0.10 }, 'Cleaned-up ports flow more air.'),
     opt('hd2', 'CNC Ported Heads', 3000, { bw: 0.20 }, 'Big airflow gains; the peak moves up.'),
-    opt('hd3', 'Billet Race Heads', 8000, { bw: 0.30 }, 'Race-port heads. The biggest single gain.')
+    opt('hd3', 'Billet Race Heads', 8000, { lvl: 4, bw: 0.30 }, 'Race-port heads. The biggest single gain.')
   ]};
   C.cams = { name: 'Camshafts', engineScaled: true, options: [
     opt('stock', 'Stock Cams', 0, { bw: 0, stress: 0 }),
@@ -93,7 +93,7 @@
     opt('vt1', 'Beehive Valve Springs', 450, { vt: 500 }, 'Valves float 500 rpm later.'),
     opt('vt2', 'Dual Springs + Ti Retainers', 1200, { vt: 1000 }, 'Valves float 1000 rpm later.'),
     opt('vt3', 'Race Valvetrain (Shaft Rockers, Ti Valves)', 3500, { vt: 1600 }, 'Valves float 1600 rpm later.'),
-    opt('vt4', 'Pro Mod Valvetrain', 8000, { vt: 2300 }, 'Valves float 2300 rpm later.')
+    opt('vt4', 'Pro Mod Valvetrain', 8000, { lvl: 5, vt: 2300 }, 'Valves float 2300 rpm later.')
   ]};
 
   // Bottom end: the weakest link sets what the engine survives. Each part
@@ -104,33 +104,33 @@
     opt('stock', 'Stock Cast Pistons', 0, { hold: 1, be: 800, cr: 0 }, 'The first thing to break.'),
     opt('p1', 'Forged Pistons (Boost, Low Comp)', 1600, { hold: 2.0, be: 1200, cr: -1 }, 'Holds 2x stock power. Lower compression: -2% power, +3 psi before knock.'),
     opt('p2', 'Forged Pistons (NA, High Comp)', 1600, { hold: 1.7, be: 1200, cr: 1 }, 'Holds 1.7x stock power. Higher compression: +4% power, 3 psi less before knock.'),
-    opt('p3', 'Billet Race Pistons', 4000, { hold: 3.4, be: 1800, cr: 0 }, 'Holds 3.4x stock power.'),
-    opt('p4', 'Pro Mod Pistons', 9000, { hold: 6, be: 2600, cr: 0 }, 'Coated skirts and gas ports. Holds 6x stock power.')
+    opt('p3', 'Billet Race Pistons', 4000, { lvl: 4, hold: 3.4, be: 1800, cr: 0 }, 'Holds 3.4x stock power.'),
+    opt('p4', 'Pro Mod Pistons', 9000, { lvl: 5, hold: 6, be: 2600, cr: 0 }, 'Coated skirts and gas ports. Holds 6x stock power.')
   ]};
   C.rods = { name: 'Connecting Rods', engineScaled: true, options: [
     opt('stock', 'Stock Rods', 0, { hold: 1.3, be: 800 }, 'Good for 1.3x stock power.'),
     opt('r1', 'Forged I-Beam Rods', 900, { hold: 2.0, be: 1200 }, 'Holds 2x stock power.'),
     opt('r2', 'Forged H-Beam Rods', 1800, { hold: 2.8, be: 1600 }, 'Holds 2.8x stock power.'),
     opt('r3', 'Billet Aluminum Rods', 5000, { hold: 4.5, be: 2600 }, 'Light and shock-absorbing. Holds 4.5x stock power.'),
-    opt('r4', 'Pro Billet Steel Rods', 9000, { hold: 6.5, be: 2600 }, 'Holds 6.5x stock power.')
+    opt('r4', 'Pro Billet Steel Rods', 9000, { lvl: 5, hold: 6.5, be: 2600 }, 'Holds 6.5x stock power.')
   ]};
   C.crank = { name: 'Crankshaft', engineScaled: true, options: [
     opt('stock', 'Stock Cast Crank', 0, { hold: 1.5, be: 800, ie: 1 }, 'Good for 1.5x stock power.'),
     opt('k1', 'Forged 4340 Crank', 2200, { hold: 2.8, be: 1400, ie: 1 }, 'Holds 2.8x stock power.'),
     opt('k2', 'Billet Crank', 6000, { hold: 4.5, be: 2200, ie: 0.97 }, 'Holds 4.5x stock power.'),
-    opt('k3', 'Knife-Edged Pro Billet Crank', 11000, { hold: 6.5, be: 2800, ie: 0.92 }, 'Holds 6.5x stock power and revs quicker.')
+    opt('k3', 'Knife-Edged Pro Billet Crank', 11000, { lvl: 5, hold: 6.5, be: 2800, ie: 0.92 }, 'Holds 6.5x stock power and revs quicker.')
   ]};
   C.block = { name: 'Engine Block', engineScaled: true, options: [
     opt('stock', 'Stock Block', 0, { hold: 1.8 }, 'Splits the main webs around 1.8x stock power.'),
     opt('b1', 'Main Studs + Girdle', 800, { hold: 2.5 }, 'Holds 2.5x stock power.'),
-    opt('b2', 'Sleeved & Filled Block', 4000, { hold: 4 }, 'Holds 4x stock power.'),
-    opt('b3', 'Billet Block', 15000, { hold: 7 }, 'Holds 7x stock power.')
+    opt('b2', 'Sleeved & Filled Block', 4000, { lvl: 4, hold: 4 }, 'Holds 4x stock power.'),
+    opt('b3', 'Billet Block', 15000, { lvl: 5, hold: 7 }, 'Holds 7x stock power.')
   ]};
   C.oiling = { name: 'Oiling', engineScaled: true, options: [
     opt('stock', 'Stock Oil Pump & Pan', 0, { be: 1000, pw: 0 }, 'Starves the bearings past +1000 rpm.'),
     opt('o1', 'High-Volume Pump + Baffled Pan', 500, { be: 1600, pw: 0 }, 'Bearings live to +1600 rpm.'),
-    opt('o2', '3-Stage Dry Sump', 3500, { be: 2600, pw: 0.015 }, 'Bearings live to +2600 rpm. Less windage: +1.5% power.'),
-    opt('o3', '5-Stage Dry Sump + Vacuum Pump', 7000, { be: 3200, pw: 0.03 }, 'Bearings live to +3200 rpm. +3% power.')
+    opt('o2', '3-Stage Dry Sump', 3500, { lvl: 4, be: 2600, pw: 0.015 }, 'Bearings live to +2600 rpm. Less windage: +1.5% power.'),
+    opt('o3', '5-Stage Dry Sump + Vacuum Pump', 7000, { lvl: 5, be: 3200, pw: 0.03 }, 'Bearings live to +3200 rpm. +3% power.')
   ]};
 
   // Fuel: the smaller of the injectors and the pump sets the power the fuel
@@ -140,15 +140,15 @@
     opt('inj1', '550cc Injectors', 400, { fuel: 600 }, 'Feeds 600 hp on gasoline.'),
     opt('inj2', '1000cc Injectors', 800, { fuel: 1000 }, 'Feeds 1000 hp.'),
     opt('inj3', '1700cc Injectors', 1500, { fuel: 1800 }, 'Feeds 1800 hp.'),
-    opt('inj4', '2400cc Injectors', 3000, { fuel: 2800 }, 'Feeds 2800 hp.'),
-    opt('inj5', 'Twin Injectors per Cylinder', 6000, { fuel: 5000 }, 'Feeds 5000 hp.')
+    opt('inj4', '2400cc Injectors', 3000, { lvl: 4, fuel: 2800 }, 'Feeds 2800 hp.'),
+    opt('inj5', 'Twin Injectors per Cylinder', 6000, { lvl: 5, fuel: 5000 }, 'Feeds 5000 hp.')
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
     opt('fp1', '255 lph In-Tank Pump', 300, { fuel: 650 }, 'Feeds 650 hp on gasoline.'),
     opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100 }, 'Feeds 1100 hp.'),
     opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800 }, 'Feeds 1800 hp.'),
-    opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { fuel: 5000 }, 'Feeds 5000 hp.')
+    opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'Feeds 5000 hp.')
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
     opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Boost over 17 psi will knock and stress the engine.'),
@@ -162,25 +162,25 @@
     opt('stock', 'Stock Coils & Plugs', 0, { spark: 0 }, 'Blows out the spark at high boost or a big nitrous shot.'),
     opt('ig1', 'Hot Coils + Colder Plugs', 300, { spark: 8 }, 'Lights about 8 psi more boost and 100 hp more nitrous.'),
     opt('ig2', 'CDI Ignition Box', 900, { spark: 20 }, 'Lights about 20 psi more boost and 300 hp more nitrous.'),
-    opt('ig3', 'Race Ignition + Crank Trigger', 2500, { spark: 60 }, 'Lights anything.')
+    opt('ig3', 'Race Ignition + Crank Trigger', 2500, { lvl: 4, spark: 60 }, 'Lights anything.')
   ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
     opt('stock', 'Stock ECU', 0, { bw: 0, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
     opt('ecu1', 'Street Tune Flash', 600, { bw: 0.03, ecu: 1 }, 'Better fuel and timing. Raises the rev limiter as far as your engine parts safely allow (up to +800 rpm).'),
     opt('ecu2', 'Standalone ECU', 2000, { bw: 0.05, ecu: 2 }, 'Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
-    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { bw: 0.08, ecu: 3 }, 'Adjustable rev limiter and traction control.')
+    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3 }, 'Adjustable rev limiter and traction control.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
     opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler; aftermarket kits have none.'),
     opt('ic1', 'Front-Mount Intercooler', 1200, { ic: 0.93 }, 'Cooler charge = more power per psi.'),
     opt('ic2', 'Large Race Intercooler', 2200, { ic: 0.97 }),
-    opt('ic3', 'Air-to-Water + Ice Tank', 4000, { ic: 1.0 }, 'Maximum charge cooling.')
+    opt('ic3', 'Air-to-Water + Ice Tank', 4000, { lvl: 4, ic: 1.0 }, 'Maximum charge cooling.')
   ]};
   // gate: share of the turbo's max boost the wastegate can hold steady
   // (an aftermarket turbo's little internal gate creeps and can't hold much)
   C.wastegate = { name: 'Wastegate & Boost Control', needsTurbo: true, options: [
-    opt('stock', 'Internal Wastegate', 0, { gate: 0.7, spoolK: 1 }, 'Aftermarket turbos: boost tops out at 70% of what the turbo can make.'),
-    opt('wg1', 'External Wastegate', 900, { gate: 0.9, spoolK: 1 }, 'Holds up to 90% of the turbo\'s max boost.'),
+    opt('stock', 'Internal Wastegate', 0, { gate: 0.7, spoolK: 1 }, 'On a bolt-on turbo kit boost tops out at 70% of what the turbo can make. Factory turbos are fine.'),
+    opt('wg1', 'External Wastegate', 900, { gate: 0.9, spoolK: 0.95 }, 'Holds up to 90% of a bolt-on turbo\'s max boost, and no boost creep: a little quicker spool.'),
     opt('wg2', 'Dual Gates + Electronic Boost Controller', 2200, { gate: 1, spoolK: 0.88 }, 'Full boost range, and the gates stay shut until target: quicker spool.')
   ]};
   // bov: how long boost hangs on while the throttle is shut for a shift (s)
@@ -192,15 +192,15 @@
   C.launch = { name: 'Launch Control', options: [
     opt('stock', 'None', 0, { twostep: 0 }),
     opt('l1', '2-Step Rev Limiter', 900, { twostep: 1 }, 'Holds a set launch RPM on the line and builds some boost.'),
-    opt('l2', '2-Step + Anti-Lag', 3000, { twostep: 2 }, 'Builds near-full boost on the line and keeps turbos lit between shifts.')
+    opt('l2', '2-Step + Anti-Lag', 3000, { lvl: 4, twostep: 2 }, 'Builds near-full boost on the line and keeps turbos lit between shifts.')
   ]};
   C.nitrous = { name: 'Nitrous Oxide', options: [
     opt('stock', 'None', 0, { nos: 0 }),
     opt('n75', '75 Shot Wet Kit', 800, { nos: 75 }, 'Adds 75 hp when sprayed.'),
     opt('n150', '150 Shot Wet Kit', 1500, { nos: 150 }),
     opt('n250', '250 Shot Plate System', 2500, { nos: 250 }),
-    opt('n400', '400 Shot Fogger', 4500, { nos: 400 }),
-    opt('n650', '650 Shot Dual-Stage Fogger', 8000, { nos: 650 }, 'Pro nitrous. Spray it carefully!')
+    opt('n400', '400 Shot Fogger', 4500, { lvl: 4, nos: 400 }),
+    opt('n650', '650 Shot Dual-Stage Fogger', 8000, { lvl: 5, nos: 650 }, 'Pro nitrous. Spray it carefully!')
   ]};
   C.nosctrl = { name: 'Nitrous Controller', needsNos: true, options: [
     opt('stock', 'On/Off Solenoid', 0, { prog: 0 }),
@@ -217,7 +217,7 @@
     opt('cl2', 'Stage 2 Clutch', 1100, { cap: 950, engage: 0.24 }, 'Holds 950 Nm.'),
     opt('cl3', 'Twin-Disc Clutch', 2400, { cap: 1500, engage: 0.20 }, 'Holds 1500 Nm.'),
     opt('cl4', 'Triple-Disc Clutch', 4200, { cap: 2400, engage: 0.17 }, 'Holds 2400 Nm.'),
-    opt('cl5', 'Pro Multi-Disc Slider Clutch', 9000, { cap: 4500, engage: 0.22 }, 'Holds anything; slips on purpose for smooth launches.')
+    opt('cl5', 'Pro Multi-Disc Slider Clutch', 9000, { lvl: 5, cap: 4500, engage: 0.22 }, 'Holds anything; slips on purpose for smooth launches.')
   ]};
   C.converter = { name: 'Torque Converter', needsConverter: true, options: [
     opt('stock', 'Stock Converter (2200 stall)', 0, { stall: 2200, tr: 1.9 }, 'Tight street converter. Soft launches, little wheelspin.'),
@@ -245,7 +245,7 @@
     opt('stock', 'Factory Axles', 0, { axle: 0, am: 0 }, 'Built for the factory engine. Big torque snaps axles.'),
     opt('ra1', 'Chromoly Axles', 900, { axle: 1100, am: 0 }, 'Holds 1100 Nm of engine torque.'),
     opt('ra2', 'Built 9-inch + 35-Spline Axles', 2600, { axle: 2000, am: 12 }, 'Holds 2000 Nm. Heavy but bulletproof.'),
-    opt('ra3', 'Fabricated Pro Rear End + 40-Spline', 6500, { axle: 9000, am: 8 }, 'Holds 9000 Nm.')
+    opt('ra3', 'Fabricated Pro Rear End + 40-Spline', 6500, { lvl: 5, axle: 9000, am: 8 }, 'Holds 9000 Nm.')
   ]};
   C.diff = { name: 'Differential', options: [
     opt('open', 'Open Differential', 0, { dgrip: 0.88 }, 'One-wheel peel: loses traction easily.'),
@@ -366,8 +366,16 @@
     return (inst.parts && inst.parts[cat]) || DR.stockPart(cat, inst);
   };
 
-  // Full option list for a category on this car instance.
+  // Part level (0 stock, 1 Street .. 5 Pro Mod): set on the part, or from
+  // its base price (before engine scaling, so a part is the same level on
+  // every car).
+  DR.partLevel = function (price) { return !price ? 0 : price <= 700 ? 1 : price <= 1300 ? 2 : price <= 4500 ? 3 : price <= 12000 ? 4 : 5; };
+  function lvlOf(o) { return !o.price ? 0 : o.lvl || DR.partLevel(o.price); }
   DR.partOptions = function (cat, inst) {
+    return listOptions(cat, inst).map(function (o) { if (o.lvl == null) o.lvl = lvlOf(o); return o; });
+  };
+  // Full option list for a category on this car instance.
+  function listOptions(cat, inst) {
     var car = DR.CARS[inst.carId], i, list = [];
     if (cat === 'engine') {
       var ids = Object.keys(DR.ENGINES).sort(function (a, b) { return DR.ENGINES[a].hp - DR.ENGINES[b].hp; });
@@ -402,8 +410,13 @@
         .map(function (o) { return o.id === 'stock' ? Object.assign({}, o, { name: 'Factory ' + car.drive }) : o; });
     }
     var c = C[cat], mul = c.engineScaled ? DR.enginePriceMul(inst.engine || car.engine) : 1;
-    return c.options.map(function (o) { return Object.assign({}, o, { price: Math.round(o.price * mul / 50) * 50 }); });
-  };
+    var eng = DR.ENGINES[inst.engine || car.engine];
+    return c.options.map(function (o) {
+      var x = Object.assign({}, o, { price: Math.round(o.price * mul / 50) * 50, lvl: lvlOf(o) });
+      if (o.hold) x.desc = (o.desc ? o.desc + ' ' : '') + 'About ' + Math.round(eng.safe * o.hold / 10) * 10 + ' hp on this engine.';
+      return x;
+    });
+  }
 
   // Whether a category applies to this car right now (e.g. clutch vs converter).
   DR.partApplies = function (cat, inst) {

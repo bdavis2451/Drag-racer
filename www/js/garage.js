@@ -11,7 +11,7 @@
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, A = DR.Audio, h = UI.h, btn = UI.btn;
 
   DR.LEVEL_COLS = ['#8a8f99', '#c4c8d0', '#46e07a', '#4da3ff', '#b06bff', '#ff9a2e'];
-  function lvlOf(price) { return price ? DR.partLevel(price) : 0; }
+  function lvlOf(o) { return o && o.price ? o.lvl : 0; }
 
   // ---------------------------------------------------------------- icons
   // 24x24 pixel-art icons, one per part category, drawn from rectangles and
@@ -233,7 +233,7 @@
     if (cat === 'engine') { DR.ENGINE_BOUND.forEach(function (c) { delete copy.parts[c]; }); copy.engine = id; delete copy.tune.boost; delete copy.tune.launchRpm; delete copy.tune.shiftRpm; delete copy.tune.revLimit; }
     else {
       if (id === DR.stockPart(cat, copy)) delete copy.parts[cat]; else copy.parts[cat] = id;
-      if (cat === 'fi') delete copy.tune.boost;
+      if (cat === 'fi' && (id === 'none' || DR.partId('fi', inst) === 'none')) delete copy.tune.boost;
       if (cat === 'trans') delete copy.tune.gears;
       if (cat === 'rtires') delete copy.tune.psi;
       if (cat === 'rearsusp') delete copy.tune.antiSquat;
@@ -248,6 +248,24 @@
     var out = [];
     if (dhp) out.push(h('span', { class: dhp > 0 ? 'good' : 'bad' }, (dhp > 0 ? '+' : '') + dhp + 'hp'));
     if (dlb) out.push(h('span', { class: dlb < 0 ? 'good' : 'bad' }, (dlb > 0 ? '+' : '') + dlb + 'lb'));
+    // then the limit the part moves: its own rating first (an upgrade that
+    // isn't the weak link yet still shows what it holds)
+    if (out.length < 2) {
+      var own = [];
+      if (S1.partHold[cat] != null) own.push(['own', S0.partHold[cat], S1.partHold[cat], 'hp holds']);
+      if (S1.partRpm[cat] != null && cat !== 'pistons' && cat !== 'rods' && cat !== 'crank') own.push(['own', S0.partRpm[cat], S1.partRpm[cat], 'rpm']);
+      if (cat === 'injectors') own.push(['own', S0.fuelInj, S1.fuelInj, 'hp feeds']);
+      if (cat === 'fuelpump') own.push(['own', S0.fuelPump, S1.fuelPump, 'hp feeds']);
+      var lim = own.concat([['safe', S0.safeHp, S1.safeHp, 'hp safe'], ['fuel', S0.fuelW / DR.HP, S1.fuelW / DR.HP, 'hp fuel'],
+        ['rpm', S0.mech, S1.mech, 'rpm safe'], ['vt', S0.vtLimit, S1.vtLimit, 'rpm valves'], ['spark', S0.sparkPsi, S1.sparkPsi, 'psi spark'],
+        ['boost', S0.maxBoost, S1.maxBoost, 'psi max'], ['axle', S0.axleTq, S1.axleTq, 'Nm axles'],
+        ['risk', -Math.max(S0.risk.engine, S0.risk.trans, S0.risk.axle) * 100, -Math.max(S1.risk.engine, S1.risk.trans, S1.risk.axle) * 100, '% risk']]);
+      for (var i = 0; i < lim.length && out.length < 2; i++) {
+        var d = Math.round(lim[i][2] - lim[i][1]);
+        var v = lim[i][0] === 'risk' ? -d : d;
+        if (d) out.push(h('span', { class: d > 0 ? 'good' : 'bad' }, (v > 0 ? '+' : '') + v + lim[i][3]));
+      }
+    }
     return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'no change');
   }
   function deltaRow(a, b, unit, dec, lowerBetter) {
@@ -331,7 +349,7 @@
     var grid = h('div', { class: 'pgrid' });
     DR.partOptions(shopCat, inst).forEach(function (o) {
       if (!o.price) return;                                  // stock / factory parts are not sold
-      var lvl = lvlOf(o.price), installed = o.id === curId, owned = G.ownedCount(shopCat, o.id), locked = !G.partUnlocked(shopCat, o.price);
+      var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(shopCat, o.id), locked = !G.partUnlocked(shopCat, lvl);
       grid.appendChild(h('div', { class: 'pcard l' + lvl + (locked ? ' locked' : '') + (installed ? ' inst' : ''), onclick: function () { partModal(inst, shopCat, o.id); } },
         h('div', { class: 'pic' }, iconEl(shopCat, lvl, o.id, 48)),
         h('div', { class: 'plvl' }, DR.LEVEL_NAMES[lvl]),
@@ -355,7 +373,7 @@
     return c;
   }
   function partModal(inst, cat, id) {
-    var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt.price), locked = !G.partUnlocked(cat, opt.price);
+    var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt), locked = !G.partUnlocked(cat, lvl);
     var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
     var fits = DR.partApplies(cat, inst), owned = G.ownedCount(cat, id), installed = DR.partId(cat, inst) === id;
     var close;
@@ -498,7 +516,7 @@
         if (!applies && !G.invFor(c).length) return;
         var id = DR.partId(c, inst), opt = DR.getOption(c, inst, id), stock = id === DR.stockPart(c, inst);
         list.appendChild(h('div', { class: 'item' + (c === bayCat ? ' sel' : '') + (applies ? '' : ' locked'), onclick: function () { bayCat = c; UI.refresh(); } },
-          iconEl(c, stock ? 0 : lvlOf(opt.price), id, 28),
+          iconEl(c, stock ? 0 : lvlOf(opt), id, 28),
           h('div', { class: 'name' }, h('div', { class: 'pix small' }, DR.catName(c)), h('div', { class: stock ? 'dim' : 'acc' }, opt.name),
             weak[c] && applies ? h('div', { class: 'bad', style: { fontSize: '14px' } }, '! ' + weak[c]) : null),
           spare ? h('span', { class: 'badge' }, String(spare)) : null));
@@ -508,9 +526,9 @@
     var id = DR.partId(bayCat, inst), opt = DR.getOption(bayCat, inst, id), stock = id === DR.stockPart(bayCat, inst);
     var right = h('div', { class: 'col' },
       h('h2', {}, DR.catName(bayCat)),
-      h('div', { class: 'slot l' + (stock ? 0 : lvlOf(opt.price)) },
-        iconEl(bayCat, stock ? 0 : lvlOf(opt.price), id, 44),
-        h('div', { class: 'grow' }, h('div', { class: 'plvl' }, stock ? 'FACTORY' : 'INSTALLED • ' + DR.LEVEL_NAMES[lvlOf(opt.price)]), h('div', { class: 'pix' }, opt.name),
+      h('div', { class: 'slot l' + (stock ? 0 : lvlOf(opt)) },
+        iconEl(bayCat, stock ? 0 : lvlOf(opt), id, 44),
+        h('div', { class: 'grow' }, h('div', { class: 'plvl' }, stock ? 'FACTORY' : 'INSTALLED • ' + DR.LEVEL_NAMES[lvlOf(opt)]), h('div', { class: 'pix' }, opt.name),
           opt.desc ? h('div', { class: 'dim', style: { fontSize: '16px' } }, opt.desc) : null),
         stock ? null : btn('Remove', function () {
           var go = function () { G.removePart(inst, bayCat); A.click(); UI.toast(opt.name + ' moved to your parts'); UI.refresh(); };
@@ -521,7 +539,7 @@
     var items = G.invFor(bayCat);
     if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat).toLowerCase() + ' parts.'));
     items.sort(function (a, b) { return (G.partFitIssue(a, inst) ? 1 : 0) - (G.partFitIssue(b, inst) ? 1 : 0) || b.price - a.price; }).forEach(function (it) {
-      var why = G.partFitIssue(it, inst), lvl = lvlOf(it.price);
+      var why = G.partFitIssue(it, inst), lvl = lvlOf(G.itemOption(it) || { price: it.price, lvl: DR.partLevel(it.price) });
       right.appendChild(h('div', { class: 'item inv l' + lvl + (why ? ' locked' : '') },
         iconEl(it.cat, lvl, it.id, 32),
         h('div', { class: 'name' }, h('div', {}, G.partName(it)), why ? h('div', { class: 'warn', style: { fontSize: '15px' } }, why) : gainLine(inst, it.cat, it.id)),
