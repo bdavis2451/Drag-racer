@@ -538,7 +538,7 @@
     ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
   }
   Scene.prototype.light = function (ctx, camX, lamps, particles) {
-    var W = DR.VIEW_W, H = DR.VIEW_H, glows = this.glow.slice();
+    var W = DR.VIEW_W, H = DR.VIEW_H, glows = this.glow.slice(), self2 = this;
     if (particles) particles.glows(camX, LANE_Y, glows);
     ctx.save();
     if (!this.theme.night) {
@@ -554,7 +554,16 @@
       ctx.globalCompositeOperation = 'multiply';
       ctx.fillStyle = 'rgb(84,92,140)'; ctx.fillRect(0, 214, W, H - 214);
       ctx.globalCompositeOperation = 'lighter';
-      if (this.standGlow) tileX(ctx, this.standGlow, this._standOff || 0, 222);
+      if (this.standGlow) {
+        // shop windows glow, but not through the cars parked in front of them
+        var gl = this._glowBuf || (this._glowBuf = mk(W, H, function () {}));
+        var g2 = gl.getContext('2d');
+        g2.globalCompositeOperation = 'source-over'; g2.clearRect(0, 0, W, H);
+        tileX(g2, this.standGlow, this._standOff || 0, 222);
+        g2.globalCompositeOperation = 'destination-out';
+        (lamps || []).forEach(function (L) { if (L.car) DR.drawCar(g2, L.car.spr, L.car.gx, L.car.gy, L.car.pitch, 0, { shadow: false }); });
+        ctx.drawImage(gl, 0, 0);
+      }
       var self = this;
       glows.forEach(function (g) {
         if (g.lamp) {
@@ -581,6 +590,13 @@
         radial(ctx, L.tail.x, L.tail.y, L.brake ? 22 : 10, [255, 30, 30], L.brake ? 0.7 : 0.45);
       });
     }
+    // neon underglow lights the ground (strong at night, a hint by day)
+    ctx.globalCompositeOperation = 'lighter';
+    (lamps || []).forEach(function (L) {
+      if (!L.neon) return;
+      ctx.save(); ctx.translate(L.neon.x, L.ground + 2); ctx.scale(1, 0.09);
+      radial(ctx, 0, 0, L.neon.w * 0.62, L.neon.c, self2.theme.night ? 0.4 : 0.16); ctx.restore();
+    });
     ctx.restore();
   };
 

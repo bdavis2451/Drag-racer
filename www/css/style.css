@@ -87,6 +87,7 @@ h3 { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dim
 .menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .menu-grid .btn { min-height: 46px; font-size: 10px; }
 .menu-grid .btn.race { grid-column: span 2; background: #b52a2a; font-size: 13px; }
+.menu-grid .btn.race.one { grid-column: auto; }
 
 /* ---------------------------------------------------------------- shop */
 .split { display: flex; gap: 10px; height: 100%; }
@@ -195,3 +196,13 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
   .menu-grid .btn { min-height: 40px; font-size: 9px; }
   body { font-size: 18px; }
 }
+
+/* career & body shop */
+.stars { display: flex; gap: 1px; font-size: 18px; letter-spacing: 0; }
+.stars span { color: #3a3d45; }
+.stars span.on { color: #ffd23d; text-shadow: 0 0 6px rgba(255, 210, 61, .5); }
+.stars span.half { color: #b8962a; }
+.item.boss { border-color: #d23a3a; box-shadow: inset 0 0 0 1px rgba(210, 58, 58, .5); background: linear-gradient(90deg, rgba(210, 58, 58, .14), transparent 60%); }
+.item.locked.boss { opacity: .6; }
+.card.locked { opacity: .55; }
+.warn { color: #ff9a4d; }

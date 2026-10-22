@@ -1,6 +1,6 @@
 // ===========================================================================
 // RACE — burnout, staging, the tree, the run itself, HUD and the timeslip.
-// cfg = {mode:'career'|'street'|'test', opp, tier, idx, dist, theme, grip,
+// cfg = {mode:'career'|'street'|'test', opp, ev, round, dist, theme, grip,
 //        reward, bet, back}
 // ===========================================================================
 (function () {
@@ -13,6 +13,12 @@
       var inst = G.car();
       if (inst.damage) { UI.toast('Repair your car first!'); return; }
       UI.show(RaceScreen, cfg);
+    },
+    // A career event (round: knockout round, 0-based).
+    careerEvent: function (ev, round) {
+      var T = DR.EVENT_TYPES[ev.type];
+      round = round || 0;
+      DR.Race.start({ mode: 'career', ev: ev, round: round, opp: ev.opps[round], dist: T.dist(), theme: T.theme, grip: T.grip, reward: G.eventReward(ev) });
     }
   };
 
@@ -100,7 +106,7 @@
     function setMsg(m, sub) { msgEl.textContent = m || ''; subEl.textContent = sub || ''; }
     var vsLine = opp ? 'VS ' + opp.label : 'TEST & TUNE';
     infoEl.innerHTML = '';
-    setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? 'Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Burnout to heat the tires, or Stage to race.' : 'Burnout to heat the tires, or Stage to race.');
+    setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (cfg.ev.type === 'knockout' ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Burnout to heat the tires, or Stage to race.' : 'Burnout to heat the tires, or Stage to race.');
 
     function startBurnout() {
       if (phase !== 'pre') return;
@@ -312,7 +318,7 @@
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
       DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode });
       var lamp = DR.carLamps(spr, gx, gy, pitch);
-      lamp.brake = sim.brake > 0.05; lamp.ground = gy;
+      lamp.brake = sim.brake > 0.05; lamp.ground = gy; lamp.car = { spr: spr, gx: gx, gy: gy, pitch: pitch };
       // smoke from the drive tires
       var rearX = frontX - (spr.padL + spr.lenPx - spr.wheelR.x) / DR.PPM;
       // tire smoke: more the harder the tires spin over the ground
@@ -414,10 +420,18 @@
       }
       var lines = [], moneyDelta = 0, firstWin = false;
       var damaged = you.sim.blown ? { engine: true } : you.sim.broke ? { trans: true } : null;
+      var ev = cfg.ev, nextRound = null;
       if (cfg.mode === 'career' && win) {
-        moneyDelta = cfg.reward; firstWin = G.beat(cfg.tier, cfg.idx);
-        if (firstWin && cfg.idx === 4) lines.push('TIER CLEARED! ' + (DR.CAREER[cfg.tier + 1] ? 'Next up: ' + DR.CAREER[cfg.tier + 1].name : 'You are the KING of the strip!'));
+        if (ev.type === 'knockout' && cfg.round < ev.opps.length - 1) {
+          nextRound = cfg.round + 1;
+          lines.push('ROUND ' + (cfg.round + 1) + ' OF ' + ev.opps.length + ' WON! Next up: ' + ev.opps[nextRound].name);
+        } else {
+          var res = G.winEvent(ev);
+          moneyDelta = res.cash; firstWin = res.first;
+          lines = lines.concat(res.lines);
+        }
       }
+      if (cfg.mode === 'career' && win === false && ev.type === 'knockout') lines.push('KNOCKED OUT in round ' + (cfg.round + 1) + '. Start over from round 1.');
       if (cfg.mode === 'street') moneyDelta = win ? cfg.bet : -cfg.bet;
       if (moneyDelta) G.earn(moneyDelta);
       if (them) { G.state.stats.races++; if (win) G.state.stats.wins++; }
@@ -453,11 +467,12 @@
         h('div', { class: 'col' },
           btn('Garage', function () { UI.show(UI.Garage); }),
           btn('Tune', function () { UI.show(UI.Tune); }),
-          !damaged ? btn(them ? (cfg.mode === 'street' ? 'Back to Street' : 'Back to Ladder') : 'Run Again', function () {
+          !damaged && nextRound != null ? btn('Next Round', function () { DR.Race.careerEvent(ev, nextRound); }, 'primary') : null,
+          !damaged && nextRound == null ? btn(them ? (cfg.mode === 'street' ? 'Back to Street' : 'Back to Career') : 'Run Again', function () {
             if (them) UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : 'career');
             else DR.Race.start(cfg);
           }, 'primary') : null,
-          !damaged && them && cfg.mode === 'career' && !win ? btn('Rematch', function () { DR.Race.start(cfg); }, 'red') : null,
+          !damaged && them && cfg.mode === 'career' && !win ? btn(ev.type === 'knockout' ? 'Retry Knockout' : 'Rematch', function () { DR.Race.careerEvent(ev, 0); }, 'red') : null,
           back && !damaged ? btn('Back to Tuning', function () { UI.show(back); }) : null))));
       if (win) A.cash();
       root.appendChild(slip);

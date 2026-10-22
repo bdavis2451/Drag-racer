@@ -111,6 +111,7 @@
       ['Drive', S.drive + ', ' + tr.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
       tr.type === 'auto' ? ['Converter', S.stall + ' stall' + (S.tbrake ? ' + transbrake' : ', foot brake')] : null,
       ['Tires', S.tire.name],
+      ['Visual rating', DR.starText(DR.starRating(inst)), 'acc'],
       ['Est. 1/4 mile', est.et >= 90 ? 'crash!' : est.et.toFixed(2) + 's @ ' + Math.round(est.trap), 'good'],
       inst.best && inst.best.q ? ['Best 1/4', inst.best.q.toFixed(3) + 's', 'acc'] : null,
       inst.best && inst.best.e ? ['Best 1/8', inst.best.e.toFixed(3) + 's', 'acc'] : null
@@ -166,10 +167,11 @@
         btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'));
     }
     var menu = h('div', { class: 'menu-grid' },
-      btn('⚑ Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'),
+      btn('⚑ Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race one'),
       btn('Upgrade', function () { UI.show(UI.Shop); }, 'blue'),
       btn('Tune', function () { UI.show(UI.Tune); }),
       btn('Dyno', function () { UI.show(UI.Dyno); }),
+      btn('Body Shop', function () { UI.show(UI.Body); }, 'blue'),
       btn('Paint', function () { UI.show(UI.Paint); }),
       btn('My Cars', function () { UI.show(UI.Cars); }),
       btn('Dealer', function () { UI.show(UI.Dealer); }));
@@ -178,8 +180,15 @@
       h('div', { class: 'content' }, h('div', { class: 'garage' },
         h('div', { class: 'view' }, cv, h('div', { class: 'pix acc', style: { textAlign: 'center' } }, DR.CARS[inst.carId].name), dmg, menu),
         h('div', { class: 'side panel' }, carStats(inst, S), riskBox(S),
+          careerLine(),
           h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Record: ' + G.state.stats.wins + ' W / ' + (G.state.stats.races - G.state.stats.wins) + ' L')))));
   };
+
+  function careerLine() {
+    var c = G.careerState(), st = DR.STAGES[c.stage], sp = c.sponsor[c.stage];
+    return h('div', { class: 'acc', style: { fontSize: '16px', marginTop: '6px' } }, 'Career: Stage ' + (c.stage + 1) + ' (' + st.name + ') • ' + G.stageWins(c.stage) + '/' + st.events.length + ' wins' +
+      (sp ? ' • ' + DR.sponsorById(sp.id).name : ' • no sponsor'));
+  }
 
   // ------------------------------------------------------------ RACE MENU
   var streetOpps = null;
@@ -188,7 +197,7 @@
     var inst = G.car();
     var body = h('div');
     var tabs = h('div', { class: 'tabs' },
-      [['career', 'Career Ladder'], ['street', 'Street Race $'], ['test', 'Test & Tune']].map(function (t) {
+      [['career', 'Career'], ['street', 'Street Race $'], ['test', 'Test & Tune']].map(function (t) {
         return btn(t[1], function () { UI.show(UI.RaceMenu, t[0]); }, tab === t[0] ? 'on' : '');
       }));
     if (tab === 'career') body.appendChild(careerView());
@@ -197,34 +206,77 @@
     return h('div', { class: 'screen' }, top('RACE', function () { UI.show(UI.Garage); }), h('div', { class: 'content' }, tabs, body));
   };
 
-  var selTier = null;
+  var selStage = null;
   function careerView() {
-    if (selTier == null) { selTier = 0; for (var t = 0; t < DR.CAREER.length; t++) if (G.tierUnlocked(t)) selTier = t; }
-    var left = h('div', { class: 'list' }), right = h('div', { class: 'list' });
-    DR.CAREER.forEach(function (tier, ti) {
-      var un = G.tierUnlocked(ti), done = tier.opps.filter(function (_, i) { return G.beaten(ti, i); }).length;
-      left.appendChild(h('div', { class: 'item' + (ti === selTier ? ' sel' : '') + (un ? '' : ' locked'), onclick: function () { if (!un) return UI.toast('Beat every racer in the previous tier first'); selTier = ti; UI.refresh(); } },
-        h('div', { class: 'name' }, h('div', { class: 'pix small' }, 'TIER ' + (ti + 1)), tier.name),
-        h('span', { class: 'tag ' + (done === 5 ? 'g' : '') }, un ? done + '/5' : 'LOCKED')));
+    var c = G.careerState();
+    if (selStage == null || selStage > c.stage) selStage = c.stage;
+    G.checkContracts().forEach(function (m) { UI.toast(m); });
+    var left = h('div', { class: 'list' });
+    DR.STAGES.forEach(function (st, si) {
+      var un = G.stageUnlocked(si), wins = G.stageWins(si), boss = G.eventWon(st.boss);
+      left.appendChild(h('div', { class: 'item' + (si === selStage ? ' sel' : '') + (un ? '' : ' locked'), onclick: function () { if (!un) return UI.toast('Beat the stage ' + si + ' boss first'); selStage = si; UI.refresh(); } },
+        h('div', { class: 'name' }, h('div', { class: 'pix small' }, 'STAGE ' + (si + 1)), st.name),
+        h('span', { class: 'tag ' + (boss ? 'g' : '') }, !un ? 'LOCKED' : boss ? 'CLEARED' : wins + '/' + st.events.length)));
     });
-    var tier = DR.CAREER[selTier];
-    tier.opps.forEach(function (o, i) {
-      var oi = G.oppInst(o), est = G.estimate(oi, tier.dist), un = G.oppUnlocked(selTier, i), beat = G.beaten(selTier, i);
-      var reward = beat ? Math.round(tier.reward[i] * 0.3) : tier.reward[i];
-      var cv = h('canvas', { width: 120, height: 50, style: { width: '96px', height: '40px', flex: 'none' } });
-      DR.drawPreview(cv, oi, { aspect: 0.42 });
-      right.appendChild(h('div', { class: 'item' + (un ? '' : ' locked') }, cv,
-        h('div', { class: 'name' }, h('div', { class: 'acc' }, (i === 4 ? '★ BOSS: ' : '') + o.name), h('div', { class: 'dim' }, DR.CARS[o.carId].name + ' • ' + (est.et >= 90 ? '??' : est.et.toFixed(2) + 's'))),
-        beat ? h('span', { class: 'tag g' }, 'BEATEN') : null,
-        h('span', { class: 'price' }, DR.money(reward)),
-        btn('Race', function () {
-          if (!un) return UI.toast('Beat the previous racer first');
-          DR.Race.start({ mode: 'career', tier: selTier, idx: i, opp: o, dist: tier.dist, theme: 'strip', grip: 1, reward: reward });
-        }, 'small ' + (un ? 'red' : 'disabled'))));
+    var st = DR.STAGES[selStage], right = h('div', { class: 'list' });
+    // sponsor
+    var sp = c.sponsor[selStage], spBox;
+    if (!sp) {
+      spBox = h('div', { class: 'warnbox' }, 'No sponsor yet. Sponsors pay a signing bonus and a bonus for every win, and the boss only races sponsored drivers. ',
+        btn('Choose Sponsor', function () { sponsorPicker(selStage); }, 'small go'));
+    } else {
+      var info = DR.sponsorById(sp.id), pr = G.contractProgress(selStage);
+      spBox = h('div', { class: 'panel', style: { borderColor: info.col } },
+        h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'pix', style: { color: info.col } }, info.name),
+          h('span', { class: 'dim' }, '+' + DR.money(sp.perWin) + ' per win • contract bonus ' + DR.money(sp.bonus) + (sp.paid ? ' (paid)' : ''))),
+        pr.lines.map(function (l) { return h('div', { class: l[2] ? 'good' : 'dim', style: { fontSize: '16px' } }, (l[2] ? '✔ ' : '• ') + l[0] + ': ' + l[1]); }));
+    }
+    var hidden = 0;
+    st.all.forEach(function (ev) {
+      if (!G.eventVisible(ev)) { hidden++; return; }
+      right.appendChild(eventRow(ev));
     });
-    var yourEst = G.estimate(G.car(), DR.QUARTER);
+    if (hidden) right.appendChild(h('div', { class: 'item locked' }, h('div', { class: 'name dim' }, hidden + ' more race' + (hidden > 1 ? 's' : '') + ' — keep winning to reveal them')));
+    var stars = DR.starRating(G.car());
     return h('div', { class: 'split' }, h('div', { class: 'left' }, left),
-      h('div', { class: 'right' }, h('h2', {}, tier.name + ' — 1/4 mile'), h('p', { class: 'dim', style: { margin: '0 0 8px' } }, 'Your estimated ET: ' + (yourEst.et >= 90 ? '??' : yourEst.et.toFixed(2) + 's') + '. Beat each racer to unlock the next. Rematches pay 30%.'), right));
+      h('div', { class: 'right' }, h('h2', {}, 'Stage ' + (selStage + 1) + ': ' + st.name),
+        h('p', { class: 'dim', style: { margin: '0 0 6px' } }, st.blurb + ' Your car: ' + estText(G.car(), DR.QUARTER) + ' • ' + DR.starText(stars) + ' visual rating.'),
+        spBox, right));
+  }
+  function estText(inst, dist, grip) { var e = G.estimate(inst, dist, grip); return e.et >= 90 ? '??' : e.et.toFixed(2) + 's'; }
+  function eventRow(ev) {
+    var T = DR.EVENT_TYPES[ev.type], lock = G.eventLock(ev), won = G.eventWon(ev), o = ev.opps[0], oi = G.oppInst(o);
+    var cv = h('canvas', { width: 120, height: 50, style: { width: '96px', height: '40px', flex: 'none' } });
+    DR.drawPreview(cv, oi, { aspect: 0.42 });
+    var who = ev.opps.length > 1 ? ev.opps.map(function (x) { return x.name; }).join(' → ') : o.name;
+    var unl = ev.unlocks.length && !won ? h('div', { class: 'dim', style: { fontSize: '15px' } }, '🔓 ' + ev.unlocks.map(DR.unlockText).join(' • ')) : null;
+    var badge = h('span', { class: 'tag ' + (ev.type === 'boss' ? 'r' : ev.type === 'sponsor' ? 'g' : '') }, T.name + (ev.stars ? ' ' + DR.starText(ev.stars) : ''));
+    return h('div', { class: 'item' + (lock ? ' locked' : '') + (ev.type === 'boss' ? ' boss' : '') }, cv,
+      h('div', { class: 'name' },
+        h('div', { class: 'acc' }, (ev.type === 'boss' ? '★ BOSS: ' : '') + who),
+        h('div', { class: 'dim' }, DR.CARS[o.carId].name + ' • ' + estText(oi, T.dist(), T.grip)), unl,
+        lock ? h('div', { class: 'warn', style: { fontSize: '15px' } }, '🔒 ' + lock) : null),
+      badge,
+      won ? h('span', { class: 'tag g' }, 'WON') : null,
+      h('span', { class: 'price' }, DR.money(G.eventReward(ev))),
+      btn('Race', function () {
+        if (lock) return UI.toast(lock);
+        DR.Race.careerEvent(ev, 0);
+      }, 'small ' + (lock ? 'disabled' : 'red')));
+  }
+  function sponsorPicker(si) {
+    var offers = G.sponsorOffers(si), close;
+    var rows = offers.map(function (o) {
+      var k = o.contract, req = ['Win ' + k.spon + ' sponsor races'];
+      if (k.street) req.push('win ' + k.street + ' street races');
+      if (k.stars) req.push('reach ' + DR.starText(k.stars));
+      return h('div', { class: 'item' },
+        h('div', { class: 'name' }, h('div', { class: 'pix', style: { color: o.col } }, o.name), h('div', { class: 'dim' }, o.pitch),
+          h('div', { style: { fontSize: '16px' } }, 'Contract: ' + req.join(', ') + '.'),
+          h('div', { class: 'good', style: { fontSize: '16px' } }, 'Signing ' + DR.money(o.sign) + ' • ' + DR.money(o.perWin) + ' per win • ' + DR.money(o.bonus) + ' when fulfilled')),
+        btn('Sign', function () { G.signSponsor(si, o); A.cash(); close(); UI.toast('Signed with ' + o.name + '!'); UI.refresh(); }, 'small go'));
+    });
+    close = UI.modal([h('h2', {}, 'Stage ' + (si + 1) + ' sponsors'), h('p', { class: 'dim' }, 'You can only sign one per stage, so choose carefully.'), h('div', { class: 'list' }, rows), btn('Not yet', function () { close(); }, 'small')]);
   }
 
   var betSel = 1000;
@@ -283,9 +335,10 @@
     var opts = DR.partOptions(shopCat, inst), curId = DR.partId(shopCat, inst);
     var olist = h('div', { class: 'list' });
     opts.forEach(function (o) {
-      var installed = o.id === curId;
-      olist.appendChild(h('div', { class: 'item' + (installed ? ' sel' : ''), onclick: function () { openPart(inst, shopCat, o.id); } },
-        h('div', { class: 'name' }, o.name), installed ? h('span', { class: 'tag g' }, 'INSTALLED') : h('span', { class: 'price' }, o.price ? DR.money(o.price) : 'FREE')));
+      var installed = o.id === curId, locked = !installed && !G.partUnlocked(shopCat, o.price);
+      olist.appendChild(h('div', { class: 'item' + (installed ? ' sel' : '') + (locked ? ' locked' : ''), onclick: function () { openPart(inst, shopCat, o.id); } },
+        h('div', { class: 'name' }, o.name, h('div', { class: 'dim', style: { fontSize: '14px' } }, DR.LEVEL_NAMES[DR.partLevel(o.price)] + ' level')),
+        installed ? h('span', { class: 'tag g' }, 'INSTALLED') : locked ? h('span', { class: 'tag' }, '🔒 LOCKED') : h('span', { class: 'price' }, o.price ? DR.money(o.price) : 'FREE')));
     });
     return h('div', { class: 'screen' }, top('UPGRADE SHOP', function () { UI.show(UI.Garage); }),
       h('div', { class: 'content' }, groupTabs, h('div', { class: 'split' },
@@ -334,6 +387,7 @@
       ]),
       riskBox(S1),
       id === cur ? h('div', { class: 'okbox' }, 'Installed on this car.') :
+        !G.partUnlocked(cat, opt.price) ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[DR.partLevel(opt.price)] + '-level ' + DR.PART_GROUPS.filter(function (g) { return g.id === DR.groupOf(cat); })[0].name.toLowerCase() + ' parts unlock as you win career races.') :
         btn(net > 0 ? 'Buy & Install (' + DR.money(net) + ')' : 'Install (+' + DR.money(-net) + ')', function () {
           var r = G.buyPart(cat, id);
           UI.toast(r.msg);
@@ -503,9 +557,11 @@
         var S = DR.buildSpec(inst);
         var cv = h('canvas', { width: 200, height: 100 });
         DR.drawPreview(cv, inst);
-        grid.appendChild(h('div', { class: 'card' + (dealerSel === id ? ' sel' : ''), onclick: function () { dealerSel = id; showCar(id); } }, cv,
+        var locked = !G.carUnlocked(id);
+        grid.appendChild(h('div', { class: 'card' + (dealerSel === id ? ' sel' : '') + (locked ? ' locked' : ''), onclick: function () { dealerSel = id; showCar(id); } }, cv,
           h('div', { class: 't acc' }, car.name),
-          h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'dim' }, Math.round(S.peakHp) + 'hp • ' + S.drive), h('span', { class: 'price' }, DR.money(car.price)))));
+          h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'dim' }, Math.round(S.peakHp) + 'hp • ' + S.drive),
+            locked ? h('span', { class: 'tag' }, '🔒 STAGE ' + (DR.CAR_STAGE[id] + 1)) : h('span', { class: 'price' }, DR.money(car.price)))));
       });
     function showCar(id) {
       var car = DR.CARS[id], inst = { carId: id, engine: car.engine, parts: {}, tune: {}, color: car.col };
@@ -517,7 +573,7 @@
         ['Drive', S.drive + ', ' + DR.TRANS[S.transId].name], ['Tires', S.tire.name], ['Est. 1/4', est.et.toFixed(2) + 's @ ' + Math.round(est.trap)], ['Price', DR.money(car.price), 'good']]),
         h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '10px' } },
           btn('Close', function () { close(); }),
-          btn('Buy', function () {
+          !G.carUnlocked(id) ? h('span', { class: 'warn' }, '🔒 Reach career stage ' + (DR.CAR_STAGE[id] + 1) + ' to buy this car') : btn('Buy', function () {
             if (!G.canAfford(car.price)) return UI.toast('Not enough money');
             G.buyCar(id); A.cash(); close(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage);
           }, 'go' + (G.canAfford(car.price) ? '' : ' disabled')))]);
@@ -544,6 +600,66 @@
     return h('div', { class: 'screen' }, top('MY CARS', function () { UI.show(UI.Garage); }), h('div', { class: 'content' }, grid));
   };
 
+  // ------------------------------------------------------------ BODY SHOP
+  // Cosmetic parts. Every part adds to the visual rating (stars), which
+  // sponsors and showcase races look at. Tiers unlock through the career.
+  var bodySlot = 'fbumper', neonPick = null;
+  function visOptions(slot) {
+    var out = [{ value: 0, name: 'Stock / None', price: 0, stars: 0, tier: 0 }];
+    if (slot.styles) slot.tiers.forEach(function (list, t) { list.forEach(function (st) { out.push({ value: st, name: DR.RIM_NAMES[st], price: slot.prices[t], stars: slot.stars[t], tier: t + 1 }); }); });
+    else slot.tiers.forEach(function (x, t) { if (x) out.push({ value: slot.id === 'neon' ? 'neon' : t + 1, name: x[0], price: x[1], stars: x[2], tier: t + 1 }); });
+    if (slot.extra) for (var k in slot.extra) { var x = slot.extra[k]; out.push({ value: k, name: x[0], price: x[1], stars: x[2], tier: x[3] }); }
+    return out;
+  }
+  UI.Body = function () {
+    var inst = G.car();
+    if (!inst.vis) inst.vis = {};
+    var slot = DR.visSlot(bodySlot);
+    var cv = h('canvas', { class: 'preview', width: 320, height: 140, style: { width: '100%' } });
+    DR.drawPreview(cv, inst);
+    var stars = DR.starRating(inst);
+    var meter = h('div', { class: 'stars' });
+    for (var i = 1; i <= 10; i++) meter.appendChild(h('span', { class: stars >= i ? 'on' : stars > i - 1 ? 'half' : '' }, '★'));
+    var slots = h('div', { class: 'list' });
+    DR.VISUAL.forEach(function (sl) {
+      var cur = inst.vis[sl.id], curName = 'Stock';
+      visOptions(sl).forEach(function (o) { if (o.value && (o.value === cur || (sl.id === 'neon' && cur))) curName = o.name; });
+      slots.appendChild(h('div', { class: 'item' + (sl.id === bodySlot ? ' sel' : ''), onclick: function () { bodySlot = sl.id; UI.refresh(); } },
+        h('div', { class: 'name' }, h('div', { class: 'pix small' }, sl.name), h('div', { class: 'dim' }, curName))));
+    });
+    var list = h('div', { class: 'list' });
+    visOptions(slot).forEach(function (o) {
+      var cur = inst.vis[slot.id], installed = slot.id === 'neon' ? (!!cur === !!o.value) : (cur || 0) === o.value;
+      var locked = o.tier && !G.visUnlocked(slot.id, o.tier);
+      list.appendChild(h('div', { class: 'item' + (installed ? ' sel' : '') + (locked ? ' locked' : '') },
+        h('div', { class: 'name' }, o.name, h('div', { class: 'dim', style: { fontSize: '14px' } }, o.tier ? 'Tier ' + o.tier + ' • +' + DR.starText(o.stars) : 'Removes the part')),
+        installed ? h('span', { class: 'tag g' }, 'INSTALLED') : locked ? h('span', { class: 'tag' }, '🔒 WIN RACES') : h('span', { class: 'price' }, o.price ? DR.money(o.price) : 'FREE'),
+        installed || locked ? null : btn(o.price ? 'Buy' : 'Fit', function () {
+          if (!G.canAfford(o.price)) return UI.toast('Not enough money');
+          G.pay(o.price); inst.spent += o.price;
+          if (o.value) inst.vis[slot.id] = slot.id === 'neon' ? (neonPick || slot.colors[0]) : o.value; else delete inst.vis[slot.id];
+          G.save(); if (o.price) A.cash();
+          UI.toast(o.value ? o.name + ' fitted!' : 'Back to stock');
+          G.noteStars().forEach(function (m) { UI.toast(m); });
+          G.checkContracts().forEach(function (m) { UI.toast(m); });
+          UI.refresh();
+        }, 'small ' + (o.price ? 'go' : ''))));
+    });
+    var extra = null;
+    if (slot.id === 'neon') {
+      extra = h('div', {}, h('h3', {}, 'NEON COLOR' + (inst.vis.neon ? ' (free to change)' : '')), h('div', { class: 'swatches' }, slot.colors.map(function (c) {
+        return h('div', { class: 'sw' + ((inst.vis.neon || neonPick || slot.colors[0]) === c ? ' on' : ''), style: { background: c }, onclick: function () {
+          neonPick = c; if (inst.vis.neon) { inst.vis.neon = c; G.save(); } UI.refresh();
+        } });
+      })));
+    }
+    if (slot.id === 'vinyl' || slot.id === 'finish') extra = h('p', { class: 'dim' }, slot.id === 'vinyl' ? 'Vinyls use your stripe color from the Paint Shop when you have one.' : 'Finishes change how the paint catches the light.');
+    return h('div', { class: 'screen' }, top('BODY SHOP', function () { UI.show(UI.Garage); }),
+      h('div', { class: 'content' }, h('div', { class: 'split' },
+        h('div', { class: 'left', style: { width: '42%' } }, cv, h('div', { class: 'row', style: { justifyContent: 'space-between', margin: '6px 0' } }, h('span', { class: 'pix acc' }, 'VISUAL RATING'), meter), slots),
+        h('div', { class: 'right' }, h('h2', {}, slot.name), list, extra))));
+  };
+
   // ------------------------------------------------------------ PAINT
   UI.Paint = function () {
     var inst = G.car();
@@ -552,7 +668,7 @@
     var costEl = h('span', { class: 'pix acc' });
     function cost() { return (draft.color !== inst.color ? 400 : 0) + (draft.stripe !== inst.stripe ? 200 : 0) + (draft.rim !== inst.rim ? 150 : 0); }
     function redraw() {
-      DR.drawPreview(cv, { carId: inst.carId, engine: inst.engine, parts: inst.parts, color: draft.color, stripe: draft.stripe, rim: draft.rim });
+      DR.drawPreview(cv, { carId: inst.carId, engine: inst.engine, parts: inst.parts, vis: inst.vis, color: draft.color, stripe: draft.stripe, rim: draft.rim });
       costEl.textContent = 'Cost: ' + DR.money(cost());
     }
     function swatches(key, colors, allowNone) {
@@ -573,9 +689,11 @@
             var c = cost();
             if (!c) return UI.toast('Nothing changed');
             if (!G.canAfford(c)) return UI.toast('Not enough money');
-            G.pay(c); inst.color = draft.color; inst.stripe = draft.stripe; inst.rim = draft.rim; G.save(); A.cash(); UI.toast('Fresh paint!'); UI.show(UI.Garage);
+            G.pay(c); inst.color = draft.color; inst.stripe = draft.stripe; inst.rim = draft.rim; G.save(); A.cash(); UI.toast('Fresh paint!');
+            G.noteStars().forEach(function (m) { UI.toast(m); });
+            UI.show(UI.Garage);
           }, 'go')),
-        h('div', { class: 'right' }, h('h3', {}, 'BODY ($400)'), swatches('color', DR.PAINTS), h('h3', {}, 'STRIPE ($200)'), swatches('stripe', DR.PAINTS, true), h('h3', {}, 'WHEELS ($150)'), swatches('rim', rims)))));
+        h('div', { class: 'right' }, h('h3', {}, 'BODY ($400)'), swatches('color', DR.PAINTS), h('h3', {}, 'STRIPE ($200, +' + DR.starText(0.25) + ')'), swatches('stripe', DR.PAINTS, true), h('h3', {}, 'WHEELS ($150)'), swatches('rim', rims)))));
   };
 
   // ------------------------------------------------------------ SETTINGS
@@ -610,8 +728,12 @@
         p('3. When the light turns GREEN, tap LAUNCH. Too early = red light and you lose.'),
         p('4. Keep holding GAS. Tap SHIFT when the blue shift light flashes. If the tires spin (SPIN warning / smoke), ease off the gas for a moment.'),
         p('5. Got nitrous? Tap NOS to spray. Big wheelies can flip the car - lift off the gas or install wheelie bars.'),
+        h('h2', {}, 'Career'),
+        p('The career has five stages. Each stage has a run of races (1/4 mile, 1/8 mile, night street races, three-round knockouts, sponsor races and showcases) and ends with a boss. Winning races reveals more races and unlocks parts. Beat the boss to open the next stage and new cars at the dealer.'),
+        p('Sign one sponsor per stage. You get a signing bonus and a bonus for every win, plus a big payout when you fulfil the contract. The boss will only race you once your contract is done.'),
+        p('Your visual rating (up to 10 stars) comes from Body Shop parts: bumpers, skirts, spoilers, hoods, roof scoops, rims, tint, neon, paint finishes and vinyls. Showcase races and some sponsors need a minimum rating.'),
         h('h2', {}, 'Building'),
-        p('Win money in the Career Ladder and Street Races, then spend it in the Upgrade Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more.'),
+        p('Spend your winnings in the Upgrade Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
         p('Watch the risk warnings: too much power for your internals, boost past your fuel\'s knock limit or more torque than the gearbox can hold can break parts mid-race. Repairs cost money!'),
         h('h2', {}, 'Tuning'),
         p('Grip comes from tire compound, tire pressure (each tire has an ideal psi), tire temperature and weight transfer. Ladder bars / 4-links, springs and shocks change how hard the car hits the tires. Gearing, launch RPM, boost, and throttle management decide whether you hook or go up in smoke.'),

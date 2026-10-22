@@ -187,7 +187,7 @@
     return {
       carId: inst.carId, body: car.body, len: car.len,
       color: inst.color || car.col, stripe: inst.stripe || '', rim: inst.rim || '#c8c8c8',
-      kit: inst.kit || null,
+      kit: inst.kit || null, vis: inst.vis && Object.keys(inst.vis).length ? inst.vis : null,
       tireR: tire.r, frontR: car.body === 'dragster' ? 0.24 : DR.partId('ftires', inst) !== 'stock' ? 0.30 : DR.TIRES[car.tire].r,
       slick: tire.kind === 'Slick', radial: tire.kind === 'Drag Radial',
       blower: !!(fiu.price && (fiu.type === 'roots' || fiu.type === 'screw')),
@@ -239,6 +239,106 @@
   }
   function lum(c) { return (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255; }
 
+  // carbon fibre weave
+  function carbon(px, py, ny) {
+    var w = ((px >> 1) + (py >> 1)) % 2 ? 34 : 22, l = ny > 0.6 ? 40 : ny < -0.3 ? -8 : 0;
+    return [w + l, w + l, w + 4 + l];
+  }
+
+  // Aftermarket body kit, generated from each car's own geometry so every
+  // part fits every car. vis: {fbumper, rbumper, skirt, spoiler, hood: tier
+  // 1-3, roof, tips: 1+}
+  function bodyKit(vis, A, shellS, parts, details, look, u) {
+    function add(mat, pts) { parts.push({ id: 'addon', mat: mat, pts: pts }); }
+    function stockBox(slot, fallback) { var v = A.kit && A.kit[slot] && A.kit[slot].stock; return v ? bbox(v.pts) : fallback; }
+    var fb = stockBox('fbumper', [90, 4, 100, 12]), rb = stockBox('rbumper', [0, 4, 10, 12]);
+    var rk = A.rocker || 5, arch = (Math.max(0.31 * PPM, look.tireR * PPM * 0.92) + 3) / u;
+    var y0, x0, t;
+    if ((t = vis.fbumper)) {
+      y0 = fb[1]; x0 = fb[0];
+      if (t === 1) add('paint', [[x0 + 2, y0 + 0.3, 1], [100, y0 + 0.4, 1], [100.6, y0 - 1.0, 1], [x0 + 3, y0 - 1.1, 1]]);
+      if (t === 2) {
+        add('paint', [[x0 + 1.5, y0 + 0.3, 1], [100.2, y0 + 0.4, 1], [100.6, y0 - 1.1, 1], [x0 + 2.5, y0 - 1.2, 1]]);
+        add('trim', [[x0 + 3, y0 - 1.0, 1], [101.2, y0 - 1.0, 1], [101.4, y0 - 1.5, 1], [x0 + 3, y0 - 1.5, 1]]);
+        add('trim', [[98.6, y0 + 3.2, 1], [101.2, y0 + 3.6, 1], [99, y0 + 4.4, 1]]);
+      }
+      if (t === 3) {
+        add('carbon', [[x0 + 0.5, y0 + 0.3, 1], [100.4, y0 + 0.5, 1], [102.4, y0 - 1.2, 1], [102.2, y0 - 1.7, 1], [x0 + 1.5, y0 - 1.7, 1]]);
+        add('carbon', [[98.4, y0 + 3.0, 1], [101.6, y0 + 3.4, 1], [98.8, y0 + 4.4, 1]]);
+        details.push(['vent', [[x0 + 2.5, y0 + 1.2], [x0 + 6.5, y0 + 1.2], [x0 + 6.5, y0 + 3.2], [x0 + 3, y0 + 3.2]]]);
+      }
+    }
+    if ((t = vis.rbumper)) {
+      y0 = rb[1]; var x1 = rb[2];
+      if (t === 1) add('paint', [[0.6, y0 + 0.3, 1], [x1 - 1, y0 + 0.3, 1], [x1 - 2, y0 - 1.0, 1], [1.2, y0 - 1.0, 1]]);
+      if (t >= 2) {
+        add(t === 3 ? 'carbon' : 'trim', [[0.2, y0 + 0.3, 1], [x1 - 0.6, y0 + 0.3, 1], [x1 - 1.4, y0 - (t === 3 ? 1.5 : 1.1), 1], [-0.6, y0 - (t === 3 ? 1.6 : 1.2), 1]]);
+        for (var fx = 1.5; fx < x1 - 2; fx += 2.4) add(t === 3 ? 'carbon' : 'trim', [[fx, y0 - 0.5, 1], [fx + 0.45, y0 - 0.5, 1], [fx + 0.45, y0 - (t === 3 ? 2.2 : 1.8), 1], [fx, y0 - (t === 3 ? 2.2 : 1.8), 1]]);
+      }
+    }
+    if ((t = vis.skirt)) {
+      var xa = A.wr + arch + 0.4, xb = A.wf - arch - 0.4;
+      if (t === 1) add('paint', [[xa, rk + 0.4, 1], [xb, rk + 0.4, 1], [xb - 0.6, rk - 1.0, 1], [xa + 0.6, rk - 1.0, 1]]);
+      if (t === 2) {
+        add('paint', [[xa, rk + 0.4, 1], [xb, rk + 0.4, 1], [xb - 0.5, rk - 1.0, 1], [xa + 0.5, rk - 1.0, 1]]);
+        add('trim', [[xa + 0.5, rk - 0.7, 1], [xb - 0.5, rk - 0.7, 1], [xb - 0.6, rk - 1.2, 1], [xa + 0.6, rk - 1.2, 1]]);
+      }
+      if (t === 3) add('carbon', [[xa, rk + 0.3, 1], [xb, rk + 0.3, 1], [xb + 1.2, rk - 1.2, 1], [xa - 1.2, rk - 1.2, 1]]);
+    }
+    if ((t = vis.spoiler) && !look.wing) {
+      var d1 = topOf(shellS, 2.5), d2 = topOf(shellS, 10), h0;
+      if (t === 1) add('paint', [[1.2, d1 - 0.3, 1], [10, d2 - 0.3, 1], [10.6, d2 + 0.5, 1], [3, d1 + 1.7, 1], [1.0, d1 + 1.1, 1]]);
+      if (t === 2) {
+        h0 = Math.max(d1, d2) + 3.2;
+        add('trim', [[3, d1 - 0.5, 1], [4, d1 - 0.5, 1], [4.4, h0, 1], [3.4, h0, 1]]);
+        add('trim', [[9, d2 - 0.5, 1], [10, d2 - 0.5, 1], [10.2, h0, 1], [9.2, h0, 1]]);
+        add('paint', [[-0.6, h0, 1], [12.4, h0 + 0.2, 1], [13, h0 + 1.0, 1], [11.4, h0 + 1.6, 1], [0, h0 + 1.5, 1]]);
+      }
+      if (t === 3) {
+        h0 = Math.max(d1, d2) + 7;
+        add('trim', [[3.2, d1 - 0.5, 1], [4.4, d1 - 0.5, 1], [4.8, h0, 1], [3.6, h0, 1]]);
+        add('trim', [[10, d2 - 0.5, 1], [11.2, d2 - 0.5, 1], [11.4, h0, 1], [10.2, h0, 1]]);
+        add('carbon', [[-2.4, h0, 1], [15.6, h0 + 0.3, 1], [16.6, h0 + 1.3, 1], [15, h0 + 2.4, 1], [-1.8, h0 + 2.2, 1]]);
+        add('trim', [[-3.2, h0 - 2, 1], [-1.8, h0 - 2, 1], [-1.8, h0 + 3.6, 1], [-3.2, h0 + 3.6, 1]]);
+      }
+    }
+    if ((t = vis.hood)) {
+      var ha = A.hood[0], hb = A.hood[1];
+      if (t === 1) [0.3, 0.55].forEach(function (f) {
+        var xv = ha + (hb - ha) * f, ty = topOf(shellS, xv), ty2 = topOf(shellS, xv + 4);
+        details.push(['vent', [[xv, ty - 0.45], [xv + 4, ty2 - 0.45], [xv + 4, ty2 - 1.2], [xv, ty - 1.2]]]);
+      });
+      if (t === 2) {
+        var c0 = ha - 1, c1 = ha + (hb - ha) * 0.65, tc0 = topOf(shellS, c0 + 0.5), tc1 = topOf(shellS, c1);
+        add('paint', [[c0, tc0 - 0.4, 1], [c1, tc1 - 0.4, 1], [c0 + 3, tc0 + 1.5], [c0, tc0 + 1.6, 1]]);
+        details.push(['vent', [[c0, tc0 + 0.1], [c0 + 0.7, tc0 + 0.1], [c0 + 0.7, tc0 + 1.3], [c0, tc0 + 1.3]]]);
+      }
+      if (t === 3) {
+        var band = [], n = 12, i2;
+        for (i2 = 0; i2 <= n; i2++) { var xh = ha + (hb - ha) * i2 / n; band.push([xh, topOf(shellS, xh) + 0.6]); }
+        for (i2 = n; i2 >= 0; i2--) { var xh2 = ha + (hb - ha) * i2 / n; band.push([xh2, topOf(shellS, xh2) - 1.2]); }
+        details.push(['carbon', band]);
+      }
+    }
+    if (vis.roof) {
+      var rx = 0, ry = 0;
+      shellS.forEach(function (p) { if (p[1] > ry) { ry = p[1]; rx = p[0]; } });
+      var r1 = topOf(shellS, rx - 3), r2 = topOf(shellS, rx + 3);
+      add('paint', [[rx - 3.5, r1 - 0.3, 1], [rx + 3, r2 - 0.3, 1], [rx + 3, r2 + 1.2, 1], [rx - 0.5, r2 + 1.0, 1]]);
+      details.push(['vent', [[rx + 2.4, r2 + 0.1], [rx + 3.2, r2 + 0.1], [rx + 3.2, r2 + 1.2], [rx + 2.4, r2 + 1.2]]]);
+    }
+    if (vis.tips) {
+      var ey = A.exhaust ? A.exhaust[1] : 5;
+      add('chrome', [[-1.6, ey - 0.6, 1], [2, ey - 0.6, 1], [2, ey + 0.7, 1], [-1.6, ey + 0.7, 1]]);
+      details.push(['vent', [[-1.6, ey - 0.4], [-1.1, ey - 0.4], [-1.1, ey + 0.5], [-1.6, ey + 0.5]]]);
+    }
+    if (vis.vinyl === 1) {
+      var fx0 = A.wf - arch - 7.5, ry0 = rk + 2.6;
+      details.push(['decal', [[fx0, ry0], [fx0 + 5, ry0], [fx0 + 5, ry0 + 1.6], [fx0, ry0 + 1.6]]]);
+      details.push(['decal', [[A.wr + arch + 1.5, ry0 + 0.2], [A.wr + arch + 5.5, ry0 + 0.2], [A.wr + arch + 5.5, ry0 + 1.5], [A.wr + arch + 1.5, ry0 + 1.5]]]);
+    }
+  }
+
   // ------------------------------------------------------------ car sprite
   DR.carSprite = function (look) {
     var key = JSON.stringify(look);
@@ -253,7 +353,7 @@
     var lamps = (A.lamps || []).slice(), details = (A.details || []).slice();
     SLOTS.forEach(function (slot) {
       var vs = A.kit && A.kit[slot]; if (!vs) return;
-      if (slot === 'spoiler' && look.wing) return;          // the aftermarket wing replaces it
+      if (slot === 'spoiler' && (look.wing || (look.vis && look.vis.spoiler))) return;   // an aftermarket wing replaces it
       var v = vs[kit[slot] || 'stock']; if (!v) return;
       parts.push({ id: slot, mat: v.mat || 'paint', pts: smooth(v.pts) });
       (v.extra || []).forEach(function (e) { parts.push({ id: slot === 'spoiler' ? 'upright' : slot, mat: v.mat || 'paint', pts: smooth(e) }); });
@@ -286,6 +386,7 @@
         details.push(['vent', rect(hx + 3.4 * k5, hy + 0.2 * k5, hx + 5 * k5, hy + 2.0 * k5)]);
       }
     }
+    if (look.vis) bodyKit(look.vis, A, shellS, parts, details, look, u);
     parts.forEach(function (p) { p.bb = bbox(p.pts); });
     var glassS = (A.glass || []).map(function (g) { return smooth(g); });
     var maxY = 0, minX = 0;
@@ -296,6 +397,40 @@
     var ctx = cv.getContext('2d');
     var img = ctx.createImageData(W, H), d = img.data;
     var base = hexToRgb(look.color), baseL = lum(base);
+    var vis = look.vis || {}, finish = vis.finish || 0, tint = vis.tint || 0, vinyl = vis.vinyl || 0;
+    var vinylCol = look.stripe ? hexToRgb(look.stripe) : baseL > 0.5 ? [22, 22, 26] : [238, 238, 240];
+    // paint finishes: metallic flake, pearl colour shift, deep candy, flat matte
+    function finished(col, ny, lm, px, py) {
+      if (finish === 'matte') return paint(col, ny * 0.42, 0.95);
+      if (finish === 3) {                                   // candy: richer, deeper colour
+        var g = (col[0] + col[1] + col[2]) / 3, sat = [g + (col[0] - g) * 1.35, g + (col[1] - g) * 1.35, g + (col[2] - g) * 1.35].map(function (v) { return Math.max(0, Math.min(255, v)); });
+        return paint(sat, ny * 1.18, lm * 0.7);
+      }
+      var c = paint(col, ny, lm);
+      if (finish === 1) { c = paint(col, ny * 1.12, lm); if (ny > -0.2 && ((px * 7 + py * 13) ^ (px * py)) % 41 === 0) c = mix(c, [255, 255, 255], 0.16); }   // metallic flake
+      if (finish === 2) c = ny > 0.05 ? mix(c, [236, 214, 255], 0.3 * ny) : mix(c, [40, 70, 120], -0.25 * ny);       // pearl
+      return c;
+    }
+    // vinyl artwork in units: side slashes (2) or flames (3)
+    function vinylAt(xu, yu) {
+      var rk = A.rocker || 5, bt = A.belt;
+      if (yu < rk + 1 || yu > bt - 0.6) return null;
+      if (vinyl === 2) {
+        var t = xu + (yu - rk) * 1.25;
+        if ((t > 50 && t < 53.5) || (t > 55.5 && t < 57.5)) return vinylCol;
+        return null;
+      }
+      if (vinyl === 3) {
+        var band = (yu - rk) / 1.7, k = Math.floor(band), f = band - k;
+        var hk = Math.sin(k * 12.9898 + 4.1) * 43758.5453; hk -= Math.floor(hk);
+        var len = 34 + 28 * hk;
+        var tip = 99 - len * (1 - Math.abs(f - 0.5) * 1.4);
+        if (xu < tip) return null;
+        var dd = xu - tip;
+        return dd < 0.5 ? [110, 14, 10] : dd < 2 ? [214, 40, 24] : dd < 6 ? [255, 128, 24] : [255, 214, 70];
+      }
+      return null;
+    }
     var stripe = look.stripe ? hexToRgb(look.stripe) : null;
     var groundY = H - 1;
     var rR = look.tireR * PPM, rF = look.frontR * PPM, stockR = 0.31 * PPM;
@@ -396,7 +531,8 @@
         var g = mix(ic, [74, 96, 124], 0.3);
         var streak = ((px * 2 + py * 3) % 29);
         if (streak < 3) g = mix(g, [210, 225, 240], streak === 1 ? 0.45 : 0.25);
-        if (top3) g = [150, 172, 198];
+        if (tint) g = mix(g, [6, 8, 12], tint === 2 ? 0.62 : 0.36);
+        if (top3) g = tint ? [96, 112, 132] : [150, 172, 198];
         else if (bot3) g = mul(g, 0.7);
         put(px, py, g); continue;
       }
@@ -416,8 +552,12 @@
         var nyq = qn(ny);
         // rear face sits away from the light, the nose catches it
         if (body && px - bodyMinX < 2 && py > topB[px]) nyq -= 0.15;
-        c = paint(col, nyq, lum(col));
-        if (body && py > beltPx + 2 && py < rockPx - 2) {
+        if (vinyl && body && py <= lowerPx) {
+          var vc = vinylAt(q2[0], q2[1]);
+          if (vc) { col = vc; }
+        }
+        c = finished(col, nyq, lum(col), px, py);
+        if (body && py > beltPx + 2 && py < rockPx - 2 && finish !== 'matte') {
           // soft diagonal sheen across the doors
           var sh = (px - padL) - 0.8 * (py - beltPx) - lenPx * 0.42;
           if (sh > 0 && sh < 3) c = mix(c, SKYT, 0.1);
@@ -429,6 +569,7 @@
       } else if (mat === 'chrome') c = chrome(ny);
       else if (mat === 'bumper') c = plastic(ny, 28);
       else if (mat === 'red') c = paint([200, 30, 30], ny, 0.3);
+      else if (mat === 'carbon') c = carbon(px, py, ny);
       else c = plastic(ny, 20);
       put(px, py, c);
     }
@@ -482,6 +623,8 @@
       chrome: function (x, y, e) { return chrome(e.top ? 0.8 : e.bot ? -0.5 : 0.25); },
       door: function (x, y, e) { return e.edge ? mul(paint(base, -0.1, baseL), 0.82) : null; },
       grille: function (x, y, e) { return e.edge ? [8, 8, 10] : ((x + y) % 2 ? [48, 49, 54] : [14, 14, 16]); },
+      carbon: function (x, y, e) { return carbon(x, y, e.top ? 0.8 : 0); },
+      decal: function (x, y, e) { return e.edge ? [20, 20, 24] : (y % 3 === 0 ? vinylCol : [240, 240, 236]); },
       vent: function (x, y, e) { return e.bot ? paint(base, 0.55, baseL) : e.top ? [4, 4, 6] : [14, 14, 17]; },
       head: function (x, y, e) { return e.edge ? (e.top ? [250, 252, 255] : [70, 74, 84]) : ((x * 3 + y) % 5 === 0 ? [255, 255, 255] : (y % 2 ? [206, 216, 230] : [176, 188, 206])); },
       fog: function (x, y, e) { return e.edge ? [60, 62, 70] : [236, 236, 214]; },
@@ -527,7 +670,7 @@
       tail: { x: Math.round(padL + tl[0] * u), y: Math.round(groundY - tl[1] * u) },
       head: hd ? { x: Math.round(padL + hd[0] * u), y: Math.round(groundY - hd[1] * u) } : null,
       exhaust: { x: padL + (A.exhaust ? A.exhaust[0] : 1) * u - 2, y: groundY - Math.round((A.exhaust ? A.exhaust[1] : 6) * u) },
-      rail: !!A.rail, bar: look.bar, look: look, rim: A.rim || 'five' };
+      rail: !!A.rail, bar: look.bar, look: look, rim: vis.rims || A.rim || 'five', neon: vis.neon || null };
     spriteCache[key] = spr;
     return spr;
   };
@@ -537,6 +680,7 @@
   // left open so the brake rotor and caliper show through.
   var wheelCache = {};
   var RIMS = {
+    deep:    { n: 6,  w: function (p, rr) { return rr > 0.7 || Math.abs(p - 0.5) < 0.07 + 0.05 * (1 - rr); } },
     pony:    { n: 5,  w: function (p, rr) { return !(rr > 0.36 && rr < 0.8 && Math.abs(p - 0.5) < 0.3 - 0.18 * Math.abs(rr - 0.58) / 0.22); } },
     turbine: { n: 10, w: function (p, rr) { return Math.abs(((p + rr * 0.55) % 1) - 0.5) < 0.24; } },
     mesh:    { n: 8,  w: function (p, rr) { return Math.abs(p - 0.5) < 0.13 + 0.1 * (1 - rr); } },
@@ -647,6 +791,14 @@
       ctx.fillStyle = '#b8bec8'; ctx.fillRect(-bl - 1, Math.round(-endH) - 1, 2, 2);
     }
     var bodyLift = opts.squat ? opts.squat : 0;
+    if (spr.neon) {
+      // underglow: a hot strip under the sills lighting the ground
+      var nx0 = Math.round(spr.padL - rx + spr.lenPx * 0.1), nw = Math.round(spr.lenPx * 0.8), ny0 = -Math.round(spr.wheelR.r * 0.5);
+      var ng = ctx.createLinearGradient(0, ny0, 0, 2);
+      ng.addColorStop(0, spr.neon); ng.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.28; ctx.fillStyle = ng; ctx.fillRect(nx0, ny0, nw, -ny0 + 2);
+      ctx.globalAlpha = 1; ctx.fillStyle = spr.neon; ctx.fillRect(nx0, ny0, nw, 1);
+    }
     ctx.drawImage(spr.canvas, Math.round(-rx), Math.round(-ground - 1 + bodyLift));
     if (opts.brake > 0.05) {
       var lx = Math.round(spr.tail.x - rx), ly = Math.round(spr.tail.y - ground - 1 + bodyLift);
@@ -664,7 +816,8 @@
   // Screen-space lamp anchors of a drawn car (for the lighting pass).
   DR.carLamps = function (spr, gx, gy, pitch) {
     function tr(x, y) { var dx = x - spr.wheelR.x, dy = y - spr.groundY - 1, c = Math.cos(-pitch), s = Math.sin(-pitch); return { x: gx + dx * c - dy * s, y: gy + dx * s + dy * c }; }
-    return { head: spr.head ? tr(spr.head.x, spr.head.y) : null, tail: tr(spr.tail.x, spr.tail.y) };
+    return { head: spr.head ? tr(spr.head.x, spr.head.y) : null, tail: tr(spr.tail.x, spr.tail.y),
+      neon: spr.neon ? { c: hexToRgb(spr.neon), x: gx + (spr.padL + spr.lenPx / 2 - spr.wheelR.x), w: spr.lenPx } : null };
   };
 
   // Parachute trailing behind the car. k: 0..1 how far it has deployed.

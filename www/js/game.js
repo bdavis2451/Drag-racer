@@ -9,8 +9,8 @@
 
   G.defaults = function () {
     return {
-      v: 2, money: 6000, cars: [], active: null, uid: 1,
-      career: {}, stats: { races: 0, wins: 0, earned: 0 },
+      v: 3, money: 6000, cars: [], active: null, uid: 1,
+      career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 },
       settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold' },
       started: false
     };
@@ -20,8 +20,9 @@
     var s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
     var d = G.defaults();
-    if (!s || (s.v !== 1 && s.v !== 2)) { G.state = d; return; }
+    if (!s || (s.v !== 1 && s.v !== 2 && s.v !== 3)) { G.state = d; return; }
     if (s.v === 1) migrate1(s);
+    if (s.v === 2) migrate2(s);
     for (var k in d) if (s[k] == null) s[k] = d[k];
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
     G.state = s;
@@ -38,12 +39,20 @@
     s.v = 2;
   }
 
+  // v2 -> v3: the career became the stage / sponsor / unlock system and cars
+  // got cosmetic parts. Keep money, cars and settings.
+  function migrate2(s) {
+    s.career = G.careerDefaults();
+    (s.cars || []).forEach(function (c) { if (!c.vis) c.vis = {}; s.career.cars[c.carId] = 1; });
+    s.v = 3;
+  }
+
   G.save = function () { try { localStorage.setItem(KEY, JSON.stringify(G.state)); } catch (e) { /* storage unavailable */ } };
   G.reset = function () { G.state = G.defaults(); G.save(); };
 
   G.newInst = function (carId) {
     var car = DR.CARS[carId];
-    return { uid: G.state.uid++, carId: carId, engine: car.engine, parts: {}, tune: {}, color: car.col, stripe: '', rim: '#c8c8c8', spent: car.price, best: {}, damage: null };
+    return { uid: G.state.uid++, carId: carId, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col, stripe: '', rim: '#c8c8c8', spent: car.price, best: {}, damage: null };
   };
   G.car = function () {
     var s = G.state;
@@ -134,7 +143,7 @@
     G.pay(c); inst.damage = null; G.save(); return true;
   };
 
-  // ---------------------------------------------------------------- career
+  // ---------------------------------------------------------------- rivals
   // An opponent: car + parts + tune + driver skill.
   function O(name, carId, engine, parts, tune, skill, color) {
     return { name: name, carId: carId, engine: engine || DR.CARS[carId].engine, parts: parts || {}, tune: tune || {}, skill: skill, color: color };
@@ -142,43 +151,44 @@
   var BOLT = { intake: 'i1', exhaust: 'e1' };
   function P(a, b) { var o = {}, k; for (k in a) o[k] = a[k]; for (k in b) o[k] = b[k]; return o; }
 
-  DR.CAREER = [
-    { name: 'Rookie Night', dist: DR.QUARTER, reward: [400, 550, 700, 900, 1500], opps: [
+  // The rival pool in six skill bands (career.js builds the stages from it).
+  var BANDS = [
+    { name: 'Rookie Night', opps: [
       O('Grandma Edna', 'hachi', null, {}, {}, 0.25, '#ff8fb8'),
       O('Tyler', 'hachi', null, BOLT, {}, 0.4, '#3a7bd2'),
       O('Jess', 'fox', null, {}, {}, 0.5, '#2fb3a8'),
       O('Danny', 'hachi', null, P(BOLT, { headers: 'h1', cams: 'c1', ecu: 'ecu1', rtires: 'st_225' }), {}, 0.55, '#151515'),
       O('Mullet Mike', 'fox', null, P(BOLT, { headers: 'h2' }), {}, 0.6, '#c01515')
     ]},
-    { name: 'Bracket Bandits', dist: DR.QUARTER, reward: [1500, 1900, 2300, 2800, 4500], opps: [
+    { name: 'Bracket Bandits', opps: [
       O('Dale', 'fox', 'v8_57', {}, {}, 0.6, '#2e7d4f'),
       O('Kenji', 'hachi', 'i4_20t', P(BOLT, { rtires: 'st_225' }), {}, 0.6, '#9aa8b4'),
       O('Rosa', 'supra', null, {}, {}, 0.6, '#b0b0b0'),
       O('Hiro', 'supra', null, P(BOLT, { ecu: 'ecu1', ic: 'ic1', rtires: 'dr_275' }), { boost: 15 }, 0.65, '#d01818'),
       O('Big Earl', 'camss', null, P(BOLT, { rtires: 'dr_275', converter: 'tcl' }), {}, 0.7, '#244fa8')
     ]},
-    { name: 'Street Outlaws', dist: DR.QUARTER, reward: [4000, 4800, 5600, 6500, 10000], opps: [
+    { name: 'Street Outlaws', opps: [
       O('Vince', 'supra', null, P(BOLT, { ecu: 'ecu1', ic: 'ic1', fueltype: 'e85', fuelsys: 'f1', rtires: 'dr_275' }), { boost: 18 }, 0.7, '#ff7a00'),
       O('Shadow', 'supra', null, P(BOLT, { headers: 'h2', fi: 't_large', ic: 'ic2', fueltype: 'e85', fuelsys: 'f2', internals: 'n2', ecu: 'ecu2', rtires: 'dr_315', clutch: 'cl3', launch: 'l1' }), { boost: 24 }, 0.8, '#151515'),
       O('Lexi', 'hachi', 'i4_20t', P(BOLT, { headers: 'h2', fi: 't_med', ic: 'ic2', fueltype: 'e85', fuelsys: 'f2', internals: 'n2', ecu: 'ecu2', clutch: 'cl3', rtires: 'dr_275', launch: 'l1' }), { boost: 28 }, 0.72, '#f6f6f6'),
       O('Marcus', 'fox', 'v8_62', P(BOLT, { headers: 'h2', nitrous: 'n150', rtires: 'dr_315', rearsusp: 'rs1', clutch: 'cl2' }), {}, 0.72, '#1c5bd6'),
       O('Tank', 'camss', null, P(BOLT, { headers: 'h2', nitrous: 'n250', rtires: 'dr_315', converter: 'tcm', transbrake: 'tb1', rearsusp: 'rs1' }), {}, 0.75, '#4b1a6e')
     ]},
-    { name: 'Radial Wars', dist: DR.QUARTER, reward: [9000, 11000, 13000, 15000, 24000], opps: [
+    { name: 'Radial Wars', opps: [
       O('Akira', 'supra', null, { intake: 'i2', exhaust: 'e2', headers: 'h3', fi: 't_large', ic: 'ic2', internals: 'n2', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu2', rtires: 'dr_315', trans: 'seq6', clutch: 'cl3', launch: 'l2', rearsusp: 'rs2', diff: 'spool' }, { boost: 30 }, 0.8, '#ffffff'),
       O('Ricky Radial', 'fox', 'v8_62', { intake: 'i2', exhaust: 'e2', headers: 'h2', fi: 't_med', ic: 'ic1', internals: 'n2', fuelsys: 'f2', fueltype: 'e85', rtires: 'dr_275', rearsusp: 'rs2', trans: 'a3_400', converter: 'tcm', transbrake: 'tb1', diff: 'spool', launch: 'l1' }, { boost: 14 }, 0.75, '#c01515'),
       O('Nitro Nate', 'camss', 'v8_70', { intake: 'i2', exhaust: 'e2', headers: 'h2', cams: 'c2', nitrous: 'n250', internals: 'n1', rtires: 'dr_315', rearsusp: 'rs2', trans: 'a3_400', converter: 'tcm', transbrake: 'tb1', diff: 'spool' }, {}, 0.78, '#ffb300'),
       O('Kaz', 'hachi', 'i6_30tt', { intake: 'i2', exhaust: 'e2', headers: 'h2', fi: 't_large', ic: 'ic2', internals: 'n2', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'dr_315', trans: 'seq6', clutch: 'cl4', launch: 'l2', rearsusp: 'rs2', diff: 'spool', wheeliebar: 'wb1' }, { boost: 26, tcSlip: 18 }, 0.8, '#7cd320'),
       O('Murder Fox', 'fox', 'v8_70', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd2', cams: 'c3', fi: 't_twin', ic: 'ic2', internals: 'n3', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'dr_315', trans: 'pg2', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w2', shocks: 'sh2', wheeliebar: 'wb1' }, { boost: 22, tcSlip: 20, barDeg: 3 }, 0.85, '#151515')
     ]},
-    { name: 'Big Tire Shootout', dist: DR.QUARTER, reward: [20000, 24000, 28000, 32000, 50000], opps: [
+    { name: 'Big Tire Shootout', opps: [
       O('Gasser Gus', 'fox', 'bb_94', { fi: 'sc_roots', internals: 'n2', fuelsys: 'f3', fueltype: 'race', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs2', diff: 'spool', wheeliebar: 'wb1' }, { boost: 12, barDeg: 4 }, 0.8, '#efe14b'),
       O('Godzilla Ken', 'supra', null, { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd3', cams: 'c4', fi: 't_huge', ic: 'ic3', internals: 'n4', fuelsys: 'f4', fueltype: 'meth', ecu: 'ecu3', rtires: 'sl_31', trans: 'seq6', clutch: 'cl4', launch: 'l2', weight: 'w3', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1' }, { boost: 45, tcSlip: 20 }, 0.9, '#3757a8'),
       O('Lisa Lightning', 'camss', 'v8_70', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd2', cams: 'c3', fi: 't_huge', ic: 'ic3', internals: 'n3', fuelsys: 'f3', fueltype: 'meth', ecu: 'ecu3', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3' }, { boost: 28, tcSlip: 20 }, 0.88, '#ffb300'),
       O('Hemi Hank', 'camss', 'hemi_70', { heads: 'hd3', cams: 'c3', fi: 'sc_1471', internals: 'n3', fuelsys: 'f4', fueltype: 'meth', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', weight: 'w3', wheeliebar: 'wb1' }, { boost: 20, barDeg: 3.5 }, 0.85, '#ff6a00'),
       O('Twin Turbo Tina', 'fox', 'bb_94', { intake: 'i3', exhaust: 'e3', headers: 'h3', fi: 't_twin', ic: 'ic2', internals: 'n3', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'sl_33', trans: 'pg2', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w3', wheeliebar: 'wb1', shocks: 'sh2' }, { boost: 20, tcSlip: 22 }, 0.85, '#151515')
     ]},
-    { name: 'Pro Mod Legends', dist: DR.QUARTER, reward: [55000, 65000, 75000, 90000, 150000], opps: [
+    { name: 'Pro Mod Legends', opps: [
       O('Nitrous Nick', 'fox', 'v8_86b', { nitrous: 'n650', internals: 'n2', fuelsys: 'f3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { barDeg: 3 }, 0.85, '#7cd320'),
       O('Rice Rocket Rin', 'hachi', 'v8_86b', { fi: 'sc_1471', fuelsys: 'f4', fueltype: 'meth', internals: 'n3', rtires: 'sl_33', trans: 'pg2', converter: 'tch', transbrake: 'tb1', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 22, barDeg: 3 }, 0.88, '#e31b6d'),
       O('Turbo Tony', 'supra', 'v8_86b', { fi: 't_promod', ic: 'ic3', fuelsys: 'f4', fueltype: 'meth', internals: 'n4', ecu: 'ecu3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', launch: 'l2', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 30, tcSlip: 22, barDeg: 3.5 }, 0.9, '#ff7a00'),
@@ -186,9 +196,10 @@
       O('THE KING', 'fox', 'v8_86b', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd3', cams: 'c4', fi: 't_promod', ic: 'ic3', fuelsys: 'f4', fueltype: 'meth', internals: 'n4', ecu: 'ecu3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', launch: 'l2', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 36, tcSlip: 15, barDeg: 3, fd: 3.6 }, 0.95, '#ffd700')
     ]}
   ];
+  DR.RIVALS = BANDS.map(function (b) { return b.opps; });
 
   G.oppInst = function (o) {
-    return { uid: -1, carId: o.carId, engine: o.engine, parts: o.parts, tune: o.tune, color: o.color || DR.CARS[o.carId].col, stripe: '', rim: '#d0d0d0' };
+    return { uid: -1, carId: o.carId, engine: o.engine, parts: o.parts, tune: o.tune, vis: o.vis || {}, color: o.color || DR.CARS[o.carId].col, stripe: o.stripe || '', rim: o.rim || '#d0d0d0' };
   };
   // Estimated ET for an opponent / car (cached per build).
   var etCache = {};
@@ -200,29 +211,10 @@
     return etCache[key];
   };
 
-  G.tierUnlocked = function (t) {
-    if (t === 0) return true;
-    var prev = G.state.career[t - 1] || [];
-    return DR.CAREER[t - 1].opps.every(function (_, i) { return prev[i]; });
-  };
-  G.oppUnlocked = function (t, i) {
-    if (!G.tierUnlocked(t)) return false;
-    if (i === 0) return true;
-    return !!(G.state.career[t] || [])[i - 1];
-  };
-  G.beat = function (t, i) {
-    var c = G.state.career;
-    if (!c[t]) c[t] = [];
-    var first = !c[t][i];
-    c[t][i] = true; G.save();
-    return first;
-  };
-  G.beaten = function (t, i) { return !!(G.state.career[t] || [])[i]; };
-
   // Street race: opponents near the player's estimated 1/8-mile time.
   G.streetOpponents = function (playerET) {
     var pool = [];
-    DR.CAREER.forEach(function (tier) { tier.opps.forEach(function (o) { pool.push(o); }); });
+    DR.RIVALS.forEach(function (band) { band.forEach(function (o) { pool.push(o); }); });
     var names = ['Spike', 'Rico', 'Jade', 'Duke', 'Sasha', 'Moose', 'Ziggy', 'Nova', 'Blaze', 'Cruz', 'Vega', 'Slim'];
     var scored = pool.map(function (o) {
       var est = G.estimate(G.oppInst(o), DR.EIGHTH, 0.85);

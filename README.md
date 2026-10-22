@@ -44,7 +44,15 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
   or more torque than the gearbox can hold can blow up the engine or gearbox mid-race.
   Repairs cost money.
 - **Game modes:**
-  - **Career ladder:** 6 tiers × 5 racers with bosses, raced on the 1/4 mile.
+  - **Career (Underground 2 style):** 5 stages of 1/4 mile, 1/8 mile, night street,
+    knockout, sponsor and showcase races, each ending in a boss. Wins reveal more races
+    and unlock performance-part levels, body-kit tiers and new cars (Fox and AE86 at
+    the start, Camaro at stage 2, Supra at stage 3).
+  - **Sponsors:** pick one per stage for a signing bonus, per-win bonuses and a contract
+    that must be fulfilled before the boss will race you.
+  - **Visual rating:** 0-10 stars from the Body Shop (bumpers, skirts, spoilers, hoods,
+    roof scoops, rims, tint, neon underglow, paint finishes and vinyls). Showcase races
+    and some sponsors need a minimum rating.
   - **Street races:** bet your money, 1/8 mile at night with less grip.
   - **Test & Tune:** free practice runs.
 - **Garage tools:** a dyno with power, torque and boost curves; a paint shop; a dealership;
@@ -82,7 +90,8 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 | `www/js/data.js` | **Cars, engines, transmissions, tires.** Add a car (or enable one from the reserve list) or an engine here. |
 | `www/js/parts.js` | **Every upgrade part** and what it does. |
 | `www/js/physics.js` | The physics engine: tires, engine, clutch, converter, weight transfer, wheelies. |
-| `www/js/game.js` | Money, saving, buying and selling, and the **career ladder opponents**. |
+| `www/js/game.js` | Money, saving, buying and selling, and the **rival pool**. |
+| `www/js/career.js` | **Career stages, events, sponsors, unlocks, cosmetic parts and the star rating.** |
 | `www/js/render.js` | The scene: sky, track, grandstands, the tree, tire smoke, flames and the day/night lighting pass. |
 | `www/js/cars.js` | **Car sprites**, built from swappable parts (see below), plus wheels, brakes and tires. |
 | `www/js/ui.js` | All menu screens (garage, shop, tuning, dyno, dealer, paint, and so on). |
@@ -90,7 +99,7 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 | `www/js/audio.js` | Engine sound synthesizer. |
 | `android/` | The Android app wrapper ([Capacitor](https://capacitorjs.com)). |
 | `tools/simtest.js` | Prints a simulated 1/4-mile run for every stock car (a physics check). |
-| `tools/career.js` | Prints every career opponent's ET, to keep the ladder in order. |
+| `tools/career.js` | Prints every career event's opponents and ETs, to keep each stage in order. |
 
 ### Car art and body kits
 

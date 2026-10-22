@@ -1,14 +1,17 @@
-// Prints each career opponent's estimated ET so the ladder stays in order.
+// Prints every career event's opponents with their estimated ETs, so each
+// stage ramps up and the bosses stay hardest.
 const path = require('path');
-for (const f of ['data.js', 'parts.js', 'physics.js', 'game.js']) require(path.join(__dirname, '..', 'www', 'js', f));
+for (const f of ['data.js', 'parts.js', 'physics.js', 'game.js', 'career.js']) require(path.join(__dirname, '..', 'www', 'js', f));
 const DR = globalThis.DR;
 DR.Game.state = DR.Game.defaults();
-DR.CAREER.forEach((t, ti) => {
-  console.log('== ' + t.name);
-  t.opps.forEach((o, i) => {
-    const inst = DR.Game.oppInst(o), S = DR.buildSpec(inst), r = DR.simulate(S, { skill: o.skill });
-    const p = DR.simulate(S, {});
-    console.log('  ', o.name.padEnd(18), DR.CARS[o.carId].name.padEnd(22), (S.peakHp + S.nosHp).toFixed(0).padStart(5) + 'hp',
-      'ET(skill)', r.et.toFixed(2), '@', r.trap.toFixed(0), ' perfect', p.et.toFixed(2), r.crashed ? 'CRASH' : '', 'risk', S.risk.engine.toFixed(2), S.risk.trans.toFixed(2), S.risk.notes.join('; '));
+DR.STAGES.forEach((st, si) => {
+  console.log('== Stage ' + (si + 1) + ': ' + st.name);
+  st.all.forEach((ev) => {
+    const T = DR.EVENT_TYPES[ev.type];
+    const opps = ev.opps.map((o) => {
+      const S = DR.buildSpec(DR.Game.oppInst(o)), r = DR.simulate(S, { skill: o.skill, dist: T.dist(), grip: T.grip });
+      return o.name + ' ' + (r.crashed ? 'CRASH' : r.et.toFixed(2));
+    });
+    console.log('  ', (ev.type + (ev.stars ? ' ' + ev.stars + '*' : '')).padEnd(12), ('$' + ev.cash).padStart(7), ' ', opps.join(' | '), ev.unlocks.length ? '  -> ' + ev.unlocks.join(', ') : '');
   });
 });
