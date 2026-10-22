@@ -27,8 +27,11 @@ for c,(x0,y0,x1,y1) in crops.items():
     near=cv2.dilate(m,np.ones((9,9),np.uint8))
     ys0,xs0=np.nonzero(m); ex0,ex1=xs0.min(),xs0.max(); ends=(np.arange(W)[None,:]<ex0+0.14*(ex1-ex0))|(np.arange(W)[None,:]>ex1-0.14*(ex1-ex0))
     low=np.arange(H)[:,None]>H*0.42
-    nearW=cv2.dilate(m,np.ones((19,19),np.uint8))
-    extra=(((V>0.55)&ends&low&(nearW==1))|((S>0.4)&(V>0.35)&(near==1)))
+    nearW=cv2.dilate(m,np.ones((27,27),np.uint8))
+    bot0=np.array([np.nonzero(m[:,x])[0].max() if m[:,x].any() else 0 for x in range(W)])
+    sill0=int(np.median([bot0[x] for x in range(int(wh[0][0])+int(W*0.08),int(wh[1][0])-int(W*0.08))]))
+    above=np.arange(H)[:,None]<sill0-2
+    extra=((((V>0.55)|((V>0.42)&(S<0.12)))&ends&low&(nearW==1))|((S>0.4)&(V>0.35)&(near==1))|((V<0.3)&ends&above&(near==1)))
     yy,xx=np.mgrid[0:H,0:W]
     for w,tr in zip(wh,tireR): extra[(xx-w[0])**2+(yy-w[1])**2<(tr+4)**2]=False
     extra[int(H*0.9):,:]=False
@@ -48,7 +51,7 @@ for c,(x0,y0,x1,y1) in crops.items():
         # supersample, blur away the pixel stairs, trace, simplify; only real
         # turns stay hard corners (the renderer curves the rest)
         up=cv2.resize(mask.astype(np.float32),None,fx=4,fy=4,interpolation=cv2.INTER_NEAREST)
-        up=cv2.GaussianBlur(up,(0,0),5.0)
+        up=cv2.GaussianBlur(up,(0,0),7.5)
         mm=(up>0.5).astype(np.uint8)
         cs,_=cv2.findContours(mm,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
         ap=cv2.approxPolyDP(max(cs,key=cv2.contourArea),eps*4,True).reshape(-1,2).astype(np.float64)/4
@@ -77,7 +80,7 @@ for c,(x0,y0,x1,y1) in crops.items():
             if 0<=x<W and m[:,x].any():
                 top=np.nonzero(m[:,x])[0].min()
                 if bot[x]<sill: m[top:sill+1,x]=1
-    shell=smooth_trace(m,1.5)
+    shell=smooth_trace(m,2.0)
     # glass: dark pixels inside the body above the belt
     raw=np.load(c+'_raw.npy')
     g=((raw==0)&(m==1)&(V<0.42)).astype(np.uint8)
@@ -149,5 +152,13 @@ for c in ('fox','camss','supra'):
 for c in ('fox','camss','hachi'):
     res[c]['kit'].pop('spoiler',None)
 for c in res: res[c]['lines']=[]
+# stock bumpers are slices of the body: no panel gap where they meet, no seam lines
+for c in ('fox','camss','supra'):
+    o=res[c]; k=o['kit']
+    for sl in ('rbumper','fbumper'): k[sl]['stock']['flush']=True
+    rb=max(p[0] for p in k['rbumper']['stock']['pts']); fb=min(p[0] for p in k['fbumper']['stock']['pts'])
+    o['seams']=[pl for pl in o['seams'] if not all(abs(p[0]-rb)<0.4 or abs(p[0]-fb)<0.4 for p in pl)]
+# supra: silver oval headlamp like the reference
+res['supra']['lamps'][0]=['headsilver',[[91.2,12.2],[93.0,10.6],[96.2,9.9],[98.4,10.4],[97.8,11.4],[95.4,12.2],[92.4,12.8]]]
 json.dump(res,open('newart.json','w'))
 print('clipped')
