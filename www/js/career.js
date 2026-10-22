@@ -185,6 +185,17 @@
   };
   function C() { if (!G.state.career || G.state.career.perf == null) G.state.career = G.careerDefaults(); return G.state.career; }
   G.careerState = C;
+  // Testing: open every stage, car, part level and body-kit tier, and top
+  // up the bank. Career wins, sponsors and covers are left as they are.
+  G.unlockAll = function () {
+    var c = C();
+    c.stage = DR.STAGES.length - 1;
+    DR.PART_GROUPS.forEach(function (g) { c.perf[g.id] = 5; });
+    DR.VISUAL.forEach(function (slot) { c.vis[slot.id] = 3; });
+    Object.keys(DR.CARS).forEach(function (id) { c.cars[id] = 1; });
+    G.state.money = Math.max(G.state.money, 5000000);
+    G.save();
+  };
 
   G.stageUnlocked = function (si) { return si <= C().stage; };
   G.stageWins = function (si) { var w = 0; DR.STAGES[si].events.forEach(function (ev) { if (C().won[ev.id]) w++; }); return w; };

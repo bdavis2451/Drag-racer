@@ -183,6 +183,10 @@
         toggle('Speed units', 'units', 'mph', 'kmh', 'MPH', 'KM/H'),
         toggle('Gas pedal', 'pedal', 'hold', 'slide', 'Hold', 'Slide', 'Slide: how high you touch the pedal sets the throttle - feather it to stop wheelspin.'),
         toggle('Burnout pull-up', 'autoStage', true, false, 'Auto', 'Manual', 'Auto: once the tires are in the window, let off the gas and the car rolls up to stage.'),
+        h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Unlock everything'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For testing: every stage, car, part level and body-kit tier, plus $5,000,000.')),
+          btn('Unlock', function () {
+            UI.confirm('Unlock everything on this save? This cannot be undone (except by erasing the save).', function () { G.unlockAll(); A.cash(); UI.toast('Everything unlocked'); UI.refresh(); }, 'Unlock');
+          }, 'small')),
         h('div', { class: 'item' }, h('div', { class: 'name' }, 'Erase save data'), btn('Reset', function () {
           UI.confirm('Erase everything and start over?', function () { G.reset(); UI.show(UI.Title); }, 'Erase');
         }, 'small red')))));
