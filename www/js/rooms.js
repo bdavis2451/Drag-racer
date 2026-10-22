@@ -227,7 +227,93 @@
     r(Math.round(W * 0.5) - 40, 0, 80, 4, '#2a2c33'); r(Math.round(W * 0.5) - 37, 3, 74, 2, '#fff6dc');
   }
 
-  var THEMES = { garage: { bg: garageBg, fl: 0.64, car: 0.36, refl: 0.18 }, showroom: { bg: showroomBg, fl: 0.62, car: 0.38, refl: 0.3 }, dyno: { bg: dynoBg, fl: 0.66, car: 0.3, refl: 0 } };
+
+  // ---------------------------------------------------------------- dealer lot (day)
+  function cloud(x, cx, cy, w) {
+    var r = rects(x), k;
+    var blobs = [[0, 0, 0.32], [0.28, -0.18, 0.3], [0.55, -0.05, 0.26], [-0.3, 0.06, 0.22], [0.8, 0.08, 0.18]];
+    blobs.forEach(function (b) { disc(x, cx + b[0] * w, cy + b[1] * w, b[2] * w, '#ffffff'); });
+    r(cx - 0.5 * w, cy + 0.08 * w, 1.45 * w, 0.18 * w, '#ffffff');
+    x.fillStyle = '#d6ebff'; x.fillRect(cx - 0.5 * w, cy + 0.2 * w, 1.45 * w, 0.06 * w);
+    for (k = 0; k < 3; k++) disc(x, cx + (k * 0.4 - 0.1) * w, cy + 0.1 * w, 0.12 * w, '#eef7ff');
+  }
+  function lotBg(x, W, H, fl) {
+    var r = rects(x), i, k, rnd = DR.rng(31);
+    var sky = x.createLinearGradient(0, 0, 0, fl);
+    sky.addColorStop(0, '#3f9cf2'); sky.addColorStop(1, '#a9dcff');
+    x.fillStyle = sky; x.fillRect(0, 0, W, fl);
+    [[0.08, 0.1, 0.09], [0.52, 0.06, 0.07], [0.78, 0.14, 0.1], [0.36, 0.2, 0.05], [0.95, 0.04, 0.06]].forEach(function (c) { cloud(x, W * c[0], fl * c[1], W * c[2]); });
+    // distant skyline
+    for (k = -10; k < W; k += 10 + Math.floor(rnd() * 16)) {
+      var bw = 14 + Math.floor(rnd() * 22), bh = fl * (0.3 + rnd() * 0.45), col = rnd() < 0.5 ? '#9fb2c9' : '#b4c3d6';
+      r(k, fl - bh, bw, bh, col); r(k, fl - bh, 2, bh, 'rgba(255,255,255,0.25)');
+      for (var yy = fl - bh + 4; yy < fl - 6; yy += 5) for (var xx = k + 3; xx < k + bw - 3; xx += 4) r(xx, yy, 2, 2, 'rgba(70,90,120,0.35)');
+      if (rnd() < 0.3) r(k + bw / 2 - 1, fl - bh - 6, 2, 6, '#8496ae');
+    }
+    // smokestack
+    var sx = Math.round(W * 0.13), st = Math.round(fl * 0.08);
+    r(sx, st, 12, fl - st, '#e8e8e8'); r(sx, st, 3, fl - st, '#ffffff'); r(sx + 9, st, 3, fl - st, '#c8c8c8');
+    [0, 0.12].forEach(function (f) { r(sx - 1, st + fl * f, 14, 6, '#d63a3a'); });
+    // chain-link fence
+    var ft = Math.round(fl * 0.55);
+    x.fillStyle = 'rgba(120,128,140,0.55)';
+    for (i = ft; i < fl; i += 3) for (k = (i % 6 ? 0 : 1.5); k < W; k += 3) x.fillRect(Math.round(k), i, 1, 1);
+    r(0, ft - 2, W, 2, '#7a808c');
+    for (k = 6; k < W; k += 48) r(k, ft - 4, 3, fl - ft + 4, '#6c717d');
+    // utility poles and sagging wires
+    [0.04, 0.66].forEach(function (f) { var px = Math.round(W * f); r(px, fl * 0.12, 5, fl * 0.88, '#6b4a2b'); r(px - 14, fl * 0.16, 33, 3, '#5a3d22'); r(px - 12, fl * 0.14, 3, 3, '#c8ccd4'); r(px + 14, fl * 0.14, 3, 3, '#c8ccd4'); });
+    x.strokeStyle = 'rgba(20,20,24,0.8)'; x.lineWidth = 1;
+    [-12, 15, 2].forEach(function (o, n) { x.beginPath(); x.moveTo(0, fl * (0.2 + n * 0.02)); x.quadraticCurveTo(W * 0.35, fl * (0.3 + n * 0.03), W * 0.66 + o, fl * 0.15); x.quadraticCurveTo(W * 0.85, fl * (0.26 + n * 0.02), W, fl * (0.2 + n * 0.03)); x.stroke(); });
+    // dealership building
+    var bx = Math.round(W * 0.2), bw2 = Math.round(W * 0.4), by = Math.round(fl * 0.16);
+    r(bx + bw2 * 0.6, by - 8, bw2 * 0.22, 8, '#8a909c'); for (k = 0; k < 4; k++) r(bx + bw2 * 0.62 + k * 7, by - 7, 4, 3, '#5c626e');
+    r(bx, by, bw2, fl - by, '#d4d4d0'); r(bx, by, bw2, 3, '#ecece8');
+    for (k = bx; k < bx + bw2; k += Math.round(bw2 / 6)) r(k, by, 1, fl * 0.12, '#b0b0aa');
+    x.fillStyle = 'rgba(0,0,0,0.05)'; for (i = 0; i < 140; i++) x.fillRect(bx + rnd() * bw2, by + rnd() * (fl - by), 1, 1);
+    var gx0 = bx + 6, gy0 = by + Math.round(fl * 0.12), gw = bw2 - 12, gh = fl - gy0 - 6;
+    var gg = x.createLinearGradient(0, gy0, 0, gy0 + gh); gg.addColorStop(0, '#1d4256'); gg.addColorStop(1, '#13293a');
+    x.fillStyle = gg; x.fillRect(gx0, gy0, gw, gh);
+    for (k = 0; k <= 6; k++) r(gx0 + k * gw / 6 - 1, gy0, 2, gh, '#2a2d33');
+    r(gx0, gy0 + gh / 2 - 1, gw, 2, '#2a2d33');
+    x.fillStyle = 'rgba(255,255,255,0.08)'; for (k = 0; k < 6; k++) { x.beginPath(); x.moveTo(gx0 + k * gw / 6 + 4, gy0 + gh); x.lineTo(gx0 + k * gw / 6 + 12, gy0 + gh); x.lineTo(gx0 + k * gw / 6 + 26, gy0); x.lineTo(gx0 + k * gw / 6 + 18, gy0); x.fill(); }
+    // entrance with sign
+    var ex = Math.round(bx + bw2 * 0.5 - 30), ew = 60, ey = gy0 + gh * 0.32;
+    r(ex - 6, ey - 12, ew + 12, 12, '#ffffff'); r(ex - 6, ey - 12, ew + 12, 2, '#d63a3a'); r(ex - 6, ey - 2, ew + 12, 2, '#d63a3a');
+    DR.pixText(x, 'PIXEL MOTORS', ex + ew / 2 - DR.pixTextW('PIXEL MOTORS', 1) / 2, ey - 9, '#222', 1);
+    r(ex - 4, ey, 4, fl - ey, '#d4d4d0'); r(ex + ew, ey, 4, fl - ey, '#d4d4d0');
+    r(ex, ey, ew, fl - ey, '#163444'); r(ex + ew / 2, ey, 1, fl - ey, '#2a2d33'); r(ex + ew / 2 - 4, ey + (fl - ey) * 0.35, 1, 8, '#c8ccd4'); r(ex + ew / 2 + 3, ey + (fl - ey) * 0.35, 1, 8, '#c8ccd4');
+    // auto care bay
+    var ax = bx + bw2 + 2, aw = Math.round(W * 0.15), ay = Math.round(fl * 0.4);
+    r(ax, ay, aw, fl - ay, '#c4c4c0'); r(ax, ay, aw, 2, '#e0e0dc');
+    r(ax, ay + 6, aw, 10, '#c42a2a'); DR.pixText(x, 'AUTO CARE', ax + aw - DR.pixTextW('AUTO CARE', 1) - 4, ay + 9, '#ffffff', 1);
+    r(ax + 6, ay + 20, aw - 12, fl - ay - 20, '#0d0e12');
+    for (i = ay + 20; i < ay + 26; i += 2) r(ax + 6, i, aw - 12, 1, '#9aa0ab');
+    r(ax + 10, fl - 14, aw - 20, 3, '#ffcc00'); r(ax + 14, fl - 30, 3, 16, '#3a3f4a'); r(ax + aw - 17, fl - 30, 3, 16, '#3a3f4a');
+    r(ax + aw * 0.3, fl - 10, aw * 0.4, 4, '#555a64'); disc(x, ax + aw * 0.36, fl - 4, 2, '#222'); disc(x, ax + aw * 0.64, fl - 4, 2, '#222');
+    // vending machines
+    var vx = ax + aw + 6;
+    [['#3fa463', '#e0f0e0'], ['#e8e8e8', '#c42a2a']].forEach(function (v, n) {
+      var mx = vx + n * 20, my = fl - 34;
+      r(mx, my, 18, 34, v[0]); r(mx, my, 18, 2, '#ffffff');
+      r(mx + 2, my + 3, 14, 15, '#20242c');
+      for (var rr = 0; rr < 3; rr++) for (var cc = 0; cc < 5; cc++) r(mx + 3 + cc * 3, my + 4 + rr * 5, 2, 3, ['#d63a3a', '#ffcc00', '#4da3ff', '#46e07a', '#ff7be8'][(cc + rr + n) % 5]);
+      r(mx + 3, my + 21, 12, 3, v[1]); r(mx + 5, my + 27, 8, 4, '#111');
+    });
+    // lot surface
+    var fg = x.createLinearGradient(0, fl, 0, H);
+    fg.addColorStop(0, '#47494f'); fg.addColorStop(1, '#2e3035');
+    x.fillStyle = fg; x.fillRect(0, fl, W, H - fl);
+    r(0, fl, W, 4, '#8a8d94'); r(0, fl + 4, W, 1, '#2a2c30');
+    x.fillStyle = 'rgba(255,255,255,0.04)'; for (i = 0; i < 500; i++) x.fillRect(rnd() * W, fl + 5 + rnd() * (H - fl), 1, 1);
+    // bollards
+    for (k = 0; k < 3; k++) { var bxx = vx - 4 + k * 16; r(bxx, fl - 16, 4, 22, '#ffcc00'); r(bxx, fl - 16, 1, 22, '#fff2a0'); r(bxx - 1, fl - 17, 6, 2, '#e0a800'); }
+    // grass strip at the very bottom
+    r(0, H - Math.round(H * 0.05), W, Math.round(H * 0.05), '#2f6b2a');
+    for (k = 0; k < W; k += 2) r(k, H - Math.round(H * 0.05) - (k * 7 % 3), 1, 3, '#3f8a38');
+    x.save(); x.globalCompositeOperation = 'lighter'; pool(x, W / 2, fl + (H - fl) * 0.42, W * 0.3, 'rgba(255,255,255,0.06)'); x.restore();
+  }
+
+  var THEMES = { garage: { bg: garageBg, fl: 0.64, car: 0.36, refl: 0.18 }, showroom: { bg: showroomBg, fl: 0.62, car: 0.38, refl: 0.3 }, dyno: { bg: dynoBg, fl: 0.66, car: 0.3, refl: 0 }, lot: { bg: lotBg, fl: 0.6, car: 0.42, refl: 0, vig: 0.15 } };
 
   DR.drawRoom = function (canvas, inst, opts) {
     opts = opts || {};
@@ -272,6 +358,14 @@
       DR.drawCar(x, spr, gx, gy, 0, spin, { shadow: false });
       x.restore();
     }
+    // other cars on the lot, cut off at the edges (dealer)
+    (opts.side || []).forEach(function (o, n) {
+      if (!o) return;
+      var sp2 = DR.carSprite(DR.carLook(o)), sgx = n === 0 ? Math.round(-sp2.lenPx * 0.72 + (sp2.wheelR.x - sp2.padL)) : Math.round(W - sp2.lenPx * 0.28 + (sp2.wheelR.x - sp2.padL));
+      DR.drawCar(x, sp2, sgx, gy, 0, 0.3);
+      var tx = n === 0 ? sgx + sp2.lenPx * 0.48 : sgx + sp2.lenPx * 0.02, ty = gy - sp2.wheelR.r * 3.4;
+      x.save(); x.translate(tx, ty); x.rotate(-0.25); x.fillStyle = '#d63a3a'; x.fillRect(-11, -5, 22, 10); x.fillStyle = '#fff'; x.fillRect(-11, -5, 22, 1); DR.pixText(x, 'SALE', -7, -2, '#ffffff', 1); x.restore();
+    });
     DR.drawCar(x, spr, gx, gy, 0, spin);
     if (opts.theme === 'dyno' && opts.running) {
       // exhaust haze off the tail
@@ -279,7 +373,7 @@
       for (var p = 0; p < 6; p++) disc(x, gx - wr * 2 - p * 9, gy - wr * 0.6 - p * 3, 4 + p * 2, '#c8ccd4');
       x.restore();
     }
-    vignette(x, W, H, opts.theme === 'showroom' ? 0.35 : 0.55);
+    vignette(x, W, H, th.vig != null ? th.vig : opts.theme === 'showroom' ? 0.35 : 0.55);
     return { gx: gx, gy: gy, spr: spr, W: W, H: H };
   };
   // Draws now, then again at the element's real aspect once it is on screen.

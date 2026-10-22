@@ -37,11 +37,11 @@
     var ids = G.starters, id = ids[starterIdx % ids.length], car = DR.CARS[id];
     var inst = { carId: id, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col };
     var S = DR.buildSpec(inst), est = G.estimate(inst, DR.QUARTER);
-    var cv = DR.roomCanvas(inst, { theme: 'showroom' });
+    var cv = DR.roomCanvas(inst, { theme: 'lot' });
     function cyc(d) { starterIdx = (starterIdx + d + ids.length) % ids.length; UI.refresh(); }
     return h('div', { class: 'screen' }, UI.top('PICK YOUR FIRST CAR', function () { UI.show(UI.Title); }),
       h('div', { class: 'gwrap' }, cv,
-        h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
+        h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name), statBars(S, est),
           gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive), gst('EST 1/4', est.et.toFixed(2) + 's', 'good'),
           h('div', { class: 'gsmall dim' }, 'Free to start, plus $6,000 for parts.')),
         h('div', { class: 'gsel' }, btn('◀', function () { cyc(-1); }, 'arrow'),
@@ -342,6 +342,22 @@
   };
 
   // ---------------------------------------------------------------- DEALER
+  // PCR-style bars, scaled against every car on sale
+  var BAR_MAX = null;
+  function statBars(S, est) {
+    if (!BAR_MAX) {
+      BAR_MAX = { hp: 1, trap: 1, m: 1, mu: 1 };
+      Object.keys(DR.CARS).forEach(function (cid) {
+        var c = DR.CARS[cid], i = { carId: cid, engine: c.engine, parts: {}, tune: {} }, s2 = DR.buildSpec(i), e2 = G.estimate(i, DR.QUARTER);
+        BAR_MAX.hp = Math.max(BAR_MAX.hp, s2.peakHp); BAR_MAX.trap = Math.max(BAR_MAX.trap, e2.trap); BAR_MAX.m = Math.max(BAR_MAX.m, s2.m); BAR_MAX.mu = Math.max(BAR_MAX.mu, s2.tire.mu);
+      });
+    }
+    function bar(label, f) {
+      var b = h('div', { class: 'sbar' }); for (var i = 0; i < 10; i++) b.appendChild(h('i', { class: i < Math.round(f * 10) ? 'on' : '' }));
+      return h('div', { class: 'sbarrow' }, h('span', { class: 'k' }, label), b);
+    }
+    return h('div', { class: 'sbars' }, bar('SPEED', est.trap / BAR_MAX.trap), bar('POWER', S.peakHp / BAR_MAX.hp), bar('WEIGHT', S.m / BAR_MAX.m), bar('GRIP', S.tire.mu / BAR_MAX.mu));
+  }
   var dealerCat = DR.CAR_CATS[0], dealerIdx = 0;
   UI.Dealer = function () {
     var ids = Object.keys(DR.CARS).filter(function (id) { return DR.CARS[id].cat === dealerCat; }).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; });
@@ -351,7 +367,10 @@
     }));
     var id = ids[dealerIdx], car = DR.CARS[id], inst = { carId: id, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col };
     var S = DR.buildSpec(inst), est = G.estimate(inst, DR.QUARTER), locked = !G.carUnlocked(id), owned = G.state.cars.filter(function (c) { return c.carId === id; }).length;
-    var cv = DR.roomCanvas(inst, { theme: 'showroom' });
+    var all = Object.keys(DR.CARS).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; }), ai = all.indexOf(id);
+    function stockInst(cid) { var c3 = DR.CARS[cid]; return { carId: cid, engine: c3.engine, parts: {}, tune: {}, color: c3.col }; }
+    var side = all.length > 1 ? [stockInst(all[(ai - 1 + all.length) % all.length]), stockInst(all[(ai + 1) % all.length])] : [];
+    var cv = DR.roomCanvas(inst, { theme: 'lot', side: side });
     function cyc(d) { dealerIdx = (dealerIdx + d + ids.length) % ids.length; UI.refresh(); }
     var strip = h('div', { class: 'dstrip' }, ids.map(function (cid, k) {
       var c2 = DR.CARS[cid], i2 = { carId: cid, engine: c2.engine, parts: {}, tune: {}, color: c2.col };
@@ -361,7 +380,7 @@
     return h('div', { class: 'screen' }, UI.top('DEALERSHIP', function () { UI.show(UI.Garage); }),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'dmain' },
         h('div', { class: 'gwrap' }, cv,
-          h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
+          h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name), statBars(S, est),
             gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
             gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
             gst('TIRES', S.tire.name), gst('EST 1/4', est.et.toFixed(2) + 's @ ' + Math.round(est.trap), 'good'),
