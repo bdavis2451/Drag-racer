@@ -248,14 +248,37 @@
   // car paint: brightens toward a sky-tinted white on surfaces facing up,
   // falls into a cool shadow facing down; dark paints get a stronger
   // clear-coat sheen so black still reads as glossy
-  function paint(base, ny, lm) {
-    var s;
-    if (ny >= 0) {
-      s = ny * (0.5 + (1 - lm) * 0.25);
-      return [base[0] + (SKYT[0] - base[0]) * s, base[1] + (SKYT[1] - base[1]) * s, base[2] + (SKYT[2] - base[2]) * s];
+  // Paint is shaded from a fixed seven-step ramp built from the colour
+  // (three highlights, the base, three shadows), like hand-made pixel-art
+  // palettes: big flat areas of one tone instead of smooth gradients.
+  function rgb2hsv(c) {
+    var r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
+    if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h / 6, mx ? d / mx : 0, mx];
+  }
+  function hsv2rgb(h, sat, v) {
+    var i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - sat), q = v * (1 - f * sat), t = v * (1 - (1 - f) * sat), r, g, b;
+    switch (i % 6) { case 0: r = v; g = t; b = p; break; case 1: r = q; g = v; b = p; break; case 2: r = p; g = v; b = t; break;
+      case 3: r = p; g = q; b = v; break; case 4: r = t; g = p; b = v; break; default: r = v; g = p; b = q; }
+    return [r * 255, g * 255, b * 255];
+  }
+  var rampCache = {};
+  function rampOf(base) {
+    var key = (base[0] | 0) + ',' + (base[1] | 0) + ',' + (base[2] | 0);
+    if (rampCache[key]) return rampCache[key];
+    var hsv = rgb2hsv(base), h = hsv[0], sat = hsv[1], v = hsv[2], dark = v < 0.35;
+    function lt(k, cap, ds, n) {
+      var vv = Math.max(v + 0.012 * n, Math.min(cap, v * k)), c = hsv2rgb(h, sat * ds, Math.min(1, vv));
+      return dark ? mix(c, [150, 160, 182], 0.1 + 0.12 * n) : c;          // dark paints keep a clear-coat sheen
     }
-    s = Math.min(0.85, -ny * 0.78);
-    return [base[0] + (SHAD[0] - base[0]) * s, base[1] + (SHAD[1] - base[1]) * s, base[2] + (SHAD[2] - base[2]) * s];
+    var r = [lt(1.55, 0.93, 0.66, 3), lt(1.42, 0.9, 0.79, 2), lt(1.3, 0.88, 0.92, 1), base.slice(),
+      hsv2rgb(h, sat, v * 0.69), hsv2rgb(h, sat, v * 0.53), hsv2rgb(h, Math.min(1, sat * 1.05), v * 0.41)];
+    rampCache[key] = r;
+    return r;
+  }
+  function paint(base, ny, lm) {
+    var r = rampOf(base);
+    return (ny > 0.82 ? r[0] : ny > 0.42 ? r[1] : ny > 0.16 ? r[2] : ny > -0.1 ? r[3] : ny > -0.3 ? r[4] : ny > -0.55 ? r[5] : r[6]).slice();
   }
   function chrome(ny) {
     if (ny > 0.5) return [236, 242, 252];
@@ -563,9 +586,8 @@
           var it = inter[k][0], itop = !inPoly(inter[k][1], q2[0], q2[1] + 1 / u);
           ic = it === 'seat' || it === 'head' ? (itop ? [52, 50, 58] : [32, 30, 36]) : [20, 20, 24];
         }
-        var g = mix(ic, [34, 42, 56], 0.35);
-        var streak = ((px * 2 + py * 3) % 37);
-        if (streak < 2) g = mix(g, [180, 196, 216], streak === 0 ? 0.22 : 0.12);
+        var g = mix(ic, [24, 28, 36], 0.3);
+        if (((px * 2 + py * 3) % 53) === 0) g = mix(g, [180, 196, 216], 0.12);   // the odd glint
         if (tint) g = mix(g, [6, 8, 12], tint === 2 ? 0.62 : 0.36);
         if (top3) g = tint ? [70, 82, 98] : [96, 110, 130];
         else if (bot3) g = mul(g, 0.7);
