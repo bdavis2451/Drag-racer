@@ -156,6 +156,9 @@ def clip(poly, keep):
 class K:
     def __init__(s,x,side): s.x=x; s.side=side
     def __call__(s,p): return p[0]<=s.x if s.side<0 else p[0]>=s.x
+# supra nose: the trace lost the top of the oval headlamp; round the nose over it
+sp=res['supra']['shell']; i=[j for j,p in enumerate(sp) if p[0]>91 and 9<p[1]<14.5]
+res['supra']['shell']=sp[:min(i)]+[[99.3,10.4],[98.6,11.6],[97.2,12.6],[95.0,13.2],[92.6,13.7],[91.4,14.25]]+sp[max(i)+1:]
 for c in ('fox','camss','supra','hachi'):
     A=res[c]; kit=A['kit']
     rb=max(p[0] for p in kit['rbumper']['stock']['pts']); fb=min(p[0] for p in kit['fbumper']['stock']['pts'])
@@ -171,8 +174,7 @@ for c in ('fox','camss','supra','hachi'):
     for sl in ('rbumper','fbumper'): k[sl]['stock']['flush']=True
     rb=max(p[0] for p in k['rbumper']['stock']['pts']); fb=min(p[0] for p in k['fbumper']['stock']['pts'])
     o['seams']=[pl for pl in o['seams'] if not all(abs(p[0]-rb)<0.4 or abs(p[0]-fb)<0.4 for p in pl)]
-bands={'supra':[[50,63.6,2.7,1.1]],'fox':[[52,64,2.4,1.1],[13,28.5,1.5,1.0]],'camss':[[53,63.8,2.7,1.1],[20,29,1.4,1.0]],'hachi':[[55,69.5,2.4,1.1]]}
-for c in bands: res[c]['wsGlass']=bands[c]
+import greenhouse; greenhouse.apply(res)
 # mirrors: small body-colour pods tucked into the glass's front-bottom corner
 mir={'supra':(55.4,58.6,17.0),'camss':(58.0,61.6,17.9),'fox':(59.6,62.6,18.3),'hachi':(63.0,65.6,19.7)}
 for c,(a,b,y) in mir.items():
@@ -185,6 +187,6 @@ res['supra']['details']=[['shade',f[1]] if f[0]=='grille' else f for f in res['s
 cm=res['camss']; cm['creases']=cm['creases'][:1]; cm['details']=[f for f in cm['details'] if f[0]!='badge']
 fbk=cm['kit']['fbumper']['stock']; fbk['details']=[['trim',f[1]] if f[0]=='grille' else f for f in fbk.get('details',[])]
 # supra: silver oval headlamp like the reference
-res['supra']['lamps'][0]=['headsilver',[[91.2,12.2],[93.0,10.6],[96.2,9.9],[98.4,10.4],[97.8,11.4],[95.4,12.2],[92.4,12.8]]]
+res['supra']['lamps'][0]=['headsilver',[[91.6,12.3],[92.6,12.9],[95.0,12.9],[97.0,12.3],[97.6,11.4],[96.6,10.6],[94.0,10.5],[92.2,11.2]]]
 json.dump(res,open('newart.json','w'))
 print('clipped')

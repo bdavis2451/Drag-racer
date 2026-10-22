@@ -381,25 +381,29 @@
 
   var THEMES = { garage: { bg: garageBg, fl: 0.66, car: 0.36, refl: 0.3, vig: 0.3 }, showroom: { bg: showroomBg, fl: 0.62, car: 0.38, refl: 0.3 }, dyno: { bg: dynoBg, fl: 0.66, car: 0.3, refl: 0 }, lot: { bg: lotBg, fl: 0.6, car: 0.42, refl: 0, vig: 0.15 } };
 
+  function hiRes(look, r) { return Object.assign({}, look, { res: r || 2 }); }
+  DR.hiResLook = hiRes;
   DR.drawRoom = function (canvas, inst, opts) {
     opts = opts || {};
     var th = THEMES[opts.theme || 'garage'];
-    var spr = opts.spr || DR.carSprite(DR.carLook(inst));
-    var W = Math.max(420, Math.round(spr.lenPx * (opts.zoom || 2.3))), H = Math.round(W / Math.max(1.5, Math.min(2.6, opts.aspect || 2.1)));
+    // the car is drawn at 2x pixel density over a 1x background scaled up
+    var spr = opts.spr || DR.carSprite(hiRes(DR.carLook(inst))), RS = spr.look.res || 1;
+    var W1 = Math.max(420, Math.round(spr.lenPx / RS * (opts.zoom || 2.3))), H1 = Math.round(W1 / Math.max(1.5, Math.min(2.6, opts.aspect || 2.1)));
+    var W = W1 * RS, H = H1 * RS;
     if (canvas.width !== W) canvas.width = W;
     if (canvas.height !== H) canvas.height = H;
     var x = canvas.getContext('2d'); x.imageSmoothingEnabled = false;
-    var fl = Math.round(H * th.fl), key = (opts.theme || 'garage') + (opts.sign === false ? 'ns' : '') + W + 'x' + H;
+    var fl1 = Math.round(H1 * th.fl), fl = fl1 * RS, key = (opts.theme || 'garage') + (opts.sign === false ? 'ns' : '') + W1 + 'x' + H1;
     if (!BG[key]) {
-      var c = document.createElement('canvas'); c.width = W; c.height = H;
+      var c = document.createElement('canvas'); c.width = W1; c.height = H1;
       var cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
       garageBg.noSign = opts.sign === false;
-      th.bg(cx, W, H, fl);
+      th.bg(cx, W1, H1, fl1);
       garageBg.noSign = false;
       BG[key] = c;
     }
-    x.drawImage(BG[key], 0, 0);
-    var gy = fl + Math.round((H - fl) * th.car), gx = Math.round(W / 2 - spr.lenPx / 2 + (spr.wheelR.x - spr.padL));
+    x.drawImage(BG[key], 0, 0, W, H);
+    var gy = fl + Math.round((H1 - fl1) * th.car) * RS, gx = Math.round(W / 2 - spr.lenPx / 2 + (spr.wheelR.x - spr.padL));
     var wb = spr.wheelF.x - spr.wheelR.x, wr = spr.wheelR.r, spin = opts.spin || 0.3;
     if (opts.theme === 'dyno') {
       // roller pits under both axles; the drive axle's rollers turn
@@ -427,10 +431,10 @@
     // other cars on the lot, cut off at the edges (dealer)
     (opts.side || []).forEach(function (o, n) {
       if (!o) return;
-      var sp2 = DR.carSprite(DR.carLook(o)), sgx = n === 0 ? Math.round(-sp2.lenPx * 0.72 + (sp2.wheelR.x - sp2.padL)) : Math.round(W - sp2.lenPx * 0.28 + (sp2.wheelR.x - sp2.padL));
+      var sp2 = DR.carSprite(hiRes(DR.carLook(o), RS)), sgx = n === 0 ? Math.round(-sp2.lenPx * 0.72 + (sp2.wheelR.x - sp2.padL)) : Math.round(W - sp2.lenPx * 0.28 + (sp2.wheelR.x - sp2.padL));
       DR.drawCar(x, sp2, sgx, gy, 0, 0.3);
       var tx = n === 0 ? sgx + sp2.lenPx * 0.48 : sgx + sp2.lenPx * 0.02, ty = gy - sp2.wheelR.r * 3.4;
-      x.save(); x.translate(tx, ty); x.rotate(-0.25); x.fillStyle = '#d63a3a'; x.fillRect(-11, -5, 22, 10); x.fillStyle = '#fff'; x.fillRect(-11, -5, 22, 1); DR.pixText(x, 'SALE', -7, -2, '#ffffff', 1); x.restore();
+      x.save(); x.translate(tx, ty); x.rotate(-0.25); x.scale(RS, RS); x.fillStyle = '#d63a3a'; x.fillRect(-11, -5, 22, 10); x.fillStyle = '#fff'; x.fillRect(-11, -5, 22, 1); DR.pixText(x, 'SALE', -7, -2, '#ffffff', 1); x.restore();
     });
     DR.drawCar(x, spr, gx, gy, 0, spin);
     if (opts.theme === 'dyno' && opts.running) {

@@ -259,7 +259,7 @@
   // ---------------------------------------------------------------- DYNO
   UI.Dyno = function () {
     var inst = G.car(), S = G.spec(inst), dy = DR.dyno(S);
-    var spr = DR.carSprite(DR.carLook(inst));
+    var spr = DR.carSprite(DR.hiResLook(DR.carLook(inst)));
     var room = DR.roomCanvas(inst, { theme: 'dyno', spr: spr, S: S, zoom: 2.2 }, 'dynoroom');
     var cv = h('canvas', { class: 'dynograph', width: 480, height: 200 });
     var sweep = { p: 1 }, rpmEl = h('div', { class: 'dynorpm' }, 'READY');
