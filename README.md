@@ -83,13 +83,25 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 | `www/js/parts.js` | **Every upgrade part** and what it does. |
 | `www/js/physics.js` | The physics engine: tires, engine, clutch, converter, weight transfer, wheelies. |
 | `www/js/game.js` | Money, saving, buying and selling, and the **career ladder opponents**. |
-| `www/js/render.js` | The pixel-art graphics: car sprites, track, tree, smoke, flames. |
+| `www/js/render.js` | The scene: sky, track, grandstands, the tree, tire smoke, flames and the day/night lighting pass. |
+| `www/js/cars.js` | **Car sprites**, built from swappable parts (see below), plus wheels, brakes and tires. |
 | `www/js/ui.js` | All menu screens (garage, shop, tuning, dyno, dealer, paint, and so on). |
 | `www/js/race.js` | The race itself: burnout, staging, launch, HUD and timeslip. |
 | `www/js/audio.js` | Engine sound synthesizer. |
 | `android/` | The Android app wrapper ([Capacitor](https://capacitorjs.com)). |
 | `tools/simtest.js` | Prints a simulated 1/4-mile run for every stock car (a physics check). |
 | `tools/career.js` | Prints every career opponent's ET, to keep the ladder in order. |
+
+### Car art and body kits
+
+Each hand-drawn car in `www/js/cars.js` has a `shell` plus a `kit` of slots
+(`fbumper`, `rbumper`, `skirt`, `hood`, `spoiler`, `mirror`). Each slot lists
+variants by name, `stock` being the factory part. A variant is a polygon (in
+units: 0 = rear bumper, 100 = front bumper, same scale for height) with a
+material (`paint`, `trim`, `bumper`, `chrome`) and optional `details` / `lamps`.
+To add a body kit part, add a variant (for example `kit.fbumper.street`), then
+set `inst.kit = { fbumper: 'street' }` on a car. The sprite picks it up, shades
+it and draws panel gaps around it automatically.
 
 ## Building the APK yourself (optional)
 

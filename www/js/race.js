@@ -260,9 +260,8 @@
       // racers: far lane first
       var order = racers.slice().sort(function (a, b) { return b.lane - a.lane; });
       var lamps = [];
-      order.forEach(function (r) { lamps.push(drawRacer(r, camX, dt)); });
       parts.update(dt);
-      parts.draw(ctx, camX, DR.LANE_Y);
+      order.forEach(function (r) { lamps.push(drawRacer(r, camX, dt)); parts.draw(ctx, camX, DR.LANE_Y, r.lane); });
       scene.drawForeground(ctx, camX);
       scene.light(ctx, camX, lamps, parts);
       drawHud();
@@ -316,11 +315,13 @@
       lamp.brake = sim.brake > 0.05; lamp.ground = gy;
       // smoke from the drive tires
       var rearX = frontX - (spr.padL + spr.lenPx - spr.wheelR.x) / DR.PPM;
-      var smoky = r.burn > 0.3 || (sim.launched && !sim.finished && sim.slip > r.S.tslip * 2 && sim.v < 70);
-      if (smoky && Math.random() < 0.9) {
-        var amt = r.burn ? 3 : Math.min(3, Math.ceil(sim.slip * 2));
-        parts.smoke(rearX, 0.15, sim.v, amt);
-        parts.list.slice(-amt).forEach(function (p) { p.lane = r.lane; });
+      // tire smoke: more the harder the tires spin over the ground
+      var slipV = Math.max(0, sim.ww * r.S.r - sim.v);
+      var heavy = r.burn ? r.burn : (sim.launched && !sim.finished && sim.v < 70 && sim.slip > r.S.tslip * 2) ? Math.min(1, slipV / 12) : 0;
+      if (heavy > 0.05) {
+        r.smokeAcc = (r.smokeAcc || 0) + dt * 52 * heavy;
+        var n = Math.floor(r.smokeAcc); r.smokeAcc -= n;
+        if (n) parts.smoke(rearX, 0.12, sim.v, Math.min(6, n), { lane: r.lane, slip: slipV, dense: 0.55 + 0.35 * heavy });
       }
       if (sim.nosOn || (sim.cut && !sim.launched && r.S.twostep && Math.random() < 0.15)) {
         var ex = rearX - (spr.wheelR.x - spr.padL) / DR.PPM;
@@ -328,8 +329,7 @@
         parts.list.slice(-4).forEach(function (p) { p.lane = r.lane; });
       }
       if ((sim.blown || sim.broke) && Math.random() < 0.6) {
-        parts.smoke(frontX - 1, 0.8, sim.v, 2);
-        parts.list.slice(-2).forEach(function (p) { p.lane = r.lane; });
+        parts.smoke(frontX - 1, 0.8, sim.v, 1, { lane: r.lane, engine: true, dense: 0.7 });
       }
       return lamp;
     }
