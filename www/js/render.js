@@ -6,6 +6,17 @@
   var DR = globalThis.DR;
   var PPM = 44;                 // pixels per metre
   DR.PPM = PPM;
+  // Cars are drawn at SPR_RES x pixel density. A canvas that shows cars keeps
+  // its logical size for layout and a backing store SPR_RES x larger.
+  DR.SPR_RES = 2;
+  DR.hiCanvas = function (c, w, h) {
+    var R = DR.SPR_RES; w = w || c._lw || c.width; h = h || c._lh || c.height;
+    c._lw = w; c._lh = h;
+    if (c.width !== w * R) c.width = w * R;
+    if (c.height !== h * R) c.height = h * R;
+    var x = c.getContext('2d'); x.setTransform(R, 0, 0, R, 0, 0); x.imageSmoothingEnabled = false;
+    return x;
+  };
   DR.VIEW_W = 800; DR.VIEW_H = 450;
 
   // ------------------------------------------------------------ colour helpers
@@ -636,11 +647,10 @@
     if (opts.fit !== false && !opts.groundY) {
       // size the canvas around the car so every preview fills its frame
       var fw = Math.max(160, Math.round(spr.lenPx * 1.5 + 40));
-      canvas.width = fw; canvas.height = Math.round(fw * (opts.aspect || 0.45));
+      canvas._lw = fw; canvas._lh = Math.round(fw * (opts.aspect || 0.45));
     }
-    var ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    var w = canvas.width, h = canvas.height;
+    var ctx = DR.hiCanvas(canvas);
+    var w = canvas._lw, h = canvas._lh;
     if (opts.bg !== false) DR.drawGarage(ctx, w, h); else ctx.clearRect(0, 0, w, h);
     var gy = opts.groundY || Math.round(h * 0.68) + 8;
     var gx = Math.round(w / 2 - spr.lenPx / 2 + (spr.wheelR.x - spr.padL));

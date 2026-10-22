@@ -48,7 +48,7 @@
 
     // ---------------------------------------------------------------- DOM
     var cv = h('canvas', { class: 'world', width: DR.VIEW_W, height: DR.VIEW_H });
-    var ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    var ctx = DR.hiCanvas(cv);
     var segs = []; var bar = h('div', { class: 'bar' });
     for (var i = 0; i < 24; i++) { var sg = h('i'); segs.push(sg); bar.appendChild(sg); }
     var gearEl = h('div', { class: 'gear' }, '1'), readEl = h('div', { class: 'read' });

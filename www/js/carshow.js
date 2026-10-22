@@ -76,8 +76,7 @@
   // ---------------------------------------------------------------- screen: list
   // a postcard of the venue: its backdrop and floor with your car parked
   function showThumb(show, inst) {
-    var c = h('canvas', { class: 'ecv', width: 400, height: 168 }), x = c.getContext('2d');
-    x.imageSmoothingEnabled = false;
+    var c = h('canvas', { class: 'ecv' }), x = DR.hiCanvas(c, 400, 168);
     var bg = backdrop(show, 800), top = GROUND + 50 - 168;
     x.translate(0, -top);
     x.drawImage(bg, -120, 0); floor(x, show, 0);
@@ -140,7 +139,7 @@
     var people = [], t = 0, done = false, podiumT = -1, final = null;
     var rowW = field[n - 1].x + SPACING;
 
-    var cv = h('canvas', { class: 'world', width: W(), height: Hh() }), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    var cv = h('canvas', { class: 'world' }), ctx = DR.hiCanvas(cv, W(), Hh());
     var hudTop = h('div', { class: 'showbar' }), hint = h('div', { class: 'msg' }, show.name), sub = h('div', { class: 'sub' }, show.where + ' • the crowd is walking the floor...');
     var skip = btn('Skip ▶▶', function () { t = Math.max(t, DUR - 0.01); }, 'small back quit');
     var root = h('div', { class: 'screen race' }, cv, h('div', { class: 'hud' }, hudTop, hint, sub), h('div', { class: 'controls' }, skip));
@@ -391,7 +390,7 @@
   // ---------------------------------------------------------------- magazine covers
   // Awarded by G.noteStars (career.js) the first time a new star level is hit.
   DR.drawCover = function (canvas, cover) {
-    var c = canvas.getContext('2d'), w = canvas.width, hh = canvas.height;
+    var c = DR.hiCanvas(canvas), w = canvas._lw, hh = canvas._lh;
     c.imageSmoothingEnabled = false;
     var hue = ['#c42a2a', '#1c3f9a', '#ff6a00', '#2e7d4f', '#8a5cff', '#ff2bd6', '#2fb3a8', '#151515', '#ffcc00', '#d0d0d0'][(cover.lvl - 1) % 10];
     var g = c.createLinearGradient(0, 0, 0, hh); g.addColorStop(0, hue); g.addColorStop(1, '#0c0d10');

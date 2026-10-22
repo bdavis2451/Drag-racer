@@ -175,6 +175,7 @@ for c in ('fox','camss','supra','hachi'):
     rb=max(p[0] for p in k['rbumper']['stock']['pts']); fb=min(p[0] for p in k['fbumper']['stock']['pts'])
     o['seams']=[pl for pl in o['seams'] if not all(abs(p[0]-rb)<0.4 or abs(p[0]-fb)<0.4 for p in pl)]
 import greenhouse; greenhouse.apply(res)
+import details; details.apply(res)
 # mirrors: small body-colour pods tucked into the glass's front-bottom corner
 mir={'supra':(55.4,58.6,17.0),'camss':(58.0,61.6,17.9),'fox':(59.6,62.6,18.3),'hachi':(63.0,65.6,19.7)}
 for c,(a,b,y) in mir.items():
@@ -187,6 +188,5 @@ res['supra']['details']=[['shade',f[1]] if f[0]=='grille' else f for f in res['s
 cm=res['camss']; cm['creases']=cm['creases'][:1]; cm['details']=[f for f in cm['details'] if f[0]!='badge']
 fbk=cm['kit']['fbumper']['stock']; fbk['details']=[['trim',f[1]] if f[0]=='grille' else f for f in fbk.get('details',[])]
 # supra: silver oval headlamp like the reference
-res['supra']['lamps'][0]=['headsilver',[[91.6,12.3],[92.6,12.9],[95.0,12.9],[97.0,12.3],[97.6,11.4],[96.6,10.6],[94.0,10.5],[92.2,11.2]]]
 json.dump(res,open('newart.json','w'))
 print('clipped')
