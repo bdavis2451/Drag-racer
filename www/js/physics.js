@@ -180,7 +180,7 @@
     S.f = clamp(front / S.m, 0.2, 0.72);
     S.L = car.wb;
     S.b = S.L * S.f;                      // CG to rear axle
-    S.h = car.h - (springs.low || 0) - (wt.low || 0) + (tire.r - stockTire.r) * 0.5;
+    S.h = car.h - (wt.low || 0) + (tire.r - stockTire.r) * 0.5;   // ride height is added below
     S.cda = car.cda + aero.dcda;
     S.cla = aero.cla;
     S.Ip = S.m * S.L * S.L * 0.19;
@@ -200,16 +200,31 @@
     S.pf = clamp(pf, 0.4, 1.1);
     S.crr = 0.012 * (1 + Math.max(0, -d) * 0.6) * ftires.roll;
 
-    // suspension
+    // ---- suspension: front and rear corners with their own spring, bump /
+    // rebound damping, bump stops and droop limits under a body that heaves
+    // and pitches (see Sim.step). Ride height moves the CG, the drag and the
+    // travel left before the bump stops.
     S.as = rs.adjA ? T.antiSquat : rs.as;
-    var kmul = springs.sk * (springs.adjS ? 0.55 + 0.09 * T.springR : 1);
-    var wn = 2 * Math.PI * 1.6 * Math.sqrt(kmul);
-    S.kphi = S.Ip * wn * wn;
-    var z = shocks.z + (shocks.adjD ? (T.rebound - 5) * 0.035 + (T.comp - 5) * 0.035 : 0);
-    z = clamp(z, 0.1, 0.95);
-    S.cphi = 2 * z * Math.sqrt(S.kphi * S.Ip);
-    S.hmul = (1 + (springs.adjS ? (5 - T.springF) * 0.012 : 0) + (shocks.adjD ? (5 - T.rebound) * 0.01 : 0)) *
-      (1 + 0.45 * (S.as - 0.5)) * (shocks.pro ? 1.02 : 1) * (rs.pro ? 1.02 : 1);
+    var rideF = springs.adjS ? T.rideF / 1000 : -(springs.low || 0), rideR = springs.adjS ? T.rideR / 1000 : -(springs.low || 0);
+    S.rideF = rideF; S.rideR = rideR;
+    S.h += 0.9 * (rideF + rideR) / 2;
+    S.cda *= 1 + 1.1 * (rideF + rideR) / 2 + 0.6 * Math.max(0, rideR - rideF);   // low = less air under the car; rake costs a little
+    function rateMul(click) { return springs.adjS ? springs.rate[0] + (springs.rate[1] - springs.rate[0]) * (click - 1) / 9 : springs.sk; }
+    var mF = S.m * S.f, mR = S.m * (1 - S.f), wF = 2 * Math.PI * 1.45, wR = 2 * Math.PI * 1.65;
+    S.kf = mF * wF * wF * rateMul(T.springF);
+    S.kr = mR * wR * wR * rateMul(T.springR);
+    // damping: clicks 1..10 scale the shock's ratio 0.35x..1.9x; rebound is
+    // naturally firmer than bump
+    function zc(click, adj, base) { return adj ? shocks.z * base * (0.35 + 0.17 * (click - 1)) / 1.03 : shocks.z * base; }
+    var a2 = shocks.adjD === 2, a1 = shocks.adjD >= 1;
+    S.cbF = 2 * zc(T.bumpF, a2, 0.75) * Math.sqrt(S.kf * mF);
+    S.crF = 2 * zc(T.rebF, a1, 1.3) * Math.sqrt(S.kf * mF);
+    S.cbR = 2 * zc(T.bumpR, a1, 0.75) * Math.sqrt(S.kr * mR);
+    S.crR = 2 * zc(T.rebR, a2, 1.3) * Math.sqrt(S.kr * mR);
+    // travel: raising the car adds bump travel and takes away droop
+    S.bumpF = Math.max(0.012, 0.075 + rideF); S.bumpR = Math.max(0.012, 0.085 + rideR);
+    S.droopF = Math.max(0.01, 0.11 - rideF * 0.6); S.droopR = Math.max(0.01, 0.09 - rideR * 0.6);
+    if (shocks.lim && T.limitF > 0) S.droopF = Math.min(S.droopF, T.limitF / 1000);
     S.bar = !!bar.bar;
     S.barRad = T.barDeg * Math.PI / 180;
     S.barLen = 1.6;
@@ -242,7 +257,8 @@
       gears: tr.ratios.slice(),
       shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, tr.ratios))) / 100) * 100,
       revLimit: S.red,
-      springF: 5, springR: 5, rebound: 5, comp: 5,
+      springF: 5, springR: 5, rideF: 0, rideR: 0,
+      bumpF: 5, rebF: 5, bumpR: 5, rebR: 5, limitF: 0,
       antiSquat: DR.getOption('rearsusp', inst).as,
       barDeg: 3,
       launchThr: 100, thrRamp: 0,
@@ -251,6 +267,9 @@
     };
   };
 
+  function coil(S) { return DR.getOption('springs', { carId: S.carId, parts: S._parts }).adjS; }
+  function shk(S) { return DR.getOption('shocks', { carId: S.carId, parts: S._parts }); }
+  function rideRange(S) { var sp = DR.getOption('springs', { carId: S.carId, parts: S._parts }); return sp.ride ? [Math.round(sp.ride[0] * 1000), Math.round(sp.ride[1] * 1000)] : [0, 0]; }
   // Ranges for the tuning screen. `show(S)` decides whether it is unlocked.
   DR.TUNE_DEFS = [
     { key: 'revLimit', label: 'Rev Limiter', unit: 'rpm', step: 100, min: revMin, max: revMax,
@@ -281,18 +300,33 @@
     { key: 'psi', label: 'Drive Tire Pressure', unit: 'psi', step: 0.5, min: function () { return 4; }, max: function () { return 45; },
       show: function () { return true; }, group: 'Tires',
       help: 'Each tire has an ideal pressure. A little below it adds grip; too low wrinkles the tire (beadlocks help).' },
+    { key: 'rideF', label: 'Front Ride Height', unit: 'mm', step: 5, min: function (S) { return rideRange(S)[0]; }, max: function (S) { return rideRange(S)[1]; },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Lower drops the CG and the drag but leaves less bump travel. Raise the front over the rear for rake.' },
+    { key: 'rideR', label: 'Rear Ride Height', unit: 'mm', step: 5, min: function (S) { return rideRange(S)[0]; }, max: function (S) { return rideRange(S)[1]; },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Too low and the rear bottoms out on the bump stops at the hit.' },
     { key: 'springF', label: 'Front Spring Rate', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
-      show: function (S) { return DR.getOption('springs', { carId: S.carId, parts: S._parts }).adjS; }, req: 'Requires adjustable coilovers', group: 'Suspension',
-      help: 'Softer front lets the nose rise and pushes weight to the rear.' },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Softer lets the nose rise and moves weight to the rear tires.' },
     { key: 'springR', label: 'Rear Spring Rate', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
-      show: function (S) { return DR.getOption('springs', { carId: S.carId, parts: S._parts }).adjS; }, req: 'Requires adjustable coilovers', group: 'Suspension',
-      help: 'Softer rear squats more slowly; stiffer reacts faster.' },
-    { key: 'rebound', label: 'Front Shock Rebound', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
-      show: function (S) { return DR.getOption('shocks', { carId: S.carId, parts: S._parts }).adjD; }, req: 'Requires adjustable shocks', group: 'Suspension',
-      help: 'Loose (low) lets the front come up fast. Too loose = big wheelies and bouncing.' },
-    { key: 'comp', label: 'Rear Shock Compression', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
-      show: function (S) { return DR.getOption('shocks', { carId: S.carId, parts: S._parts }).adjD; }, req: 'Requires adjustable shocks', group: 'Suspension',
-      help: 'Stiffer hits the tire harder at launch; softer is gentler.' },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Softer squats more and loads the tires gently; stiffer reacts faster.' },
+    { key: 'bumpF', label: 'Front Bump', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD === 2; }, req: 'Requires double-adjustable shocks', group: 'Suspension',
+      help: 'How hard the front resists compressing: firmer cuts nose dive under braking.' },
+    { key: 'rebF', label: 'Front Rebound', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD >= 1; }, req: 'Requires adjustable shocks', group: 'Suspension',
+      help: 'Loose (low) lets the front come up fast. Too loose = big wheelies and a bouncy launch.' },
+    { key: 'bumpR', label: 'Rear Bump', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD >= 1; }, req: 'Requires adjustable shocks', group: 'Suspension',
+      help: 'Firmer hits the tires harder at the launch; softer is gentler on them.' },
+    { key: 'rebR', label: 'Rear Rebound', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD === 2; }, req: 'Requires double-adjustable shocks', group: 'Suspension',
+      help: 'How fast the rear extends again: firmer keeps it planted over bumps and through the shifts.' },
+    { key: 'limitF', label: 'Front Travel Limiter', unit: 'mm', step: 5, min: function () { return 0; }, max: function () { return 110; },
+      show: function (S) { return !!shk(S).lim; }, req: 'Requires adjustable drag shocks', group: 'Suspension',
+      help: 'Caps how far the front can extend (0 = off). Less rise keeps the car flatter but the front tires lift sooner.' },
     { key: 'antiSquat', label: 'Anti-Squat / Instant Centre', unit: '', step: 0.05, min: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).asMin || 0.3; },
       max: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).asMax || 1.3; },
       show: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).adjA; }, req: 'Requires ladder bars or a 4-link', group: 'Suspension',
@@ -311,6 +345,8 @@
   DR.fullTune = function (inst, S, over) {
     S._parts = inst.parts || {};
     var d = DR.tuneDefaults(inst, S), t = {}, src = over || inst.tune || {};
+    if (src.rebound != null && src.rebF == null) src = Object.assign({}, src, { rebF: src.rebound });   // older saves
+    if (src.comp != null && src.bumpR == null) src = Object.assign({}, src, { bumpR: src.comp });
     for (var k in d) t[k] = (src[k] != null) ? src[k] : d[k];
     if (!Array.isArray(t.gears) || t.gears.length !== d.gears.length) t.gears = d.gears;
     DR.TUNE_DEFS.forEach(function (def) {
@@ -371,7 +407,7 @@
     this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = S.engage || 0.3; this.locked = false;
     this.launched = false; this.t = 0; this.time = 0;
     this.boost = 0; this.thr = 0; this.cut = false;
-    this.phi = 0; this.dphi = 0;
+    this.phi = 0; this.dphi = 0; this.z = 0; this.dz = 0;   // body pitch (nose up +) and heave (up +) on the springs
     this.wheelie = false; this.th = 0; this.dth = 0; this.unload = 0; this.onBar = false;
     this.tireT = opts.tireT != null ? opts.tireT : 28;
     this.nosOn = false; this.nosLvl = 0; this.nosT = 0;
@@ -391,6 +427,16 @@
   DR.SPLITS = [['60ft', 60 * DR.FT], ['330ft', 330 * DR.FT], ['1/8', DR.EIGHTH], ['1000ft', 1000 * DR.FT], ['1/4', DR.QUARTER]];
 
   Sim.prototype.rpm = function () { return this.we * W2RPM; };
+
+  // Suspension force (beyond static) at one corner: spring, bump / rebound
+  // damping, a stiff bump stop past the bump travel and a droop limit that
+  // pulls back once the corner is fully extended.
+  function corner(k, cb, cr, bump, droop, c, v) {
+    var F = k * c + (v > 0 ? cb : cr) * v;
+    if (c > bump) F += 9 * k * (c - bump) + 2 * cb * Math.max(0, v);
+    if (c < -droop) F += 9 * k * (c + droop) + 2 * cr * Math.min(0, v);
+    return F;
+  }
 
   Sim.prototype.tireForce = function (ww, N, mu) {
     var S = this.S, r = S.r, v = this.v;
@@ -515,15 +561,23 @@
     if (this.we < idleW && !dead) Te += (idleW - this.we) / idleW * S.Tpk * 0.6;   // idle governor
 
     // -------- normal loads (weight transfer + wheelies)
-    var L = S.L, h = S.h * S.hmul, Nr, Nf, mg = m * G;
-    var Nr0 = mg * (1 - S.f);
+    var L = S.L, h = S.h, Nr, Nf, mg = m * G;
     if (!this.wheelie) {
-      var M = m * this.a * h;
-      var ddphi = (M * (1 - S.as) - S.kphi * this.phi - S.cphi * this.dphi) / S.Ip;
-      this.dphi += ddphi * dt; this.phi += this.dphi * dt;
-      var dN = (S.as * M + S.kphi * this.phi + S.cphi * this.dphi) / L;
-      Nr = Nr0 + dN; Nf = mg - Nr;
-      if (Nf < 0) { this.wheelie = true; this.th = 0; this.dth = 0.02; }
+      // Body on two suspension corners. Fl: longitudinal force at the ground
+      // (drive or brakes) pitches the body about its CG; anti-squat feeds part
+      // of the drive force straight into the rear through the links.
+      var aF = L - S.b, bR = S.b;
+      var Fl = m * this.a, Fj = S.drive !== 'FWD' ? S.as * Math.max(0, this.F || 0) * h / L : 0;
+      var cf = -(this.z + aF * this.phi), cr = -(this.z - bR * this.phi);          // compression (+)
+      var vf = -(this.dz + aF * this.dphi), vr = -(this.dz - bR * this.dphi);
+      var Ff = mg * S.f + corner(S.kf, S.cbF, S.crF, S.bumpF, S.droopF, cf, vf);
+      var Fr = mg * (1 - S.f) + corner(S.kr, S.cbR, S.crR, S.bumpR, S.droopR, cr, vr);
+      this.dz += dt * (Ff + Fr + Fj - mg) / m;
+      this.dphi += dt * (Ff * aF - (Fr + Fj) * bR + Fl * h) / S.Ip;
+      this.z += this.dz * dt; this.phi += this.dphi * dt;
+      this.cf = cf; this.cr = cr;
+      Nr = Fr + Fj; Nf = Ff;
+      if (Nf < 0) { this.wheelie = true; this.th = 0; this.dth = 0.02; Nr = mg; Nf = 0; }
     }
     if (this.wheelie) {
       var b = S.b, Ir = S.Ip + m * (b * b + h * h), th = this.th;
@@ -539,7 +593,7 @@
       }
       if (this.th <= 0 && this.dth <= 0) {
         if (this.dth < -0.6) this.events.push('land');
-        this.wheelie = false; this.th = 0; this.dth = 0; this.phi = 0; this.dphi = 0;
+        this.wheelie = false; this.th = 0; this.dth = 0; this.phi = 0; this.dphi = 0; this.z = -0.01; this.dz = 0;
       }
       if (this.th > (this.maxTh || 0)) this.maxTh = this.th;
       if (this.th > 1.15 && !this.crashed) { this.crashed = true; this.events.push('crash'); }

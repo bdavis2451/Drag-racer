@@ -151,17 +151,21 @@
     opt('rwd', 'RWD Conversion', 9000, { layout: 'RWD' }, 'Rear-wheel drive: weight transfer works for you.'),
     opt('awd', 'AWD Conversion', 16000, { layout: 'AWD' }, 'All four wheels drive. +90 kg and some power loss.')
   ]};
+  // sk: spring rate multiplier. low: fixed drop (m). adjS: ride height and
+  // spring rates adjustable within ride [lo, hi] (m) and rate [lo, hi] (x).
   C.springs = { name: 'Springs', options: [
     opt('stock', 'Stock Springs', 0, { sk: 1, adjS: false }),
-    opt('sp1', 'Lowering Springs', 500, { sk: 1.25, adjS: false, low: 0.03 }, 'Lower CG, stiffer. Less weight transfer.'),
-    opt('sp2', 'Adjustable Coilovers', 1800, { sk: 1, adjS: true, low: 0.02 }, 'Tune front and rear spring rates.'),
-    opt('sp3', 'Drag Coilovers', 2600, { sk: 0.9, adjS: true, low: 0 }, 'Wide adjustment range built for launching.')
+    opt('sp1', 'Lowering Springs', 500, { sk: 1.25, adjS: false, low: 0.03 }, 'Drops the car 30 mm and stiffens it. Lower CG, less weight transfer, less travel.'),
+    opt('sp2', 'Adjustable Coilovers', 1800, { sk: 1, adjS: true, ride: [-0.06, 0.03], rate: [0.6, 1.5] }, 'Set ride height and spring rate at each end.'),
+    opt('sp3', 'Drag Coilovers', 2600, { sk: 0.9, adjS: true, ride: [-0.06, 0.07], rate: [0.35, 1.8] }, 'Wide ride-height and spring range built for launching.')
   ]};
+  // z: damping ratio. adjD: 1 = front rebound + rear bump adjustable, 2 = bump
+  // and rebound at both ends. lim: front travel (extension) limiter.
   C.shocks = { name: 'Shocks', options: [
-    opt('stock', 'Stock Shocks', 0, { z: 0.42, adjD: false }),
-    opt('sh1', 'Sport Shocks', 700, { z: 0.50, adjD: false }),
-    opt('sh2', 'Adjustable Drag Shocks', 2500, { z: 0.45, adjD: true }, 'Tune front rebound & rear compression.'),
-    opt('sh3', 'Double-Adjustable Race Shocks', 5000, { z: 0.45, adjD: true, pro: true }, 'Finer control & better weight transfer.')
+    opt('stock', 'Stock Shocks', 0, { z: 0.42, adjD: 0 }),
+    opt('sh1', 'Sport Shocks', 700, { z: 0.50, adjD: 0 }),
+    opt('sh2', 'Adjustable Drag Shocks', 2500, { z: 0.45, adjD: 1, lim: true }, 'Adjust front rebound and rear bump, plus a front travel limiter.'),
+    opt('sh3', 'Double-Adjustable Race Shocks', 5000, { z: 0.45, adjD: 2, lim: true, pro: true }, 'Bump and rebound at both ends, plus a front travel limiter.')
   ]};
   C.rearsusp = { name: 'Rear Suspension', options: [
     opt('stock', 'Stock Rear Suspension', 0, { as: 0.35, adjA: false }),

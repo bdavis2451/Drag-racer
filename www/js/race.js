@@ -6,6 +6,7 @@
 (function () {
   var DR = globalThis.DR, G = DR.Game, A = DR.Audio, UI = DR.UI, h = UI.h, btn = UI.btn;
   var DT = 1 / 600;
+  var DASH_W = 200, DASH_H = 74;
   var BOX_X = -16;           // where cars sit for the burnout (m)
 
   DR.Race = {
@@ -22,6 +23,89 @@
       DR.Race.start({ mode: 'career', ev: ev, round: round, opp: ev.opps[round], dist: T.dist(), theme: T.theme, grip: T.grip, reward: G.eventReward(ev) });
     }
   };
+
+  // ---------------------------------------------------------------- dash
+  // Pixel instrument cluster: shift lights over a tach dial with the gear in
+  // its middle, tire temp & boost bars on the left, speed and dash lights on
+  // the right. Drawn at 200x74 and scaled up crisp by CSS.
+  function px(c, x, y, w, hh, col) { c.fillStyle = col; c.fillRect(x, y, w, hh); }
+  function drawDash(c, sim, Sx, phase) {
+    var W = DASH_W, H = DASH_H, txt = DR.pixText;
+    c.clearRect(0, 0, W, H);
+    // panel: stepped corners, bevelled edge, carbon weave
+    px(c, 3, 0, W - 6, H, '#0b0c10'); px(c, 0, 3, W, H - 3, '#0b0c10'); px(c, 1, 1, W - 2, H - 1, '#0b0c10');
+    px(c, 4, 1, W - 8, H - 2, '#16181f'); px(c, 1, 4, W - 2, H - 5, '#16181f'); px(c, 2, 2, W - 4, H - 3, '#16181f');
+    for (var yy = 4; yy < H - 2; yy += 2) for (var xx = 4 + (yy % 4 ? 1 : 0); xx < W - 4; xx += 4) px(c, xx, yy, 1, 1, '#1d2029');
+    px(c, 4, 1, W - 8, 1, '#3a3e4c'); px(c, 1, 4, 1, H - 6, '#2c303b');
+    // ---- tach
+    var cx = 100, cy = 63, R = 43, rpm = sim.rpm(), top = Math.ceil((Sx.red + 600) / 1000) * 1000;
+    var a0 = Math.PI, a1 = 0;
+    function ang(r) { return a0 + (a1 - a0) * Math.min(1, Math.max(0, r / top)); }
+    for (var rr = R; rr >= 0; rr--) { var w2 = Math.round(Math.sqrt(R * R - rr * rr)); px(c, cx - w2, cy - rr, w2 * 2, 1, rr > R - 2 ? '#2e3240' : '#07080b'); }
+    // red zone
+    for (var r2 = Sx.red; r2 <= top; r2 += 25) { var t = ang(r2); for (var d = R - 5; d <= R - 2; d++) px(c, Math.round(cx + Math.cos(t) * d), Math.round(cy - Math.sin(t) * d), 1, 1, '#c8202a'); }
+    // ticks & numbers
+    for (var k = 0; k <= top; k += 500) {
+      var ta = ang(k), major = k % 1000 === 0, len = major ? 5 : 2;
+      for (var q = 0; q < len; q++) px(c, Math.round(cx + Math.cos(ta) * (R - 3 - q)), Math.round(cy - Math.sin(ta) * (R - 3 - q)), 1, 1, k >= Sx.red ? '#ff6a6a' : '#cfd3dc');
+      if (major && top <= 12000) { var nx = Math.round(cx + Math.cos(ta) * (R - 13)) - 1, ny = Math.round(cy - Math.sin(ta) * (R - 13)) - 2; txt(c, String(k / 1000), nx, ny, '#7d8291', 1); }
+    }
+    // needle
+    var na = ang(rpm), ncol = rpm >= Sx.red ? '#ff4040' : '#ff8a2a';
+    for (var n = 4; n < R - 4; n++) px(c, Math.round(cx + Math.cos(na) * n), Math.round(cy - Math.sin(na) * n), n < R - 12 ? 2 : 1, n < R - 12 ? 2 : 1, ncol);
+    px(c, cx - 3, cy - 3, 6, 6, '#3a3e4c'); px(c, cx - 2, cy - 2, 4, 4, '#9aa0ad');
+    txt(c, 'X1000', cx - 9, cy - 20, '#4a4f5c', 1);
+    // ---- gear window (left)
+    var gtxt = sim.launched || phase === 'tree' || phase === 'race' || sim.burnMode ? String(sim.gear + 1) : 'N';
+    px(c, 7, 11, 26, 33, '#050608'); px(c, 8, 12, 24, 31, '#1a1408');
+    txt(c, '8', 13, 15, '#2a2010', 5);
+    txt(c, gtxt, 13, 15, '#ffd23d', 5);
+    txt(c, 'GEAR', 12, 47, '#7d8291', 1);
+    // ---- shift lights: green, yellow, red, then all blue at the shift point
+    var shiftAt = Sx.tune.shiftRpm, lo = shiftAt - 1800, nL = 9, flash = sim.launched && !sim.finished && rpm >= shiftAt - 50 && sim.gear < Sx.ratios.length - 1;
+    for (var l = 0; l < nL; l++) {
+      var lx = cx - 30 + l * 7, on = rpm >= lo + (shiftAt - lo) * l / (nL - 1);
+      var col = l < 4 ? '#2bd45a' : l < 7 ? '#ffd000' : '#ff3030';
+      if (flash) { col = (Math.floor(performance.now() / 70) % 2) ? '#4f8dff' : '#0b0c10'; on = true; }
+      px(c, lx, 3, 5, 4, '#050608'); px(c, lx + 1, 4, 3, 2, on ? col : '#23262e');
+      if (on && !flash) px(c, lx + 1, 4, 1, 1, '#ffffff');
+    }
+    // ---- left: tire temp & boost bars
+    var T = sim.tireT, tt = Sx.tire, tmax = Math.max(130, tt.topt + 50), bh = 44, by = 11;
+    function vbar(x, frac, col, zone) {
+      px(c, x - 1, by - 1, 7, bh + 2, '#050608'); px(c, x, by, 5, bh, '#101218');
+      if (zone) px(c, x, by + bh - Math.round(zone[1] * bh), 5, Math.max(1, Math.round((zone[1] - zone[0]) * bh)), '#173a24');
+      var fh = Math.round(Math.min(1, Math.max(0, frac)) * bh);
+      for (var s2 = 0; s2 < fh; s2 += 2) px(c, x + 1, by + bh - s2 - 1, 3, 1, col);
+    }
+    var tcol = T < tt.topt - 10 ? '#4da3ff' : T > tt.topt + 30 ? '#ff4d4d' : '#46e07a';
+    vbar(39, T / tmax, tcol, [(tt.topt - 10) / tmax, (tt.topt + 30) / tmax]);
+    txt(c, 'T', 40, 58, '#7d8291', 1);
+    if (Sx.fiType !== 'none') {
+      vbar(48, sim.boost / Math.max(Sx.maxBoost, 5), '#ffcc33');
+      txt(c, 'B', 49, 58, '#7d8291', 1);
+    }
+    txt(c, String(Math.round(T)) + (Sx.fiType !== 'none' ? ' ' + sim.boost.toFixed(0) : ''), 8, 64, '#5d6271', 1);
+    // ---- right: speed and dash lights
+    var mph = sim.v * 2.23694, km = G.state.settings.units === 'kmh', sp = String(Math.round(km ? mph * 1.609 : mph));
+    while (sp.length < 3) sp = ' ' + sp;
+    px(c, 150, 13, 44, 20, '#050608'); px(c, 151, 14, 42, 18, '#0f1a12');
+    txt(c, '888', 152, 16, '#16281a', 3);
+    txt(c, sp, 152, 16, '#7dff8a', 3);
+    txt(c, km ? 'KM/H' : 'MPH', 180 - (km ? 4 : 0), 36, '#4a4f5c', 1);
+    var lamps = [
+      ['LOCK', sim.burnMode, '#ffcc00'],
+      ['TB', Sx.trType === 'auto' && Sx.tbrake && !sim.launched && phase !== 'pre' && phase !== 'burnout', '#ffcc00'],
+      ['2STP', Sx.twostep && !sim.launched && sim.cut, '#ff8a2a'],
+      ['NOS', sim.nosOn, '#c89bff'],
+      ['TC', sim.tcCut > 0.2, '#ff8a2a'],
+      ['BRK', sim.brakeLimited, '#ff4040']];
+    lamps.forEach(function (lp, i) {
+      var lx2 = 150 + (i % 3) * 15, ly = 46 + Math.floor(i / 3) * 10;
+      px(c, lx2, ly, 14, 8, '#050608'); px(c, lx2 + 1, ly + 1, 12, 6, lp[1] ? lp[2] : '#1a1c23');
+      txt(c, lp[0].slice(0, 3), lx2 + 1, ly + 2, lp[1] ? '#0b0c10' : '#383c47', 1);
+    });
+  }
 
   function rollFailure(S) {
     var r = S.risk, est = DR.simulate(S, {}).et;
@@ -50,21 +134,19 @@
     // ---------------------------------------------------------------- DOM
     var cv = h('canvas', { class: 'world', width: DR.VIEW_W, height: DR.VIEW_H });
     var ctx = DR.hiCanvas(cv);
-    var segs = []; var bar = h('div', { class: 'bar' });
-    for (var i = 0; i < 24; i++) { var sg = h('i'); segs.push(sg); bar.appendChild(sg); }
-    var gearEl = h('div', { class: 'gear' }, '1'), readEl = h('div', { class: 'read' });
-    var shiftEl = h('div', { class: 'shiftlight' }, 'SHIFT');
+    // HUD: a pixel instrument cluster (drawn on its own low-res canvas), a
+    // slim plate for the matchup and clock, and a ribbon for messages
+    var dash = h('canvas', { class: 'dash', width: DASH_W, height: DASH_H }), dctx = dash.getContext('2d');
     var msgEl = h('div', { class: 'msg' }), subEl = h('div', { class: 'sub' });
     var infoEl = h('div', { class: 'info' });
-    var tempFill = h('b'), tempZone = h('s');
-    var meter = h('div', { class: 'meter' }, h('div', { class: 'lbl' }, 'TIRE TEMP'), h('div', { class: 'm' }, tempZone, tempFill));
-    var hud = h('div', { class: 'hud' }, h('div', { class: 'tach' }, gearEl, bar, readEl), shiftEl, infoEl, meter, msgEl, subEl);
+    var ribbon = h('div', { class: 'ribbon' }, msgEl, subEl);
+    var hud = h('div', { class: 'hud' }, infoEl, ribbon, dash);
 
     var gasFill = h('div', { class: 'fill', style: { height: '0%' } });
-    var gasBtn = h('div', { class: 'pad gas' }, gasFill, h('span', {}, 'GAS'));
-    var actLabel = h('span', {}, 'STAGE');
+    var gasBtn = h('div', { class: 'pad gas' }, gasFill, h('span', { class: 'plab' }, 'GAS'));
+    var actLabel = h('span', { class: 'plab' }, 'STAGE');
     var actBtn = h('div', { class: 'pad act go' }, actLabel);
-    var nosBtn = h('div', { class: 'pad nos', style: { display: S.nosW && !S.prog ? 'flex' : 'none' } }, 'NOS');
+    var nosBtn = h('div', { class: 'pad nos', style: { display: S.nosW && !S.prog ? 'flex' : 'none' } }, h('span', { class: 'plab' }, 'NOS'));
     var burnBtn = btn('Burnout', function () { startBurnout(); }, 'primary');
     var stageBar = h('div', { class: 'stagebar' }, burnBtn);
     var quitBtn = btn('✖', function () { quit(); }, 'small back quit');
@@ -107,12 +189,8 @@
     var flash = { text: '', t: 0 };
 
     function setMsg(m, sub) { msgEl.textContent = m || ''; subEl.textContent = sub || ''; }
-    // what each car should run here, so you know what you are up against
     var estLine = '';
-    if (opp) {
-      var eMe = G.estimate(inst, cfg.dist, cfg.grip).et, eOpp = G.estimate(G.oppInst(cfg.opp), cfg.dist, cfg.grip).et;
-      if (eMe < 90 && eOpp < 90) estLine = 'You ~' + eMe.toFixed(2) + 's vs ~' + eOpp.toFixed(2) + 's • ';
-    } else if (testDrive) estLine = 'TEST DRIVE • ';
+    if (testDrive) estLine = 'TEST DRIVE • ';
     var vsLine = opp ? 'VS ' + opp.label : 'TEST & TUNE';
     infoEl.innerHTML = '';
     setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (cfg.ev.type === 'knockout' ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Burnout to heat the tires, or Stage to race.' : 'Burnout to heat the tires, or Stage to race.');
@@ -249,24 +327,15 @@
         // player
         if (act && !you.sim.launched) {
           if (greenAt === null) { redLight = true; tree.red[0] = true; A.beep(220, 0.4); }
-          else {
-            // how good was the light?
-            var rt = clock - greenAt, rr = rt < 0.1 ? 'PERFECT LIGHT!' : rt < 0.25 ? 'GREAT LAUNCH' : rt < 0.45 ? 'GOOD LAUNCH' : 'LATE LAUNCH';
-            note('R/T ' + rt.toFixed(3) + ' • ' + rr);
-          }
           you.sim.launch(); act = false;
-          actLabel.textContent = 'SHIFT'; actBtn.classList.add('go');
+          actLabel.textContent = 'SHIFT'; actBtn.classList.add('shift');
           phase = 'race';
         } else if (act && you.sim.launched) {
-          var shRpm = you.sim.rpm(), onLim = you.limT || 0;
-          if (you.sim.shiftUp()) rateShift(shRpm, onLim);
+          you.sim.shiftUp();
           act = false;
         }
-        // time spent spinning the tires after the launch (for the tips)
-        if (you.sim.launched && !you.sim.finished && you.sim.v > 0.5 && you.sim.slip > you.S.tslip * 2.2) you.spinT = (you.spinT || 0) + sdt;
-        // time spent bouncing off the limiter before a shift
-        if (you.sim.launched && !you.sim.finished) you.limT = you.sim.rpm() >= you.S.limit - 40 ? (you.limT || 0) + sdt : 0;
-        if (settings.autoShift && you.sim.launched && !you.sim.shifting && you.sim.sinceShift > 0.25) {
+        // auto-shift (setting); never in the first moments of the launch
+        if (settings.autoShift && you.sim.launched && you.sim.t > 0.6 && !you.sim.shifting && you.sim.sinceShift > 0.25) {
           var Sy = you.S, line = you.sim.ww * Sy.ratios[you.sim.gear] * Sy.fd * 30 / Math.PI;
           var trig = Sy.trType === 'auto' ? Math.max(line / 0.95, you.sim.rpm() >= Sy.limit - 60 ? you.sim.rpm() : 0) : you.sim.locked ? you.sim.rpm() : line;
           if (trig >= Sy.tune.shiftRpm) you.sim.shiftUp();
@@ -280,7 +349,7 @@
       }
       if (greenAt !== null && phase === 'tree' && clock - greenAt > 4 && !you.sim.launched) {
         // driver asleep at the wheel: auto-launch so the race can finish
-        you.sim.launch(); phase = 'race'; actLabel.textContent = 'SHIFT';
+        you.sim.launch(); phase = 'race'; actLabel.textContent = 'SHIFT'; actBtn.classList.add('shift');
       }
       // finish conditions: the slip comes up a couple of seconds into the
       // shutdown (the cars keep coasting behind it); a slower opponent gets a
@@ -293,16 +362,6 @@
         var oppDone = !opp || (opp.doneAt != null && clock - opp.doneAt > 0.4) || !opp.sim.launched && clock - you.doneAt > 3;
         if (oppDone || clock - you.doneAt > 6) { resultShown = true; showResult(); }
       }
-    }
-
-    // shift feedback against the shift RPM from your tune
-    var shiftLog = { perfect: 0, early: 0, late: 0 };
-    function rateShift(rpm, limT) {
-      var d = rpm - you.S.tune.shiftRpm, r;
-      if (limT > 0.2 || d > 250) { r = limT > 0.2 ? 'ON THE LIMITER!' : 'LATE SHIFT'; shiftLog.late++; }
-      else if (d < -350) { r = 'EARLY SHIFT'; shiftLog.early++; }
-      else { r = 'PERFECT SHIFT'; shiftLog.perfect++; }
-      note(r);
     }
 
     function goGreen() {
@@ -367,12 +426,14 @@
       var gy = DR.LANE_Y[r.lane];
       var frontPx = (frontX - camX) * DR.PPM;
       var gx = frontPx - (spr.padL + spr.lenPx - spr.wheelR.x);
-      var pitch = sim.th + sim.phi * 1.6;
+      // rigid pitch only for wheelies; the body moves on its springs on top
+      var pitch = sim.th, SUSP_VIS = 1.8;
       // wheel rotation
       var spin = r.burn && !sim.burnMode ? 60 : sim.ww;
       r.wheelAng += spin * dt;
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
-      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode });
+      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode,
+        susp: { z: (sim.z || 0) * SUSP_VIS, phi: (sim.phi || 0) * SUSP_VIS } });
       var lamp = DR.carLamps(spr, gx, gy, pitch);
       lamp.brake = sim.brake > 0.05; lamp.ground = gy; lamp.car = { spr: spr, gx: gx, gy: gy, pitch: pitch };
       // smoke from the drive tires
@@ -413,48 +474,23 @@
     }
     function note(t) { subEl.textContent = t; flash.t = 1.6; }
 
-    var lastGear = -1;
     function drawHud() {
-      var sim = you.sim, Sx = you.S, rpm = sim.rpm();
-      var top = Sx.red + 300, lit = Math.round(rpm / top * 24);
-      var shiftOn = sim.launched && !sim.finished && rpm >= Sx.tune.shiftRpm - 50 && sim.gear < Sx.ratios.length - 1;
-      var lz = (!sim.launched) ? Math.round((Sx.twostep ? Sx.tune.launchRpm : Sx.tune.launchRpm) / top * 24) : -9;
-      for (var i = 0; i < 24; i++) {
-        var on = i < lit, frac = i / 24 * top;
-        var c = !on ? '' : shiftOn ? 'z' : frac > Sx.red ? 'r' : frac > Sx.red * 0.8 ? 'y' : 'g';
-        segs[i].className = c;
-        segs[i].style.outline = (!sim.launched && Math.abs(i - lz) <= 1) ? '2px solid #fff' : '';
-      }
-      shiftEl.className = 'shiftlight' + (shiftOn ? ' on' : '');
-      if (sim.gear !== lastGear) { gearEl.textContent = String(sim.gear + 1); lastGear = sim.gear; }
-      var mph = sim.v * 2.23694;
-      readEl.innerHTML = UI.speed(mph) + '<br>' + Math.round(rpm) + ' RPM' + (Sx.fiType !== 'none' ? '<br>' + sim.boost.toFixed(1) + ' PSI' : '');
-      // info top-left
+      var sim = you.sim, Sx = you.S;
+      drawDash(dctx, sim, Sx, phase);
+      // the plate: matchup, clock, red light
       var lines = [];
-      if (opp) lines.push(vsLine);
+      lines.push('<span class="dim">' + (opp ? 'VS ' : '') + '</span>' + (opp ? opp.label : testDrive ? 'TEST DRIVE' : 'TEST &amp; TUNE'));
       if (greenAt !== null) {
         var el = sim.finished ? sim.et : sim.etStart !== null ? sim.time - sim.etStart : 0;
-        lines.push('ET ' + el.toFixed(2));
-        if (redLight) lines.push('<span class="warn">RED LIGHT!</span>');
+        lines.push('<span class="clock">' + el.toFixed(3) + '</span>');
+        if (redLight) lines.push('<span class="warn">RED LIGHT</span>');
       }
-      if (sim.launched && sim.slip > Sx.tslip * 2.2 && !sim.finished && sim.v > 0.5) lines.push('<span class="warn">WHEELSPIN!</span>');
-      if (sim.wheelie && sim.th > 0.05) lines.push('<span class="acc">WHEELIE ' + Math.round(sim.th * 57.3) + '°</span>');
-      if (sim.nosOn) lines.push('<span style="color:#c89bff">NITROUS!</span>');
-      if (sim.burnMode) lines.push('<span class="acc">LINE LOCK</span>');
-      else if (!sim.launched && Sx.trType === 'auto') lines.push(Sx.tbrake ? '<span class="acc">TRANSBRAKE ON</span>' : sim.brakeLimited ? '<span class="warn">BRAKES AT LIMIT</span>' : '<span class="dim">FOOT BRAKE</span>');
-      if (sim.tcCut > 0.2) lines.push('<span class="dim">TRACTION CTRL</span>');
-      infoEl.innerHTML = lines.join('<br>');
-      // tire temperature meter until the launch
-      if (!sim.launched || phase !== 'race') {
-        meter.style.display = '';
-        var T = sim.tireT, t = Sx.tire, max = Math.max(130, t.topt + 50);
-        tempFill.style.width = DR.clamp(T / max * 100, 0, 100) + '%';
-        tempFill.style.background = T < t.topt - 10 ? '#4da3ff' : T > t.topt + 30 ? '#ff4d4d' : '#46e07a';
-        tempZone.style.left = ((t.topt - 10) / max * 100) + '%'; tempZone.style.width = (40 / max * 100) + '%';
-      } else meter.style.display = 'none';
+      var html = lines.join('<br>');
+      if (html !== infoEl._h) { infoEl.innerHTML = html; infoEl._h = html; }
       gasBtn.classList.toggle('on', input.gasHeld);
       gasFill.style.height = (input.gasHeld ? input.gas * 100 : 0) + '%';
-      if (phase === 'tree' && greenAt === null && !redLight) setMsg('', tree.amber ? '' : 'Hold GAS to rev... tap LAUNCH on GREEN!');
+      if (phase === 'tree' && greenAt === null && !redLight) setMsg('', tree.amber ? '' : 'Hold GAS to rev. Tap LAUNCH on green.');
+      ribbon.classList.toggle('on', !!(msgEl.textContent || subEl.textContent));
     }
 
     // ---------------------------------------------------------------- results
@@ -506,15 +542,6 @@
       }
       G.save();
 
-      // one tip on what to fix, when the run shows a clear problem
-      var tip = null;
-      if (redLight) tip = 'You left before the green. Wait for it, then tap LAUNCH.';
-      else if (me.rt != null && me.rt > 0.45) tip = 'Slow reaction (' + me.rt.toFixed(3) + '). Tap LAUNCH the moment the light turns green.';
-      else if ((you.spinT || 0) > 0.8) tip = 'Lots of wheelspin. Feather the gas, do a burnout first, or fit stickier tires.';
-      else if (!settings.autoShift && shiftLog.early + shiftLog.late > 1) tip = 'Shift on the blue SHIFT light, or turn on auto-shift in Settings.';
-      else if (them && win === false && them.total < Infinity && me.total < Infinity) tip = 'Their car is just quicker. More power or grip from the Parts Shop will close the gap.';
-      var nShifts = shiftLog.perfect + shiftLog.early + shiftLog.late;
-      if (nShifts && !settings.autoShift) lines.push('Shifts: ' + shiftLog.perfect + ' perfect' + (shiftLog.early ? ' • ' + shiftLog.early + ' early' : '') + (shiftLog.late ? ' • ' + shiftLog.late + ' late' : ''));
       var head = them ? (win ? 'YOU WIN!' : 'YOU LOSE') : (you.sim.finished ? 'RUN COMPLETE' : 'DNF');
       var tbl = h('table');
       tbl.appendChild(h('tr', {}, h('th', {}, ''), h('th', {}, 'YOU'), them ? h('th', {}, opp.label) : null));
@@ -536,7 +563,6 @@
         margin ? h('div', { class: 'margin' }, margin) : null,
         moneyDelta ? h('div', { class: 'pix ' + (moneyDelta > 0 ? 'good' : 'bad'), style: { textAlign: 'center' } }, (moneyDelta > 0 ? '+' : '') + DR.money(moneyDelta)) : null,
         pbLine ? h('div', { class: 'dim', style: { textAlign: 'center' } }, pbLine) : null,
-        tip && win !== true ? h('div', { class: 'tipline' }, 'TIP: ' + tip) : null,
         lines.map(function (l) { return h('div', { class: 'acc', style: { textAlign: 'center' } }, l); }),
         testDrive ? h('div', { class: 'col' },
           btn('Back to Dealer', function () { UI.show(UI.Dealer); }, 'primary'),

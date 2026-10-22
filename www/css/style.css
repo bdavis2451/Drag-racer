@@ -123,38 +123,42 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .race { background: #000; }
 .race canvas.world { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 70%; }
 .hud { position: absolute; inset: 0; pointer-events: none; }
-.hud .tach { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(500px, 54%); background: rgba(0,0,0,.65); box-shadow: 0 0 0 2px #000; padding: 6px 8px; display: flex; gap: 10px; align-items: center; }
-.hud .bar { flex: 1; height: 18px; display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
-.hud .bar i { background: #262626; }
-.hud .bar i.g { background: #2bd45a; } .hud .bar i.y { background: #ffd000; } .hud .bar i.r { background: #ff3030; } .hud .bar i.z { background: #2b6bff; }
-.hud .gear { font-family: 'Press Start 2P', monospace; font-size: 22px; width: 30px; text-align: center; color: var(--accent); }
-.hud .read { font-family: 'Press Start 2P', monospace; font-size: 10px; line-height: 1.5; white-space: nowrap; text-align: right; min-width: 92px; }
-.hud .shiftlight { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); font-family: 'Press Start 2P', monospace; font-size: 14px; color: #000; background: #2b6bff; padding: 6px 10px; box-shadow: 0 0 0 2px #000; display: none; }
-.hud .shiftlight.on { display: block; animation: blink .15s steps(1) infinite; }
-.hud .msg { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-family: 'Press Start 2P', monospace; font-size: 20px; color: #fff; text-shadow: 3px 3px 0 #000; text-align: center; white-space: nowrap; }
-.hud .sub { position: absolute; left: 50%; top: 56%; transform: translateX(-50%); font-family: 'Press Start 2P', monospace; font-size: 10px; color: #fff; text-shadow: 2px 2px 0 #000; text-align: center; max-width: 80%; line-height: 1.6; }
-.hud .info { position: absolute; left: 10px; top: 8px; max-width: 22%; font-family: 'Press Start 2P', monospace; font-size: 8px; line-height: 1.6; text-shadow: 2px 2px 0 #000; }
+/* ---- race HUD: pixel cluster, plate and ribbon */
+.hud .dash { position: absolute; left: 50%; top: 6px; transform: translateX(-50%); width: min(36vw, 320px); image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0,0,0,.6)); }
+.hud .info { position: absolute; left: 10px; top: 8px; font-family: 'Press Start 2P', monospace; font-size: 8px; line-height: 1.8; color: #e8eaf0;
+  background: linear-gradient(180deg, rgba(22,24,31,.92), rgba(11,12,16,.92)); padding: 6px 10px 6px 12px; border-left: 3px solid var(--accent);
+  box-shadow: 0 0 0 2px #000, inset 0 1px 0 #3a3e4c; min-width: 120px; }
+.hud .info .clock { font-size: 16px; color: #7dff8a; text-shadow: 0 0 6px rgba(125,255,138,.35); letter-spacing: 1px; }
+.hud .info .dim { color: #7d8291; }
 .hud .warn { color: var(--bad); }
-.hud .meter { position: absolute; right: 10px; top: 56px; width: 140px; }
-.hud .meter .lbl { font-family: 'Press Start 2P', monospace; font-size: 8px; text-shadow: 2px 2px 0 #000; }
-.hud .meter .m { height: 10px; background: #111; box-shadow: 0 0 0 2px #000; position: relative; margin: 4px 0 8px; }
-.hud .meter .m b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
-.hud .meter .m s { position: absolute; top: -3px; bottom: -3px; background: rgba(70,224,122,.45); }
-
+.hud .ribbon { position: absolute; left: 0; right: 0; top: 40%; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0;
+  background: linear-gradient(90deg, transparent, rgba(8,9,12,.78) 20%, rgba(8,9,12,.78) 80%, transparent); opacity: 0; transition: opacity .2s; }
+.hud .ribbon.on { opacity: 1; }
+.hud .ribbon::before, .hud .ribbon::after { content: ''; position: absolute; left: 20%; right: 20%; height: 2px; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 10px); }
+.hud .ribbon::before { top: 0; } .hud .ribbon::after { bottom: 0; }
+.hud .msg { font-family: 'Press Start 2P', monospace; font-size: 20px; color: #fff; text-shadow: 3px 3px 0 #000; text-align: center; white-space: nowrap; }
+.hud .msg:empty, .hud .sub:empty { display: none; }
+.hud .sub { font-family: 'Press Start 2P', monospace; font-size: 9px; color: #d8dbe4; text-shadow: 2px 2px 0 #000; text-align: center; max-width: 70%; line-height: 1.7; }
 .controls { position: absolute; inset: 0; pointer-events: none; }
+/* pedals & buttons: pixel plates with a tread texture and a coloured edge */
 .controls .pad { position: absolute; bottom: 12px; pointer-events: auto; display: flex; align-items: center; justify-content: center; text-align: center;
-  font-family: 'Press Start 2P', monospace; color: #fff; text-shadow: 2px 2px 0 #000; box-shadow: 0 0 0 3px #000, inset -4px -4px 0 rgba(0,0,0,.4), inset 4px 4px 0 rgba(255,255,255,.15); touch-action: none; }
-.controls .gas { left: 14px; width: 120px; height: 150px; background: rgba(40,170,80,.75); font-size: 13px; flex-direction: column; overflow: hidden; }
-.controls .gas .fill { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(120,255,150,.45); }
-.controls .gas span { position: relative; }
-.controls .gas.on { background: rgba(60,220,110,.9); }
-.controls .act { right: 14px; width: 150px; height: 150px; background: rgba(200,50,50,.8); font-size: 15px; }
-.controls .act.go { background: rgba(40,140,230,.85); }
-.controls .act.on { filter: brightness(1.35); }
-.controls .nos { right: 178px; width: 90px; height: 70px; background: rgba(140,70,230,.85); font-size: 11px; }
-.controls .nos.on { background: rgba(200,140,255,.95); color: #000; }
+  font-family: 'Press Start 2P', monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; overflow: hidden;
+  --pc: #46e07a; background: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 3px, transparent 3px 7px), linear-gradient(180deg, rgba(34,37,46,.92), rgba(14,15,20,.92));
+  box-shadow: 0 0 0 2px #000, inset 0 0 0 2px var(--pc), inset 0 3px 0 2px rgba(255,255,255,.08), 0 4px 0 0 rgba(0,0,0,.55); }
+.controls .pad .plab { position: relative; font-size: 12px; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; }
+.controls .pad::after { content: ''; position: absolute; left: 6px; right: 6px; top: 6px; height: 4px; background: var(--pc); opacity: .9; box-shadow: 0 0 8px var(--pc); }
+.controls .gas { left: 14px; width: 112px; height: 150px; --pc: #46e07a; flex-direction: column; }
+.controls .gas .fill { position: absolute; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, rgba(70,224,122,.55) 0 4px, rgba(70,224,122,.25) 4px 6px); }
+.controls .gas.on { filter: brightness(1.2); transform: translateY(2px); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px var(--pc), 0 2px 0 0 rgba(0,0,0,.55); }
+.controls .act { right: 14px; width: 140px; height: 150px; --pc: #ff4d4d; }
+.controls .act.go { --pc: #ffcc00; }
+.controls .act.shift { --pc: #4f8dff; }
+.controls .act.on { filter: brightness(1.35); transform: translateY(2px); }
+.controls .nos { right: 166px; width: 84px; height: 64px; --pc: #a26bff; }
+.controls .nos .plab { font-size: 10px; }
+.controls .nos.on { filter: brightness(1.4); background: linear-gradient(180deg, rgba(120,70,220,.9), rgba(60,30,120,.9)); }
 .controls .quit { position: absolute; right: 10px; top: 8px; pointer-events: auto; }
-.controls .stagebar { position: absolute; left: 50%; top: 66px; transform: translateX(-50%); pointer-events: auto; display: flex; gap: 10px; }
+.controls .stagebar { position: absolute; right: 14px; bottom: 174px; pointer-events: auto; display: flex; gap: 10px; }
 
 .slip { position: absolute; inset: 0; background: rgba(0,0,0,.72); display: flex; align-items: center; justify-content: center; padding: 10px; }
 .slip .panel { max-width: 760px; width: 100%; max-height: 100%; overflow: auto; }

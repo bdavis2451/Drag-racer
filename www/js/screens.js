@@ -7,7 +7,8 @@
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, A = DR.Audio, h = UI.h, btn = UI.btn;
   function icon(cat, lvl, size) { return UI.partIconEl(cat, lvl || 2, '', size || 26); }
   function railItem(cat, lvl, label, on, fn) { return h('div', { class: 'srail-i' + (on ? ' on' : ''), onclick: fn }, icon(cat, lvl), h('span', {}, label)); }
-  function estText(inst, dist, grip) { var e = G.estimate(inst, dist, grip); return e.et >= 90 ? '??' : e.et.toFixed(2) + 's'; }
+  // no predicted times anywhere: you find out what a car runs by running it
+  function bestText(inst) { return inst && inst.best && inst.best.q ? 'Best 1/4 ' + inst.best.q.toFixed(3) + 's' : 'No timeslip yet'; }
   function chip(label, on, fn, extra) { return btn(label, fn, 'chip' + (on ? ' on' : '') + (extra ? ' ' + extra : '')); }
   function gst(k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); }
 
@@ -36,15 +37,15 @@
   UI.Starter = function () {
     var ids = G.starters, id = ids[starterIdx % ids.length], car = DR.CARS[id];
     var inst = { carId: id, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col };
-    var S = DR.buildSpec(inst), est = G.estimate(inst, DR.QUARTER);
+    var S = DR.buildSpec(inst);
     var cv = DR.roomCanvas(inst, { theme: 'lot' });
     function cyc(d) { starterIdx = (starterIdx + d + ids.length) % ids.length; UI.refresh(); }
     return h('div', { class: 'screen' }, UI.top('PICK YOUR FIRST CAR', function () { UI.show(UI.Title); }),
       h('div', { class: 'gwrap' }, cv,
         h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
             // the real model the sprite should be drawn from, and whether it still uses the generic placeholder
-            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S, est),
-          gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive), gst('EST 1/4', est.et.toFixed(2) + 's', 'good'),
+            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S),
+          gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive),
           h('div', { class: 'gsmall dim' }, 'Free to start, plus $6,000 for parts.')),
         h('div', { class: 'gsel' }, btn('◀', function () { cyc(-1); }, 'arrow'),
           h('div', { class: 'gname' }, h('div', { class: 'pix acc' }, car.name), h('div', { class: 'dim' }, (starterIdx % ids.length + 1) + ' / ' + ids.length + ' • starter car')),
@@ -62,7 +63,7 @@
       railItem('u_street', 2, 'Street $', tab === 'street', function () { UI.show(UI.RaceMenu, 'street'); }),
       railItem('u_test', 2, 'Test & Tune', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }));
     var body = tab === 'career' ? careerView() : tab === 'street' ? streetView(inst) : testView(inst);
-    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, DR.CARS[inst.carId].name + ' • ' + estText(inst, DR.QUARTER))),
+    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, DR.CARS[inst.carId].name + ' • ' + bestText(inst))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
   };
 
@@ -102,23 +103,15 @@
       pr.lines.map(function (l) { return h('div', { class: 'gsmall ' + (l[2] ? 'good' : '') }, (l[2] ? '✔ ' : '• ') + l[0] + ': ' + l[1]); }));
   }
   function oppCanvas(oi) { return UI.lazyPreview('ecv', oi, { aspect: 0.42 }); }
-  // your odds against the toughest car in an event, from both estimates
-  function oddsOf(ev) {
-    var T = DR.EVENT_TYPES[ev.type], mine = G.estimate(G.car(), T.dist(), T.grip).et, worst = 99;
-    ev.opps.forEach(function (o) { worst = Math.min(worst, G.estimate(G.oppInst(o), T.dist(), T.grip).et); });
-    var d = worst - mine;
-    return d > 0.25 ? ['EASY', 'good'] : d > -0.1 ? ['CLOSE', 'acc'] : ['TOUGH', 'bad'];
-  }
   function eventCard(ev, isNext) {
     var T = DR.EVENT_TYPES[ev.type], lock = G.eventLock(ev), won = G.eventWon(ev), o = ev.opps[0], oi = G.oppInst(o);
     var who = ev.opps.length > 1 ? ev.opps.map(function (x) { return x.name; }).join(' → ') : o.name;
     var cls = 'ecard t-' + ev.type + (lock ? ' locked' : '') + (won ? ' won' : '') + (isNext ? ' next' : '');
-    var odds = !won && !lock ? oddsOf(ev) : null;
     return h('div', { class: cls },
       h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, ev.type === 'boss' ? '★ BOSS' : T.name), won ? h('span', { class: 'ewon' }, 'WON') : null,
-        isNext ? h('span', { class: 'enext' }, 'NEXT UP') : null, odds ? h('span', { class: 'eodds ' + odds[1] }, odds[0]) : null),
+        isNext ? h('span', { class: 'enext' }, 'NEXT UP') : null),
       h('div', { class: 'acc ename' }, who),
-      h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name + ' • runs ' + estText(oi, T.dist(), T.grip)),
+      h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name),
       ev.unlocks.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + ev.unlocks.map(DR.unlockText).join(' • ')) : null,
       lock ? h('div', { class: 'warn gsmall' }, '🔒 ' + lock) : null,
       h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))),
@@ -145,11 +138,10 @@
     var bets = [500, 1000, 2500, 5000, 10000, 25000, 50000];
     var grid = h('div', { class: 'egrid' });
     streetOpps.forEach(function (o) {
-      var oi = G.oppInst(o), est = G.estimate(oi, DR.EIGHTH, 0.85), diff = est.et - mine.et;
-      var odds = diff > 0.25 ? ['EASY', 'good'] : diff > -0.1 ? ['CLOSE', 'acc'] : ['TOUGH', 'bad'];
+      var oi = G.oppInst(o);
       grid.appendChild(h('div', { class: 'ecard t-street' },
-        h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype ' + odds[1] }, odds[0])),
-        h('div', { class: 'acc ename' }, o.name), h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name + ' • runs ~' + est.et.toFixed(2) + 's'),
+        h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, 'STREET')),
+        h('div', { class: 'acc ename' }, o.name), h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name),
         h('div', { class: 'efoot' }, h('span', { class: 'price' }, 'Pot ' + DR.money(betSel * 2)),
           btn('Race', function () {
             if (G.state.money < betSel) return UI.toast('You cannot cover that bet');
@@ -159,7 +151,7 @@
     });
     return h('div', {},
       h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET RACE'), h('div', { class: 'pix acc' }, '1/8 mile • night • no prep'),
-        h('div', { class: 'dim' }, 'Winner takes the pot. The street has less grip than the strip. Your car runs ~' + (mine.et >= 90 ? '??' : mine.et.toFixed(2) + 's') + ' here.'))),
+        h('div', { class: 'dim' }, 'Winner takes the pot. The street has less grip than the strip. Size them up and pick your fight.'))),
       h('div', { class: 'schips' }, h('span', { class: 'pix small', style: { alignSelf: 'center' } }, 'BET'), bets.map(function (b) {
         return chip(DR.money(b), b === betSel, function () { betSel = b; UI.refresh(); }, b > G.state.money ? 'disabled' : '');
       })),
@@ -197,7 +189,7 @@
     runs.forEach(function (r) {
       grid.appendChild(h('div', { class: 'ecard t-test' }, h('div', { class: 'ecvwrap' }, trackThumb(r[0])),
         h('div', { class: 'acc ename' }, r[1]), h('div', { class: 'dim gsmall' }, r[2]),
-        h('div', { class: 'efoot' }, h('span', { class: 'gsmall acc' }, r[4] ? 'Best ' + r[4].toFixed(3) + 's' : 'Est ' + estText(inst, r[3].dist, r[3].grip)),
+        h('div', { class: 'efoot' }, h('span', { class: 'gsmall acc' }, r[4] ? 'Best ' + r[4].toFixed(3) + 's' : 'No runs yet'),
           btn('Run', function () { DR.Race.start(r[3]); }, 'small go'))));
     });
     return h('div', {}, h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'TEST & TUNE'), h('div', { class: 'pix acc' }, 'Solo passes'),
@@ -227,18 +219,17 @@
     var statBox = h('div', { class: 'tstats' }), statInner = h('div');
     var pv = h('canvas', { class: 'preview' }); DR.drawPreview(pv, inst, { aspect: 0.36 });
     statBox.appendChild(pv); statBox.appendChild(statInner);
-    var timer = 0, base8 = G.estimate(inst, DR.EIGHTH).et, base = G.estimate(inst, DR.QUARTER).et;
-    // "12.83s (-0.12)" against the times when this screen opened
-    function vs(et, b0) { var d = et - b0; return Math.abs(d) < 0.005 || et >= 90 || b0 >= 90 ? '' : ' (' + (d > 0 ? '+' : '') + d.toFixed(2) + ')'; }
+    var timer = 0;
     function recalc() {
       clearTimeout(timer);
       timer = setTimeout(function () {
-        var S2 = G.spec(inst), est = G.estimate(inst, DR.QUARTER), est8 = G.estimate(inst, DR.EIGHTH);
+        var S2 = G.spec(inst), best = inst.best || {};
+        DR.drawPreview(pv, inst, { aspect: 0.36 });   // ride height / rake show on the car
         statInner.innerHTML = '';
         [gst('POWER', UI.fmtHp(S2.peakHp) + ' @ ' + S2.peakHpRpm, 'acc'), gst('TORQUE', Math.round(S2.peakTq) + ' lb-ft'),
           S2.nosHp ? gst('NITROUS', '+' + S2.nosHp + ' hp') : null, gst('REDLINE', S2.red + ' rpm'),
-          gst('EST 1/8', est8.et >= 90 ? 'crash!' : est8.et.toFixed(2) + 's' + vs(est8.et, base8), est8.et > base8 + 0.005 ? 'bad' : 'good'),
-          gst('EST 1/4', est.et >= 90 ? 'crash!' : est.et.toFixed(2) + 's' + vs(est.et, base) + ' @ ' + Math.round(est.trap), est.et > base + 0.005 ? 'bad' : 'good')].concat(UI.riskBox(S2)).forEach(function (el) { if (el) statInner.appendChild(el); });
+          gst('BEST 1/8', best.e ? best.e.toFixed(3) + 's' : '—', 'good'),
+          gst('BEST 1/4', best.q ? best.q.toFixed(3) + 's' : '—', 'good')].concat(UI.riskBox(S2)).forEach(function (el) { if (el) statInner.appendChild(el); });
       }, 120);
     }
     DR.TUNE_DEFS.forEach(function (def) {
@@ -379,19 +370,21 @@
   // ---------------------------------------------------------------- DEALER
   // PCR-style bars, scaled against every car on sale
   var BAR_MAX = null;
-  function statBars(S, est) {
+  // a rough top-end index from power, weight and drag (not a time)
+  function speedIdx(S) { return Math.pow(S.peakHp / (S.cda + S.m / 4000), 1 / 3); }
+  function statBars(S) {
     if (!BAR_MAX) {
       BAR_MAX = { hp: 1, trap: 1, m: 1, mu: 1 };
       Object.keys(DR.CARS).forEach(function (cid) {
-        var c = DR.CARS[cid], i = { carId: cid, engine: c.engine, parts: {}, tune: {} }, s2 = DR.buildSpec(i), e2 = G.estimate(i, DR.QUARTER);
-        BAR_MAX.hp = Math.max(BAR_MAX.hp, s2.peakHp); BAR_MAX.trap = Math.max(BAR_MAX.trap, e2.trap); BAR_MAX.m = Math.max(BAR_MAX.m, s2.m); BAR_MAX.mu = Math.max(BAR_MAX.mu, s2.tire.mu);
+        var c = DR.CARS[cid], i = { carId: cid, engine: c.engine, parts: {}, tune: {} }, s2 = DR.buildSpec(i);
+        BAR_MAX.hp = Math.max(BAR_MAX.hp, s2.peakHp); BAR_MAX.trap = Math.max(BAR_MAX.trap, speedIdx(s2)); BAR_MAX.m = Math.max(BAR_MAX.m, s2.m); BAR_MAX.mu = Math.max(BAR_MAX.mu, s2.tire.mu);
       });
     }
     function bar(label, f) {
       var b = h('div', { class: 'sbar' }); for (var i = 0; i < 10; i++) b.appendChild(h('i', { class: i < Math.round(f * 10) ? 'on' : '' }));
       return h('div', { class: 'sbarrow' }, h('span', { class: 'k' }, label), b);
     }
-    return h('div', { class: 'sbars' }, bar('SPEED', est.trap / BAR_MAX.trap), bar('POWER', S.peakHp / BAR_MAX.hp), bar('WEIGHT', S.m / BAR_MAX.m), bar('GRIP', S.tire.mu / BAR_MAX.mu));
+    return h('div', { class: 'sbars' }, bar('SPEED', speedIdx(S) / BAR_MAX.trap), bar('POWER', S.peakHp / BAR_MAX.hp), bar('WEIGHT', S.m / BAR_MAX.m), bar('GRIP', S.tire.mu / BAR_MAX.mu));
   }
   var dealerCat = DR.CAR_CATS[0], dealerIdx = 0;
   UI.Dealer = function () {
@@ -404,7 +397,7 @@
     }));
     var id = ids[dealerIdx], car = DR.CARS[id], inst = { carId: id, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col };
     var wasNew = G.isNewCar(id); G.markCarSeen(id);
-    var S = DR.buildSpec(inst), est = G.estimate(inst, DR.QUARTER), locked = !G.carUnlocked(id), owned = G.state.cars.filter(function (c) { return c.carId === id; }).length;
+    var S = DR.buildSpec(inst), locked = !G.carUnlocked(id), owned = G.state.cars.filter(function (c) { return c.carId === id; }).length;
     var all = Object.keys(DR.CARS).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; }), ai = all.indexOf(id);
     function stockInst(cid) { var c3 = DR.CARS[cid]; return { carId: cid, engine: c3.engine, parts: {}, tune: {}, color: c3.col }; }
     var side = all.length > 1 ? [stockInst(all[(ai - 1 + all.length) % all.length]), stockInst(all[(ai + 1) % all.length])] : [];
@@ -421,10 +414,10 @@
         h('div', { class: 'gwrap' }, cv,
           h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
             // the real model the sprite should be drawn from, and whether it still uses the generic placeholder
-            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S, est),
+            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S),
             gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
             gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
-            gst('TIRES', S.tire.name), gst('EST 1/4', est.et.toFixed(2) + 's @ ' + Math.round(est.trap), 'good'),
+            gst('TIRES', S.tire.name),
             owned ? h('div', { class: 'gsmall acc' }, 'You own ' + owned) : null),
           h('div', { class: 'gsel' }, ids.length > 1 ? btn('◀', function () { cyc(-1); }, 'arrow') : null,
             h('div', { class: 'gname' }, h('div', { class: 'price big' }, DR.money(car.price)), h('div', { class: 'dim' }, (dealerIdx + 1) + ' / ' + ids.length + ' • ' + dealerCat)),

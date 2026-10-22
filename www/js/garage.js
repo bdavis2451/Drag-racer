@@ -190,13 +190,10 @@
   // Small "+42 hp  -0.31s" line for a part on this car.
   function gainLine(inst, cat, id) {
     var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
-    var e0 = G.estimate(inst, DR.QUARTER).et, e1 = G.estimate(copy, DR.QUARTER).et;
-    var dhp = Math.round(S1.peakHp + S1.nosHp - S0.peakHp - S0.nosHp), dlb = Math.round((S1.m - S0.m) * 2.2046), det = Math.min(e1, 99) - Math.min(e0, 99);
+    var dhp = Math.round(S1.peakHp + S1.nosHp - S0.peakHp - S0.nosHp), dlb = Math.round((S1.m - S0.m) * 2.2046);
     var out = [];
     if (dhp) out.push(h('span', { class: dhp > 0 ? 'good' : 'bad' }, (dhp > 0 ? '+' : '') + dhp + 'hp'));
     if (dlb) out.push(h('span', { class: dlb < 0 ? 'good' : 'bad' }, (dlb > 0 ? '+' : '') + dlb + 'lb'));
-    if (Math.abs(det) >= 0.005) out.push(h('span', { class: det < 0 ? 'good' : 'bad' }, (det > 0 ? '+' : '') + det.toFixed(2) + 's'));
-    if (e1 >= 90 && e0 < 90) out.push(h('span', { class: 'bad' }, 'crashes!'));
     return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'no change');
   }
   function deltaRow(a, b, unit, dec, lowerBetter) {
@@ -234,14 +231,13 @@
       mbtn('Paint', function () { UI.show(UI.Paint); }),
       mbtn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }),
       mbtn('Dealer', function () { UI.show(UI.Dealer); }, '', G.newCarCount() ? 'NEW' : 0));
-    var est = G.estimate(inst, DR.QUARTER), stars = DR.starRating(inst);
+    var stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };
     var side = h('div', { class: 'gside' },
       stat('POWER', Math.round(S.peakHp) + (S.nosHp ? '+' + S.nosHp : '') + ' hp', 'acc'),
       stat('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
       stat('WEIGHT', UI.kgLb(S.m)),
       stat('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
-      stat('EST 1/4', est.et >= 90 ? 'crash!' : est.et.toFixed(2) + 's', 'good'),
       inst.best && inst.best.q ? stat('BEST 1/4', inst.best.q.toFixed(3) + 's', 'acc') : null,
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
       S.risk.engine > 0.001 || S.risk.trans > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(Math.max(S.risk.engine, S.risk.trans) * 100) + '% failure risk') : null,
@@ -305,7 +301,6 @@
   function partModal(inst, cat, id) {
     var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt.price), locked = !G.partUnlocked(cat, opt.price);
     var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
-    var e0 = G.estimate(inst, DR.QUARTER), e1 = G.estimate(copy, DR.QUARTER);
     var fits = DR.partApplies(cat, inst), owned = G.ownedCount(cat, id), installed = DR.partId(cat, inst) === id;
     var close;
     function buy(andInstall) {
@@ -322,7 +317,6 @@
         ['Power', deltaRow(S0.peakHp + S0.nosHp, S1.peakHp + S1.nosHp, ' hp')],
         S0.red !== S1.red ? ['Rev limiter', deltaRow(S0.red, S1.red, ' rpm')] : null,
         ['Weight', deltaRow(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)],
-        ['Est. 1/4', deltaRow(Math.min(e0.et, 99), Math.min(e1.et, 99), 's', 2, true)],
         ['Price', DR.money(opt.price), 'good'],
         owned ? ['In your parts', '×' + owned, 'acc'] : null
       ]) : h('div', { class: 'warnbox' }, G.partFitIssue({ cat: cat, id: id }, inst)),
@@ -431,7 +425,6 @@
     if (jump) bayCat = jump;
     var cv = h('canvas', { class: 'preview' });
     DR.drawPreview(cv, inst);
-    var est = G.estimate(inst, DR.QUARTER);
     var list = h('div', { class: 'list bay-list' });
     DR.PART_GROUPS.forEach(function (g) {
       list.appendChild(h('div', { class: 'bay-h' }, g.name));
@@ -480,7 +473,7 @@
     return h('div', { class: 'screen' }, UI.top('INSTALL PARTS', function () { UI.show(UI.Garage); }, btn('Shop ▶', function () { UI.show(UI.Shop, bayCat); }, 'small shop')),
       h('div', { class: 'content' }, h('div', { class: 'split' },
         h('div', { class: 'left bay-left' }, cv,
-          h('div', { class: 'row bay-quick' }, h('span', { class: 'acc' }, Math.round(S.peakHp + S.nosHp) + 'hp'), h('span', {}, UI.kgLb(S.m)), h('span', { class: 'good' }, est.et >= 90 ? 'crash' : est.et.toFixed(2) + 's')),
+          h('div', { class: 'row bay-quick' }, h('span', { class: 'acc' }, Math.round(S.peakHp + S.nosHp) + 'hp'), h('span', {}, UI.kgLb(S.m)), h('span', { class: 'good' }, inst.best && inst.best.q ? inst.best.q.toFixed(2) + 's' : '—')),
           UI.riskBox(S), list),
         h('div', { class: 'right' }, right))));
   };

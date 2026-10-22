@@ -124,10 +124,19 @@
       blower: !!(fiu.price && (fiu.type === 'roots' || fiu.type === 'screw')),
       scoop: !!(fiu.price && fiu.type === 'turbo' && fiu.flow > 1000),
       wing: aero === 'a2' ? 2 : aero === 'a1' ? 1 : 0,
-      bar: DR.partId('wheeliebar', inst) !== 'stock'
+      bar: DR.partId('wheeliebar', inst) !== 'stock',
+      ride: rideOf(inst)
     };
   };
 
+  // static ride height [front, rear] in metres for drawing (0 = stock)
+  function rideOf(inst) {
+    var sp = DR.getOption('springs', inst), t = inst.tune || {};
+    if (!sp.adjS) return [-(sp.low || 0), -(sp.low || 0)];
+    function c(v) { return Math.max(sp.ride[0], Math.min(sp.ride[1], (v || 0) / 1000)); }
+    return [c(t.rideF), c(t.rideR)];
+  }
+  DR.rideOf = rideOf;
   function artFor(look) {
     if (ART[look.carId]) return ART[look.carId];
     var B = BODIES[look.body] || BODIES.coupe, minW = 99;
@@ -358,6 +367,8 @@
     var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     var ctx = cv.getContext('2d');
     var img = ctx.createImageData(W, H), d = img.data;
+    var cvU = document.createElement('canvas'); cvU.width = W; cvU.height = H;
+    var imgU = cvU.getContext('2d').createImageData(W, H), ud = imgU.data;
     var base = hexToRgb(look.color), baseL = lum(base);
     var vis = look.vis || {}, finish = vis.finish || 0, tint = vis.tint || 0, vinyl = vis.vinyl || 0;
     var vinylCol = look.stripe ? hexToRgb(look.stripe) : baseL > 0.5 ? [22, 22, 26] : [238, 238, 240];
@@ -500,7 +511,8 @@
         // inner fender: lit lip, black inside
         var dA = Math.min(Math.abs(Math.hypot(px + 0.5 - archR.x, py + 0.5 - archR.y) - archR.r), Math.abs(Math.hypot(px + 0.5 - archF.x, py + 0.5 - archF.y) - archF.r));
         var a2 = dA < 1.1 * RS ? 26 : dA < 2.2 * RS ? 12 : 6;
-        put(px, py, [a2, a2, a2 + 3]); continue;
+        // goes on the under layer: the wheel is drawn between it and the body
+        var ui = (py * W + px) * 4; ud[ui] = a2; ud[ui + 1] = a2; ud[ui + 2] = a2 + 3; ud[ui + 3] = 255; continue;
       }
       var q2 = U(px, py);
       if (v === -4) {
@@ -666,6 +678,7 @@
       }
     });
     ctx.putImageData(img, 0, 0);
+    cvU.getContext('2d').putImageData(imgU, 0, 0);
 
     function topAt(ux) { var x = Math.round(padL + ux * u); return topB[x] >= 0 ? topB[x] : groundY; }
     if (A.helmet) {
@@ -693,7 +706,7 @@
       head: hd ? { x: Math.round(padL + hd[0] * u), y: Math.round(groundY - hd[1] * u) } : null,
       exhaust: { x: padL + (A.exhaust ? A.exhaust[0] : 1) * u - 2 * RS, y: groundY - Math.round((A.exhaust ? A.exhaust[1] : 6) * u) } };
     function sc(o) { if (!o) return o; var r = {}; for (var kk in o) r[kk] = o[kk] / RS; return r; }
-    var spr = { canvas: cv, RS: RS, raw: raw, w: W / RS, h: H / RS, padL: padL / RS, lenPx: lenPx / RS, groundY: groundY / RS,
+    var spr = { canvas: cv, under: cvU, RS: RS, raw: raw, w: W / RS, h: H / RS, padL: padL / RS, lenPx: lenPx / RS, groundY: groundY / RS,
       wheelR: sc(wheelR), wheelF: sc(wheelF), tail: sc(raw.tail), head: sc(raw.head), exhaust: sc(raw.exhaust),
       rail: !!A.rail, bar: look.bar, look: look, rim: vis.rims || A.rim || 'five', neon: vis.neon || null };
     spriteCache[key] = spr;
@@ -830,17 +843,28 @@
       ctx.globalAlpha = 0.28; ctx.fillStyle = ng; ctx.fillRect(nx0, ny0, nw, -ny0 + 2);
       ctx.globalAlpha = 1; ctx.fillStyle = spr.neon; ctx.fillRect(nx0, ny0, nw, 1);
     }
-    ctx.drawImage(spr.canvas, Math.round(-rx), Math.round(-ground - 1 + bodyLift));
-    if (opts.brake > 0.05) {
-      var lx = Math.round(R.tail.x - rx), ly = Math.round(R.tail.y - ground - 1 + bodyLift);
-      ctx.fillStyle = '#ffd0c8'; ctx.fillRect(lx - RS, ly - 2 * RS, 3 * RS, 4 * RS);
-      ctx.globalAlpha = 0.45 * opts.brake; ctx.fillStyle = '#ff2020'; ctx.fillRect(lx - 4 * RS, ly - 4 * RS, 6 * RS, 8 * RS);
-      ctx.globalAlpha = 1;
-    }
+    // The body rides on its suspension: static ride height / rake from the
+    // build, plus opts.susp {z (m), phi (rad)} from the sim. It turns about
+    // the middle of the wheelbase; the wheels stay on the ground.
+    var ppx = DR.PPM * RS, wbPx = R.wheelF.x - R.wheelR.x, mid = wbPx / 2;
+    var ride = spr.look.ride || [0, 0], su = opts.susp || { z: 0, phi: 0 };
+    var lift = ((ride[0] + ride[1]) / 2 + su.z) * ppx, bphi = (ride[0] - ride[1]) * ppx / wbPx + su.phi;
+    function bodyXf() { ctx.translate(mid, Math.round(-lift + bodyLift)); ctx.rotate(-bphi); ctx.translate(-mid, 0); }
+    var bx = Math.round(-rx), by = Math.round(-ground - 1);
+    ctx.save(); bodyXf(); ctx.drawImage(spr.under, bx, by); ctx.restore();
     var look = spr.look, sp = opts.spin || 0;
     drawWheel(ctx, 0, -R.wheelR.r, R.wheelR.r, wheelAng, look, look.slick ? 'drag' : spr.rim, sp, null);
     var fk = opts.frontStill ? 0 : R.wheelR.r / R.wheelF.r;
     drawWheel(ctx, R.wheelF.x - rx, -R.wheelF.r, R.wheelF.r, opts.frontStill ? 0.3 : wheelAng * fk, look, spr.rail ? 'drag' : spr.rim, sp * fk, spr.rail ? null : '#b3202a');
+    ctx.save(); bodyXf();
+    ctx.drawImage(spr.canvas, bx, by);
+    if (opts.brake > 0.05) {
+      var lx = Math.round(R.tail.x - rx), ly = Math.round(R.tail.y - ground - 1);
+      ctx.fillStyle = '#ffd0c8'; ctx.fillRect(lx - RS, ly - 2 * RS, 3 * RS, 4 * RS);
+      ctx.globalAlpha = 0.45 * opts.brake; ctx.fillStyle = '#ff2020'; ctx.fillRect(lx - 4 * RS, ly - 4 * RS, 6 * RS, 8 * RS);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
     ctx.restore();
   };
 
