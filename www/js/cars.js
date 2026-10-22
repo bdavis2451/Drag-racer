@@ -826,13 +826,17 @@
   }
 
   // Soft contact shadow under a car, drawn on the ground before the car.
+  // A soft, stepped elliptical shadow under the car (darker in the middle
+  // and under the tires), fading as the nose lifts.
   function carShadow(ctx, spr, gx, gy, pitch) {
     var x0 = gx - (spr.wheelR.x - spr.padL), len = spr.lenPx, lift = Math.max(0, pitch) * len * 0.5;
-    var k = Math.max(0.25, 1 - lift / 40);
-    ctx.fillStyle = 'rgba(0,0,0,' + (0.2 * k).toFixed(3) + ')';
-    ctx.fillRect(Math.round(x0 - 3), Math.round(gy - 1), len + 6, 4);
-    ctx.fillStyle = 'rgba(0,0,0,' + (0.26 * k).toFixed(3) + ')';
-    ctx.fillRect(Math.round(x0 + 3), Math.round(gy - 1), len - 6, 3);
+    var k = Math.max(0.25, 1 - lift / 40), cx = x0 + len / 2, rx = len * 0.56, ry = Math.max(4, Math.round(len * 0.05));
+    for (var dy = -2; dy <= ry; dy++) {
+      var t = dy < 0 ? 0 : dy / ry, w = rx * Math.sqrt(Math.max(0, 1 - t * t));
+      ctx.fillStyle = 'rgba(0,0,0,' + ((0.16 + 0.18 * (1 - t)) * k).toFixed(3) + ')';
+      ctx.fillRect(Math.round(cx - w), Math.round(gy + dy), Math.round(w * 2), 1);
+      if (w > rx * 0.5) { ctx.fillStyle = 'rgba(0,0,0,' + (0.12 * (1 - t) * k).toFixed(3) + ')'; ctx.fillRect(Math.round(cx - w * 0.7), Math.round(gy + dy), Math.round(w * 1.4), 1); }
+    }
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(Math.round(gx - spr.wheelR.r * 0.85), Math.round(gy - 1), Math.round(spr.wheelR.r * 1.7), 2);
     if (pitch < 0.25) ctx.fillRect(Math.round(gx + spr.wheelF.x - spr.wheelR.x - spr.wheelF.r * 0.85), Math.round(gy - 1), Math.round(spr.wheelF.r * 1.7), 2);
