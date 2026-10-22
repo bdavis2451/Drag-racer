@@ -6,7 +6,7 @@
 (function () {
   var DR = globalThis.DR, G = DR.Game, A = DR.Audio, UI = DR.UI, h = UI.h, btn = UI.btn;
   var DT = 1 / 600;
-  var DASH_W = 200, DASH_H = 74;
+  var DASH_W = 232, DASH_H = 44;
   var BOX_X = -16;           // where cars sit for the burnout (m)
 
   DR.Race = {
@@ -25,86 +25,68 @@
   };
 
   // ---------------------------------------------------------------- dash
-  // Pixel instrument cluster: shift lights over a tach dial with the gear in
-  // its middle, tire temp & boost bars on the left, speed and dash lights on
-  // the right. Drawn at 200x74 and scaled up crisp by CSS.
+  // Pixel race dash: an rpm sweep (rising LED segments that flash blue at
+  // the shift point) over a big gear digit, tire temp & boost bars on the
+  // left, LCD speed on the right, warning lights in the corners. Drawn at
+  // 232x44 on a smoked, see-through panel and scaled up crisp by CSS.
   function px(c, x, y, w, hh, col) { c.fillStyle = col; c.fillRect(x, y, w, hh); }
   function drawDash(c, sim, Sx, phase) {
     var W = DASH_W, H = DASH_H, txt = DR.pixText;
     c.clearRect(0, 0, W, H);
-    // panel: stepped corners, bevelled edge, carbon weave
-    px(c, 3, 0, W - 6, H, '#0b0c10'); px(c, 0, 3, W, H - 3, '#0b0c10'); px(c, 1, 1, W - 2, H - 1, '#0b0c10');
-    px(c, 4, 1, W - 8, H - 2, '#16181f'); px(c, 1, 4, W - 2, H - 5, '#16181f'); px(c, 2, 2, W - 4, H - 3, '#16181f');
-    for (var yy = 4; yy < H - 2; yy += 2) for (var xx = 4 + (yy % 4 ? 1 : 0); xx < W - 4; xx += 4) px(c, xx, yy, 1, 1, '#1d2029');
-    px(c, 4, 1, W - 8, 1, '#3a3e4c'); px(c, 1, 4, 1, H - 6, '#2c303b');
-    // ---- tach
-    var cx = 100, cy = 63, R = 43, rpm = sim.rpm(), top = Math.ceil((Sx.red + 600) / 1000) * 1000;
-    var a0 = Math.PI, a1 = 0;
-    function ang(r) { return a0 + (a1 - a0) * Math.min(1, Math.max(0, r / top)); }
-    for (var rr = R; rr >= 0; rr--) { var w2 = Math.round(Math.sqrt(R * R - rr * rr)); px(c, cx - w2, cy - rr, w2 * 2, 1, rr > R - 2 ? '#2e3240' : '#07080b'); }
-    // red zone
-    for (var r2 = Sx.red; r2 <= top; r2 += 25) { var t = ang(r2); for (var d = R - 5; d <= R - 2; d++) px(c, Math.round(cx + Math.cos(t) * d), Math.round(cy - Math.sin(t) * d), 1, 1, '#c8202a'); }
-    // ticks & numbers
-    for (var k = 0; k <= top; k += 500) {
-      var ta = ang(k), major = k % 1000 === 0, len = major ? 5 : 2;
-      for (var q = 0; q < len; q++) px(c, Math.round(cx + Math.cos(ta) * (R - 3 - q)), Math.round(cy - Math.sin(ta) * (R - 3 - q)), 1, 1, k >= Sx.red ? '#ff6a6a' : '#cfd3dc');
-      if (major && top <= 12000) { var nx = Math.round(cx + Math.cos(ta) * (R - 13)) - 1, ny = Math.round(cy - Math.sin(ta) * (R - 13)) - 2; txt(c, String(k / 1000), nx, ny, '#7d8291', 1); }
+    // smoked glass panel with stepped corners and a fine top highlight
+    var glass = 'rgba(9,10,14,0.58)';
+    px(c, 3, 0, W - 6, H, glass); px(c, 1, 1, 2, H - 2, glass); px(c, W - 3, 1, 2, H - 2, glass); px(c, 0, 3, 1, H - 6, glass); px(c, W - 1, 3, 1, H - 6, glass);
+    px(c, 3, 0, W - 6, 1, 'rgba(255,255,255,0.14)');
+    px(c, 60, 4, 1, H - 8, 'rgba(255,255,255,0.07)'); px(c, W - 61, 4, 1, H - 8, 'rgba(255,255,255,0.07)');
+    // ---- rpm sweep
+    var rpm = sim.rpm(), top = Math.ceil((Sx.red + 600) / 1000) * 1000, shiftAt = Sx.tune.shiftRpm;
+    var x0 = 66, nSeg = 34, segW = 2, gap = 1;
+    var flash = sim.launched && !sim.finished && rpm >= shiftAt - 50 && sim.gear < Sx.ratios.length - 1;
+    var blink = Math.floor(performance.now() / 70) % 2;
+    for (var i = 0; i < nSeg; i++) {
+      var r0 = top * i / nSeg, on = rpm >= r0 + top / nSeg * 0.5, hgt = 3 + Math.round(i / (nSeg - 1) * 6), sx = x0 + i * (segW + gap), sy = 13 - hgt;
+      var col = r0 >= Sx.red ? '#ff3a3a' : r0 >= shiftAt - 1200 ? '#ffd000' : '#36e06a';
+      if (flash) { col = blink ? '#5b95ff' : col; }
+      px(c, sx, sy, segW, hgt, on ? col : (r0 >= Sx.red ? 'rgba(255,58,58,0.18)' : 'rgba(255,255,255,0.09)'));
+      if (on) px(c, sx, sy, segW, 1, 'rgba(255,255,255,0.55)');
     }
-    // needle
-    var na = ang(rpm), ncol = rpm >= Sx.red ? '#ff4040' : '#ff8a2a';
-    for (var n = 4; n < R - 4; n++) px(c, Math.round(cx + Math.cos(na) * n), Math.round(cy - Math.sin(na) * n), n < R - 12 ? 2 : 1, n < R - 12 ? 2 : 1, ncol);
-    px(c, cx - 3, cy - 3, 6, 6, '#3a3e4c'); px(c, cx - 2, cy - 2, 4, 4, '#9aa0ad');
-    txt(c, 'X1000', cx - 9, cy - 20, '#4a4f5c', 1);
-    // ---- gear window (left)
+    for (var k = 1000; k < top; k += 1000) {
+      var kx = x0 + Math.round(k / top * nSeg) * (segW + gap) - 1;
+      txt(c, String(k / 1000), kx, 15, k >= Sx.red ? '#ff6a6a' : 'rgba(205,210,220,0.55)', 1);
+    }
+    // ---- gear
     var gtxt = sim.launched || phase === 'tree' || phase === 'race' || sim.burnMode ? String(sim.gear + 1) : 'N';
-    px(c, 7, 11, 26, 33, '#050608'); px(c, 8, 12, 24, 31, '#1a1408');
-    txt(c, '8', 13, 15, '#2a2010', 5);
-    txt(c, gtxt, 13, 15, '#ffd23d', 5);
-    txt(c, 'GEAR', 12, 47, '#7d8291', 1);
-    // ---- shift lights: green, yellow, red, then all blue at the shift point
-    var shiftAt = Sx.tune.shiftRpm, lo = shiftAt - 1800, nL = 9, flash = sim.launched && !sim.finished && rpm >= shiftAt - 50 && sim.gear < Sx.ratios.length - 1;
-    for (var l = 0; l < nL; l++) {
-      var lx = cx - 30 + l * 7, on = rpm >= lo + (shiftAt - lo) * l / (nL - 1);
-      var col = l < 4 ? '#2bd45a' : l < 7 ? '#ffd000' : '#ff3030';
-      if (flash) { col = (Math.floor(performance.now() / 70) % 2) ? '#4f8dff' : '#0b0c10'; on = true; }
-      px(c, lx, 3, 5, 4, '#050608'); px(c, lx + 1, 4, 3, 2, on ? col : '#23262e');
-      if (on && !flash) px(c, lx + 1, 4, 1, 1, '#ffffff');
+    txt(c, gtxt, 110, 21, 'rgba(0,0,0,0.5)', 4);
+    txt(c, gtxt, 109, 20, '#ffd23d', 4);
+    txt(c, Math.round(rpm) + '', 140, 34, 'rgba(205,210,220,0.6)', 1);
+    txt(c, 'RPM', 140, 28, 'rgba(125,130,145,0.7)', 1);
+    // ---- left: tire temp & boost
+    function hbar(y, label, frac, col, zone) {
+      txt(c, label, 6, y, 'rgba(125,130,145,0.9)', 1);
+      px(c, 6, y + 7, 48, 4, 'rgba(255,255,255,0.08)');
+      if (zone) px(c, 6 + Math.round(zone[0] * 48), y + 6, Math.max(1, Math.round((zone[1] - zone[0]) * 48)), 6, 'rgba(70,224,122,0.22)');
+      var fw = Math.round(Math.min(1, Math.max(0, frac)) * 48);
+      for (var q = 0; q < fw; q += 2) px(c, 6 + q, y + 7, 1, 4, col);
     }
-    // ---- left: tire temp & boost bars
-    var T = sim.tireT, tt = Sx.tire, tmax = Math.max(130, tt.topt + 50), bh = 44, by = 11;
-    function vbar(x, frac, col, zone) {
-      px(c, x - 1, by - 1, 7, bh + 2, '#050608'); px(c, x, by, 5, bh, '#101218');
-      if (zone) px(c, x, by + bh - Math.round(zone[1] * bh), 5, Math.max(1, Math.round((zone[1] - zone[0]) * bh)), '#173a24');
-      var fh = Math.round(Math.min(1, Math.max(0, frac)) * bh);
-      for (var s2 = 0; s2 < fh; s2 += 2) px(c, x + 1, by + bh - s2 - 1, 3, 1, col);
-    }
+    var T = sim.tireT, tt = Sx.tire, tmax = Math.max(130, tt.topt + 50);
     var tcol = T < tt.topt - 10 ? '#4da3ff' : T > tt.topt + 30 ? '#ff4d4d' : '#46e07a';
-    vbar(39, T / tmax, tcol, [(tt.topt - 10) / tmax, (tt.topt + 30) / tmax]);
-    txt(c, 'T', 40, 58, '#7d8291', 1);
-    if (Sx.fiType !== 'none') {
-      vbar(48, sim.boost / Math.max(Sx.maxBoost, 5), '#ffcc33');
-      txt(c, 'B', 49, 58, '#7d8291', 1);
-    }
-    txt(c, String(Math.round(T)) + (Sx.fiType !== 'none' ? ' ' + sim.boost.toFixed(0) : ''), 8, 64, '#5d6271', 1);
-    // ---- right: speed and dash lights
+    hbar(4, 'TIRE ' + Math.round(T), T / tmax, tcol, [(tt.topt - 10) / tmax, (tt.topt + 30) / tmax]);
+    if (Sx.fiType !== 'none') hbar(18, 'BOOST ' + sim.boost.toFixed(0), sim.boost / Math.max(Sx.maxBoost, 5), '#ffcc33');
+    // ---- right: speed
     var mph = sim.v * 2.23694, km = G.state.settings.units === 'kmh', sp = String(Math.round(km ? mph * 1.609 : mph));
     while (sp.length < 3) sp = ' ' + sp;
-    px(c, 150, 13, 44, 20, '#050608'); px(c, 151, 14, 42, 18, '#0f1a12');
-    txt(c, '888', 152, 16, '#16281a', 3);
-    txt(c, sp, 152, 16, '#7dff8a', 3);
-    txt(c, km ? 'KM/H' : 'MPH', 180 - (km ? 4 : 0), 36, '#4a4f5c', 1);
-    var lamps = [
-      ['LOCK', sim.burnMode, '#ffcc00'],
-      ['TB', Sx.trType === 'auto' && Sx.tbrake && !sim.launched && phase !== 'pre' && phase !== 'burnout', '#ffcc00'],
-      ['2STP', Sx.twostep && !sim.launched && sim.cut, '#ff8a2a'],
-      ['NOS', sim.nosOn, '#c89bff'],
-      ['TC', sim.tcCut > 0.2, '#ff8a2a'],
-      ['BRK', sim.brakeLimited, '#ff4040']];
-    lamps.forEach(function (lp, i) {
-      var lx2 = 150 + (i % 3) * 15, ly = 46 + Math.floor(i / 3) * 10;
-      px(c, lx2, ly, 14, 8, '#050608'); px(c, lx2 + 1, ly + 1, 12, 6, lp[1] ? lp[2] : '#1a1c23');
-      txt(c, lp[0].slice(0, 3), lx2 + 1, ly + 2, lp[1] ? '#0b0c10' : '#383c47', 1);
-    });
+    txt(c, '888', W - 52, 5, 'rgba(125,255,138,0.08)', 3);
+    txt(c, sp, W - 52, 5, '#7dff8a', 3);
+    txt(c, km ? 'KM/H' : 'MPH', W - 22, 23, 'rgba(125,130,145,0.9)', 1);
+    // ---- warning lights, bottom corners
+    var lampsL = [['LCK', sim.burnMode, '#ffcc00'], ['TB', Sx.trType === 'auto' && Sx.tbrake && !sim.launched && phase !== 'pre' && phase !== 'burnout', '#ffcc00'], ['2ST', Sx.twostep && !sim.launched && sim.cut, '#ff8a2a']];
+    var lampsR = [['NOS', sim.nosOn, '#c89bff'], ['TC', sim.tcCut > 0.2, '#ff8a2a'], ['BRK', sim.brakeLimited, '#ff4040']];
+    function lamp(x, lp) {
+      px(c, x, 33, 15, 7, lp[1] ? lp[2] : 'rgba(255,255,255,0.06)');
+      txt(c, lp[0], x + 2, 34, lp[1] ? '#0b0c10' : 'rgba(205,210,220,0.28)', 1);
+    }
+    lampsL.forEach(function (lp, j) { lamp(6 + j * 17, lp); });
+    lampsR.forEach(function (lp, j) { lamp(W - 57 + j * 17, lp); });
   }
 
   function rollFailure(S) {
@@ -464,7 +446,6 @@
         ev.forEach(function (e) {
           if (e === 'shift' && r.S.fiType === 'turbo' && isYou) A.blowoff();
           if (e === 'backfire' && isYou && !(r.voice && r.voice.wk) && Math.random() < 0.3) A.pop();
-          if (e === 'bar' && isYou) note('WHEELIE BARS!');
           if (e === 'crash') { if (isYou) { A.boom(); note('YOU FLIPPED IT!'); } else note(r.label + ' FLIPPED!'); }
           if (e === 'blown') { A.boom(); if (isYou) note('ENGINE BLEW UP!'); else note(r.label + ' BLEW UP!'); }
           if (e === 'broke') { if (isYou) note('TRANSMISSION BROKE!'); else note(r.label + ' BROKE!'); }

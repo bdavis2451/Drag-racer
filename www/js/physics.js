@@ -583,17 +583,23 @@
       var b = S.b, Ir = S.Ip + m * (b * b + h * h), th = this.th;
       var mom = m * this.a * (b * Math.sin(th) + h * Math.cos(th)) - mg * (b * Math.cos(th) - h * Math.sin(th));
       this.dth += mom / Ir * dt; this.th += this.dth * dt;
-      var Fbar = 0;
+      var Fbar = 0, wasOnBar = this.onBar;
       this.onBar = false;
       if (S.bar && this.th >= S.barRad) {
-        if (this.dth > 0.05) { this.unload = Math.min(0.55 * mg, this.unload + Ir * this.dth / (S.barLen * 0.07)); this.events.push('bar'); }
+        // the strike (once, coming up onto the bar) kicks load off the tires;
+        // riding the bar just carries part of the car's weight
+        if (!wasOnBar && this.dth > 0.05) { this.unload = Math.min(0.55 * mg, this.unload + Ir * this.dth / (S.barLen * 0.07)); this.events.push('bar'); }
         this.th = S.barRad; this.dth = Math.min(0, this.dth);
         Fbar = Math.max(0, mom) / S.barLen;
         this.onBar = true;
       }
       if (this.th <= 0 && this.dth <= 0) {
         if (this.dth < -0.6) this.events.push('land');
-        this.wheelie = false; this.th = 0; this.dth = 0; this.phi = 0; this.dphi = 0; this.z = -0.01; this.dz = 0;
+        // front tires back down: the springs pick up from where the body is,
+        // with the nose's fall going into the front corners (bounce, no snap)
+        var aL = L - S.b;
+        this.dphi += this.dth; this.dz += this.dth * aL * 0.5;
+        this.wheelie = false; this.th = 0; this.dth = 0;
       }
       if (this.th > (this.maxTh || 0)) this.maxTh = this.th;
       if (this.th > 1.15 && !this.crashed) { this.crashed = true; this.events.push('crash'); }

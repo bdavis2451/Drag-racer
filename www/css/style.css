@@ -124,10 +124,10 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .race canvas.world { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 70%; }
 .hud { position: absolute; inset: 0; pointer-events: none; }
 /* ---- race HUD: pixel cluster, plate and ribbon */
-.hud .dash { position: absolute; left: 50%; top: 6px; transform: translateX(-50%); width: min(36vw, 320px); image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0,0,0,.6)); }
+.hud .dash { position: absolute; left: 50%; top: 6px; transform: translateX(-50%); width: min(42vw, 372px); image-rendering: pixelated; }
 .hud .info { position: absolute; left: 10px; top: 8px; font-family: 'Press Start 2P', monospace; font-size: 8px; line-height: 1.8; color: #e8eaf0;
-  background: linear-gradient(180deg, rgba(22,24,31,.92), rgba(11,12,16,.92)); padding: 6px 10px 6px 12px; border-left: 3px solid var(--accent);
-  box-shadow: 0 0 0 2px #000, inset 0 1px 0 #3a3e4c; min-width: 120px; }
+  background: rgba(9,10,14,.58); padding: 6px 10px 6px 12px; border-left: 3px solid var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14); min-width: 120px; }
 .hud .info .clock { font-size: 16px; color: #7dff8a; text-shadow: 0 0 6px rgba(125,255,138,.35); letter-spacing: 1px; }
 .hud .info .dim { color: #7d8291; }
 .hud .warn { color: var(--bad); }
