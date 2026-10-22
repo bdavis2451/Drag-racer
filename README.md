@@ -45,14 +45,21 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
   Repairs cost money.
 - **Game modes:**
   - **Career (Underground 2 style):** 5 stages of 1/4 mile, 1/8 mile, night street,
-    knockout, sponsor and showcase races, each ending in a boss. Wins reveal more races
+    knockout, sponsor and night invitational races, each ending in a boss. Wins reveal more races
     and unlock performance-part levels, body-kit tiers and new cars (Fox and AE86 at
     the start, Camaro at stage 2, Supra at stage 3).
   - **Sponsors:** pick one per stage for a signing bonus, per-win bonuses and a contract
     that must be fulfilled before the boss will race you.
   - **Visual rating:** 0-10 stars from the Body Shop (bumpers, skirts, spoilers, hoods,
-    roof scoops, rims, tint, neon underglow, paint finishes and vinyls). Showcase races
-    and some sponsors need a minimum rating.
+    roof scoops, rims, tint, neon underglow, paint finishes and vinyls). It never blocks
+    career races; only the looks-focused sponsor asks for a rating.
+  - **Car shows:** park your build at a booth next to other custom rides. Rating, rarity,
+    power, blowers and neon decide how many people stop by; you earn a little per visitor
+    and the top three take the podium and prize money. Four shows from a free parking-lot
+    meet to the Pixel Nationals; entry fees and a crowd that tires of the same build keep
+    it a side hustle.
+  - **Magazine covers:** each new star level puts your car on the cover of Pixel Tuner
+    for a small bonus; collect all ten.
   - **Street races:** bet your money, 1/8 mile at night with less grip.
   - **Test & Tune:** free practice runs.
 - **Garage tools:** a dyno with power, torque and boost curves; a paint shop; a dealership;
@@ -92,6 +99,7 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 | `www/js/physics.js` | The physics engine: tires, engine, clutch, converter, weight transfer, wheelies. |
 | `www/js/game.js` | Money, saving, buying and selling, and the **rival pool**. |
 | `www/js/career.js` | **Career stages, events, sponsors, unlocks, cosmetic parts and the star rating.** |
+| `www/js/carshow.js` | **Car shows (booths, crowd, podium) and magazine covers.** |
 | `www/js/render.js` | The scene: sky, track, grandstands, the tree, tire smoke, flames and the day/night lighting pass. |
 | `www/js/cars.js` | **Car sprites**, built from swappable parts (see below), plus wheels, brakes and tires. |
 | `www/js/ui.js` | All menu screens (garage, shop, tuning, dyno, dealer, paint, and so on). |

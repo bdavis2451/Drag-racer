@@ -68,6 +68,7 @@
       btn('Cancel', function () { close(); }), btn(yesLabel || 'Yes', function () { close(); yes(); }, 'primary'))]);
   };
 
+  UI.top = function (t, b, x) { return top(t, b, x); };
   function top(title, back, extra) {
     return h('div', { class: 'top' },
       back ? btn('◀', back, 'back') : null,
@@ -167,12 +168,13 @@
         btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'));
     }
     var menu = h('div', { class: 'menu-grid' },
-      btn('⚑ Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race one'),
+      btn('⚑ Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'),
       btn('Upgrade', function () { UI.show(UI.Shop); }, 'blue'),
       btn('Tune', function () { UI.show(UI.Tune); }),
       btn('Dyno', function () { UI.show(UI.Dyno); }),
       btn('Body Shop', function () { UI.show(UI.Body); }, 'blue'),
       btn('Paint', function () { UI.show(UI.Paint); }),
+      btn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }, 'blue'),
       btn('My Cars', function () { UI.show(UI.Cars); }),
       btn('Dealer', function () { UI.show(UI.Dealer); }));
     return h('div', { class: 'screen' }, top('GARAGE', function () { UI.show(UI.Title); }, h('div', { class: 'row', style: { gap: '6px' } },
@@ -640,7 +642,7 @@
           if (o.value) inst.vis[slot.id] = slot.id === 'neon' ? (neonPick || slot.colors[0]) : o.value; else delete inst.vis[slot.id];
           G.save(); if (o.price) A.cash();
           UI.toast(o.value ? o.name + ' fitted!' : 'Back to stock');
-          G.noteStars().forEach(function (m) { UI.toast(m); });
+          UI.afterStars(G.noteStars());
           G.checkContracts().forEach(function (m) { UI.toast(m); });
           UI.refresh();
         }, 'small ' + (o.price ? 'go' : ''))));
@@ -690,7 +692,7 @@
             if (!c) return UI.toast('Nothing changed');
             if (!G.canAfford(c)) return UI.toast('Not enough money');
             G.pay(c); inst.color = draft.color; inst.stripe = draft.stripe; inst.rim = draft.rim; G.save(); A.cash(); UI.toast('Fresh paint!');
-            G.noteStars().forEach(function (m) { UI.toast(m); });
+            UI.afterStars(G.noteStars());
             UI.show(UI.Garage);
           }, 'go')),
         h('div', { class: 'right' }, h('h3', {}, 'BODY ($400)'), swatches('color', DR.PAINTS), h('h3', {}, 'STRIPE ($200, +' + DR.starText(0.25) + ')'), swatches('stripe', DR.PAINTS, true), h('h3', {}, 'WHEELS ($150)'), swatches('rim', rims)))));
@@ -729,9 +731,11 @@
         p('4. Keep holding GAS. Tap SHIFT when the blue shift light flashes. If the tires spin (SPIN warning / smoke), ease off the gas for a moment.'),
         p('5. Got nitrous? Tap NOS to spray. Big wheelies can flip the car - lift off the gas or install wheelie bars.'),
         h('h2', {}, 'Career'),
-        p('The career has five stages. Each stage has a run of races (1/4 mile, 1/8 mile, night street races, three-round knockouts, sponsor races and showcases) and ends with a boss. Winning races reveals more races and unlocks parts. Beat the boss to open the next stage and new cars at the dealer.'),
+        p('The career has five stages. Each stage has a run of races (1/4 mile, 1/8 mile, night street races, three-round knockouts, sponsor races and night invitationals) and ends with a boss. Winning races reveals more races and unlocks parts. Beat the boss to open the next stage and new cars at the dealer.'),
         p('Sign one sponsor per stage. You get a signing bonus and a bonus for every win, plus a big payout when you fulfil the contract. The boss will only race you once your contract is done.'),
-        p('Your visual rating (up to 10 stars) comes from Body Shop parts: bumpers, skirts, spoilers, hoods, roof scoops, rims, tint, neon, paint finishes and vinyls. Showcase races and some sponsors need a minimum rating.'),
+        p('Your visual rating (up to 10 stars) comes from Body Shop parts: bumpers, skirts, spoilers, hoods, roof scoops, rims, tint, neon, paint finishes and vinyls. Stars never block career races; only the sponsor who wants a car that looks the part asks for a rating.'),
+        h('h2', {}, 'Car Shows & Covers'),
+        p('Park your car at a booth at a car show. Your rating, how rare and loud the build is, and the show itself decide how many people stop by. You earn a little per visitor, and the three most-visited cars take the podium and the prize money. Show judges get bored of the same build: change something up between entries. Each new star level also puts your car on the cover of Pixel Tuner, with a small bonus.'),
         h('h2', {}, 'Building'),
         p('Spend your winnings in the Upgrade Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
         p('Watch the risk warnings: too much power for your internals, boost past your fuel\'s knock limit or more torque than the gearbox can hold can break parts mid-race. Repairs cost money!'),

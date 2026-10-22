@@ -10,7 +10,7 @@
   G.defaults = function () {
     return {
       v: 3, money: 6000, cars: [], active: null, uid: 1,
-      career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 },
+      career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [],
       settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold' },
       started: false
     };

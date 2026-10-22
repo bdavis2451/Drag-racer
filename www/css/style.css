@@ -84,7 +84,7 @@ h3 { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dim
 .garage .view { flex: 1.35; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .garage canvas.preview { width: 100%; flex: 1; min-height: 120px; background: #222; box-shadow: 0 0 0 2px #000; object-fit: contain; }
 .garage .side { flex: 1; min-width: 210px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
-.menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.menu-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .menu-grid .btn { min-height: 46px; font-size: 10px; }
 .menu-grid .btn.race { grid-column: span 2; background: #b52a2a; font-size: 13px; }
 .menu-grid .btn.race.one { grid-column: auto; }
@@ -206,3 +206,4 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .item.locked.boss { opacity: .6; }
 .card.locked { opacity: .55; }
 .warn { color: #ff9a4d; }
+.showbar { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-family: 'Press Start 2P', monospace; font-size: 10px; background: rgba(0,0,0,.65); padding: 6px 10px; white-space: nowrap; pointer-events: none; }

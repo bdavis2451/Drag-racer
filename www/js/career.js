@@ -3,8 +3,9 @@
 //  * Five stages of events. Winning events pays out and unlocks parts
 //    (performance levels per shop group, body kit tiers), more events and,
 //    with the stage boss, the next stage and the next tier of cars.
-//  * A visual rating (0-10 stars) from cosmetic parts. Showcase events need
-//    a minimum rating.
+//  * A visual rating (0-10 stars) from cosmetic parts. It lives beside the
+//    career rather than gating it: car shows and magazine covers reward it,
+//    and only the looks-focused sponsor contract asks for it.
 //  * One sponsor per stage: a signing bonus, a bonus for every win and a
 //    contract that has to be fulfilled before the boss will race you.
 // ===========================================================================
@@ -79,7 +80,7 @@
     street:   { name: 'Street 1/8', dist: function () { return DR.EIGHTH; }, theme: 'street', grip: 0.85 },
     knockout: { name: 'Knockout', dist: function () { return DR.QUARTER; }, theme: 'strip', grip: 1 },
     sponsor:  { name: 'Sponsor Race', dist: function () { return DR.QUARTER; }, theme: 'strip', grip: 1 },
-    showcase: { name: 'Showcase', dist: function () { return DR.QUARTER; }, theme: 'street', grip: 0.92 },
+    showcase: { name: 'Night Invitational', dist: function () { return DR.QUARTER; }, theme: 'street', grip: 0.92 },
     boss:     { name: 'BOSS', dist: function () { return DR.QUARTER; }, theme: 'strip', grip: 1 }
   };
   // e(type, opponents, cash, unlocks, needWins, stars)
@@ -95,7 +96,7 @@
         e('sponsor', [rv(0, 3)], 800, ['perf:drive:2', 'vis:finish:1'], 2),
         e('knockout', [rv(0, 0, { name: 'Edna' }), rv(0, 2, { name: 'Kat', color: '#ff2bd6' }), rv(0, 3)], 1100, ['perf:power:2', 'vis:skirt:1'], 3),
         e('eighth', [rv(0, 4)], 650, ['vis:spoiler:1', 'vis:tips:1'], 3),
-        e('showcase', [rv(0, 3, { name: 'Neon Nina', color: '#ff2bd6', vis: { neon: '#ff2bd6', fbumper: 1, rims: 'mesh', tint: 1, vinyl: 1 } })], 900, ['vis:hood:1'], 4, 1),
+        e('showcase', [rv(0, 3, { name: 'Neon Nina', color: '#ff2bd6', vis: { neon: '#ff2bd6', fbumper: 1, rims: 'mesh', tint: 1, vinyl: 1 } })], 900, ['vis:hood:1'], 4),
         e('sponsor', [rv(0, 4, { name: 'Mike' })], 900, ['perf:body:2'], 5),
         e('street', [rv(1, 0, { name: 'Dale' })], 750, [], 5)
       ],
@@ -110,7 +111,7 @@
         e('sponsor', [rv(1, 2, { name: 'Rosa' })], 2400, ['perf:drive:3', 'vis:finish:2'], 2),
         e('knockout', [rv(1, 1, { name: 'Kenji' }), rv(1, 3, { name: 'Hiro' }), rv(1, 4)], 3200, ['perf:susp:3', 'vis:skirt:2'], 3),
         e('street', [rv(1, 4, { name: 'Earl' })], 2000, ['vis:spoiler:2', 'vis:roof:2'], 3),
-        e('showcase', [rv(1, 3, { name: 'Chrome Carla', color: '#d0d0d0', vis: { fbumper: 2, rbumper: 2, skirt: 2, spoiler: 2, finish: 2, rims: 'split', neon: '#00e5ff', tint: 2 } })], 2800, ['vis:hood:2', 'vis:vinyl:2'], 4, 2.5),
+        e('showcase', [rv(1, 3, { name: 'Chrome Carla', color: '#d0d0d0', vis: { fbumper: 2, rbumper: 2, skirt: 2, spoiler: 2, finish: 2, rims: 'split', neon: '#00e5ff', tint: 2 } })], 2800, ['vis:hood:2', 'vis:vinyl:2'], 4),
         e('sponsor', [rv(2, 0)], 2800, ['perf:body:3'], 5),
         e('eighth', [rv(2, 1)], 2200, [], 5)
       ],
@@ -125,7 +126,7 @@
         e('sponsor', [rv(3, 0)], 6000, ['vis:skirt:3'], 2),
         e('knockout', [rv(2, 3, { name: 'Marcus' }), rv(2, 4, { name: 'Tank' }), rv(3, 1)], 8000, ['perf:susp:4', 'vis:spoiler:3'], 3),
         e('quarter', [rv(3, 1, { name: 'Ricky' })], 5000, ['vis:hood:3'], 3),
-        e('showcase', [rv(3, 0, { name: 'Akira', vis: { fbumper: 3, rbumper: 3, skirt: 3, spoiler: 3, hood: 3, rims: 'deep', tint: 2, finish: 3, vinyl: 3, neon: '#39ff14' } })], 7000, ['vis:vinyl:3'], 4, 4),
+        e('showcase', [rv(3, 0, { name: 'Akira', vis: { fbumper: 3, rbumper: 3, skirt: 3, spoiler: 3, hood: 3, rims: 'deep', tint: 2, finish: 3, vinyl: 3, neon: '#39ff14' } })], 7000, ['vis:vinyl:3'], 4),
         e('sponsor', [rv(3, 2)], 7000, ['perf:body:4'], 5),
         e('eighth', [rv(3, 1, { name: 'Ricky Radial' })], 5500, [], 5)
       ],
@@ -140,7 +141,7 @@
         e('sponsor', [rv(4, 2)], 15000, [], 2),
         e('knockout', [rv(3, 4, { name: 'Murder Fox' }), rv(4, 0, { name: 'Gus' }), rv(4, 1, { name: 'Ken' })], 20000, ['perf:susp:5'], 3),
         e('street', [rv(4, 3)], 12000, [], 3),
-        e('showcase', [rv(4, 2, { name: 'Lisa', vis: { fbumper: 3, rbumper: 3, skirt: 3, spoiler: 3, hood: 3, rims: 'deep', tint: 2, finish: 2, vinyl: 2, neon: '#8a5cff', roof: 2 }, stripe: '#151515' })], 16000, [], 4, 6),
+        e('showcase', [rv(4, 2, { name: 'Lisa', vis: { fbumper: 3, rbumper: 3, skirt: 3, spoiler: 3, hood: 3, rims: 'deep', tint: 2, finish: 2, vinyl: 2, neon: '#8a5cff', roof: 2 }, stripe: '#151515' })], 16000, [], 4),
         e('sponsor', [rv(4, 3, { name: 'Hank' })], 16000, ['perf:body:5'], 5),
         e('eighth', [rv(4, 1, { name: 'Godzilla' })], 13000, [], 5)
       ],
@@ -155,7 +156,7 @@
         e('sponsor', [rv(5, 1, { name: 'Rin' })], 35000, [], 2),
         e('knockout', [rv(5, 0, { name: 'Nitrous Nick' }), rv(5, 1, { name: 'Rice Rocket Rin' }), rv(5, 3)], 50000, [], 3),
         e('eighth', [rv(5, 3, { name: 'Bill' })], 30000, [], 3),
-        e('showcase', [rv(5, 2, { name: 'Tony', vis: { fbumper: 3, rbumper: 3, skirt: 3, hood: 3, rims: 'drag', tint: 2, finish: 3, vinyl: 3, neon: '#ff3030', tips: 1 } })], 40000, [], 4, 8),
+        e('showcase', [rv(5, 2, { name: 'Tony', vis: { fbumper: 3, rbumper: 3, skirt: 3, hood: 3, rims: 'drag', tint: 2, finish: 3, vinyl: 3, neon: '#ff3030', tips: 1 } })], 40000, [], 4),
         e('sponsor', [rv(5, 2)], 40000, [], 5),
         e('street', [rv(5, 3, { name: 'Blower Bill' })], 32000, [], 5)
       ],
@@ -191,7 +192,6 @@
     if (ev.stage > c.stage) return 'Beat the previous stage boss';
     var wins = G.stageWins(ev.stage);
     if (wins < ev.needWins) return 'Win ' + (ev.needWins - wins) + ' more race' + (ev.needWins - wins > 1 ? 's' : '') + ' in this stage';
-    if (ev.stars && DR.starRating(G.car()) < ev.stars) return 'Needs a ' + DR.starText(ev.stars) + ' visual rating';
     if (ev.type === 'boss') {
       var sp = c.sponsor[ev.stage];
       if (!sp) return 'Sign a sponsor first';
@@ -231,14 +231,25 @@
     if (k.stars) { var best = C().bestStars; lines.push(['Visual rating', DR.starText(Math.min(best, k.stars)) + ' / ' + DR.starText(k.stars), best >= k.stars]); done = done && best >= k.stars; }
     return { done: done, lines: lines };
   };
-  // Keep the best visual rating reached (sponsors and showcases look at it).
+  // Keep the best visual rating reached (the looks sponsor checks it) and put
+  // the car on a magazine cover the first time it reaches each star level.
+  DR.COVER_BONUS = function (lvl) { return 100 * lvl; };
+  var newCovers = [];
   G.noteStars = function () {
-    var c = C(), cur = G.car() ? DR.starRating(G.car()) : 0, msgs = [];
-    if (Math.floor(cur) > Math.floor(c.bestStars)) msgs.push('NEW STAR LEVEL: ' + DR.starText(Math.floor(cur)) + '! More showcase races open up.');
+    var c = C(), inst = G.car(), cur = inst ? DR.starRating(inst) : 0, msgs = [];
+    if (Math.floor(cur) > Math.floor(c.bestStars)) msgs.push('NEW STAR LEVEL: ' + Math.floor(cur) + ' STARS!');
     if (cur > c.bestStars) c.bestStars = cur;
+    var covers = G.state.covers || (G.state.covers = []), have = {};
+    covers.forEach(function (cv) { have[cv.lvl] = 1; });
+    for (var l = 1; l <= Math.min(10, Math.floor(cur)); l++) {
+      if (have[l]) continue;
+      var cover = { lvl: l, bonus: DR.COVER_BONUS(l), inst: JSON.parse(JSON.stringify({ carId: inst.carId, engine: inst.engine, parts: inst.parts, vis: inst.vis, color: inst.color, stripe: inst.stripe, rim: inst.rim })) };
+      covers.push(cover); newCovers.push(cover); G.earn(cover.bonus);
+    }
     G.save();
     return msgs;
   };
+  G.takeNewCovers = function () { var n = newCovers; newCovers = []; return n; };
 
   // ---------------------------------------------------------------- results
   function unlockText(u) {
