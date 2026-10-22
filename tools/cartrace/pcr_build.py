@@ -156,7 +156,7 @@ def clip(poly, keep):
 class K:
     def __init__(s,x,side): s.x=x; s.side=side
     def __call__(s,p): return p[0]<=s.x if s.side<0 else p[0]>=s.x
-for c in ('fox','camss','supra'):
+for c in ('fox','camss','supra','hachi'):
     A=res[c]; kit=A['kit']
     rb=max(p[0] for p in kit['rbumper']['stock']['pts']); fb=min(p[0] for p in kit['fbumper']['stock']['pts'])
     kit['rbumper']['stock']['pts']=clip(A['shell'],K(rb,-1))
@@ -166,17 +166,24 @@ for c in ('fox','camss','hachi'):
     res[c]['kit'].pop('spoiler',None)
 for c in res: res[c]['lines']=[]
 # stock bumpers are slices of the body: no panel gap where they meet, no seam lines
-for c in ('fox','camss','supra'):
+for c in ('fox','camss','supra','hachi'):
     o=res[c]; k=o['kit']
     for sl in ('rbumper','fbumper'): k[sl]['stock']['flush']=True
     rb=max(p[0] for p in k['rbumper']['stock']['pts']); fb=min(p[0] for p in k['fbumper']['stock']['pts'])
     o['seams']=[pl for pl in o['seams'] if not all(abs(p[0]-rb)<0.4 or abs(p[0]-fb)<0.4 for p in pl)]
-bands={'supra':[[50,63.3,2.1]],'fox':[[52,64,2.1],[13,28.5,1.6]],'camss':[[53,63.5,2.1],[20,29,1.4]],'hachi':[[55,69.5,2.1]]}
+bands={'supra':[[50,63.6,2.7,1.1]],'fox':[[52,64,2.4,1.1],[13,28.5,1.5,1.0]],'camss':[[53,63.8,2.7,1.1],[20,29,1.4,1.0]],'hachi':[[55,69.5,2.4,1.1]]}
 for c in bands: res[c]['wsGlass']=bands[c]
 # mirrors: small body-colour pods tucked into the glass's front-bottom corner
-mir={'supra':(55.4,58.6,17.0),'camss':(58.0,61.6,17.9),'fox':(59.6,62.6,18.3),'hachi':(62.2,65.2,20.4)}
+mir={'supra':(55.4,58.6,17.0),'camss':(58.0,61.6,17.9),'fox':(59.6,62.6,18.3),'hachi':(63.0,65.6,19.7)}
 for c,(a,b,y) in mir.items():
     res[c]['kit']['mirror']={'stock':{'pts':[[a,y],[b-0.6,y],[b,y+0.8],[b-0.3,y+1.9],[a+0.6,y+2.1],[a,y+1.4]]}}
+# the AE86 reference is one colour all over; the supra's rear duct is a soft recess, not a grille
+res['hachi'].pop('lower',None)
+for sl in ('rbumper','fbumper'): res['hachi']['kit'][sl]['stock'].pop('mat',None)
+res['supra']['details']=[['shade',f[1]] if f[0]=='grille' else f for f in res['supra']['details']]
+# camaro: solid intake slots (not checker), no fender crease or badge the reference doesn't have
+cm=res['camss']; cm['creases']=cm['creases'][:1]; cm['details']=[f for f in cm['details'] if f[0]!='badge']
+fbk=cm['kit']['fbumper']['stock']; fbk['details']=[['trim',f[1]] if f[0]=='grille' else f for f in fbk.get('details',[])]
 # supra: silver oval headlamp like the reference
 res['supra']['lamps'][0]=['headsilver',[[91.2,12.2],[93.0,10.6],[96.2,9.9],[98.4,10.4],[97.8,11.4],[95.4,12.2],[92.4,12.8]]]
 json.dump(res,open('newart.json','w'))
