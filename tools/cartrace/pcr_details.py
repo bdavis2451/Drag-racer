@@ -24,15 +24,15 @@ def apply(res):
     f = res['fox']; k = f['kit']
     f['lamps'] = [['amber', [[92.9, 11.0], [95.0, 11.0], [95.0, 13.3], [94.0, 12.6]]],
                   ['head', [[95.0, 11.0], [97.7, 11.0], [97.5, 13.5], [95.0, 13.3]]],
-                  ['taildark', R(2.0, 10.9, 5.6, 15.0)]]
+                  ['tailbox', R(1.8, 10.8, 5.6, 15.2)]]
     f['details'] = [d for d in f['details'] if d[0] != 'badge']
     k['rbumper']['stock']['details'] = [d for d in k['rbumper']['stock'].get('details', []) if d[0] == 'shade']
     k['fbumper']['stock']['details'] = [d for d in k['fbumper']['stock'].get('details', []) if d[0] != 'grille']
 
     h = res['hachi']; k = h['kit']
-    h['lamps'] = [['tail', R(2.0, 18.4, 4.6, 20.3)], ['taildark', R(1.8, 15.8, 4.6, 18.4)]]
+    h['lamps'] = [['tailbox', R(1.7, 18.4, 4.6, 20.3)], ['ambersmoke', R(1.7, 15.8, 4.6, 18.4)]]
     h['details'] = [d for d in h['details'] if d[0] not in ('badge', 'door')] + \
         [['trim', [[95.0, 18.4], [97.4, 20.4], [98.6, 20.5], [98.4, 19.0], [96.5, 18.4]]]]
-    k['rbumper']['stock']['details'] = [['chrome', R(2.0, 5.7, 11.8, 6.5)]]
+    k['rbumper']['stock']['details'] = [['chrome', R(1.4, 5.5, 11.8, 6.7)]]
     k['fbumper']['stock']['lamps'] = [['amber', R(93.7, 14.4, 98.2, 15.1)], ['head', R(97.0, 11.3, 99.0, 12.0)]]
     k['fbumper']['stock']['details'] = [['intake', [[96.4, 6.3], [99.6, 6.9], [99.6, 8.5], [96.4, 8.3]]]]

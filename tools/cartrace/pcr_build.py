@@ -156,6 +156,12 @@ def clip(poly, keep):
 class K:
     def __init__(s,x,side): s.x=x; s.side=side
     def __call__(s,p): return p[0]<=s.x if s.side<0 else p[0]>=s.x
+# fox / ae86 tails: the trace notched out the dark tail lamps; restore the
+# flat rear face they sit in (read off the reference rear grids)
+fs=res['fox']['shell']; i=[j for j,p in enumerate(fs) if p[0]<6 and 10.2<p[1]<20]
+res['fox']['shell']=fs[:min(i)]+[[2.6,19.8,1],[2.0,19.2],[1.8,15.0],[1.8,10.7],[0.6,10.1]]+fs[max(i)+1:]
+hs=res['hachi']['shell']; i=[j for j,p in enumerate(hs) if p[0]<4.5 and 15<p[1]<21]
+res['hachi']['shell']=hs[:min(i)]+[[2.3,20.9],[1.8,20.0],[1.7,15.9],[1.0,15.3]]+hs[max(i)+1:]
 # supra nose: the trace lost the top of the oval headlamp; round the nose over it
 sp=res['supra']['shell']; i=[j for j,p in enumerate(sp) if p[0]>91 and 9<p[1]<14.5]
 res['supra']['shell']=sp[:min(i)]+[[99.3,10.4],[98.6,11.6],[97.2,12.6],[95.0,13.2],[92.6,13.7],[91.4,14.25]]+sp[max(i)+1:]
