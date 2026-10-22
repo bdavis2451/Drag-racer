@@ -252,17 +252,19 @@
     // ---------------------------------------------------------------- drawing
     function draw(dt) {
       var you0 = you.sim.x + you.off;
-      var camX = you0 - 230 / DR.PPM;
+      var camX = you0 - DR.VIEW_W * 0.575 / DR.PPM;
       if (camX < -30) camX = -30;
       scene.drawBackground(ctx, camX, clock);
       scene.drawTrack(ctx, camX, clock);
       scene.drawTree(ctx, camX, tree);
       // racers: far lane first
       var order = racers.slice().sort(function (a, b) { return b.lane - a.lane; });
-      order.forEach(function (r) { drawRacer(r, camX, dt); });
+      var lamps = [];
+      order.forEach(function (r) { lamps.push(drawRacer(r, camX, dt)); });
       parts.update(dt);
       parts.draw(ctx, camX, DR.LANE_Y);
       scene.drawForeground(ctx, camX);
+      scene.light(ctx, camX, lamps, parts);
       drawHud();
       handleEvents();
       racers.forEach(function (r) {
@@ -309,7 +311,9 @@
       var spin = r.burn && !sim.burnMode ? 60 : sim.ww;
       r.wheelAng += spin * dt;
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
-      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock });
+      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode });
+      var lamp = DR.carLamps(spr, gx, gy, pitch);
+      lamp.brake = sim.brake > 0.05; lamp.ground = gy;
       // smoke from the drive tires
       var rearX = frontX - (spr.padL + spr.lenPx - spr.wheelR.x) / DR.PPM;
       var smoky = r.burn > 0.3 || (sim.launched && !sim.finished && sim.slip > r.S.tslip * 2 && sim.v < 70);
@@ -327,6 +331,7 @@
         parts.smoke(frontX - 1, 0.8, sim.v, 2);
         parts.list.slice(-2).forEach(function (p) { p.lane = r.lane; });
       }
+      return lamp;
     }
 
     function handleEvents() {
@@ -373,7 +378,8 @@
       if (sim.launched && sim.slip > Sx.tslip * 2.2 && !sim.finished && sim.v > 0.5) lines.push('<span class="warn">WHEELSPIN!</span>');
       if (sim.wheelie && sim.th > 0.05) lines.push('<span class="acc">WHEELIE ' + Math.round(sim.th * 57.3) + '°</span>');
       if (sim.nosOn) lines.push('<span style="color:#c89bff">NITROUS!</span>');
-      if (!sim.launched && Sx.trType === 'auto') lines.push(Sx.tbrake ? '<span class="acc">TRANSBRAKE ON</span>' : sim.brakeLimited ? '<span class="warn">BRAKES AT LIMIT</span>' : '<span class="dim">FOOT BRAKE</span>');
+      if (sim.burnMode) lines.push('<span class="acc">LINE LOCK</span>');
+      else if (!sim.launched && Sx.trType === 'auto') lines.push(Sx.tbrake ? '<span class="acc">TRANSBRAKE ON</span>' : sim.brakeLimited ? '<span class="warn">BRAKES AT LIMIT</span>' : '<span class="dim">FOOT BRAKE</span>');
       if (sim.tcCut > 0.2) lines.push('<span class="dim">TRACTION CTRL</span>');
       infoEl.innerHTML = lines.join('<br>');
       // tire temperature meter until the launch

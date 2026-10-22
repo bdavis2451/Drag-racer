@@ -492,7 +492,7 @@
   };
 
   // ------------------------------------------------------------ DEALER
-  var dealerCat = 'Compact', dealerSel = null;
+  var dealerCat = DR.CAR_CATS[0], dealerSel = null;
   UI.Dealer = function () {
     var tabs = h('div', { class: 'tabs' }, DR.CAR_CATS.map(function (c) { return btn(c, function () { dealerCat = c; dealerSel = null; UI.refresh(); }, c === dealerCat ? 'on' : ''); }));
     var grid = h('div', { class: 'cards' });
