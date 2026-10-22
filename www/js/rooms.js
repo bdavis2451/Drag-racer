@@ -32,110 +32,176 @@
   }
 
   // ---------------------------------------------------------------- garage
-  function garageBg(x, W, H, fl) {
-    var r = rects(x), i, k;
-    var g = x.createLinearGradient(0, 0, 0, fl);
-    g.addColorStop(0, '#14161c'); g.addColorStop(1, '#2a2e38');
-    x.fillStyle = g; x.fillRect(0, 0, W, fl);
-    x.fillStyle = 'rgba(0,0,0,0.22)';
-    for (i = 0; i < fl; i += 12) { x.fillRect(0, i, W, 1); for (k = ((i / 12) % 2) * 12; k < W; k += 24) x.fillRect(k, i, 1, 12); }
-    // ceiling: rafters, a duct and a hanging cord
-    r(0, 0, W, 10, '#0d0e12'); for (k = 8; k < W; k += 46) r(k, 0, 6, 10, '#1d2027');
-    r(0, 12, W, 6, '#3a3f4a'); r(0, 12, W, 1, '#565c69'); for (k = 30; k < W; k += 90) r(k, 11, 3, 8, '#2a2e36');
-    x.strokeStyle = '#111'; x.lineWidth = 1; x.beginPath(); x.moveTo(W * 0.62, 18); x.quadraticCurveTo(W * 0.64, fl * 0.42, W * 0.66, fl * 0.2); x.stroke();
-    r(W * 0.66 - 2, fl * 0.2, 5, 7, '#d0a020');
-    // wainscot
-    r(0, fl - 26, W, 18, '#3a2f22'); r(0, fl - 26, W, 2, '#4a3c2b');
-    // roll-up door with windows
-    var dx = Math.round(W * 0.3), dw = Math.round(W * 0.4), dy = Math.round(fl * 0.24);
-    r(dx - 5, dy - 5, dw + 10, fl - dy - 21, '#0e0f13'); r(dx - 5, dy - 5, dw + 10, 2, '#2c2f37');
-    for (i = dy; i < fl - 26; i += 6) { r(dx, i, dw, 5, '#5b606b'); r(dx, i, dw, 1, '#6c717d'); r(dx, i + 4, dw, 1, '#4b505a'); }
-    var wy = dy + 18;
-    for (k = 0; k < 4; k++) {
-      var wx = dx + 8 + k * (dw - 16) / 4;
-      r(wx, wy, (dw - 16) / 4 - 6, 9, '#0b1428'); r(wx + 2, wy + 2, 4, 1, '#ffe7a0'); r(wx + 10, wy + 4, 2, 1, '#9ad0ff');
-    }
-    r(dx + dw / 2 - 8, fl - 34, 16, 3, '#2a2c33');
-    for (k = dx; k < dx + dw; k += 16) r(k, fl - 30, 8, 3, '#ffcc00');
-    // left wall: pegboard, tools, red tool chest with a radio on top
-    var px0 = Math.round(W * 0.04), pw = Math.round(W * 0.2), pt = Math.round(fl * 0.2), ph = Math.round(fl * 0.34);
-    r(px0, pt, pw, ph, '#6b5135'); r(px0, pt, pw, 2, '#7e6141');
-    x.fillStyle = '#543f29'; for (i = pt + 4; i < pt + ph; i += 5) for (k = px0 + 3; k < px0 + pw; k += 5) x.fillRect(k, i, 1, 1);
-    var ty = pt + 5;
-    r(px0 + 6, ty, 3, 22, '#c8ccd4'); r(px0 + 4, ty, 7, 4, '#c8ccd4');
-    r(px0 + 16, ty + 2, 2, 20, '#c8ccd4'); r(px0 + 15, ty + 14, 4, 9, '#d23a3a');
-    r(px0 + 26, ty, 3, 18, '#c8ccd4'); r(px0 + 25, ty + 12, 5, 10, '#2a62b5');
-    r(px0 + 36, ty + 4, 14, 4, '#9aa0ab'); r(px0 + 46, ty + 8, 4, 12, '#ffcc00');
-    for (k = 0; k < 5; k++) r(px0 + 56 + k * 5, ty + 2 + k, 3, 16 - k * 2, '#c8ccd4');
-    for (k = 0; k < 3; k++) { disc(x, px0 + 14 + k * 14, ty + 34, 5, '#2a2c33'); disc(x, px0 + 14 + k * 14, ty + 34, 2, '#6b5135'); }   // hose loops / pliers rack
-    var cx0 = px0, cw = pw, cy0 = Math.round(fl * 0.58);
-    r(cx0, cy0, cw, fl - cy0 + 4, '#9e1f1f'); r(cx0, cy0, cw, 3, '#c62f2f');
-    for (i = cy0 + 6; i < fl; i += 8) { r(cx0 + 2, i, cw - 4, 1, '#7d1717'); r(cx0 + cw / 2 - 6, i + 3, 12, 2, '#d0d4dc'); }
-    r(cx0 + 2, fl + 4, 4, 4, '#111'); r(cx0 + cw - 6, fl + 4, 4, 4, '#111');
-    r(cx0 + 6, cy0 - 9, 20, 9, '#23252b'); disc(x, cx0 + 11, cy0 - 5, 3, '#555a64'); r(cx0 + 16, cy0 - 7, 8, 2, '#46e07a'); r(cx0 + 8, cy0 - 12, 1, 3, '#888');
-    r(cx0 + cw - 14, cy0 - 7, 6, 7, '#e8e2d0'); r(cx0 + cw - 8, cy0 - 5, 2, 3, '#e8e2d0');
-    // poster and clock
-    var pX = Math.round(W * 0.245), pY = Math.round(fl * 0.26);
-    r(pX, pY, Math.round(W * 0.045), Math.round(fl * 0.26), '#e8d9b0'); r(pX + 2, pY + 2, Math.round(W * 0.045) - 4, Math.round(fl * 0.12), '#d23a3a');
-    r(pX + 4, pY + Math.round(fl * 0.1), Math.round(W * 0.045) - 8, 3, '#111'); r(pX + 4, pY + Math.round(fl * 0.16), Math.round(W * 0.045) - 8, 2, '#555');
-    r(pX + 4, pY + Math.round(fl * 0.19), Math.round(W * 0.03), 2, '#555');
-    var ckx = Math.round(W * 0.745), cky = Math.round(fl * 0.3);
-    disc(x, ckx, cky, 9, '#111'); disc(x, ckx, cky, 7, '#efe9da'); r(ckx, cky - 5, 1, 5, '#111'); r(ckx, cky, 4, 1, '#d23a3a');
-    // fire extinguisher
-    var fx = Math.round(W * 0.74), fy = Math.round(fl * 0.6);
-    r(fx, fy, 7, 18, '#c42a2a'); r(fx, fy, 2, 18, '#e65050'); r(fx + 1, fy - 3, 5, 3, '#222'); r(fx + 6, fy - 2, 4, 2, '#222'); r(fx - 2, fy - 8, 11, 2, '#888');
-    // right: shelving with tires, boxes and oil cans
-    var sx = Math.round(W * 0.79), sw = Math.round(W * 0.18), st = Math.round(fl * 0.12);
-    r(sx, st, 3, fl - st, '#4b505b'); r(sx + sw - 3, st, 3, fl - st, '#4b505b');
-    [0.3, 0.58, 0.86].forEach(function (f) { r(sx, Math.round(fl * f), sw, 3, '#5c6270'); });
-    var tr = Math.round(fl * 0.1);
-    for (k = 0; k < 3; k++) {
-      var tx = sx + 6 + k * (tr * 2 + 2), tyy = Math.round(fl * 0.58) - tr;
-      if (tx + tr * 2 > sx + sw) break;
-      disc(x, tx + tr, tyy, tr, '#141416'); disc(x, tx + tr, tyy, tr * 0.55, '#5c6270'); disc(x, tx + tr, tyy, tr * 0.25, '#2a2b30');
-    }
-    [['#c99a00', 0.3, 0], ['#2a62b5', 0.3, 1], ['#b52a2a', 0.86, 0], ['#d8d8d8', 0.86, 1], ['#1e9e4a', 0.86, 2]].forEach(function (b) {
-      var bw = Math.round(sw * 0.26), bh = Math.round(fl * 0.1), bx = sx + 6 + b[2] * (bw + 3), by = Math.round(fl * b[1]) - bh;
-      r(bx, by, bw, bh, b[0]); r(bx, by, bw, 2, 'rgba(0,0,0,0.25)'); r(bx + 3, by + bh / 2, bw - 6, 2, 'rgba(255,255,255,0.35)');
-    });
-    for (k = 0; k < 4; k++) { var ox = sx + 6 + k * 9; if (ox + 7 > sx + sw) break; r(ox, Math.round(fl * 0.3) - 26, 7, 10, ['#1c3f9a', '#ffcc00', '#1c3f9a', '#d23a3a'][k]); r(ox + 2, Math.round(fl * 0.3) - 28, 3, 2, '#222'); }
-    // neon shop sign
-    if (garageBg.noSign) return floorAndLights();
-    var sign = 'PIXEL DRAG', ss = 2, sgx = Math.round(W / 2 - DR.pixTextW(sign, ss) / 2), sgy = Math.round(fl * 0.1);
-    r(sgx - 6, sgy - 5, DR.pixTextW(sign, ss) + 12, 20, 'rgba(0,0,0,0.35)');
-    x.save(); x.shadowColor = '#ff2bd6'; x.shadowBlur = 10; DR.pixText(x, sign, sgx, sgy, '#ff7be8', ss); x.restore();
-    DR.pixText(x, sign, sgx, sgy, '#ffd6f7', ss);
-    floorAndLights();
-    function floorAndLights() {
-    var fg = x.createLinearGradient(0, fl, 0, H);
-    fg.addColorStop(0, '#3f434c'); fg.addColorStop(1, '#202227');
-    x.fillStyle = fg; x.fillRect(0, fl, W, H - fl);
-    floorLines(x, W, H, fl, 'rgba(0,0,0,0.18)', 6, 30);
-    r(0, fl, W, 1, '#62666f');
-    r(0, fl + Math.round((H - fl) * 0.8), W, 2, '#ffcc00');
-    // oil stain, drain, jack, cones, air hose
-    x.save(); x.translate(W * 0.58, fl + (H - fl) * 0.62); x.scale(1, 0.25); disc(x, 0, 0, 26, 'rgba(10,8,6,0.35)'); disc(x, 10, 4, 12, 'rgba(10,8,6,0.3)'); x.restore();
-    var dgx = Math.round(W * 0.45), dgy = Math.round(fl + (H - fl) * 0.88);
-    r(dgx, dgy, 26, 5, '#191a1e'); for (k = 2; k < 26; k += 3) r(dgx + k, dgy + 1, 1, 3, '#4a4e57');
-    var jx = Math.round(W * 0.18), jy = Math.round(fl + (H - fl) * 0.7);
-    r(jx, jy, 30, 6, '#c42a2a'); r(jx, jy, 30, 2, '#e65050'); r(jx + 22, jy - 5, 8, 5, '#c42a2a'); r(jx + 24, jy - 7, 6, 2, '#888');
-    disc(x, jx + 3, jy + 7, 2, '#111'); disc(x, jx + 26, jy + 7, 2, '#111');
-    x.strokeStyle = '#999'; x.lineWidth = 2; x.beginPath(); x.moveTo(jx, jy + 2); x.lineTo(jx - 22, jy - 14); x.stroke(); r(jx - 26, jy - 17, 8, 3, '#222');
-    [0.77, 0.81].forEach(function (f, n) {
-      var cx = Math.round(W * f), cy = Math.round(fl + (H - fl) * (0.62 + n * 0.12));
-      r(cx - 6, cy, 13, 2, '#222');
-      for (k = 0; k < 12; k++) { var w = Math.max(1, Math.round((12 - k) * 0.45)); r(cx - w, cy - k, w * 2 + 1, 1, k === 5 || k === 6 ? '#f0f0f0' : '#ff6a00'); }
-    });
-    x.strokeStyle = '#d6b020'; x.lineWidth = 1.5;
-    for (k = 0; k < 3; k++) { x.beginPath(); x.ellipse(W * 0.885, fl + (H - fl) * 0.45, 14 - k * 3, 5 - k, 0, 0, Math.PI * 2); x.stroke(); }
-    // strip lights and their pools
-    x.save(); x.globalCompositeOperation = 'lighter';
-    [0.3, 0.7].forEach(function (f) { cone(x, Math.round(W * f), 22, 120, H, 0.13); });
-    pool(x, W / 2, fl + (H - fl) * 0.45, W * 0.38, 'rgba(255,236,200,0.26)');
-    x.restore();
-    [0.3, 0.7].forEach(function (f) { var lx = Math.round(W * f); r(lx - 34, 18, 68, 5, '#2a2c33'); r(lx - 31, 21, 62, 2, '#fff6dc'); r(lx - 30, 12, 1, 6, '#222'); r(lx + 29, 12, 1, 6, '#222'); });
-    }
+  // A clean modern home garage: grey slatwall, a storage rack, a side door,
+  // bikes on the wall, a TV, a neon sign, white cabinets with a tool rail,
+  // a rolling tool chest and a polished epoxy floor that mirrors the car.
+  function bike(x, cx, cy, col) {
+    x.strokeStyle = '#1a1b1f'; x.lineWidth = 2;
+    [[cx - 13, cy], [cx + 13, cy]].forEach(function (w) { x.beginPath(); x.arc(w[0], w[1], 9, 0, Math.PI * 2); x.stroke(); });
+    x.strokeStyle = '#6a6e78'; x.lineWidth = 1;
+    [[cx - 13, cy], [cx + 13, cy]].forEach(function (w) { for (var k = 0; k < 6; k++) { var a = k * Math.PI / 3; x.beginPath(); x.moveTo(w[0], w[1]); x.lineTo(w[0] + Math.cos(a) * 8, w[1] + Math.sin(a) * 8); x.stroke(); } });
+    x.strokeStyle = col; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(cx - 13, cy); x.lineTo(cx - 2, cy - 1); x.lineTo(cx + 6, cy - 11); x.lineTo(cx - 6, cy - 11); x.lineTo(cx - 2, cy - 1); x.moveTo(cx - 6, cy - 11); x.lineTo(cx - 13, cy); x.moveTo(cx + 6, cy - 11); x.lineTo(cx + 13, cy); x.stroke();
+    x.fillStyle = '#1a1b1f'; x.fillRect(cx - 9, cy - 14, 6, 2); x.fillRect(cx + 4, cy - 15, 5, 2);
   }
+  function garageBg(x, W, H, fl) {
+    var r = rects(x), i, k, rnd = DR.rng(5);
+    // ceiling
+    var cg = x.createLinearGradient(0, 0, 0, fl * 0.18);
+    cg.addColorStop(0, '#9fa2a8'); cg.addColorStop(1, '#c4c6cb');
+    x.fillStyle = cg; x.fillRect(0, 0, W, fl * 0.18);
+    // slatwall
+    var wt = Math.round(fl * 0.18);
+    r(0, wt, W, fl - wt, '#c9cacd');
+    for (i = wt; i < fl; i += 6) { r(0, i, W, 1, '#aeb0b4'); r(0, i + 1, W, 1, '#d6d7da'); }
+    r(0, wt, W, 3, '#8e9096');
+    // right side wall in perspective
+    var sw0 = Math.round(W * 0.86);
+    x.fillStyle = '#b4b6ba'; x.beginPath(); x.moveTo(sw0, wt); x.lineTo(W, wt - fl * 0.12); x.lineTo(W, fl + (H - fl) * 0.3); x.lineTo(sw0, fl); x.fill();
+    // storage rack on the left (perspective uprights)
+    var rx = Math.round(W * 0.02), rw = Math.round(W * 0.15);
+    r(rx, wt - 6, 3, fl - wt + 10, '#5e5a70'); r(rx + rw, wt + 6, 3, fl - wt - 2, '#5e5a70');
+    [0.12, 0.34, 0.56, 0.78].forEach(function (f, n) {
+      var sy = Math.round(wt + (fl - wt) * f);
+      r(rx, sy, rw + 3, 3, '#3a3747');
+      for (k = 0; k < 9; k++) {
+        if (n === 3 && k > 4) break;
+        var bh = 6 + Math.floor(rnd() * 8), bx = rx + 4 + k * Math.floor(rw / 9);
+        r(bx, sy - bh, Math.floor(rw / 9) - 2, bh, ['#d23a3a', '#2a62b5', '#e8e8e8', '#ffcc00', '#2e7d4f', '#b06bff', '#8a5a2b'][Math.floor(rnd() * 7)]);
+        r(bx + 1, sy - bh, 1, bh, 'rgba(255,255,255,0.35)');
+      }
+    });
+    // fire extinguisher and jack stands
+    r(rx + rw + 6, fl - 26, 7, 20, '#c42a2a'); r(rx + rw + 6, fl - 26, 2, 20, '#e65050'); r(rx + rw + 7, fl - 29, 5, 3, '#222');
+    [0.22, 0.25].forEach(function (f) { var jx = Math.round(W * f); r(jx, fl - 16, 2, 14, '#2a2c33'); x.fillStyle = '#2a2c33'; x.beginPath(); x.moveTo(jx - 6, fl); x.lineTo(jx + 8, fl); x.lineTo(jx + 1, fl - 8); x.fill(); r(jx - 2, fl - 17, 6, 2, '#e0e0e0'); });
+    // side door with a step
+    var dx = Math.round(W * 0.27), dw = Math.round(W * 0.07), dt = Math.round(wt + (fl - wt) * 0.18);
+    r(dx - 3, dt - 3, dw + 6, fl - dt - 12, '#9a9ca2'); r(dx, dt, dw, fl - dt - 15, '#8a8d93'); r(dx + 2, dt + 2, dw - 4, fl - dt - 19, '#95989e');
+    r(dx + dw - 6, dt + (fl - dt) * 0.45, 2, 6, '#2a2c33');
+    r(dx - 10, fl - 12, dw + 28, 12, '#d8d9dc'); r(dx - 10, fl - 12, dw + 28, 2, '#ebecee');
+    // bikes on wall hooks
+    bike(x, Math.round(W * 0.42), Math.round(wt + (fl - wt) * 0.3), '#6b7d5e');
+    bike(x, Math.round(W * 0.42), Math.round(wt + (fl - wt) * 0.6), '#7a7090');
+    // wall TV
+    var tx = Math.round(W * 0.5), tw = Math.round(W * 0.1), ty = Math.round(wt + (fl - wt) * 0.24);
+    r(tx - 2, ty - 2, tw + 4, Math.round(tw * 0.56) + 4, '#2a2c33'); r(tx, ty, tw, Math.round(tw * 0.56), '#0b0c10');
+    x.fillStyle = 'rgba(255,255,255,0.06)'; x.beginPath(); x.moveTo(tx + tw * 0.5, ty); x.lineTo(tx + tw, ty); x.lineTo(tx + tw, ty + tw * 0.3); x.fill();
+    // neon sign
+    if (!garageBg.noSign) {
+      var sign = 'PIXEL', sgx = Math.round(W * 0.66 - DR.pixTextW(sign, 2) / 2), sgy = Math.round(wt + (fl - wt) * 0.1);
+      x.save(); x.shadowColor = '#3df0c8'; x.shadowBlur = 8; DR.pixText(x, sign, sgx, sgy, '#7ffbe0', 2); x.restore();
+      DR.pixText(x, sign, sgx, sgy, '#d8fff5', 2); r(sgx - 8, sgy + 4, 5, 2, '#2a2c33');
+    }
+    // cabinets: uppers, tool rail, lowers with a counter
+    var cx0 = Math.round(W * 0.58), cw = Math.round(W * 0.27), ut = Math.round(wt + (fl - wt) * 0.04), ub = Math.round(wt + (fl - wt) * 0.36);
+    r(cx0, ut, cw, ub - ut, '#e6e7ea'); for (k = 0; k <= 4; k++) r(cx0 + k * cw / 4, ut, 1, ub - ut, '#b9bbc0');
+    for (k = 0; k < 4; k++) r(cx0 + k * cw / 4 + cw / 8 - 1, ub - 8, 2, 4, '#9a9ca2');
+    r(cx0, ub, cw, 2, '#9a9ca2'); r(cx0 + 2, ub + 2, cw - 4, 1, '#ffffff');
+    var tr = ub + 6;
+    r(cx0 + 4, tr, cw - 8, 2, '#8a8d93');
+    for (k = 0; k < cw - 14; k += 4) { var tlen = 6 + (k * 7 % 9); r(cx0 + 8 + k, tr + 2, 2, tlen, k % 12 === 0 ? '#8a8d93' : '#c8ccd4'); }
+    r(cx0 + cw * 0.18, tr + 18, 14, 6, '#c42a2a'); r(cx0 + cw * 0.62, tr + 16, 12, 8, '#f0f0f0'); r(cx0 + cw * 0.62 + 2, tr + 18, 8, 4, '#d23a3a');
+    var lt = Math.round(wt + (fl - wt) * 0.62);
+    r(cx0 - 2, lt, cw + 4, 3, '#f4f4f6'); r(cx0, lt + 3, cw, fl - lt - 3, '#e2e3e6');
+    for (k = 0; k <= 5; k++) r(cx0 + k * cw / 5, lt + 3, 1, fl - lt - 3, '#b9bbc0');
+    for (k = 0; k < 5; k++) r(cx0 + k * cw / 5 + cw / 10 - 3, lt + 8, 6, 1, '#9a9ca2');
+    // rolling tool chest
+    var tcx = Math.round(W * 0.76), tcw = Math.round(W * 0.06), tct = Math.round(wt + (fl - wt) * 0.58);
+    r(tcx, tct, tcw, fl - tct - 4, '#d8d9dc'); r(tcx + 2, tct + 3, tcw - 8, fl - tct - 10, '#141519');
+    for (i = tct + 6; i < fl - 8; i += 5) r(tcx + 3, i, tcw - 10, 1, '#55585f');
+    r(tcx + tcw - 5, tct + 3, 3, fl - tct - 10, '#b0b2b6');
+    r(tcx + 1, fl - 4, 3, 3, '#222'); r(tcx + tcw - 4, fl - 4, 3, 3, '#222');
+    // epoxy floor
+    var fg = x.createLinearGradient(0, fl, 0, H);
+    fg.addColorStop(0, '#77797e'); fg.addColorStop(1, '#4a4c51');
+    x.fillStyle = fg; x.fillRect(0, fl, W, H - fl);
+    r(0, fl, W, 2, '#5c5e63');
+    // the wall reflected in the floor
+    x.save(); x.globalAlpha = 0.16; x.translate(0, fl * 2 + 2); x.scale(1, -1);
+    x.drawImage(x.canvas, 0, wt, W, fl - wt, 0, wt, W, fl - wt);
+    x.restore();
+    x.fillStyle = 'rgba(255,255,255,0.05)';
+    for (k = 0; k < 4; k++) { x.beginPath(); x.moveTo(W * (0.1 + k * 0.25), fl); x.lineTo(W * (0.16 + k * 0.25), fl); x.lineTo(W * (0.1 + k * 0.25), H); x.lineTo(W * (0.02 + k * 0.25), H); x.fill(); }
+    // soft overhead light
+    x.save(); x.globalCompositeOperation = 'lighter';
+    pool(x, W / 2, fl + (H - fl) * 0.45, W * 0.38, 'rgba(255,255,255,0.12)');
+    x.restore();
+    r(Math.round(W * 0.3), 4, Math.round(W * 0.4), 3, '#f4f6fa');
+  }
+
+  // ---------------------------------------------------------------- parts store
+  // The parts shop interior: pegboard and counter with a clerk, a glass door,
+  // slatwall shelving full of parts, wheels and tires, and a checker floor.
+  DR.drawStore = function (canvas) {
+    var W = canvas.width, H = canvas.height, x = canvas.getContext('2d'), r = rects(x), i, k;
+    x.imageSmoothingEnabled = false;
+    var fl = Math.round(H * 0.78), wt = Math.round(H * 0.24);
+    // ceiling with strip lights in perspective
+    r(0, 0, W, wt, '#b9bbbf');
+    x.strokeStyle = '#ffffff'; x.lineWidth = 2;
+    for (k = -4; k <= 4; k++) { x.beginPath(); x.moveTo(W / 2 + k * W * 0.08, wt - 4); x.lineTo(W / 2 + k * W * 0.2, 0); x.stroke(); }
+    // slatwall
+    r(0, wt, W, fl - wt, '#c4c5c8');
+    for (i = wt; i < fl; i += 5) r(0, i, W, 1, '#a9abaf');
+    // pegboard + counter + clerk
+    var px = Math.round(W * 0.05), pw = Math.round(W * 0.24);
+    r(px, wt + 4, pw, fl - wt - 30, '#e8e8e6'); x.fillStyle = '#9a9a98'; for (i = wt + 8; i < fl - 28; i += 4) for (k = px + 3; k < px + pw; k += 4) x.fillRect(k, i, 1, 1);
+    r(px + 12, wt + 10, 14, 10, '#2a3a8a'); r(px + 14, wt + 12, 10, 6, '#4d6ad6');
+    r(px + 40, wt + 10, 10, 12, '#c8ccd4'); r(px + 42, wt + 14, 6, 6, '#4da3ff');
+    r(px + 58, wt + 14, 14, 3, '#8a5cff'); disc(x, px + 74, wt + 15, 3, '#8a5cff');
+    r(px + 4, wt + 30, 26, 18, '#5a3a9a'); r(px + 4, wt + 38, 26, 10, '#ffcc00');
+    // clerk
+    var kx = Math.round(px + pw * 0.62), ky = fl - 46;
+    r(kx, ky, 8, 8, '#e0b090'); r(kx, ky - 2, 8, 3, '#3a2a1a'); r(kx + 6, ky + 3, 1, 1, '#222');
+    r(kx - 2, ky + 8, 12, 14, '#1a1b1f'); r(kx + 2, ky + 10, 4, 2, '#e8e8e8');
+    // counter
+    r(px - 6, fl - 26, pw + 12, 26, '#1d1e22'); r(px - 6, fl - 26, pw + 12, 3, '#3a3c42');
+    r(px + 30, fl - 40, 22, 14, '#111'); r(px + 32, fl - 38, 18, 10, '#2a3546'); r(px + 39, fl - 26, 4, 0, '#111');
+    // glass door with a green view
+    var gx = Math.round(W * 0.34), gw = Math.round(W * 0.16);
+    r(gx - 3, wt + 14, gw + 6, fl - wt - 14, '#1a1b1f');
+    var gg = x.createLinearGradient(0, wt + 16, 0, fl); gg.addColorStop(0, '#5ab0ff'); gg.addColorStop(0.45, '#9ad0ff'); gg.addColorStop(0.46, '#3f8a38'); gg.addColorStop(0.55, '#2f6b2a'); gg.addColorStop(0.56, '#3a4a50'); gg.addColorStop(1, '#2a3238');
+    x.fillStyle = gg; x.fillRect(gx, wt + 16, gw, fl - wt - 16);
+    r(gx + gw / 2 - 1, wt + 16, 2, fl - wt - 16, '#1a1b1f');
+    r(gx - 8, fl, gw + 16, 4, '#1a1b1f');
+    // shelving with parts
+    var sx = Math.round(W * 0.54), sw = W - sx - 4;
+    r(sx, wt + 8, sw, fl - wt - 8, '#d0d1d4'); for (i = wt + 8; i < fl; i += 4) r(sx, i, sw, 1, '#b4b6ba');
+    r(sx, wt + 8, 3, fl - wt - 8, '#1a1b1f'); r(sx + sw * 0.45, wt + 8, 3, fl - wt - 8, '#1a1b1f');
+    [0.36, 0.62, 0.9].forEach(function (f) { r(sx + sw * 0.45, wt + (fl - wt) * f, sw * 0.55, 3, '#7ad13a'); });
+    r(sx, fl - 3, sw, 3, '#7ad13a');
+    // coilovers
+    ['#d23a3a', '#3a7bd2', '#8a5cff'].forEach(function (c, n) {
+      var cx = sx + 8 + n * 8, cy = wt + 14;
+      r(cx, cy, 4, 26, '#c8ccd4'); for (i = 0; i < 8; i++) r(cx - 1, cy + 6 + i * 2, 6, 1, c);
+      disc(x, cx + 2, cy, 2, '#555'); disc(x, cx + 2, cy + 26, 2, '#555');
+    });
+    // nitrous bottles
+    for (k = 0; k < 2; k++) { var nx = sx + 10 + k * 10, ny = fl - 28; r(nx, ny, 8, 26, '#b03ad6'); r(nx, ny, 2, 26, '#d48aff'); r(nx + 2, ny - 3, 4, 3, '#555'); }
+    // shelf items
+    var c2 = sx + sw * 0.45 + 6;
+    disc(x, c2 + 14, wt + (fl - wt) * 0.36 - 9, 8, '#d0d0d0'); disc(x, c2 + 14, wt + (fl - wt) * 0.36 - 9, 3, '#888'); r(c2 + 4, wt + (fl - wt) * 0.36 - 14, 4, 9, '#d23a3a');
+    r(c2 + 6, wt + (fl - wt) * 0.62 - 12, 16, 12, '#1d3f9a'); for (i = 0; i < 4; i++) r(c2 + 8 + i * 4, wt + (fl - wt) * 0.62 - 11, 1, 10, '#0e1f50');
+    r(c2 + 4, wt + (fl - wt) * 0.9 - 9, 24, 8, '#c8ccd4'); r(c2 + 26, wt + (fl - wt) * 0.9 - 7, 6, 4, '#555'); r(c2, wt + (fl - wt) * 0.9 - 6, 4, 3, '#6a5aa0');
+    var c3 = c2 + 40;
+    disc(x, c3 + 10, wt + (fl - wt) * 0.62 - 10, 8, '#c8ccd4'); disc(x, c3 + 10, wt + (fl - wt) * 0.62 - 10, 4, '#888'); r(c3 + 14, wt + (fl - wt) * 0.62 - 20, 8, 6, '#c8ccd4');
+    r(c3 - 4, wt + (fl - wt) * 0.36 - 6, 40, 4, '#1a1b1f'); r(c3 - 6, wt + (fl - wt) * 0.36 - 10, 3, 8, '#1a1b1f'); r(c3 + 34, wt + (fl - wt) * 0.36 - 10, 3, 8, '#1a1b1f');
+    ['#e8e8e8', '#3df0c8', '#3a7bd2'].forEach(function (c, n) { r(c3 + 6 + n * 7, wt + (fl - wt) * 0.36 - 26, 6, 14, '#e8e8e8'); r(c3 + 6 + n * 7, wt + (fl - wt) * 0.36 - 22, 6, 5, c); r(c3 + 7 + n * 7, wt + (fl - wt) * 0.36 - 28, 4, 2, '#999'); });
+    // race seats
+    for (k = 0; k < 2; k++) { var bx = c3 + 2 + k * 18, by = fl - 34; r(bx, by, 14, 30, '#18191d'); r(bx + 3, by + 3, 8, 3, '#2a2c33'); r(bx - 1, by + 22, 16, 10, '#111214'); }
+    // wheels and tire stacks by the counter
+    for (k = 0; k < 2; k++) { var wx = px + 4 + k * 22, wy = fl - 6; for (i = 0; i < 3; i++) r(wx, wy - i * 6 - 6, 20, 5, '#1a1b1f'); disc(x, wx + 10, wy - 26, 9, '#e8e8e8'); disc(x, wx + 10, wy - 26, 6, '#b0b4bc'); disc(x, wx + 10, wy - 26, 2, '#555'); }
+    // checker floor
+    r(0, fl, W, H - fl, '#9c968a');
+    for (i = 0; i < 6; i++) for (k = -6; k < 30; k++) {
+      if ((i + k) % 2) continue;
+      var y0 = fl + Math.pow(i / 6, 1.3) * (H - fl), y1 = fl + Math.pow((i + 1) / 6, 1.3) * (H - fl);
+      x.fillStyle = '#c9c3b6'; x.beginPath();
+      x.moveTo(W / 2 + (k - 12) * 24 * (1 + i * 0.25), y0); x.lineTo(W / 2 + (k - 11) * 24 * (1 + i * 0.25), y0);
+      x.lineTo(W / 2 + (k - 11) * 24 * (1 + (i + 1) * 0.25), y1); x.lineTo(W / 2 + (k - 12) * 24 * (1 + (i + 1) * 0.25), y1); x.fill();
+    }
+    vignette(x, W, H, 0.25);
+  };
 
   // ---------------------------------------------------------------- showroom
   function showroomBg(x, W, H, fl) {
@@ -313,7 +379,7 @@
     x.save(); x.globalCompositeOperation = 'lighter'; pool(x, W / 2, fl + (H - fl) * 0.42, W * 0.3, 'rgba(255,255,255,0.06)'); x.restore();
   }
 
-  var THEMES = { garage: { bg: garageBg, fl: 0.64, car: 0.36, refl: 0.18 }, showroom: { bg: showroomBg, fl: 0.62, car: 0.38, refl: 0.3 }, dyno: { bg: dynoBg, fl: 0.66, car: 0.3, refl: 0 }, lot: { bg: lotBg, fl: 0.6, car: 0.42, refl: 0, vig: 0.15 } };
+  var THEMES = { garage: { bg: garageBg, fl: 0.66, car: 0.36, refl: 0.3, vig: 0.3 }, showroom: { bg: showroomBg, fl: 0.62, car: 0.38, refl: 0.3 }, dyno: { bg: dynoBg, fl: 0.66, car: 0.3, refl: 0 }, lot: { bg: lotBg, fl: 0.6, car: 0.42, refl: 0, vig: 0.15 } };
 
   DR.drawRoom = function (canvas, inst, opts) {
     opts = opts || {};

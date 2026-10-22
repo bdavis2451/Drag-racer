@@ -290,9 +290,16 @@
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
     var note = !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
     return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts, shopCat); }, 'small blue')),
-      h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, chips, note, grid)));
+      h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, storeHead(), chips, note, grid)));
   };
 
+  var storeImg = null;
+  function storeHead() {
+    var c = h('canvas', { class: 'storehead', width: 560, height: 150 });
+    if (!storeImg) { storeImg = document.createElement('canvas'); storeImg.width = 560; storeImg.height = 150; DR.drawStore(storeImg); }
+    c.getContext('2d').drawImage(storeImg, 0, 0);
+    return c;
+  }
   function partModal(inst, cat, id) {
     var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt.price), locked = !G.partUnlocked(cat, opt.price);
     var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
