@@ -233,7 +233,7 @@
       mbtn('Body Shop', function () { UI.show(UI.Body); }, 'purple'),
       mbtn('Paint', function () { UI.show(UI.Paint); }),
       mbtn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }),
-      mbtn('Dealer', function () { UI.show(UI.Dealer); }));
+      mbtn('Dealer', function () { UI.show(UI.Dealer); }, '', G.newCarCount() ? 'NEW' : 0));
     var est = G.estimate(inst, DR.QUARTER), stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };
     var side = h('div', { class: 'gside' },

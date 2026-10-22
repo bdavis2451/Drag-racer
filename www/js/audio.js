@@ -24,7 +24,7 @@
     var comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 3; comp.attack.value = 0.005; comp.release.value = 0.2;
     comp.connect(ctx.destination);
-    A.master = ctx.createGain(); A.master.gain.value = 0.55; A.master.connect(comp);
+    A.master = ctx.createGain(); A.master.gain.value = 0.55 * A.volume; A.master.connect(comp);
     try {
       var rate = ctx.sampleRate, n = Math.floor(rate * 0.9), ir = ctx.createBuffer(2, n, rate);
       for (var ch = 0; ch < 2; ch++) {
@@ -43,6 +43,8 @@
   };
   A.resume = function () { if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); };
   A.setOn = function (on) { A.on = on; if (!on) A.stopAll(); };
+  A.volume = 1;
+  A.setVolume = function (v) { A.volume = v; if (A.master) A.master.gain.value = 0.55 * v; };
 
   function noiseSrc() { var s = A.ctx.createBufferSource(); s.buffer = A.noise; s.loop = true; return s; }
 

@@ -189,6 +189,15 @@
   G.stageUnlocked = function (si) { return si <= C().stage; };
   G.stageWins = function (si) { var w = 0; DR.STAGES[si].events.forEach(function (ev) { if (C().won[ev.id]) w++; }); return w; };
   G.eventWon = function (ev) { return !!C().won[ev.id]; };
+  // cars unlocked since you last looked at them in the dealer
+  function seenCars() {
+    var c = C();
+    if (!c.seenCars) { c.seenCars = {}; Object.keys(DR.CARS).forEach(function (id) { if (G.carUnlocked(id)) c.seenCars[id] = 1; }); }
+    return c.seenCars;
+  }
+  G.isNewCar = function (id) { return G.carUnlocked(id) && !seenCars()[id]; };
+  G.markCarSeen = function (id) { var s = seenCars(); if (!s[id]) { s[id] = 1; G.save(); } };
+  G.newCarCount = function (cat) { return Object.keys(DR.CARS).filter(function (id) { return (!cat || DR.CARS[id].cat === cat) && G.isNewCar(id); }).length; };
   G.carUnlocked = function (carId) { return !!C().cars[carId] || (DR.CAR_STAGE[carId] != null && DR.CAR_STAGE[carId] <= C().stage); };
   G.partUnlocked = function (cat, price) {
     var lvl = DR.partLevel(price);

@@ -9,8 +9,9 @@
   var BOX_X = -16;           // where cars sit for the burnout (m)
 
   DR.Race = {
+    // cfg.inst: race a car you don't own (dealer test drive)
     start: function (cfg) {
-      var inst = G.car();
+      var inst = cfg.inst || G.car();
       if (inst.damage) { UI.toast('Repair your car first!'); return; }
       UI.show(RaceScreen, cfg);
     },
@@ -31,8 +32,8 @@
   }
 
   function RaceScreen(cfg) {
-    var settings = G.state.settings;
-    var inst = G.car(), S = G.spec(inst);
+    var settings = G.state.settings, testDrive = !!cfg.inst;
+    var inst = cfg.inst || G.car(), S = G.spec(inst);
     var fail = rollFailure(S);
     var you = makeRacer(inst, S, 0, cfg, fail, 'YOU');
     var opp = null, ai = null;
@@ -106,9 +107,16 @@
     var flash = { text: '', t: 0 };
 
     function setMsg(m, sub) { msgEl.textContent = m || ''; subEl.textContent = sub || ''; }
+    // what each car should run here, so you know what you are up against
+    var estLine = '';
+    if (opp) {
+      var eMe = G.estimate(inst, cfg.dist, cfg.grip).et, eOpp = G.estimate(G.oppInst(cfg.opp), cfg.dist, cfg.grip).et;
+      if (eMe < 90 && eOpp < 90) estLine = 'You ~' + eMe.toFixed(2) + 's vs ~' + eOpp.toFixed(2) + 's • ';
+    } else if (testDrive) estLine = 'TEST DRIVE • ';
     var vsLine = opp ? 'VS ' + opp.label : 'TEST & TUNE';
     infoEl.innerHTML = '';
     setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (cfg.ev.type === 'knockout' ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Burnout to heat the tires, or Stage to race.' : 'Burnout to heat the tires, or Stage to race.');
+    if (estLine) subEl.textContent = estLine + subEl.textContent;
 
     function startBurnout() {
       if (phase !== 'pre') return;
@@ -241,10 +249,23 @@
         // player
         if (act && !you.sim.launched) {
           if (greenAt === null) { redLight = true; tree.red[0] = true; A.beep(220, 0.4); }
+          else {
+            // how good was the light?
+            var rt = clock - greenAt, rr = rt < 0.1 ? 'PERFECT LIGHT!' : rt < 0.25 ? 'GREAT LAUNCH' : rt < 0.45 ? 'GOOD LAUNCH' : 'LATE LAUNCH';
+            note('R/T ' + rt.toFixed(3) + ' • ' + rr);
+          }
           you.sim.launch(); act = false;
           actLabel.textContent = 'SHIFT'; actBtn.classList.add('go');
           phase = 'race';
-        } else if (act && you.sim.launched) { if (you.sim.shiftUp()) { act = false; } else act = false; }
+        } else if (act && you.sim.launched) {
+          var shRpm = you.sim.rpm(), onLim = you.limT || 0;
+          if (you.sim.shiftUp()) rateShift(shRpm, onLim);
+          act = false;
+        }
+        // time spent spinning the tires after the launch (for the tips)
+        if (you.sim.launched && !you.sim.finished && you.sim.v > 0.5 && you.sim.slip > you.S.tslip * 2.2) you.spinT = (you.spinT || 0) + sdt;
+        // time spent bouncing off the limiter before a shift
+        if (you.sim.launched && !you.sim.finished) you.limT = you.sim.rpm() >= you.S.limit - 40 ? (you.limT || 0) + sdt : 0;
         if (settings.autoShift && you.sim.launched && !you.sim.shifting && you.sim.sinceShift > 0.25) {
           var Sy = you.S, line = you.sim.ww * Sy.ratios[you.sim.gear] * Sy.fd * 30 / Math.PI;
           var trig = Sy.trType === 'auto' ? Math.max(line / 0.95, you.sim.rpm() >= Sy.limit - 60 ? you.sim.rpm() : 0) : you.sim.locked ? you.sim.rpm() : line;
@@ -272,6 +293,16 @@
         var oppDone = !opp || (opp.doneAt != null && clock - opp.doneAt > 0.4) || !opp.sim.launched && clock - you.doneAt > 3;
         if (oppDone || clock - you.doneAt > 6) { resultShown = true; showResult(); }
       }
+    }
+
+    // shift feedback against the shift RPM from your tune
+    var shiftLog = { perfect: 0, early: 0, late: 0 };
+    function rateShift(rpm, limT) {
+      var d = rpm - you.S.tune.shiftRpm, r;
+      if (limT > 0.2 || d > 250) { r = limT > 0.2 ? 'ON THE LIMITER!' : 'LATE SHIFT'; shiftLog.late++; }
+      else if (d < -350) { r = 'EARLY SHIFT'; shiftLog.early++; }
+      else { r = 'PERFECT SHIFT'; shiftLog.perfect++; }
+      note(r);
     }
 
     function goGreen() {
@@ -459,21 +490,31 @@
       if (cfg.mode === 'career' && win === false && ev.type === 'knockout') lines.push('KNOCKED OUT in round ' + (cfg.round + 1) + '. Start over from round 1.');
       if (cfg.mode === 'street') moneyDelta = win ? cfg.bet : -cfg.bet;
       if (moneyDelta) G.earn(moneyDelta);
-      if (them) { G.state.stats.races++; if (win) G.state.stats.wins++; }
+      if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; }
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
-      if (you.sim.finished && cfg.grip >= 1 && !redLight && (!inst.best[key] || you.sim.et < inst.best[key])) { inst.best[key] = you.sim.et; lines.push('NEW PERSONAL BEST!'); }
+      if (!testDrive && you.sim.finished && cfg.grip >= 1 && !redLight && (!inst.best[key] || you.sim.et < inst.best[key])) { inst.best[key] = you.sim.et; lines.push('NEW PERSONAL BEST!'); }
       else if (you.sim.finished && prevBest) pbLine = 'Your best ' + (key === 'q' ? '1/4' : '1/8') + ': ' + prevBest.toFixed(3) + ' (' + '+' + (you.sim.et - prevBest).toFixed(3) + ')';
       // how close it was
       var margin = null;
       if (them && me.total < Infinity && them.total < Infinity && !me.red && !them.red) margin = (win ? 'Won' : 'Lost') + ' by ' + Math.abs(them.total - me.total).toFixed(3) + 's';
       else if (them && win && them.total === Infinity && !them.red) margin = opp.label + (opp.sim.crashed ? ' crashed' : opp.sim.blown ? ' blew up' : opp.sim.broke ? ' broke' : ' did not finish');
+      if (damaged && testDrive) { lines.push('Good thing it was a test drive.'); damaged = null; }
       if (damaged) {
         inst.damage = damaged;
         lines.push((damaged.engine ? 'Your engine is toast.' : 'Your transmission is broken.') + ' Repair cost: ' + DR.money(G.repairCost(inst)));
       }
       G.save();
 
+      // one tip on what to fix, when the run shows a clear problem
+      var tip = null;
+      if (redLight) tip = 'You left before the green. Wait for it, then tap LAUNCH.';
+      else if (me.rt != null && me.rt > 0.45) tip = 'Slow reaction (' + me.rt.toFixed(3) + '). Tap LAUNCH the moment the light turns green.';
+      else if ((you.spinT || 0) > 0.8) tip = 'Lots of wheelspin. Feather the gas, do a burnout first, or fit stickier tires.';
+      else if (!settings.autoShift && shiftLog.early + shiftLog.late > 1) tip = 'Shift on the blue SHIFT light, or turn on auto-shift in Settings.';
+      else if (them && win === false && them.total < Infinity && me.total < Infinity) tip = 'Their car is just quicker. More power or grip from the Parts Shop will close the gap.';
+      var nShifts = shiftLog.perfect + shiftLog.early + shiftLog.late;
+      if (nShifts && !settings.autoShift) lines.push('Shifts: ' + shiftLog.perfect + ' perfect' + (shiftLog.early ? ' • ' + shiftLog.early + ' early' : '') + (shiftLog.late ? ' • ' + shiftLog.late + ' late' : ''));
       var head = them ? (win ? 'YOU WIN!' : 'YOU LOSE') : (you.sim.finished ? 'RUN COMPLETE' : 'DNF');
       var tbl = h('table');
       tbl.appendChild(h('tr', {}, h('th', {}, ''), h('th', {}, 'YOU'), them ? h('th', {}, opp.label) : null));
@@ -495,7 +536,11 @@
         margin ? h('div', { class: 'margin' }, margin) : null,
         moneyDelta ? h('div', { class: 'pix ' + (moneyDelta > 0 ? 'good' : 'bad'), style: { textAlign: 'center' } }, (moneyDelta > 0 ? '+' : '') + DR.money(moneyDelta)) : null,
         pbLine ? h('div', { class: 'dim', style: { textAlign: 'center' } }, pbLine) : null,
+        tip && win !== true ? h('div', { class: 'tipline' }, 'TIP: ' + tip) : null,
         lines.map(function (l) { return h('div', { class: 'acc', style: { textAlign: 'center' } }, l); }),
+        testDrive ? h('div', { class: 'col' },
+          btn('Back to Dealer', function () { UI.show(UI.Dealer); }, 'primary'),
+          btn('Run Again', function () { DR.Race.start(cfg); })) :
         h('div', { class: 'col' },
           btn('Garage', function () { UI.show(UI.Garage); }),
           btn('Tune', function () { UI.show(UI.Tune); }),
@@ -514,13 +559,14 @@
       root.appendChild(slip);
       controls.style.display = 'none';
       slipEl = slip;
-      root._back = function () { UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : cfg.mode === 'test' ? 'test' : 'career'); };
+      root._back = testDrive ? function () { UI.show(UI.Dealer); } : function () { UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : cfg.mode === 'test' ? 'test' : 'career'); };
     }
 
     function quit() {
       if (you.sim.launched && cfg.mode === 'street' && !resultShown) {
         UI.confirm('Leaving now forfeits your ' + DR.money(cfg.bet) + ' bet. Quit?', function () { G.earn(-cfg.bet); G.state.stats.races++; G.save(); UI.show(UI.RaceMenu, 'street'); });
-      } else UI.show(cfg.mode === 'test' ? UI.RaceMenu : UI.RaceMenu, cfg.mode === 'street' ? 'street' : cfg.mode === 'test' ? 'test' : 'career');
+      } else if (testDrive) UI.show(UI.Dealer);
+      else UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : cfg.mode === 'test' ? 'test' : 'career');
     }
 
     return root;

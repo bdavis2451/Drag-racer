@@ -6,8 +6,19 @@
   function boot() {
     DR.Game.load();
     DR.Audio.on = DR.Game.state.settings.sound;
+    DR.Audio.setVolume(DR.Game.state.settings.volume != null ? DR.Game.state.settings.volume : 1);
     DR.UI.app = document.getElementById('app');
     DR.UI.show(DR.UI.Title);
+    // warm the sprite and ET caches in spare frames: every stock car, then
+    // the career rivals, so the dealer, race menus and shows open instantly
+    Object.keys(DR.CARS).forEach(function (id) {
+      var c = DR.CARS[id], inst = { carId: id, engine: c.engine, parts: {}, tune: {}, vis: {}, color: c.col };
+      DR.UI.warm(function () { DR.carSprite(DR.carLook(inst)); });
+      DR.UI.warm(function () { DR.Game.estimate(inst, DR.QUARTER); });
+    });
+    DR.RIVALS.forEach(function (band) { band.forEach(function (o) {
+      DR.UI.warm(function () { DR.Game.estimate(DR.Game.oppInst(o), DR.EIGHTH, 0.85); });
+    }); });
     // unlock audio on the first touch anywhere
     var unlock = function () { DR.Audio.init(); DR.Audio.resume(); window.removeEventListener('pointerdown', unlock); };
     window.addEventListener('pointerdown', unlock);

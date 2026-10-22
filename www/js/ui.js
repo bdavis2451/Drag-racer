@@ -41,9 +41,32 @@
   UI.et = et;
 
   UI.app = null;
+  // Work spread over frames (~8 ms a frame) so screens appear at once:
+  // UI.later for the current screen (dropped when the screen changes),
+  // UI.warm for background cache warming (runs when nothing else is queued).
+  var jobs = [], warmJobs = [], pumping = false;
+  function pump() {
+    var t0 = performance.now();
+    while ((jobs.length || warmJobs.length) && performance.now() - t0 < 8) {
+      var f = jobs.length ? jobs.shift() : warmJobs.shift();
+      try { f(); } catch (e) { /* a stale job */ }
+    }
+    if (jobs.length || warmJobs.length) requestAnimationFrame(pump); else pumping = false;
+  }
+  function kick() { if (!pumping) { pumping = true; requestAnimationFrame(pump); } }
+  UI.later = function (fn) { jobs.push(fn); kick(); };
+  UI.warm = function (fn) { warmJobs.push(fn); kick(); };
+  // A car preview canvas that draws itself a frame or two later.
+  UI.lazyPreview = function (cls, inst, opts) {
+    var c = h('canvas', { class: cls });
+    UI.later(function () { DR.drawPreview(c, inst, opts); });
+    return c;
+  };
+
   UI.show = function (fn, arg) {
     if (UI.cleanup) { try { UI.cleanup(); } catch (e) { /* ignore */ } }
     UI.cleanup = null;
+    jobs.length = 0;
     UI.app.innerHTML = '';
     UI.app.appendChild(fn(arg));
     UI.cur = { fn: fn, arg: arg };
@@ -150,6 +173,13 @@
     return h('div', { class: 'screen' }, top('SETTINGS', function () { UI.show(back || UI.Garage); }),
       h('div', { class: 'content' }, h('div', { class: 'list' },
         toggle('Sound', 'sound', true, false, 'On', 'Off'),
+        (function () {
+          var val = h('span', { class: 'acc' }, Math.round(s.volume * 100) + '%');
+          var r = h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s.volume, style: { width: '180px' } });
+          r.addEventListener('input', function () { s.volume = parseFloat(r.value); A.setVolume(s.volume); val.textContent = Math.round(s.volume * 100) + '%'; });
+          r.addEventListener('change', function () { G.save(); A.init(); A.resume(); A.beep(660, 0.08); });
+          return h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Volume')), val, r);
+        })(),
         toggle('Shifting', 'autoShift', false, true, 'Manual', 'Auto', 'Auto-shift uses the shift RPM from your tune.'),
         toggle('Christmas tree', 'proTree', false, true, 'Sportsman', 'Pro', 'Pro tree: all ambers flash at once, green 0.4s later.'),
         toggle('Speed units', 'units', 'mph', 'kmh', 'MPH', 'KM/H'),

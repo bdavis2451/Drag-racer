@@ -101,11 +101,7 @@
       h('div', { class: 'gsmall dim' }, '+' + DR.money(sp.perWin) + ' per win • bonus ' + DR.money(sp.bonus) + (sp.paid ? ' (paid)' : '')),
       pr.lines.map(function (l) { return h('div', { class: 'gsmall ' + (l[2] ? 'good' : '') }, (l[2] ? '✔ ' : '• ') + l[0] + ': ' + l[1]); }));
   }
-  function oppCanvas(oi) {
-    var cv = h('canvas', { class: 'ecv' });
-    DR.drawPreview(cv, oi, { aspect: 0.42 });
-    return cv;
-  }
+  function oppCanvas(oi) { return UI.lazyPreview('ecv', oi, { aspect: 0.42 }); }
   // your odds against the toughest car in an event, from both estimates
   function oddsOf(ev) {
     var T = DR.EVENT_TYPES[ev.type], mine = G.estimate(G.car(), T.dist(), T.grip).et, worst = 99;
@@ -211,14 +207,16 @@
   // ---------------------------------------------------------------- TUNE
   var TUNE_ICONS = { Engine: 'engine', Drivetrain: 'trans', Tires: 'rtires', Suspension: 'springs', Nitrous: 'nitrous' };
   var tuneGroup = 'Engine';
-  function slider(label, val, mn, mx, step, unit, onchange, fmt) {
+  function slider(label, val, mn, mx, step, unit, onchange, fmt, onReset) {
     var dec = step < 0.1 ? 2 : step < 1 ? 1 : 0;
     var vEl = h('span', { class: 'val' });
     function show(v) { var f = fmt && fmt(v); vEl.textContent = f || (Number(v).toFixed(dec) + ' ' + unit); }
     var inp = h('input', { type: 'range', min: mn, max: mx, step: step, value: val });
     inp.addEventListener('input', function () { var v = parseFloat(inp.value); show(v); onchange(v); });
     show(val);
-    return h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, label), vEl), inp);
+    // ↺ puts a changed setting back to its default
+    var rs = onReset ? h('button', { class: 'treset', title: 'Back to default', onclick: function (e) { e.stopPropagation(); onReset(); } }, '↺') : null;
+    return h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, label, rs), vEl), inp);
   }
   UI.Tune = function () {
     var inst = G.car(), S = G.spec(inst);
@@ -229,7 +227,9 @@
     var statBox = h('div', { class: 'tstats' }), statInner = h('div');
     var pv = h('canvas', { class: 'preview' }); DR.drawPreview(pv, inst, { aspect: 0.36 });
     statBox.appendChild(pv); statBox.appendChild(statInner);
-    var timer = 0;
+    var timer = 0, base8 = G.estimate(inst, DR.EIGHTH).et, base = G.estimate(inst, DR.QUARTER).et;
+    // "12.83s (-0.12)" against the times when this screen opened
+    function vs(et, b0) { var d = et - b0; return Math.abs(d) < 0.005 || et >= 90 || b0 >= 90 ? '' : ' (' + (d > 0 ? '+' : '') + d.toFixed(2) + ')'; }
     function recalc() {
       clearTimeout(timer);
       timer = setTimeout(function () {
@@ -237,8 +237,8 @@
         statInner.innerHTML = '';
         [gst('POWER', UI.fmtHp(S2.peakHp) + ' @ ' + S2.peakHpRpm, 'acc'), gst('TORQUE', Math.round(S2.peakTq) + ' lb-ft'),
           S2.nosHp ? gst('NITROUS', '+' + S2.nosHp + ' hp') : null, gst('REDLINE', S2.red + ' rpm'),
-          gst('EST 1/8', est8.et >= 90 ? 'crash!' : est8.et.toFixed(2) + 's', 'good'),
-          gst('EST 1/4', est.et >= 90 ? 'crash!' : est.et.toFixed(2) + 's @ ' + Math.round(est.trap), 'good')].concat(UI.riskBox(S2)).forEach(function (el) { if (el) statInner.appendChild(el); });
+          gst('EST 1/8', est8.et >= 90 ? 'crash!' : est8.et.toFixed(2) + 's' + vs(est8.et, base8), est8.et > base8 + 0.005 ? 'bad' : 'good'),
+          gst('EST 1/4', est.et >= 90 ? 'crash!' : est.et.toFixed(2) + 's' + vs(est.et, base) + ' @ ' + Math.round(est.trap), est.et > base + 0.005 ? 'bad' : 'good')].concat(UI.riskBox(S2)).forEach(function (el) { if (el) statInner.appendChild(el); });
       }, 120);
     }
     DR.TUNE_DEFS.forEach(function (def) {
@@ -252,10 +252,12 @@
             var arr = (inst.tune.gears || S.tune.gears).slice(); arr[gi] = v; inst.tune.gears = arr; G.save(); recalc();
           }));
         });
-        list.appendChild(h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, def.label)), gg));
+        list.appendChild(h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, def.label,
+          inst.tune.gears ? h('button', { class: 'treset', title: 'Back to default', onclick: function () { delete inst.tune.gears; G.save(); UI.refresh(); } }, '↺') : null)), gg));
         return;
       }
-      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; G.save(); recalc(); }, def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null);
+      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; G.save(); recalc(); }, def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null,
+        inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; G.save(); UI.refresh(); } : null);
       row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Fuel knock limit: ' + S.knock + ' psi.' : '')));
       list.appendChild(row);
     });
@@ -271,8 +273,13 @@
   };
 
   // ---------------------------------------------------------------- DYNO
+  // the last pull of each car, drawn faded behind a new one after changes
+  var lastPull = {};
   UI.Dyno = function () {
     var inst = G.car(), S = G.spec(inst), dy = DR.dyno(S);
+    var bkey = JSON.stringify([inst.engine, inst.parts, inst.tune]), prev = lastPull[inst.uid];
+    if (prev && prev.key === bkey) prev = null;
+    lastPull[inst.uid] = { key: bkey, pts: dy.pts, peakHp: dy.peakHp, peakTq: dy.peakTq, nosHp: S.nosHp };
     var spr = DR.carSprite(DR.carLook(inst));
     var room = DR.roomCanvas(inst, { theme: 'dyno', spr: spr, S: S, zoom: 2.2 }, 'dynoroom');
     var cv = h('canvas', { class: 'dynograph', width: 480, height: 200 });
@@ -303,6 +310,18 @@
           for (var k = 0; k <= steps; k++) { var t = k / steps; ctx.fillRect(Math.round(X(a.rpm + (b.rpm - a.rpm) * t)), Math.round(Y(va + (vb - va) * t)), 2, 2); }
         }
       }
+      if (prev) {
+        // previous pull: faded, full length
+        ctx.globalAlpha = 0.35;
+        [['tq', '#4da3ff'], ['hp', '#ffcc00']].forEach(function (k) {
+          ctx.fillStyle = k[1];
+          for (var i = 1; i < prev.pts.length; i++) {
+            var a = prev.pts[i - 1], b = prev.pts[i], steps = Math.ceil(X(b.rpm) - X(a.rpm));
+            for (var q = 0; q <= steps; q++) { var tt = q / steps; ctx.fillRect(Math.round(X(a.rpm + (b.rpm - a.rpm) * tt)), Math.round(Y(a[k[0]] + (b[k[0]] - a[k[0]]) * tt)), 1, 1); }
+          }
+        });
+        ctx.globalAlpha = 1;
+      }
       if (S.nosHp) line('hp', '#7a3ad6', function (p) { return p.rpm > 2200 ? S.nosHp : 0; });
       line('tq', '#4da3ff'); line('hp', '#ffcc00');
       if (S.fiType !== 'none') { ctx.fillStyle = '#46e07a'; dy.pts.forEach(function (p) { if (p.rpm <= limit) ctx.fillRect(Math.round(X(p.rpm)), Math.round(B - p.boost / Math.max(S.maxBoost, 1) * (B - T) * 0.5), 1, 1); }); }
@@ -314,13 +333,15 @@
     }
     var info = h('div', { class: 'tstats' },
       h('div', { class: 'row', style: { marginBottom: '6px' } }, btn('▶ Run Dyno', run, 'go'), btn('Tune', function () { UI.show(UI.Tune); })),
-      gst('PEAK HP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm, 'acc'), gst('PEAK TQ', Math.round(dy.peakTq) + ' lb-ft'),
+      gst('PEAK HP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm + delta(dy.peakHp, prev && prev.peakHp), 'acc'), gst('PEAK TQ', Math.round(dy.peakTq) + ' lb-ft' + delta(dy.peakTq, prev && prev.peakTq)),
+      prev ? h('div', { class: 'gsmall dim' }, 'Faded lines: your last pull before the changes.') : null,
       S.nosHp ? gst('W/ NITROUS', Math.round(dy.peakHp + S.nosHp) + ' hp', 'acc') : null,
       S.fiType !== 'none' ? gst('BOOST', S.boostSet.toFixed(1) + ' psi') : null,
       gst('LIMITER', S.red + ' rpm' + (S.ecu === 0 ? ' (stock)' : ''), S.red > S.mech ? 'bad' : ''),
       gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst('BOTTOM END', S.beLimit + ' rpm', S.red > S.beLimit ? 'bad' : ''),
       gst('SAFE POWER', Math.round(S.safeHp) + ' hp', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),
       UI.riskBox(S));
+    function delta(v, p0) { if (p0 == null) return ''; var d = Math.round(v - p0); return d ? ' (' + (d > 0 ? '+' : '') + d + ')' : ''; }
     draw();
     // match the graph's pixels to its on-screen size so the text stays square
     setTimeout(function () { var rc = cv.getBoundingClientRect(); if (rc.width > 50 && rc.height > 50) { cv.width = Math.round(rc.width / 1.5); cv.height = Math.round(rc.height / 1.5); draw(); } }, 0);
@@ -377,9 +398,12 @@
     var ids = Object.keys(DR.CARS).filter(function (id) { return DR.CARS[id].cat === dealerCat; }).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; });
     if (dealerIdx >= ids.length) dealerIdx = 0;
     var rail = h('div', { class: 'srail' }, DR.CAR_CATS.map(function (c, k) {
-      return railItem('u_car', [2, 3, 4, 5, 1][k % 5], c, c === dealerCat, function () { dealerCat = c; dealerIdx = 0; UI.refresh(); });
+      var it = railItem('u_car', [2, 3, 4, 5, 1][k % 5], c, c === dealerCat, function () { dealerCat = c; dealerIdx = 0; UI.refresh(); });
+      if (G.newCarCount(c)) it.appendChild(h('span', { class: 'newdot' }, 'NEW'));
+      return it;
     }));
     var id = ids[dealerIdx], car = DR.CARS[id], inst = { carId: id, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col };
+    var wasNew = G.isNewCar(id); G.markCarSeen(id);
     var S = DR.buildSpec(inst), est = G.estimate(inst, DR.QUARTER), locked = !G.carUnlocked(id), owned = G.state.cars.filter(function (c) { return c.carId === id; }).length;
     var all = Object.keys(DR.CARS).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; }), ai = all.indexOf(id);
     function stockInst(cid) { var c3 = DR.CARS[cid]; return { carId: cid, engine: c3.engine, parts: {}, tune: {}, color: c3.col }; }
@@ -388,8 +412,9 @@
     function cyc(d) { dealerIdx = (dealerIdx + d + ids.length) % ids.length; UI.refresh(); }
     var strip = h('div', { class: 'dstrip' }, ids.map(function (cid, k) {
       var c2 = DR.CARS[cid], i2 = { carId: cid, engine: c2.engine, parts: {}, tune: {}, color: c2.col };
-      var t = h('canvas', { class: 'ecv' }); DR.drawPreview(t, i2, { aspect: 0.42 });
-      return h('div', { class: 'dthumb' + (k === dealerIdx ? ' on' : '') + (G.carUnlocked(cid) ? '' : ' locked'), onclick: function () { dealerIdx = k; UI.refresh(); } }, t, h('span', {}, c2.name));
+      var t = UI.lazyPreview('ecv', i2, { aspect: 0.42 });
+      return h('div', { class: 'dthumb' + (k === dealerIdx ? ' on' : '') + (G.carUnlocked(cid) ? '' : ' locked'), onclick: function () { dealerIdx = k; UI.refresh(); } }, t, h('span', {}, c2.name),
+        G.isNewCar(cid) || (cid === id && wasNew) ? h('b', { class: 'newdot' }, 'NEW') : null);
     }));
     return h('div', { class: 'screen' }, UI.top('DEALERSHIP', function () { UI.show(UI.Garage); }),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'dmain' },
@@ -404,6 +429,10 @@
           h('div', { class: 'gsel' }, ids.length > 1 ? btn('◀', function () { cyc(-1); }, 'arrow') : null,
             h('div', { class: 'gname' }, h('div', { class: 'price big' }, DR.money(car.price)), h('div', { class: 'dim' }, (dealerIdx + 1) + ' / ' + ids.length + ' • ' + dealerCat)),
             ids.length > 1 ? btn('▶', function () { cyc(1); }, 'arrow') : null,
+            btn('Test Drive', function () {
+              var td = { uid: -2, carId: id, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col, best: {}, inv: [] };
+              DR.Race.start({ mode: 'test', inst: td, dist: DR.QUARTER, theme: 'strip', grip: 1 });
+            }, 'small'),
             locked ? h('span', { class: 'tag' }, '🔒 STAGE ' + (DR.CAR_STAGE[id] + 1)) : btn('Buy', function () {
               if (!G.canAfford(car.price)) return UI.toast('Not enough money');
               UI.confirm('Buy the ' + car.name + ' for ' + DR.money(car.price) + '?', function () { G.buyCar(id); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage); }, 'Buy');
@@ -416,7 +445,7 @@
     var grid = h('div', { class: 'egrid' });
     G.state.cars.forEach(function (inst) {
       var S = DR.buildSpec(inst), active = inst.uid === G.state.active, stars = DR.starRating(inst);
-      var cv = h('canvas', { class: 'ecv' }); DR.drawPreview(cv, inst, { aspect: 0.42 });
+      var cv = UI.lazyPreview('ecv', inst, { aspect: 0.42 });
       grid.appendChild(h('div', { class: 'ecard' + (active ? ' won' : '') },
         h('div', { class: 'ecvwrap' }, cv, active ? h('span', { class: 'etype good' }, 'DRIVING') : null, inst.damage ? h('span', { class: 'ewon bad' }, 'BROKEN') : null),
         h('div', { class: 'acc ename' }, DR.CARS[inst.carId].name),
