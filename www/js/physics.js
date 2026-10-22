@@ -22,10 +22,12 @@
   function boostedTorque(S, rpm, boost) {
     var w = Math.max(rpm, 300) * RPM2W;
     var Tna = S.Tpk * shape(S, rpm);
+    // past the mechanical limit the valves float: power falls away fast
+    if (S.mech && rpm > S.mech) Tna *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
     var be = Math.min(boost, S.knock) + Math.max(0, boost - S.knock) * 0.35;
     var T = Tna * (1 + be / 14.7 * S.icEff);
     if (S.fiType === 'roots' || S.fiType === 'screw' || S.fiType === 'cent')
-      T -= S.paras * S.Tpk * (boost / 14.7) * Math.min(1, rpm / S.red) * 1.2;
+      T -= S.paras * S.Tpk * (boost / 14.7) * Math.min(1, rpm / S.ref) * 1.2;
     if (S.flowW) T = Math.min(T, Math.max(Tna, S.flowW / w));
     T = Math.min(T, S.fuelW / w);
     return T;
@@ -35,7 +37,7 @@
   function steadyBoost(S, rpm) {
     if (S.fiType === 'none') return 0;
     if (S.fiType === 'turbo') return S.boostSet * clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1);
-    if (S.fiType === 'cent') return S.boostSet * Math.pow(Math.min(rpm, S.red) / S.red, 2);
+    if (S.fiType === 'cent') return S.boostSet * Math.pow(Math.min(rpm, S.ref) / S.ref, 2);
     return S.boostSet * clamp(rpm / 1800, 0, 1);
   }
   DR.steadyBoost = steadyBoost;
@@ -62,7 +64,8 @@
     var shift = mods.rpm || 0;
     S.tqRpm = e.tq + shift * 0.7;
     S.pkRpm = e.pk + shift;
-    S.red = e.red + (mods.red || 0);
+    S.ref = e.red + shift;                 // where the engine "breathes" to (sets blower curves)
+    S.red = e.red;                         // rev limiter; buildSpec sets the real one
     S.idle = e.diesel ? 700 : 900;
     S.lowK = 0.45 + (mods.low || 0);
     var xp = Math.max(1.05, S.pkRpm / S.tqRpm);
@@ -107,7 +110,6 @@
     var tqMul = intake.tq * exh.tq * hdr.tq * cams.tq * heads.tq * ecu.tq * (e.diesel ? 1 : fuel.fmul);
     var mods = {
       rpm: (intake.rpm || 0) + (exh.rpm || 0) + (hdr.rpm || 0) + (cams.rpm || 0) + (heads.rpm || 0),
-      red: Math.min(1600, (cams.red || 0) + (intl.red || 0) * 0.5),
       low: (intake.low || 0) + (cams.low || 0),
       fi: fiId,
       ic: ic.ic || 0,
@@ -117,6 +119,19 @@
     S.carId = inst.carId; S.car = car; S.engId = engId; S.eng = e;
     S.name = car.name;
     S.diesel = !!e.diesel;
+    // ---- rev limits: the hardware sets how high the engine can safely
+    // spin (valvetrain & bottom end), the ECU sets where the limiter is
+    S.factoryRed = e.red;
+    S.vtLimit = e.red + 400 + (cams.vt || 0);
+    S.beLimit = e.red + 800 + (intl.be || 0);
+    S.mech = Math.min(S.vtLimit, S.beLimit);
+    var safeRed = Math.max(e.red, S.mech - 200);
+    if (ecu.ecu >= 2) {
+      var tsrc = tuneOverride || inst.tune || {};
+      S.red = tsrc.revLimit != null ? clamp(tsrc.revLimit, revMin(S), revMax(S)) : safeRed;
+    } else if (ecu.ecu === 1) S.red = Math.min(safeRed, e.red + 800);
+    else S.red = e.red;
+    S.red = Math.round(S.red / 50) * 50;
     S.limit = S.red;
     S.safeHp = e.safe * intl.safe;
     var stockFuelHp = Math.max(e.hp * 1.35 + 60, 300);
@@ -207,6 +222,13 @@
     return S;
   };
 
+  function revMin(S) { return Math.round((S.idle + 2500) / 100) * 100; }
+  function revMax(S) { return Math.round((S.mech + 800) / 100) * 100; }
+
+  // the spec with stock gearing, for picking a default shift point before the
+  // tune (and with it the gear ratios) is known
+  function withRatios(S, ratios) { var o = Object.create(S); o.ratios = ratios; return o; }
+
   // ---------------------------------------------------------------- tune
   DR.tuneDefaults = function (inst, S) {
     var tr = DR.TRANS[S.transId];
@@ -218,7 +240,8 @@
       psi: S.tire.optP,
       fd: S.car.fd,
       gears: tr.ratios.slice(),
-      shiftRpm: Math.round((S.red - 150) / 100) * 100,
+      shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, tr.ratios))) / 100) * 100,
+      revLimit: S.red,
       springF: 5, springR: 5, rebound: 5, comp: 5,
       antiSquat: DR.getOption('rearsusp', inst).as,
       barDeg: 3,
@@ -230,6 +253,9 @@
 
   // Ranges for the tuning screen. `show(S)` decides whether it is unlocked.
   DR.TUNE_DEFS = [
+    { key: 'revLimit', label: 'Rev Limiter', unit: 'rpm', step: 100, min: revMin, max: revMax,
+      show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU (a Flash tune raises it automatically)', group: 'Engine',
+      help: 'Past your valvetrain or bottom-end limit the valves float and the engine may let go.' },
     { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function () { return 0; }, max: function (S) { return S.maxBoost; },
       show: function (S) { return S.fiType !== 'none'; }, req: 'Requires a turbo or supercharger', group: 'Engine',
       help: 'More boost = more power, but watch the knock limit of your fuel and your internals.' },
@@ -320,6 +346,10 @@
     var r = { engine: 0, trans: 0, notes: [] };
     var over = (S.peakHp + S.nosHp) / S.safeHp;
     if (over > 1) { r.engine += Math.min(0.85, (over - 1) * 1.6); r.notes.push('Power is ' + Math.round(over * 100) + '% of what the internals can take'); }
+    if (S.red > S.mech) {
+      r.engine += Math.min(0.7, (S.red - S.mech) / 1000 * 0.8);
+      r.notes.push('Rev limiter is ' + (S.red - S.mech) + ' rpm past the ' + (S.vtLimit <= S.beLimit ? 'valvetrain (valve float)' : 'bottom end'));
+    }
     if (S.boostSet > S.knock + 0.5) { r.engine += Math.min(0.6, (S.boostSet - S.knock) * 0.05); r.notes.push('Boost is past the knock limit of the fuel (' + S.knock + ' psi)'); }
     if (S.fuelW < (S.peakHp * DR.HP) * 1.001) r.notes.push('Fuel system is maxed out - power is limited');
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
@@ -459,7 +489,7 @@
 
     // -------- engine torque
     var wE = Math.max(this.we, 30);
-    var fric = S.Tpk * (0.05 + 0.09 * rpm / S.red);
+    var fric = S.Tpk * (0.05 + 0.09 * rpm / S.ref);
     var Te;
     if (dead) Te = -fric * 2;
     else if (firing) {

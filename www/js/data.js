@@ -41,7 +41,7 @@ DR.ENGINES = {
   v6_38tt: { name: '3.8L V6 Twin-Turbo',        cyl: 6,  disp: 3.8, hp: 565,  pk: 6800, tq: 3300, red: 7100, w: 210, price: 28000, safe: 900, fi: { part: 'fi_oem_tt', boost: 14 } },
   f6_38tt: { name: '3.8L Flat-6 Twin-Turbo',    cyl: 6,  disp: 3.8, hp: 540,  pk: 6500, tq: 2500, red: 7200, w: 205, price: 30000, safe: 850, fi: { part: 'fi_oem_tt', boost: 15 } },
   v8_46sc: { name: '4.6L V8 Supercharged',      cyl: 8,  disp: 4.6, hp: 390,  pk: 6000, tq: 3500, red: 6500, w: 215, price: 9000,  safe: 650, fi: { part: 'fi_oem_sc', boost: 12 } },
-  v8_50:   { name: '5.0L V8 Pushrod',           cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 5200, w: 205, price: 2500,  safe: 450 },
+  v8_50:   { name: '5.0L V8 Pushrod',           cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 6250, w: 205, price: 2500,  safe: 450 },
   v8_50d:  { name: '5.0L V8 DOHC',              cyl: 8,  disp: 5.0, hp: 460,  pk: 7000, tq: 4600, red: 7500, w: 200, price: 9000,  safe: 750 },
   v8_57:   { name: '5.7L V8 Pushrod',           cyl: 8,  disp: 5.7, hp: 345,  pk: 5600, tq: 4000, red: 6200, w: 190, price: 5000,  safe: 650 },
   v8_62:   { name: '6.2L V8 Pushrod',           cyl: 8,  disp: 6.2, hp: 430,  pk: 5900, tq: 4600, red: 6600, w: 192, price: 8000,  safe: 750 },

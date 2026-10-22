@@ -124,7 +124,8 @@
       turbo: fi === 'turbo',
       blower: fi === 'roots' || fi === 'screw' || fi === 'cent',
       antilag: S.twostep === 2,
-      twostep: S.twostep > 0
+      twostep: S.twostep > 0,
+      red: S.red
     };
   };
 

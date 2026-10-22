@@ -444,7 +444,7 @@
       turbo: !!build.turbo, turboHz: 330,
       knock: Lc.diesel ? 0.35 : 0,
       panA: twin ? 0.68 : 0.5,
-      rotary: !!Lc.sharp, red: eng.red,
+      rotary: !!Lc.sharp, red: build.red || eng.red,
       // intake: stock airbox (muffled) -> cold-air -> ported -> race manifold
       inRunner: [0.42, 0.42, 0.36, 0.3][build.intake],
       inHz: [650, 1000, 1500, 2400][build.intake] * (Lc.sharp ? 1.3 : 1),

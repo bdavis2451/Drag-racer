@@ -53,10 +53,10 @@
   ]};
   C.cams = { name: 'Camshafts & Valvetrain', engineScaled: true, options: [
     opt('stock', 'Stock Cams', 0, { tq: 1 }),
-    opt('c1', 'Stage 1 Cams', 800, { tq: 1.04, rpm: 250, red: 200, low: 0.05 }, '+4% power, +200 rpm redline.'),
-    opt('c2', 'Stage 2 Cams + Springs', 1600, { tq: 1.08, rpm: 500, red: 400, low: 0.12 }, '+8% power, +400 rpm. Loses some low-end.'),
-    opt('c3', 'Stage 3 Race Cams', 3000, { tq: 1.13, rpm: 900, red: 700, low: 0.22 }, '+13% power, +700 rpm. Lumpy idle, soft bottom end.'),
-    opt('c4', 'Solid Roller Race Valvetrain', 6000, { tq: 1.17, rpm: 1300, red: 1100, low: 0.30 }, '+17% power, +1100 rpm. All top end.')
+    opt('c1', 'Stage 1 Cams', 800, { tq: 1.04, rpm: 250, vt: 300, low: 0.05 }, '+4% power. Valvetrain safe to +300 rpm.'),
+    opt('c2', 'Stage 2 Cams + Springs', 1600, { tq: 1.08, rpm: 500, vt: 600, low: 0.12 }, '+8% power, power peak +500 rpm. Valvetrain safe to +600 rpm. Loses some low-end.'),
+    opt('c3', 'Stage 3 Race Cams', 3000, { tq: 1.13, rpm: 900, vt: 1000, low: 0.22 }, '+13% power, power peak +900 rpm. Valvetrain safe to +1000 rpm. Lumpy idle.'),
+    opt('c4', 'Solid Roller Race Valvetrain', 6000, { tq: 1.17, rpm: 1300, vt: 1500, low: 0.30 }, '+17% power, power peak +1300 rpm. Valvetrain safe to +1500 rpm. All top end.')
   ]};
   C.heads = { name: 'Cylinder Heads', engineScaled: true, options: [
     opt('stock', 'Stock Heads', 0, { tq: 1 }),
@@ -66,10 +66,10 @@
   ]};
   C.internals = { name: 'Engine Internals', engineScaled: true, options: [
     opt('stock', 'Stock Internals', 0, { safe: 1 }),
-    opt('n1', 'Forged Pistons', 2500, { safe: 1.5, red: 200 }, 'Engine survives 1.5x its stock rating.'),
-    opt('n2', 'Forged Rotating Assembly', 6000, { safe: 2.2, red: 400 }, 'Forged crank, rods & pistons. 2.2x safe power.'),
-    opt('n3', 'Billet Crank & Rods', 12000, { safe: 3.2, red: 700 }, 'Survives 3.2x stock power.'),
-    opt('n4', 'Billet Block & Race Internals', 30000, { safe: 5.5, red: 1000 }, 'Built to take massive boost and nitrous.')
+    opt('n1', 'Forged Pistons', 2500, { safe: 1.5, be: 300 }, 'Survives 1.5x its stock power. Bottom end safe to +300 rpm.'),
+    opt('n2', 'Forged Rotating Assembly', 6000, { safe: 2.2, be: 700 }, 'Forged crank, rods & pistons. 2.2x safe power, +700 rpm.'),
+    opt('n3', 'Billet Crank & Rods', 12000, { safe: 3.2, be: 1200 }, 'Survives 3.2x stock power. Bottom end safe to +1200 rpm.'),
+    opt('n4', 'Billet Block & Race Internals', 30000, { safe: 5.5, be: 2000 }, 'Built to take massive boost, nitrous and +2000 rpm.')
   ]};
   C.fuelsys = { name: 'Fuel System', options: [
     opt('stock', 'Stock Fuel System', 0, { fuel: 0 }),
@@ -85,10 +85,10 @@
     opt('meth', 'Methanol', 2500, { knock: 50, fmul: 1.06, ff: 0.62 }, '+6% power, 50 psi safe. Needs 60% more fuel flow.')
   ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
-    opt('stock', 'Stock ECU', 0, { tq: 1, ecu: 0 }),
-    opt('ecu1', 'Street Tune Flash', 600, { tq: 1.04, ecu: 1 }, '+4% power.'),
-    opt('ecu2', 'Standalone ECU', 2000, { tq: 1.06, ecu: 2 }, '+6% power. Unlocks launch throttle & throttle ramp tuning.'),
-    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { tq: 1.08, ecu: 3 }, '+8% power. Adds adjustable traction control.')
+    opt('stock', 'Stock ECU', 0, { tq: 1, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
+    opt('ecu1', 'Street Tune Flash', 600, { tq: 1.04, ecu: 1 }, '+4% power. Raises the rev limiter as far as your engine parts safely allow (up to +800 rpm).'),
+    opt('ecu2', 'Standalone ECU', 2000, { tq: 1.06, ecu: 2 }, '+6% power. Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
+    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { tq: 1.08, ecu: 3 }, '+8% power. Adjustable rev limiter and traction control.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
     opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler; aftermarket kits have none.'),

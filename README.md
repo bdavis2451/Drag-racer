@@ -15,6 +15,10 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
 - **Deep, menu-based upgrades** across 31 categories:
   - **Engine:** intake, exhaust, headers, cams, heads, internals, fuel system, fuel type
     (pump/E85/race gas/methanol) and ECU.
+  - **Rev limits:** cams/springs and internals set how high the engine can safely spin.
+    The ECU sets the limiter: stock keeps the factory limit, a flash tune raises it to a
+    safe level, and a standalone makes it fully adjustable (over-revving floats the
+    valves and risks the engine).
   - **Power adders:** turbos from 54 mm to twin 98 mm, roots, twin-screw and centrifugal
     superchargers, intercoolers, 2-step and anti-lag, and nitrous up to a 650 shot with a
     progressive controller.

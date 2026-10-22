@@ -295,7 +295,7 @@
 
   function hypothetical(inst, cat, id) {
     var copy = JSON.parse(JSON.stringify(inst));
-    if (cat === 'engine') { DR.ENGINE_BOUND.forEach(function (c) { delete copy.parts[c]; }); copy.engine = id; delete copy.tune.boost; delete copy.tune.launchRpm; delete copy.tune.shiftRpm; }
+    if (cat === 'engine') { DR.ENGINE_BOUND.forEach(function (c) { delete copy.parts[c]; }); copy.engine = id; delete copy.tune.boost; delete copy.tune.launchRpm; delete copy.tune.shiftRpm; delete copy.tune.revLimit; }
     else {
       if (id === DR.stockPart(cat, copy)) delete copy.parts[cat]; else copy.parts[cat] = id;
       if (cat === 'fi') delete copy.tune.boost;
@@ -326,6 +326,7 @@
       opt.desc ? h('div', {}, opt.desc) : null,
       statsGrid([
         ['Power', d(S0.peakHp + S0.nosHp, S1.peakHp + S1.nosHp, ' hp')],
+        S0.red !== S1.red ? ['Rev limiter', d(S0.red, S1.red, ' rpm')] : null,
         ['Weight', d(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)],
         ['Est. 1/4', d(Math.min(e0.et, 99), Math.min(e1.et, 99), 's', 2, true)],
         ['Price', DR.money(opt.price || 0)],
@@ -458,7 +459,9 @@
       ['Peak torque', Math.round(dy.peakTq) + ' lb-ft'],
       S.nosHp ? ['With nitrous', Math.round(dy.peakHp + S.nosHp) + ' hp', 'acc'] : null,
       S.fiType !== 'none' ? ['Boost', S.boostSet.toFixed(1) + ' psi'] : null,
-      ['Redline', S.red + ' rpm'],
+      ['Rev limiter', S.red + ' rpm' + (S.ecu === 0 ? ' (factory)' : ''), S.red > S.mech ? 'bad' : ''],
+      ['Valvetrain safe to', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''],
+      ['Bottom end safe to', S.beLimit + ' rpm', S.red > S.beLimit ? 'bad' : ''],
       ['Safe power', Math.round(S.safeHp) + ' hp', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good']
     ]));
     draw();
