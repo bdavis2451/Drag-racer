@@ -277,3 +277,82 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .bodyhead { position: relative; }
 .bodyhead canvas.preview { width: 100%; max-height: 42vh; object-fit: cover; background: #222; box-shadow: 0 0 0 2px #000; display: block; }
 .bodystars { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.7); padding: 4px 8px; display: flex; gap: 8px; align-items: center; box-shadow: 0 0 0 2px #000; }
+
+/* ---------------------------------------------------------------- title */
+.title2 { background: #0d0e12; }
+.title2 canvas.bay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; }
+.tpanel { position: absolute; left: 50%; top: 6%; transform: translateX(-50%); text-align: center; display: flex; flex-direction: column; align-items: center; width: 100%; padding: 0 12px; }
+.tpanel .logo { font-family: 'Press Start 2P', monospace; font-size: clamp(26px, 6vw, 54px); color: var(--accent); text-shadow: 4px 4px 0 #b52a2a, 8px 8px 0 #000; margin-bottom: 6px; }
+.tpanel .tag2 { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #fff; text-shadow: 2px 2px 0 #000; margin-bottom: 12px; }
+.tpanel .row { margin-top: auto; }
+.title2 .tpanel { bottom: 12px; top: 5%; }
+.title2 .tpanel .row .btn { box-shadow: inset -3px -3px 0 rgba(0,0,0,.45), inset 3px 3px 0 rgba(255,255,255,.12), 0 0 0 2px #000, 0 4px 12px rgba(0,0,0,.6); }
+
+/* ---------------------------------------------------------------- race menu */
+.topcar { font-size: 16px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30%; }
+.stagehead { display: flex; gap: 10px; background: linear-gradient(90deg, #2a2d38, #22242c); box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #3b3f4c; padding: 8px 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.stagehead .dim { font-size: 16px; }
+.pbar { height: 8px; background: #111; box-shadow: 0 0 0 2px #000; margin: 6px 0 2px; max-width: 320px; }
+.pbar b { display: block; height: 100%; background: linear-gradient(90deg, #c99a00, #ffcc00); }
+.spcard { background: #1a1b21; box-shadow: 0 0 0 2px #000; border-left: 4px solid #555; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 220px; flex: 1; max-width: 360px; }
+.spcard.empty { border-left-color: #7a2a2a; }
+.spcard .btn { align-self: flex-start; margin-top: 4px; }
+.egrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.ecard { background: linear-gradient(180deg, #2a2d38, #22242c); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3b3f4c; padding: 6px; display: flex; flex-direction: column; gap: 3px; }
+.ecard.locked { filter: grayscale(.6) brightness(.7); }
+.ecard.won { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #2a7a46; }
+.ecard.t-boss { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #d23a3a, 0 0 14px rgba(210,58,58,.35); background: linear-gradient(180deg, #3a1d22, #22242c); }
+.ecard.t-sponsor { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #2a7a46; }
+.ecard.t-showcase { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #8a5cff; }
+.ecvwrap { position: relative; }
+canvas.ecv { width: 100%; aspect-ratio: 2.4 / 1; display: block; background: #222; box-shadow: 0 0 0 1px #000; object-fit: cover; }
+.etype { position: absolute; left: 4px; top: 4px; font-family: 'Press Start 2P', monospace; font-size: 7px; background: rgba(0,0,0,.75); padding: 3px 5px; color: var(--accent); }
+.ecard.t-boss .etype { background: #b52a2a; color: #fff; }
+.ewon { position: absolute; right: 4px; top: 4px; font-family: 'Press Start 2P', monospace; font-size: 7px; background: #1e9e4a; padding: 3px 5px; }
+.ewon.bad { background: #b52a2a; color: #fff; }
+.ename { font-size: 18px; line-height: 1.05; }
+.eunl { color: #8fd0ff; }
+.efoot { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: auto; padding-top: 4px; flex-wrap: wrap; }
+.hiddenev { align-items: center; justify-content: center; text-align: center; min-height: 120px; }
+
+/* ---------------------------------------------------------------- tune & dyno */
+.tunemain { display: flex; gap: 10px; align-items: flex-start; }
+.tstats { width: 250px; flex: none; position: sticky; top: 0; background: rgba(14,15,19,.9); box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #3b3f4c; padding: 8px; display: flex; flex-direction: column; gap: 3px; }
+.tstats canvas.preview { width: 100%; box-shadow: 0 0 0 2px #000; margin-bottom: 4px; }
+.tstats .warnbox { font-size: 15px; }
+.tstats .dim { font-size: 15px; }
+.dynowrap { flex: 1; display: flex; gap: 10px; padding: 10px; min-height: 0; }
+.dynomain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.dynoscene { position: relative; flex: 1.1; min-height: 0; box-shadow: 0 0 0 2px #000; overflow: hidden; }
+.dynoscene canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 60%; }
+.dynorpm { position: absolute; right: 8px; top: 8px; font-family: 'Press Start 2P', monospace; font-size: 10px; color: #46e07a; background: rgba(0,0,0,.75); padding: 5px 8px; box-shadow: 0 0 0 2px #000; }
+canvas.dynograph { flex: 1; min-height: 0; width: 100%; background: #0c0d10; box-shadow: 0 0 0 2px #000; object-fit: fill; }
+.dynowrap .tstats { overflow-y: auto; max-height: 100%; }
+
+/* ---------------------------------------------------------------- dealer & paint */
+.dmain { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.dmain .gwrap { flex: 1; min-height: 0; }
+.dstrip { flex: none; display: flex; gap: 8px; overflow-x: auto; padding: 8px; background: #101116; border-top: 2px solid #000; scrollbar-width: none; }
+.dstrip::-webkit-scrollbar { display: none; }
+.dthumb { flex: none; width: 112px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; font-size: 14px; text-align: center; padding: 3px; box-shadow: 0 0 0 2px #000; background: #22242c; }
+.dthumb.on { box-shadow: 0 0 0 2px var(--accent); background: #3d3524; }
+.dthumb.locked { opacity: .5; }
+.dthumb span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.price.big { font-size: 13px; }
+.paintbar { flex: none; padding: 8px 10px; background: #101116; border-top: 2px solid #000; }
+.swatches.big { grid-template-columns: repeat(auto-fill, 38px); margin-top: 6px; }
+.swatches.big .sw { width: 38px; height: 30px; }
+
+/* ---------------------------------------------------------------- settings & help polish */
+.content > .list > .item, .content > .panel { box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #3b3f4c; }
+.content > .panel h2 { border-bottom: 2px solid #3b3f4c; padding-bottom: 4px; margin-top: 10px; }
+@media (max-height: 420px) {
+  .tstats { width: 220px; }
+  .dstrip { padding: 6px; }
+  .dthumb { width: 96px; font-size: 13px; }
+  .egrid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .stagehead { padding: 6px 8px; margin-bottom: 8px; }
+}
+.tstats > * { flex: none; }
+canvas.dynograph { object-fit: contain; image-rendering: pixelated; }
+.egrid.shows { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }

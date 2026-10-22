@@ -66,7 +66,9 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
   side and arrows to switch cars. The **Parts Shop** sells colour-coded part cards into
   your inventory; **Install Parts** fits them, puts removed parts back on the shelf and
   sells spares. Body Shop cards preview a part before you buy it, and bought kit stays
-  free to refit. Plus a dyno, a paint shop and a dealership.
+  free to refit. Every menu uses the same side-rail and card layout: race events as cards with the
+  rival's car, a dealership showroom with a turntable, a dyno cell where the car spins
+  the rollers while the curve draws, and a paint shop that repaints the car in the bay.
 - **On the strip:** a Christmas tree (sportsman or pro), reaction times, a full timeslip
   (60 ft, 330 ft, 1/8, 1000 ft, 1/4, trap speeds), a synthesized engine sound, tire smoke,
   flames, and nitrous purge.
@@ -103,6 +105,8 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 | `www/js/game.js` | Money, saving, buying and selling, and the **rival pool**. |
 | `www/js/career.js` | **Career stages, events, sponsors, unlocks, cosmetic parts and the star rating.** |
 | `www/js/garage.js` | **Garage bay, Parts Shop, Install Parts, Body Shop and the part icons.** |
+| `www/js/rooms.js` | **Pixel scenes behind the menus: garage bay, dealership showroom, dyno cell.** |
+| `www/js/screens.js` | **Title, starter pick, race menu, tuning, dyno, dealership, my cars and paint screens.** |
 | `www/js/carshow.js` | **Car shows (booths, crowd, podium) and magazine covers.** |
 | `www/js/render.js` | The scene: sky, track, grandstands, the tree, tire smoke, flames and the day/night lighting pass. |
 | `www/js/cars.js` | **Car sprites**, built from swappable parts (see below), plus wheels, brakes and tires. |

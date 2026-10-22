@@ -74,31 +74,44 @@
 
   DR.showRival = rival;
   // ---------------------------------------------------------------- screen: list
+  // a postcard of the venue: its backdrop and floor with your car parked
+  function showThumb(show, inst) {
+    var c = h('canvas', { class: 'ecv', width: 400, height: 168 }), x = c.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    var bg = backdrop(show, 800), top = GROUND + 50 - 168;
+    x.translate(0, -top);
+    x.drawImage(bg, -120, 0); floor(x, show, 0);
+    var spr = DR.carSprite(DR.carLook(inst));
+    DR.drawCar(x, spr, Math.round(200 - spr.lenPx / 2 + (spr.wheelR.x - spr.padL)), GROUND + 20, 0, 0.3, {});
+    return c;
+  }
   UI.Shows = function () {
     var inst = G.car(), stars = DR.starRating(inst);
-    var list = h('div', { class: 'list' });
+    var grid = h('div', { class: 'egrid shows' });
     DR.SHOWS.forEach(function (sh) {
       var st = showState(sh.id), ok = stars >= sh.minStars, bored = st.sig === buildSig(inst) && st.entries > 0;
-      list.appendChild(h('div', { class: 'item' + (ok ? '' : ' locked') },
-        h('div', { class: 'name' }, h('div', { class: 'acc' }, sh.name), h('div', { class: 'dim' }, sh.where + ' • ~' + sh.crowd + ' visitors • ' + DR.money(sh.pay) + ' per visitor at your booth'),
-          h('div', { class: 'dim', style: { fontSize: '15px' } }, 'Prizes: ' + sh.prizes.map(DR.money).join(' / ') + ' • Your trophies: 🥇' + st.places[0] + ' 🥈' + st.places[1] + ' 🥉' + st.places[2]),
-          bored ? h('div', { class: 'warn', style: { fontSize: '15px' } }, 'The regulars have seen this build — expect a smaller crowd until you change it up.') : null,
-          !ok ? h('div', { class: 'warn', style: { fontSize: '15px' } }, '🔒 Needs a ' + DR.starText(sh.minStars) + ' car') : null),
-        h('span', { class: 'tag' }, sh.minStars ? DR.starText(sh.minStars) + '+' : 'OPEN'),
-        h('span', { class: 'price' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free'),
-        btn('Enter', function () {
-          if (!ok) return UI.toast('Your car needs a ' + DR.starText(sh.minStars) + ' rating for this show');
-          if (inst.damage) return UI.toast('Fix your car first — broken cars stay home');
-          if (!G.canAfford(sh.entry)) return UI.toast('You cannot cover the entry fee');
-          UI.show(ShowScreen, sh);
-        }, 'small ' + (ok ? 'go' : 'disabled'))));
+      grid.appendChild(h('div', { class: 'ecard' + (ok ? '' : ' locked') + (sh.theme === 'hall' ? ' t-showcase' : '') },
+        h('div', { class: 'ecvwrap' }, showThumb(sh, inst), h('span', { class: 'etype' }, sh.minStars ? sh.minStars + '+ STARS' : 'OPEN TO ALL'), sh.night ? h('span', { class: 'ewon', style: { background: '#3a2a7a' } }, 'NIGHT') : null),
+        h('div', { class: 'acc ename' }, sh.name),
+        h('div', { class: 'gsmall dim' }, sh.where + ' • ~' + sh.crowd + ' visitors • ' + DR.money(sh.pay) + '/visitor'),
+        h('div', { class: 'gsmall' }, 'Prizes ' + sh.prizes.map(DR.money).join(' / ')),
+        h('div', { class: 'gsmall' }, '🥇' + st.places[0] + '  🥈' + st.places[1] + '  🥉' + st.places[2] + (st.best ? '  • best crowd ' + st.best : '')),
+        bored ? h('div', { class: 'warn gsmall' }, 'The regulars have seen this build — change it up for a bigger crowd.') : null,
+        !ok ? h('div', { class: 'warn gsmall' }, '🔒 Needs a ' + sh.minStars + '-star car') : null,
+        h('div', { class: 'efoot' }, h('span', { class: 'price' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free entry'),
+          btn('Enter', function () {
+            if (!ok) return UI.toast('Your car needs a ' + sh.minStars + '-star rating for this show');
+            if (inst.damage) return UI.toast('Fix your car first — broken cars stay home');
+            if (!G.canAfford(sh.entry)) return UI.toast('You cannot cover the entry fee');
+            UI.show(ShowScreen, sh);
+          }, 'small ' + (ok ? 'go' : 'disabled')))));
     });
     var covers = (G.state.covers || []).length;
-    return h('div', { class: 'screen' }, UI.top('CAR SHOWS', function () { UI.show(UI.Garage); }),
+    return h('div', { class: 'screen' }, UI.top('CAR SHOWS', function () { UI.show(UI.Garage); }, btn('Covers ' + covers + '/10', function () { UI.show(UI.Covers); }, 'small blue')),
       h('div', { class: 'content' },
-        h('p', { class: 'dim', style: { margin: '0 0 8px' } }, 'Park your build at a booth and see who stops to look. Your car: ' + DR.starText(stars) + '. The crowd likes stars most, but rare cars, big power, a blower sticking out of the hood and neon at night shows all help.'),
-        list,
-        h('div', { class: 'row', style: { marginTop: '10px' } }, btn('Magazine Covers (' + covers + '/10)', function () { UI.show(UI.Covers); }, 'blue'))));
+        h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'YOUR BUILD • ' + (Math.round(stars * 100) / 100) + ' STARS'),
+          h('div', { class: 'dim' }, 'Park at a booth and see who stops to look. The crowd likes stars most, but rare cars, big power, a blower sticking out of the hood and neon at night shows all help.'))),
+        grid));
   };
 
   // ---------------------------------------------------------------- the show

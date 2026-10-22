@@ -124,6 +124,23 @@
         disc(12, 12, 2, ac); break;
       case 'weight':
         r(3, 9, 18, 12, M3); r(3, 9, 18, 1, M2); r(8, 4, 8, 5, M4); r(10, 6, 4, 3, M3); DR.pixText(x, '-LB', 6, 13, ac, 1); break;
+      // menu icons
+      case 'u_career':
+        r(6, 3, 12, 2, '#ffd23d'); r(7, 5, 10, 6, '#ffcc00'); r(8, 11, 8, 2, '#e0a800'); r(10, 13, 4, 3, '#c99a00'); r(7, 16, 10, 2, '#8a6a10'); r(6, 18, 12, 3, '#5a4510');
+        r(3, 5, 3, 1, '#ffcc00'); r(3, 5, 1, 4, '#ffcc00'); r(3, 8, 4, 1, '#ffcc00'); r(18, 5, 3, 1, '#ffcc00'); r(20, 5, 1, 4, '#ffcc00'); r(17, 8, 4, 1, '#ffcc00'); r(9, 6, 2, 4, '#fff2a0'); break;
+      case 'u_street':
+        r(2, 6, 20, 12, '#2e7d4f'); r(2, 6, 20, 1, '#46e07a'); r(4, 8, 16, 8, '#3fa463'); disc(12, 12, 4, '#2e7d4f'); DR.pixText(x, '$', 11, 10, '#d8ffd8', 1); r(4, 18, 20, 2, '#1e5a36'); break;
+      case 'u_test':
+        disc(12, 14, 9, M3); disc(12, 14, 7, M1); r(10, 2, 4, 3, M2); r(11, 4, 2, 2, M3); r(18, 5, 3, 2, M2);
+        r(12, 8, 1, 6, BK); r(12, 13, 4, 1, '#d23a3a'); for (k = 0; k < 12; k++) { var a5 = k * Math.PI / 6; r(Math.round(12 + Math.cos(a5) * 6), Math.round(14 + Math.sin(a5) * 6), 1, 1, M3); } break;
+      case 'u_paint':
+        r(8, 7, 9, 15, ac); r(8, 7, 3, 15, DR.shadeHex(ac, 0.35)); r(9, 4, 7, 3, M2); r(11, 2, 3, 2, M3); r(4, 3, 2, 1, ac); r(2, 5, 2, 1, ac); r(4, 7, 1, 1, ac); r(8, 12, 9, 3, M1); break;
+      case 'u_flag':
+        r(4, 2, 2, 21, M2);
+        for (var fy2 = 0; fy2 < 4; fy2++) for (var fx2 = 0; fx2 < 5; fx2++) r(6 + fx2 * 3, 3 + fy2 * 3, 3, 3, (fx2 + fy2) % 2 ? BK : '#ffffff'); break;
+      case 'u_car':
+        r(2, 11, 20, 6, ac); r(7, 7, 10, 4, ac); r(8, 8, 4, 3, '#2a3346'); r(13, 8, 3, 3, '#2a3346'); r(2, 11, 20, 1, DR.shadeHex(ac, 0.3));
+        disc(6, 17, 3, BK); disc(18, 17, 3, BK); disc(6, 17, 1, M2); disc(18, 17, 1, M2); break;
       // cosmetic slots: a little car with the part lit up
       case 'v_fbumper': case 'v_rbumper': case 'v_skirt': case 'v_spoiler': case 'v_hood': case 'v_roof':
       case 'v_rims': case 'v_tint': case 'v_neon': case 'v_finish': case 'v_vinyl': case 'v_tips':
@@ -192,107 +209,10 @@
     return meter;
   }
 
-  // ---------------------------------------------------------------- garage scene
-  // A PCR-style garage bay: tool chest, pegboard, tire rack, roll-up door,
-  // strip lights, a polished floor and the car front and centre.
-  function drawBay(canvas, inst, aspect) {
-    var spr = DR.carSprite(DR.carLook(inst));
-    var W = Math.max(420, Math.round(spr.lenPx * 2.3)), H = Math.round(W / Math.max(1.5, Math.min(2.6, aspect || 2.1)));
-    canvas.width = W; canvas.height = H;
-    var x = canvas.getContext('2d'); x.imageSmoothingEnabled = false;
-    var fl = Math.round(H * 0.64), i, k;
-    // back wall: painted block
-    var g = x.createLinearGradient(0, 0, 0, fl);
-    g.addColorStop(0, '#15171d'); g.addColorStop(1, '#2a2e38');
-    x.fillStyle = g; x.fillRect(0, 0, W, fl);
-    x.fillStyle = 'rgba(0,0,0,0.22)';
-    for (i = 0; i < fl; i += 12) { x.fillRect(0, i, W, 1); for (k = ((i / 12) % 2) * 12; k < W; k += 24) x.fillRect(k, i, 1, 12); }
-    x.fillStyle = '#3a2f22'; x.fillRect(0, fl - 26, W, 18); x.fillStyle = '#4a3c2b'; x.fillRect(0, fl - 26, W, 2);   // wainscot
-    // roll-up door behind the car
-    var dx = Math.round(W * 0.27), dw = Math.round(W * 0.46), dy = Math.round(fl * 0.2);
-    x.fillStyle = '#0e0f13'; x.fillRect(dx - 4, dy - 4, dw + 8, fl - dy - 22);
-    for (i = dy; i < fl - 26; i += 6) { x.fillStyle = '#5b606b'; x.fillRect(dx, i, dw, 5); x.fillStyle = '#6c717d'; x.fillRect(dx, i, dw, 1); }
-    x.fillStyle = '#ffcc00'; for (k = dx; k < dx + dw; k += 16) { x.fillRect(k, fl - 30, 8, 3); }
-    // left: pegboard + red tool chest
-    var px0 = Math.round(W * 0.04), pw = Math.round(W * 0.18);
-    x.fillStyle = '#6b5135'; x.fillRect(px0, Math.round(fl * 0.16), pw, Math.round(fl * 0.36));
-    x.fillStyle = '#543f29'; for (i = Math.round(fl * 0.16) + 3; i < fl * 0.52; i += 5) for (k = px0 + 3; k < px0 + pw; k += 5) x.fillRect(k, i, 1, 1);
-    // tools on the pegboard
-    var ty = Math.round(fl * 0.2);
-    x.fillStyle = '#c8ccd4'; x.fillRect(px0 + 6, ty, 3, 22); x.fillRect(px0 + 4, ty, 7, 4);           // wrench
-    x.fillRect(px0 + 16, ty + 2, 2, 20); x.fillStyle = '#d23a3a'; x.fillRect(px0 + 15, ty + 14, 4, 9); // screwdriver
-    x.fillStyle = '#c8ccd4'; x.fillRect(px0 + 26, ty, 3, 18); x.fillStyle = '#2a62b5'; x.fillRect(px0 + 25, ty + 12, 5, 10);
-    x.fillStyle = '#9aa0ab'; x.fillRect(px0 + 36, ty + 4, 14, 4); x.fillStyle = '#ffcc00'; x.fillRect(px0 + 46, ty + 8, 4, 12);   // ratchet
-    x.fillStyle = '#c8ccd4'; for (k = 0; k < 4; k++) x.fillRect(px0 + 56 + k * 5, ty + 2 + k, 3, 16 - k * 2);
-    var cx0 = px0, cw = pw, cy0 = Math.round(fl * 0.56);
-    x.fillStyle = '#9e1f1f'; x.fillRect(cx0, cy0, cw, fl - cy0 + 4);
-    x.fillStyle = '#c62f2f'; x.fillRect(cx0, cy0, cw, 3);
-    for (i = cy0 + 6; i < fl; i += 8) { x.fillStyle = '#7d1717'; x.fillRect(cx0 + 2, i, cw - 4, 1); x.fillStyle = '#d0d4dc'; x.fillRect(cx0 + cw / 2 - 6, i + 3, 12, 2); }
-    x.fillStyle = '#111'; x.fillRect(cx0 + 2, fl + 4, 4, 4); x.fillRect(cx0 + cw - 6, fl + 4, 4, 4);
-    // right: shelf with tires and boxes
-    var sx = Math.round(W * 0.79), sw = Math.round(W * 0.18);
-    x.fillStyle = '#4b505b'; x.fillRect(sx, Math.round(fl * 0.12), 3, fl - Math.round(fl * 0.12)); x.fillRect(sx + sw - 3, Math.round(fl * 0.12), 3, fl - Math.round(fl * 0.12));
-    [0.3, 0.58, 0.86].forEach(function (f) { x.fillStyle = '#5c6270'; x.fillRect(sx, Math.round(fl * f), sw, 3); });
-    var tr = Math.round(fl * 0.1);
-    for (k = 0; k < 3; k++) {
-      var tx = sx + 6 + k * (tr * 2 + 2), tyy = Math.round(fl * 0.58) - tr;
-      if (tx + tr * 2 > sx + sw) break;
-      x.fillStyle = '#141416'; x.beginPath(); x.arc(tx + tr, tyy, tr, 0, Math.PI * 2); x.fill();
-      x.fillStyle = '#5c6270'; x.beginPath(); x.arc(tx + tr, tyy, tr * 0.5, 0, Math.PI * 2); x.fill();
-      x.fillStyle = '#2a2b30'; x.beginPath(); x.arc(tx + tr, tyy, tr * 0.25, 0, Math.PI * 2); x.fill();
-    }
-    [['#c99a00', 0.3, 0], ['#2a62b5', 0.3, 1], ['#b52a2a', 0.86, 0], ['#d8d8d8', 0.86, 1], ['#1e9e4a', 0.86, 2]].forEach(function (b) {
-      var bw = Math.round(sw * 0.26), bh = Math.round(fl * 0.1);
-      x.fillStyle = b[0]; x.fillRect(sx + 6 + b[2] * (bw + 3), Math.round(fl * b[1]) - bh, bw, bh);
-      x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(sx + 6 + b[2] * (bw + 3), Math.round(fl * b[1]) - bh, bw, 2);
-    });
-    // neon shop sign
-    var sign = 'PIXEL DRAG', ss = 2, sgx = Math.round(W / 2 - DR.pixTextW(sign, ss) / 2), sgy = Math.round(fl * 0.07);
-    x.save(); x.shadowColor = '#ff2bd6'; x.shadowBlur = 10; DR.pixText(x, sign, sgx, sgy, '#ff7be8', ss); x.restore();
-    DR.pixText(x, sign, sgx, sgy, '#ffd6f7', ss);
-    // floor: polished epoxy with tiles and a yellow bay line
-    var fg = x.createLinearGradient(0, fl, 0, H);
-    fg.addColorStop(0, '#3f434c'); fg.addColorStop(1, '#22242a');
-    x.fillStyle = fg; x.fillRect(0, fl, W, H - fl);
-    x.fillStyle = 'rgba(0,0,0,0.18)';
-    for (i = 0; i < 6; i++) { var yy = fl + Math.round((H - fl) * Math.pow(i / 6, 1.4)); x.fillRect(0, yy, W, 1); }
-    for (k = -10; k <= 10; k++) { x.beginPath(); x.moveTo(W / 2 + k * 30, fl); x.lineTo(W / 2 + k * 70, H); x.lineTo(W / 2 + k * 70 + 1, H); x.lineTo(W / 2 + k * 30 + 1, fl); x.fill(); }
-    x.fillStyle = '#ffcc00'; x.fillRect(0, fl + Math.round((H - fl) * 0.78), W, 2);
-    x.fillStyle = '#62666f'; x.fillRect(0, fl, W, 1);
-    // strip lights and their pools
-    x.save(); x.globalCompositeOperation = 'lighter';
-    [0.3, 0.7].forEach(function (f) {
-      var lx = Math.round(W * f);
-      var cone = x.createLinearGradient(0, 0, 0, H);
-      cone.addColorStop(0, 'rgba(255,240,210,0.14)'); cone.addColorStop(1, 'rgba(255,240,210,0.02)');
-      x.fillStyle = cone; x.beginPath(); x.moveTo(lx - 30, 4); x.lineTo(lx + 30, 4); x.lineTo(lx + 120, H); x.lineTo(lx - 120, H); x.closePath(); x.fill();
-    });
-    x.translate(W / 2, fl + (H - fl) * 0.45); x.scale(1, 0.22);
-    var pg = x.createRadialGradient(0, 0, 0, 0, 0, W * 0.38);
-    pg.addColorStop(0, 'rgba(255,236,200,0.26)'); pg.addColorStop(1, 'rgba(255,236,200,0)');
-    x.fillStyle = pg; x.fillRect(-W * 0.4, -W * 0.4, W * 0.8, W * 0.8);
-    x.restore();
-    [0.3, 0.7].forEach(function (f) { var lx = Math.round(W * f); x.fillStyle = '#2a2c33'; x.fillRect(lx - 34, 0, 68, 5); x.fillStyle = '#fff6dc'; x.fillRect(lx - 31, 3, 62, 2); });
-    // the car, with a reflection in the floor
-    var gy = fl + Math.round((H - fl) * 0.36), gxx = Math.round(W / 2 - spr.lenPx / 2 + (spr.wheelR.x - spr.padL));
-    x.save(); x.globalAlpha = 0.18; x.translate(0, gy * 2); x.scale(1, -1);
-    DR.drawCar(x, spr, gxx, gy, 0, 0.3, { shadow: false });
-    x.restore();
-    DR.drawCar(x, spr, gxx, gy, 0, 0.3);
-    // vignette
-    var vg = x.createRadialGradient(W / 2, H * 0.55, H * 0.4, W / 2, H * 0.55, W * 0.7);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
-    x.fillStyle = vg; x.fillRect(0, 0, W, H);
-  }
-  DR.drawBay = drawBay;
-
   // ---------------------------------------------------------------- GARAGE (hub)
   UI.Garage = function () {
     var inst = G.car(), S = G.spec(inst), cars = G.state.cars, idx = cars.indexOf(inst);
-    var cv = h('canvas', { class: 'bay' });
-    drawBay(cv, inst);
-    // redraw at the real aspect once on screen so the floor is never cropped
-    setTimeout(function () { var r = cv.getBoundingClientRect(); if (r.width && r.height) drawBay(cv, inst, r.width / r.height); }, 0);
+    var cv = DR.roomCanvas(inst, { theme: 'garage' });
     function cycle(d) { var n = cars.length; G.state.active = cars[(idx + d + n) % n].uid; G.save(); UI.refresh(); }
     var dmg = null;
     if (inst.damage) {
