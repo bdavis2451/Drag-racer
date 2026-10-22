@@ -531,8 +531,9 @@
     }
     for (var lane = 0; lane < 2; lane++) {
       var bx = lane === 0 ? x + 13 : x + 3;
-      bulb(bx, top + 4, st.stage, '#fffbe0');
-      bulb(bx, top + 12, st.stage, '#fffbe0');
+      // pre-stage / stage bulbs light per lane as each car creeps in
+      bulb(bx, top + 4, st.pre ? st.pre[lane] : st.stage, '#fffbe0');
+      bulb(bx, top + 12, st.staged ? st.staged[lane] : st.stage, '#fffbe0');
       for (var a = 0; a < 3; a++) bulb(bx, top + 24 + a * 12, st.amber > a, '#ffb000');
       bulb(bx, top + 64, st.green && !st.red[lane], '#22ff4a');
       bulb(bx, top + 76, st.red[lane], '#ff2222');

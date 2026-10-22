@@ -284,7 +284,9 @@
         h('div', { class: 'pic' }, iconEl(shopCat, lvl, o.id, 48)),
         h('div', { class: 'plvl' }, DR.LEVEL_NAMES[lvl]),
         h('div', { class: 'pname' }, o.name),
-        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 LOCKED') : h('span', { class: 'price' }, DR.money(o.price)),
+        // what it does for this car, at a glance
+        !locked && !installed && DR.partApplies(shopCat, inst) ? gainLine(inst, shopCat, o.id) : null,
+        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 LOCKED') : h('span', { class: 'price' + (G.canAfford(o.price) ? '' : ' bad') }, DR.money(o.price)),
           installed ? h('span', { class: 'tag g' }, 'ON CAR') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
@@ -330,7 +332,11 @@
       locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + groupById(DR.groupOf(cat)).name.toLowerCase() + ' parts unlock as you win career races.') :
         h('div', { class: 'row', style: { flexWrap: 'wrap' } },
           btn('Buy ' + DR.money(opt.price), function () { buy(false); }, 'go' + (G.canAfford(opt.price) ? '' : ' disabled')),
-          fits && !installed ? btn('Buy & Install', function () { buy(true); }, 'primary' + (G.canAfford(opt.price) ? '' : ' disabled')) : null),
+          fits && !installed && owned ? btn('Install Yours', function () {
+            var it = G.state.inv.filter(function (x) { return x.cat === cat && x.id === id; })[0];
+            var r = G.installPart(inst, it.uid); UI.toast(r.msg); close(); UI.refresh();
+          }, 'primary') : null,
+          fits && !installed && !owned ? btn('Buy & Install', function () { buy(true); }, 'primary' + (G.canAfford(opt.price) ? '' : ' disabled')) : null),
       btn('Close', function () { close(); }, 'small')));
   }
 

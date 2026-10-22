@@ -87,6 +87,8 @@
     function key(e, down) {
       if (e.repeat) return;
       var k = e.key;
+      // on the timeslip: Enter / Space press its main button
+      if (slipEl) { if (down && (k === 'Enter' || k === ' ')) { var pb = slipEl.querySelector('.btn.primary'); if (pb) { e.preventDefault(); pb.click(); } } return; }
       if (k === 'ArrowUp' || k === 'w' || k === 'W') { input.gasHeld = down; input.gas = down ? 1 : 0; e.preventDefault(); }
       else if (down && (k === ' ' || k === 'ArrowRight' || k === 'Enter')) { input.act = true; e.preventDefault(); }
       else if (down && (k === 'n' || k === 'N')) { input.nos = !input.nos; nosBtn.classList.toggle('on', input.nos); }
@@ -97,9 +99,9 @@
 
     // ---------------------------------------------------------------- state
     var phase = 'pre', phaseT = 0, clock = 0;
-    var tree = { stage: false, amber: 0, green: false, red: [false, false] };
+    var tree = { stage: false, pre: [false, false], staged: [false, false], amber: 0, green: false, red: [false, false] };
     var treeStart = 0, greenAt = null, redLight = false, oppRed = false;
-    var resultShown = false, doneT = 0;
+    var resultShown = false, slipEl = null;
     var voices = [];
     var flash = { text: '', t: 0 };
 
@@ -116,17 +118,32 @@
       setMsg('', lineLock ? 'HOLD GAS to spin the tires. Watch the temp meter, then hit STAGE.'
         : 'AWD: all four wheels are on the brakes. HOLD GAS to scrub some heat in, then hit STAGE.');
     }
-    function startStaging() {
+    // Pull out of the box and creep into the beams. Each car does this on its
+    // own; the tree comes down once both are staged.
+    function startStaging(auto) {
       if (phase !== 'pre' && phase !== 'burnout') return;
-      phase = 'roll'; phaseT = 0; stageBar.innerHTML = ''; setMsg('', '');
+      phase = 'stage'; phaseT = 0; stageBar.innerHTML = '';
       you.sim.burnout(false); you.burn = 0;
-      if (opp) { opp.sim.burnout(false); opp.burn = 0; opp.sim.tireT = Math.max(opp.sim.tireT, opp.burnTarget); }   // they did their burnout
+      beginRoll(you);
+      setMsg('', auto ? 'Tires are hot. Pulling up to the line...' : '');
       actLabel.textContent = 'LAUNCH'; actBtn.classList.remove('go');
+    }
+    function beginRoll(r) { if (r.box === 'box' || r.box === 'burn') { r.box = 'roll'; r.rollT = 0; } }
+    // roll from the box to the line: ease in, then creep through pre-stage
+    function stepRoll(r, dt) {
+      if (r.box !== 'roll') return;
+      r.rollT += dt;
+      var k = Math.min(1, r.rollT / 2.2), e = k < 0.75 ? (k / 0.75) * 0.93 : 0.93 + (k - 0.75) / 0.25 * 0.07;
+      r.off = BOX_X * (1 - e); r.burn = 0;
+      r.wheelAng += dt * (k < 0.75 ? 6 : 1.5);
+      tree.pre[r.lane] = k > 0.8;
+      if (k >= 1) { r.off = 0; r.box = 'staged'; tree.staged[r.lane] = true; if (r === you || !opp || opp.box !== 'staged') A.beep(880, 0.05); }
     }
 
     function makeRacer(inst, S, lane, cfg, fail, label) {
       var sim = new DR.Sim(S, { grip: cfg.grip, dist: cfg.dist, tireT: 30, failAt: fail.failAt, failType: fail.failType });
-      return { inst: inst, S: S, sim: sim, lane: lane, label: label, spr: DR.carSprite(DR.carLook(inst)), off: BOX_X, wheelAng: 0, burn: 0, voice: null, burnT: 0 };
+      return { inst: inst, S: S, sim: sim, lane: lane, label: label, spr: DR.carSprite(DR.carLook(inst)), off: BOX_X, wheelAng: 0, burn: 0, voice: null, burnT: 0,
+        box: 'box', rollT: 0, waitT: 0.6 + Math.random() * 1.2 };
     }
 
     function ensureVoices() {
@@ -156,22 +173,25 @@
     function update(dt) {
       phaseT += dt;
       var act = input.act; input.act = false;
-      if (phase === 'pre') {
-        if (act) startStaging();
-        stepIdle(dt, playerThrottle());
-      } else if (phase === 'burnout') {
-        if (act) startStaging();
+      if (phase === 'pre' || phase === 'burnout' || phase === 'stage') {
+        if (act && phase !== 'stage') startStaging();
         var thr = playerThrottle();
-        stepIdle(dt, thr);
-        if (you.sim.burnMode) you.burn = burnAmt(you);
-        else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.burn = thr * 0.5; }
-        oppBurn(dt);
-      } else if (phase === 'roll') {
-        racers.forEach(function (r) { r.off = Math.min(0, BOX_X + (phaseT / 1.6) * -BOX_X); r.burn = 0; });
-        var rollAng = dt * 6;
-        racers.forEach(function (r) { r.wheelAng += rollAng; });
-        stepIdle(dt, playerThrottle());
-        if (phaseT >= 1.7) { racers.forEach(function (r) { r.off = 0; }); phase = 'tree'; phaseT = 0; tree.stage = true; treeStart = 0.8 + Math.random() * 1.4; A.beep(880, 0.06); }
+        stepSim(you, dt, thr, true);
+        if (phase === 'burnout') {
+          if (you.sim.burnMode) you.burn = burnAmt(you);
+          else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.burn = thr * 0.5; }
+          // tires in the window and off the gas: roll up to the line on its own
+          var tt = S.tire.topt;
+          you.offGas = thr > 0.05 ? 0 : (you.offGas || 0) + dt;
+          if (settings.autoStage !== false && you.sim.tireT >= tt - 8 && you.sim.tireT <= tt + 30 && you.offGas > 0.5 && phaseT > 1) startStaging(true);
+          else if (you.sim.tireT >= tt - 8 && thr > 0.05) setMsg('', you.sim.tireT > tt + 25 ? 'Too hot! Let off the gas.' : settings.autoStage !== false ? 'Tires are in the window. Let off the gas to pull up.' : 'Tires are in the window. Hit STAGE.');
+        }
+        stepRoll(you, dt);
+        oppBox(dt);
+        if (phase === 'stage' && you.box === 'staged') {
+          if (!opp || opp.box === 'staged') { phase = 'tree'; phaseT = 0; tree.stage = true; treeStart = 0.8 + Math.random() * 1.0; setMsg('', ''); }
+          else setMsg('', 'Staged. Waiting on ' + opp.label + '...');
+        }
       } else if (phase === 'tree' || phase === 'race') {
         runRace(dt, act);
       }
@@ -179,21 +199,27 @@
       if (flash.t > 0) { flash.t -= dt; if (flash.t <= 0 && (phase === 'race')) subEl.textContent = ''; }
     }
 
-    function oppBurn(dt) {
+    // The other driver does their own burnout as soon as the screen opens,
+    // then pulls up and stages by themselves.
+    function oppBox(dt) {
       if (!opp) return;
-      opp.burnT += dt;
-      if (opp.sim.tireT < opp.burnTarget && opp.burnT < 6) {
-        if (opp.sim.burnout(true)) { stepSim(opp, dt, opp.burnT < 0.4 ? opp.burnT / 0.4 : 0.85, true); opp.burn = burnAmt(opp); }
-        else { opp.sim.tireT += DR.clamp(opp.S.peakHp / 250, 0.7, 2.6) * 8 * dt; opp.burn = 1; stepSim(opp, dt, 1, true); }
-      } else { opp.sim.burnout(false); opp.burn = 0; stepSim(opp, dt, 0, true); }
+      if (opp.box === 'box') {
+        opp.waitT -= dt; stepSim(opp, dt, 0, true);
+        if (opp.waitT <= 0) { opp.box = 'burn'; opp.burnT = 0; }
+      } else if (opp.box === 'burn') {
+        opp.burnT += dt;
+        if (opp.sim.tireT < opp.burnTarget && opp.burnT < 6) {
+          if (opp.sim.burnout(true)) { stepSim(opp, dt, opp.burnT < 0.4 ? opp.burnT / 0.4 : 0.85, true); opp.burn = burnAmt(opp); }
+          else { opp.sim.tireT += DR.clamp(opp.S.peakHp / 250, 0.7, 2.6) * 8 * dt; opp.burn = 1; stepSim(opp, dt, 1, true); }
+        } else {
+          opp.sim.burnout(false); opp.burn = 0; stepSim(opp, dt, 0, true);
+          opp.coolT = (opp.coolT || 0) + dt;
+          if (opp.coolT > 0.7) beginRoll(opp);      // a breath, then pull up
+        }
+      } else { stepSim(opp, dt, 0, true); stepRoll(opp, dt); }
     }
     // 0..1 how hard the drive tires are really spinning in the box
     function burnAmt(r) { return DR.clamp((r.sim.ww * r.S.r - 2) / 10, 0, 1); }
-
-    function stepIdle(dt, thr) {
-      stepSim(you, dt, thr, true);
-      if (opp && phase !== 'burnout') stepSim(opp, dt, 0.0, true);
-    }
 
     function stepSim(r, dt, thr, idle) {
       var n = Math.max(1, Math.round(dt / DT));
@@ -235,17 +261,16 @@
         // driver asleep at the wheel: auto-launch so the race can finish
         you.sim.launch(); phase = 'race'; actLabel.textContent = 'SHIFT';
       }
-      // finish conditions
-      // show the timeslip once everyone has slowed down in the shutdown area
-      var allDone = racers.every(function (r) {
-        var s = r.sim;
-        if (s.finished) return s.v < 9 || s.time - s.finishTime > 6;
-        return s.crashed || s.blown || s.broke || (s.launched && s.t > 40);
+      // finish conditions: the slip comes up a couple of seconds into the
+      // shutdown (the cars keep coasting behind it); a slower opponent gets a
+      // few more seconds to cross the line first
+      racers.forEach(function (r) {
+        var s2 = r.sim;
+        if (r.doneAt == null && (s2.finished || s2.crashed || s2.blown || s2.broke || (s2.launched && s2.t > 40))) r.doneAt = clock;
       });
-      var playerOut = you.sim.finished || you.sim.crashed || you.sim.blown || you.sim.broke;
-      if (allDone || (playerOut && opp && opp.sim.launched && clock - greenAt > 25)) {
-        doneT += dt;
-        if (doneT > 0.6 && !resultShown) { resultShown = true; showResult(); }
+      if (!resultShown && you.doneAt != null && clock - you.doneAt > 2) {
+        var oppDone = !opp || (opp.doneAt != null && clock - opp.doneAt > 0.4) || !opp.sim.launched && clock - you.doneAt > 3;
+        if (oppDone || clock - you.doneAt > 6) { resultShown = true; showResult(); }
       }
     }
 
@@ -436,8 +461,13 @@
       if (moneyDelta) G.earn(moneyDelta);
       if (them) { G.state.stats.races++; if (win) G.state.stats.wins++; }
       // personal bests
-      var key = cfg.dist > 300 ? 'q' : 'e';
+      var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
       if (you.sim.finished && cfg.grip >= 1 && !redLight && (!inst.best[key] || you.sim.et < inst.best[key])) { inst.best[key] = you.sim.et; lines.push('NEW PERSONAL BEST!'); }
+      else if (you.sim.finished && prevBest) pbLine = 'Your best ' + (key === 'q' ? '1/4' : '1/8') + ': ' + prevBest.toFixed(3) + ' (' + '+' + (you.sim.et - prevBest).toFixed(3) + ')';
+      // how close it was
+      var margin = null;
+      if (them && me.total < Infinity && them.total < Infinity && !me.red && !them.red) margin = (win ? 'Won' : 'Lost') + ' by ' + Math.abs(them.total - me.total).toFixed(3) + 's';
+      else if (them && win && them.total === Infinity && !them.red) margin = opp.label + (opp.sim.crashed ? ' crashed' : opp.sim.blown ? ' blew up' : opp.sim.broke ? ' broke' : ' did not finish');
       if (damaged) {
         inst.damage = damaged;
         lines.push((damaged.engine ? 'Your engine is toast.' : 'Your transmission is broken.') + ' Repair cost: ' + DR.money(G.repairCost(inst)));
@@ -462,7 +492,9 @@
         h('div', { class: 'grow' }, tbl),
         h('div', { class: 'col', style: { width: '38%', minWidth: '210px' } },
         h('div', { class: 'pix big ' + (win === false ? 'bad' : 'good'), style: { textAlign: 'center' } }, head),
+        margin ? h('div', { class: 'margin' }, margin) : null,
         moneyDelta ? h('div', { class: 'pix ' + (moneyDelta > 0 ? 'good' : 'bad'), style: { textAlign: 'center' } }, (moneyDelta > 0 ? '+' : '') + DR.money(moneyDelta)) : null,
+        pbLine ? h('div', { class: 'dim', style: { textAlign: 'center' } }, pbLine) : null,
         lines.map(function (l) { return h('div', { class: 'acc', style: { textAlign: 'center' } }, l); }),
         h('div', { class: 'col' },
           btn('Garage', function () { UI.show(UI.Garage); }),
@@ -473,10 +505,16 @@
             else DR.Race.start(cfg);
           }, 'primary') : null,
           !damaged && them && cfg.mode === 'career' && !win ? btn(ev.type === 'knockout' ? 'Retry Knockout' : 'Rematch', function () { DR.Race.careerEvent(ev, 0); }, 'red') : null,
+          !damaged && them && cfg.mode === 'career' && win && nextRound == null ? btn('Race Again (' + DR.money(G.eventReward(ev)) + ')', function () { DR.Race.careerEvent(ev, 0); }) : null,
           back && !damaged ? btn('Back to Tuning', function () { UI.show(back); }) : null))));
+      // peek: slide the slip down to watch the cars coast through the shutdown
+      var peekBtn = btn('▼ Watch', function () { var on = slip.classList.toggle('peek'); peekBtn.textContent = on ? '▲ Slip' : '▼ Watch'; }, 'small peekbtn');
+      slip.firstChild.appendChild(peekBtn);
       if (win) A.cash();
       root.appendChild(slip);
       controls.style.display = 'none';
+      slipEl = slip;
+      root._back = function () { UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : cfg.mode === 'test' ? 'test' : 'career'); };
     }
 
     function quit() {

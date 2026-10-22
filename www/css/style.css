@@ -165,6 +165,13 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .slip th { font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--dim); }
 .slip td:first-child, .slip th:first-child { text-align: left; color: var(--dim); }
 .slip .winner { color: var(--good); }
+.slip { transition: background .25s; }
+.slip .panel { transition: transform .3s ease; }
+.slip.peek { background: transparent; pointer-events: none; align-items: flex-end; }
+.slip.peek .panel { transform: translateY(calc(100% - 34px)); pointer-events: auto; }
+.slip .peekbtn { position: absolute; right: 8px; top: 6px; font-size: 8px; padding: 4px 8px; }
+.slip .panel { position: relative; }
+.slip .margin { text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--dim); }
 
 /* ---------------------------------------------------------------- dyno */
 .dyno canvas { width: 100%; height: 100%; background: #0c0d10; box-shadow: 0 0 0 2px #000; }
@@ -364,3 +371,7 @@ canvas.dynograph { object-fit: contain; image-rendering: pixelated; }
 .sbar i { background: #2a2d34; }
 .sbar i.on { background: linear-gradient(#5cf0a4, #23b46c); }
 canvas.storehead { width: 100%; height: 24vh; min-height: 80px; object-fit: cover; object-position: 50% 70%; display: block; box-shadow: 0 0 0 2px #000; margin-bottom: 8px; }
+.pcard .gain { font-size: 14px; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+.enext { position: absolute; right: 4px; top: 4px; font-family: 'Press Start 2P', monospace; font-size: 7px; background: var(--accent); color: #111; padding: 3px 5px; }
+.eodds { position: absolute; left: 4px; bottom: 4px; font-family: 'Press Start 2P', monospace; font-size: 7px; background: rgba(0,0,0,.75); padding: 3px 5px; }
+.ecard.next { box-shadow: 0 0 0 2px var(--accent); }

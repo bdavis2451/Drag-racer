@@ -80,10 +80,13 @@
         h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(wins / st.events.length * 100) + '%' } })),
         h('div', { class: 'gsmall dim' }, wins + ' / ' + st.events.length + ' races won')),
       sponsorCard(c));
-    var grid = h('div', { class: 'egrid' }), hidden = 0;
+    var grid = h('div', { class: 'egrid' }), hidden = 0, next = null;
+    st.all.forEach(function (ev) { if (!next && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) next = ev; });
     st.all.forEach(function (ev) {
       if (!G.eventVisible(ev)) { hidden++; return; }
-      grid.appendChild(eventCard(ev));
+      var card = eventCard(ev, ev === next);
+      grid.appendChild(card);
+      if (ev === next) setTimeout(function () { if (card.scrollIntoView && card.getBoundingClientRect().bottom > window.innerHeight) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 60);
     });
     if (hidden) grid.appendChild(h('div', { class: 'ecard locked hiddenev' }, h('div', { class: 'pix big dim' }, '?'), h('div', { class: 'dim' }, hidden + ' more race' + (hidden > 1 ? 's' : '') + ' — keep winning to reveal them')));
     return h('div', {}, chips, head, grid);
@@ -103,12 +106,21 @@
     DR.drawPreview(cv, oi, { aspect: 0.42 });
     return cv;
   }
-  function eventCard(ev) {
+  // your odds against the toughest car in an event, from both estimates
+  function oddsOf(ev) {
+    var T = DR.EVENT_TYPES[ev.type], mine = G.estimate(G.car(), T.dist(), T.grip).et, worst = 99;
+    ev.opps.forEach(function (o) { worst = Math.min(worst, G.estimate(G.oppInst(o), T.dist(), T.grip).et); });
+    var d = worst - mine;
+    return d > 0.25 ? ['EASY', 'good'] : d > -0.1 ? ['CLOSE', 'acc'] : ['TOUGH', 'bad'];
+  }
+  function eventCard(ev, isNext) {
     var T = DR.EVENT_TYPES[ev.type], lock = G.eventLock(ev), won = G.eventWon(ev), o = ev.opps[0], oi = G.oppInst(o);
     var who = ev.opps.length > 1 ? ev.opps.map(function (x) { return x.name; }).join(' → ') : o.name;
-    var cls = 'ecard t-' + ev.type + (lock ? ' locked' : '') + (won ? ' won' : '');
+    var cls = 'ecard t-' + ev.type + (lock ? ' locked' : '') + (won ? ' won' : '') + (isNext ? ' next' : '');
+    var odds = !won && !lock ? oddsOf(ev) : null;
     return h('div', { class: cls },
-      h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, ev.type === 'boss' ? '★ BOSS' : T.name), won ? h('span', { class: 'ewon' }, 'WON') : null),
+      h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, ev.type === 'boss' ? '★ BOSS' : T.name), won ? h('span', { class: 'ewon' }, 'WON') : null,
+        isNext ? h('span', { class: 'enext' }, 'NEXT UP') : null, odds ? h('span', { class: 'eodds ' + odds[1] }, odds[0]) : null),
       h('div', { class: 'acc ename' }, who),
       h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name + ' • runs ' + estText(oi, T.dist(), T.grip)),
       ev.unlocks.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + ev.unlocks.map(DR.unlockText).join(' • ')) : null,

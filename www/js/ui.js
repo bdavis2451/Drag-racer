@@ -49,6 +49,17 @@
     UI.cur = { fn: fn, arg: arg };
   };
   UI.refresh = function () { if (UI.cur) UI.show(UI.cur.fn, UI.cur.arg); };
+  // Back (Android back button, browser back, Escape): close the top dialog,
+  // otherwise press the screen's own back / quit button.
+  UI.goBack = function () {
+    var ms = document.querySelectorAll('.modal');
+    if (ms.length) { var m = ms[ms.length - 1]; m.parentNode.removeChild(m); return true; }
+    var root = UI.app && UI.app.firstChild;
+    if (root && root._back) { root._back(); return true; }
+    var b = UI.app && (UI.app.querySelector('.top .back') || UI.app.querySelector('.controls .quit'));
+    if (b && b.offsetParent !== null) { b.click(); return true; }
+    return false;
+  };
 
   var toastT = 0;
   UI.toast = function (msg) {
@@ -143,6 +154,7 @@
         toggle('Christmas tree', 'proTree', false, true, 'Sportsman', 'Pro', 'Pro tree: all ambers flash at once, green 0.4s later.'),
         toggle('Speed units', 'units', 'mph', 'kmh', 'MPH', 'KM/H'),
         toggle('Gas pedal', 'pedal', 'hold', 'slide', 'Hold', 'Slide', 'Slide: how high you touch the pedal sets the throttle - feather it to stop wheelspin.'),
+        toggle('Burnout pull-up', 'autoStage', true, false, 'Auto', 'Manual', 'Auto: once the tires are in the window, let off the gas and the car rolls up to stage.'),
         h('div', { class: 'item' }, h('div', { class: 'name' }, 'Erase save data'), btn('Reset', function () {
           UI.confirm('Erase everything and start over?', function () { G.reset(); UI.show(UI.Title); }, 'Erase');
         }, 'small red')))));
@@ -154,12 +166,13 @@
     return h('div', { class: 'screen' }, top('HOW TO PLAY', function () { UI.show(back || UI.Garage); }),
       h('div', { class: 'content' }, h('div', { class: 'panel', style: { maxWidth: '820px' } },
         h('h2', {}, 'Racing'),
-        p('1. Optional: hit BURNOUT and hold GAS to heat your tires. Slicks need heat to grip - watch the tire temp meter.'),
-        p('2. Hit STAGE. Hold GAS to rev the engine. Keep the RPM in the green launch zone (a 2-step holds it for you).'),
+        p('1. Optional: hit BURNOUT and hold GAS to heat your tires. Slicks need heat to grip - watch the tire temp meter. Once it is in the green window, let off the gas and the car pulls up to the line on its own (or hit STAGE any time; the Burnout pull-up setting turns the auto pull-up off).'),
+        p('2. Your opponent does their own burnout and stages when they are ready; the tree comes down once both cars are staged. Hold GAS to rev the engine and keep the RPM in the green launch zone (a 2-step holds it for you).'),
         p('Automatics: the torque converter decides how high the engine revs on the line (low, medium or high stall). Without a transbrake you are on the foot brake: it can only hold so much, so the game eases off the throttle for you (BRAKES AT LIMIT) and the launch is a bit softer. A transbrake holds full throttle and boost and lets go instantly.'),
         p('3. When the light turns GREEN, tap LAUNCH. Too early = red light and you lose.'),
         p('4. Keep holding GAS. Tap SHIFT when the blue shift light flashes. If the tires spin (SPIN warning / smoke), ease off the gas for a moment.'),
         p('5. Got nitrous? Tap NOS to spray. Big wheelies can flip the car - lift off the gas or install wheelie bars.'),
+        p('6. The time slip comes up a couple of seconds after the finish. Tap WATCH to slide it away and see the cars coast down the shutdown. The back button (or Esc) always takes you back a screen.'),
         h('h2', {}, 'Career'),
         p('The career has five stages. Each stage has a run of races (1/4 mile, 1/8 mile, night street races, three-round knockouts, sponsor races and night invitationals) and ends with a boss. Winning races reveals more races and unlocks parts. Beat the boss to open the next stage and new cars at the dealer.'),
         p('Sign one sponsor per stage. You get a signing bonus and a bonus for every win, plus a big payout when you fulfil the contract. The boss will only race you once your contract is done.'),

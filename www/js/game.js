@@ -11,7 +11,7 @@
     return {
       v: 3, money: 6000, cars: [], active: null, uid: 1,
       career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [], inv: [],
-      settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold' },
+      settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true },
       started: false
     };
   };
@@ -65,7 +65,9 @@
   G.pay = function (p) { G.state.money -= p; G.save(); };
   G.earn = function (p) { G.state.money += p; G.state.stats.earned += Math.max(0, p); G.save(); };
 
-  G.starters = ['fox', 'hachi'];
+  // first-car choices: every car up to $8k (the two with full art first)
+  G.starters = ['fox', 'hachi'].concat(Object.keys(DR.CARS).filter(function (id) { return id !== 'fox' && id !== 'hachi' && DR.CARS[id].price <= 8000; })
+    .sort(function (a, b) { return DR.CARS[b].price - DR.CARS[a].price; }));
   G.newGame = function (starterId) {
     G.state = G.defaults();
     var inst = G.newInst(starterId);
