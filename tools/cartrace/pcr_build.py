@@ -36,6 +36,18 @@ for c,(x0,y0,x1,y1) in crops.items():
     for w,tr in zip(wh,tireR): extra[(xx-w[0])**2+(yy-w[1])**2<(tr+4)**2]=False
     extra[int(H*0.9):,:]=False
     m=(m|extra.astype(np.uint8))
+    # windshield / rear glass seen edge-on: near-black strips along the top
+    # edge of the greenhouse. Thin lines (the reference's outline) are
+    # opened away; real glass strips stay.
+    Lest=ex1-ex0
+    upper=np.arange(H)[:,None]<ground-0.15*Lest
+    dk=((V<0.15)&(S<0.35)&upper&(nearW==1)).astype(np.uint8)
+    dk=cv2.morphologyEx(dk,cv2.MORPH_OPEN,np.ones((4,4),np.uint8))
+    dk=(dk&cv2.dilate(m,np.ones((5,5),np.uint8)))|dk*0
+    n1,l1,s1,_=cv2.connectedComponentsWithStats(dk)
+    for k1 in range(1,n1):
+        comp=(l1==k1)
+        if s1[k1,4]>=25 and (cv2.dilate(comp.astype(np.uint8),np.ones((5,5),np.uint8))&m).any(): m[comp]=1
     m=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((5,5),np.uint8))
     mc=cv2.morphologyEx(m,cv2.MORPH_CLOSE,np.ones((11,11),np.uint8))
     m=np.where(ends&low,mc,m).astype(np.uint8)
@@ -47,11 +59,11 @@ for c,(x0,y0,x1,y1) in crops.items():
     if c=='hachi': xr,xf=974-x0,1435-x0
     L=xf-xr+1
     U=lambda x,y:[R((x-xr)/L*100),R((ground-y)/L*100)]
-    def smooth_trace(mask,eps):
+    def smooth_trace(mask,eps,sig=7.5):
         # supersample, blur away the pixel stairs, trace, simplify; only real
         # turns stay hard corners (the renderer curves the rest)
         up=cv2.resize(mask.astype(np.float32),None,fx=4,fy=4,interpolation=cv2.INTER_NEAREST)
-        up=cv2.GaussianBlur(up,(0,0),7.5)
+        up=cv2.GaussianBlur(up,(0,0),sig)
         mm=(up>0.5).astype(np.uint8)
         cs,_=cv2.findContours(mm,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
         ap=cv2.approxPolyDP(max(cs,key=cv2.contourArea),eps*4,True).reshape(-1,2).astype(np.float64)/4
@@ -83,16 +95,17 @@ for c,(x0,y0,x1,y1) in crops.items():
     shell=smooth_trace(m,2.0)
     # glass: dark pixels inside the body above the belt
     raw=np.load(c+'_raw.npy')
-    g=((raw==0)&(m==1)&(V<0.42)).astype(np.uint8)
+    mi=cv2.erode(m,np.ones((7,7),np.uint8))   # keep the roof rail / pillars above the glass
+    g=((raw==0)&(mi==1)&(V<0.42)).astype(np.uint8)
     g[int(ground-0.165*L):,:]=0
     g=cv2.morphologyEx(g,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))
     n,lab,st,_=cv2.connectedComponentsWithStats(g)
     order=sorted(range(1,n),key=lambda k:-st[k,4])
     glass=[]
-    for k in order[:2]:
-        if st[k,4]<0.15*st[order[0],4]: continue
-        glass.append(smooth_trace((lab==k).astype(np.uint8),1.6))
-    beltv=min(min(p[1] for p in gl) for gl in glass)
+    for k in order[:3]:
+        if st[k,4]<0.06*st[order[0],4]: continue
+        glass.append(smooth_trace((lab==k).astype(np.uint8),1.0,3.0))
+    beltv=sorted(p[1] for p in glass[0])[1]
     wingpts=None
     if wing is not None:
         wingpts=smooth_trace(wing,1.2)
@@ -158,6 +171,12 @@ for c in ('fox','camss','supra'):
     for sl in ('rbumper','fbumper'): k[sl]['stock']['flush']=True
     rb=max(p[0] for p in k['rbumper']['stock']['pts']); fb=min(p[0] for p in k['fbumper']['stock']['pts'])
     o['seams']=[pl for pl in o['seams'] if not all(abs(p[0]-rb)<0.4 or abs(p[0]-fb)<0.4 for p in pl)]
+bands={'supra':[[50,63.3,2.1]],'fox':[[52,64,2.1],[13,28.5,1.6]],'camss':[[53,63.5,2.1],[20,29,1.4]],'hachi':[[55,69.5,2.1]]}
+for c in bands: res[c]['wsGlass']=bands[c]
+# mirrors: small body-colour pods tucked into the glass's front-bottom corner
+mir={'supra':(55.4,58.6,17.0),'camss':(58.0,61.6,17.9),'fox':(59.6,62.6,18.3),'hachi':(62.2,65.2,20.4)}
+for c,(a,b,y) in mir.items():
+    res[c]['kit']['mirror']={'stock':{'pts':[[a,y],[b-0.6,y],[b,y+0.8],[b-0.3,y+1.9],[a+0.6,y+2.1],[a,y+1.4]]}}
 # supra: silver oval headlamp like the reference
 res['supra']['lamps'][0]=['headsilver',[[91.2,12.2],[93.0,10.6],[96.2,9.9],[98.4,10.4],[97.8,11.4],[95.4,12.2],[92.4,12.8]]]
 json.dump(res,open('newart.json','w'))
