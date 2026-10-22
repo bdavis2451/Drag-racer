@@ -20,7 +20,37 @@
     }
     return c;
   }
-  function rect(x0, y0, x1, y1) { return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]; }
+  function rect(x0, y0, x1, y1) { return [[x0, y0, 1], [x1, y0, 1], [x1, y1, 1], [x0, y1, 1]]; }
+  // Closed Catmull-Rom curve through the points; [x, y, 1] stays a corner.
+  var smoothCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+  function smooth(pts) {
+    if (smoothCache && smoothCache.has(pts)) return smoothCache.get(pts);
+    var n = pts.length, out = [];
+    for (var i = 0; i < n; i++) {
+      var p1 = pts[i], p2 = pts[(i + 1) % n];
+      out.push([p1[0], p1[1]]);
+      if (p1[2] && p2[2]) continue;
+      var p0 = p1[2] ? p1 : pts[(i - 1 + n) % n], p3 = p2[2] ? p2 : pts[(i + 2) % n];
+      var len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]), steps = Math.max(2, Math.min(10, Math.round(len * 1.5)));
+      for (var k = 1; k < steps; k++) {
+        var t = k / steps, t2 = t * t, t3 = t2 * t;
+        out.push([0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+                  0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]);
+      }
+    }
+    if (smoothCache) smoothCache.set(pts, out);
+    return out;
+  }
+  // x crossings of a polygon at height y, sorted (even-odd spans)
+  function xsAt(pts, y) {
+    var xs = [];
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      var yi = pts[i][1], yj = pts[j][1];
+      if ((yi > y) !== (yj > y)) xs.push(pts[i][0] + (y - yi) * (pts[j][0] - pts[i][0]) / (yj - yi));
+    }
+    return xs.sort(function (a, b) { return a - b; });
+  }
+  function bbox(pts) { var b = [1e9, 1e9, -1e9, -1e9]; pts.forEach(function (p) { b[0] = Math.min(b[0], p[0]); b[1] = Math.min(b[1], p[1]); b[2] = Math.max(b[2], p[0]); b[3] = Math.max(b[3], p[1]); }); return b; }
 
   // ------------------------------------------------------------ generic bodies
   // x: 0 (rear bumper) .. 100 (front bumper). y: units above the ground, same
@@ -44,109 +74,132 @@
   DR.BODIES = BODIES;
 
   // ------------------------------------------------------------ hand-drawn cars
-  // Traced from the real cars' side profiles, in the same units as BODIES.
+  // Built from each car's published length, wheelbase, height and
+  // overhangs (x = % of length from the rear bumper, y in the same unit).
+  // Outline points are smoothed into curves; [x, y, 1] marks a sharp corner.
   //  shell: the main body. kit: slot -> variants ({pts, mat, extra, lamps,
   //  details}); the look picks a variant per slot ('stock' by default).
   //  glass / pillars / interior: the greenhouse. belt: shoulder crease.
-  //  rocker: bottom of the side. lamps / details: [material, polygon].
+  //  creases: extra sculpt lines. rocker: bottom of the side.
+  //  lamps / details: [material, polygon]. lines: [colour, polyline].
   //  seams: panel gaps (polylines). head / tail: lamp centres for lighting.
   var ART = {
-    // '87-'93 Mustang GT hatch: aero nose, boxy flanks, long sloped hatch
+    // '87-'93 Mustang GT hatch (4.56 m, 2.55 m wb, 1.32 m): aero nose, flat
+    // hood, upright screen, long shallow hatch with a lip spoiler
     fox: {
-      wr: 21, wf: 76.5, belt: 19.8, rocker: 5.2, rim: 'turbine', hood: [70, 90], frame: [18, 18, 20],
-      shell: [[1.4,11],[0.6,15.5],[1.2,19.6],[2.2,20.6],[3.6,20.9],[4.4,20.7],[16,26.6],[22,28.5],[25,28.8],[46.5,28.8],[49,28.2],[63,21.8],[64.5,21.5],[88,19.8],[94,19.1],[97.2,18.3],[98.6,16.6],[98.8,13],[96,6.5],[90,5.2],[10,5.2],[3,6.5]],
+      wr: 23.5, wf: 79, belt: 18.6, rocker: 3.8, rim: 'turbine', hood: [72, 92], frame: [16, 16, 18],
+      shell: [[99.3,3.7],[100,5,1],[100,9.8],[99.4,12.2],[98.6,15.1],[97.2,16.0,1],[82.6,17.4],[68.5,18.9,1],[56,26.4],[53.4,28.3],[50,28.75],[45.7,28.85],[40,28.7],[37.2,28.4],[22,24.9],[7.6,21.6,1],[6.6,22.6],[3.6,23.0],[2.6,22.4,1],[1.5,20.9],[0.65,13.5,1],[0.2,12.2],[0,6.1,1],[1,4.3],[3.4,3.7,1],[96,3.7,1]],
       kit: {
-        rbumper: { stock: { pts: [[2.8,5.1],[1,6.2],[0,8],[0,11.6],[0.6,12.6],[7.6,12.6],[7.6,5]],
-          details: [['soft', rect(0.2, 10.8, 7.6, 11.9)], ['trim', rect(0.6, 5.2, 7, 6.2)]] } },
-        fbumper: { stock: { pts: [[91.5,4.9],[97,5.3],[99.4,6.6],[100,8.6],[100,13.4],[99.2,14.4],[93,14.2],[91.5,12]],
-          details: [['soft', rect(92, 10.8, 100, 11.9)], ['grille', rect(97.4, 8.8, 100, 10.4)], ['trim', [[92.5, 4.9], [99.5, 5.6], [100, 6.6], [92.5, 6]]]],
-          lamps: [['fog', rect(98, 6.8, 100, 8.2)]] } },
-        skirt: { stock: { pts: [[24,4.6],[66,4.6],[66,7.6],[24,7.6]], details: [['vent', [[28.6, 5.2], [33.2, 5.2], [33.2, 9.4], [30.2, 8.8]]]] } },
-        spoiler: { stock: { pts: [[1.6,20.2],[5.8,21.4],[7,22.4],[2.8,22.3],[1.1,21.1]] } },
-        mirror: { stock: { mat: 'trim', pts: [[57.6,22.2],[61,22.2],[60.4,24.6],[58.2,24.4]] } }
+        rbumper: { stock: { pts: [[0.1,12.6,1],[0,6.1],[1,4.3],[3.6,3.6,1],[10.4,3.6,1],[10.4,12.6,1]],
+          details: [['soft', [[0.2, 11.0], [10.4, 11.0], [10.4, 12.0], [0.3, 12.0]]], ['trim', [[1.2, 4.1], [9.6, 3.8], [9.6, 5.0], [1.4, 5.3]]]] } },
+        fbumper: { stock: { pts: [[90.5,12.6,1],[90.5,3.6,1],[99.2,3.6],[100,5,1],[100,9.8],[99.6,12.6,1]],
+          details: [['soft', [[90.5, 11.0], [100, 11.0], [100, 12.0], [90.5, 12.0]]], ['grille', [[97.2, 7.6], [100, 7.6], [100, 9.4], [97.2, 9.4]]], ['trim', [[91, 3.7], [99, 3.7], [99.8, 4.8], [91, 4.6]]]],
+          lamps: [['fog', [[98, 5.3], [99.9, 5.3], [99.9, 6.8], [98, 6.8]]]] } },
+        skirt: { stock: { pts: [[30,3.6,1],[71,3.6,1],[71,7.8,1],[30,7.8,1]], details: [['vent', [[30.2, 4.2], [35.2, 4.2], [35.2, 8.8], [31.6, 8.3]]]] } },
+        spoiler: { stock: { pts: [[1.9,21.4,1],[7.8,22.3],[8.6,23.4,1],[2.8,23.6],[1.6,22.5]] } },
+        mirror: { stock: { mat: 'trim', pts: [[63.4,20.8],[67.2,20.8],[66.6,23.6],[63.9,23.3]] } }
       },
-      glass: [[[33.8,22.4],[33.8,27.8],[46.4,27.8],[60.6,22.2]], [[17.8,23.1],[23,27.1],[25.2,27.8],[31.6,27.8],[31.6,22.4]]],
-      pillars: [['trim', rect(31.6, 22.4, 33.8, 27.8)]],
-      interior: [['seat', [[40, 22.4], [43.6, 22.4], [43.2, 26.6], [40.8, 27.2]]], ['seat', [[27, 22.4], [30, 22.4], [29.6, 25.8], [27.4, 26]]], ['wheel', [[51.6, 23], [53.6, 25.4], [54.4, 24.6], [52.4, 22.4]]]],
-      lamps: [['head', [[93.8, 17], [98.4, 16.7], [99, 14.8], [93.8, 15]]], ['amber', [[92.2, 15.1], [93.8, 15], [93.8, 17], [92.2, 17.1]]],
-        ['taillouvre', [[0.3, 14], [2.8, 14], [2.8, 19], [1, 19]]], ['amber', rect(88.4, 12.6, 90.4, 13.5)], ['tail', rect(8.4, 12.6, 10.2, 13.5)]],
-      details: [['soft', rect(7.6, 11.2, 92, 12.1)], ['handle', rect(35.2, 19.4, 37.8, 20.2)], ['badge', rect(83.5, 15.4, 86.5, 16.2)], ['door', rect(11.6, 15.2, 14.4, 17.6)]],
-      seams: [[[62.6, 21.7], [62.9, 12], [62.6, 7.6]], [[33.1, 22.3], [32.7, 12], [33, 7.6]], [[64.5, 21.5], [90, 19.65]]],
-      head: [98.6, 15.8], tail: [1.5, 16.5], exhaust: [5, 5.4]
+      glass: [[[66.2,20.9,1],[55.2,27.4],[50,27.95],[45.6,28.05],[39.6,27.85,1],[39.6,20.9,1]],
+              [[37.8,20.9,1],[37.8,27.6,1],[34.4,27.0],[21.2,23.9],[19.4,22.4],[20.2,20.9,1]]],
+      pillars: [['trim', [[37.8, 20.9], [39.6, 20.9], [39.6, 27.9], [37.8, 27.7]]]],
+      interior: [['seat', [[44.2, 20.9], [48.2, 20.9], [47.8, 24.6], [44.8, 25.0]]], ['head', [[45.2, 25.0], [47.8, 24.8], [47.6, 26.6], [45.4, 26.8]]],
+        ['seat', [[29, 20.9], [32.6, 20.9], [32.2, 23.6], [29.4, 23.8]]], ['head', [[29.8, 23.8], [32.2, 23.6], [32, 25.1], [30, 25.2]]],
+        ['wheel', [[55.6, 21.4], [57.4, 24.4], [58.4, 23.8], [56.8, 21.0]]]],
+      lamps: [['head', [[93.2, 15.6], [98.4, 15.3], [99.0, 13.2], [93.2, 13.4]]], ['amber', [[91.4, 13.5], [93.2, 13.4], [93.2, 15.6], [91.4, 15.7]]],
+        ['taillouvre', [[0.6, 13.8], [3.0, 13.8], [3.0, 20.4], [1.4, 20.4]]], ['amber', [[86.8, 9.0], [89, 9.0], [89, 10], [86.8, 10]]], ['tail', [[11, 9.0], [13, 9.0], [13, 10], [11, 10]]]],
+      details: [['soft', [[10.4, 11.4], [90.5, 11.4], [90.5, 12.3], [10.4, 12.3]]], ['handle', [[40.6, 19.2], [44, 19.2], [44, 20.0], [40.6, 20.0]]],
+        ['badge', [[84, 14.4], [87.4, 14.4], [87.4, 15.2], [84, 15.2]]], ['door', [[12.6, 15.0], [15.6, 15.0], [15.6, 17.6], [12.6, 17.6]]]],
+      lines: [['#2a2a2e', [[69.5, 18.7], [65.6, 33.5]]], ['#101012', [[68.5, 18.95], [64.2, 21.7]]]],
+      seams: [[[66.4, 20.8], [66.6, 8.6], [65.6, 7.8]], [[38.6, 20.8], [38.6, 8.6], [39.4, 7.8]], [[68.4, 18.4], [97, 15.6]], [[36.8, 27.6], [8.4, 21.4]]],
+      head: [98.6, 14.4], tail: [1.8, 17], exhaust: [6, 4.4]
     },
-    // 6th-gen Camaro SS: long hood, high belt, gun-slit glass, short deck
+    // 6th-gen Camaro SS (4.78 m, 2.81 m wb, 1.35 m): long domed hood, very
+    // high belt with slit glass, fastback C-pillar, short deck, wide haunches
     camss: {
-      wr: 19.6, wf: 78.4, belt: 21.6, rocker: 6.4, rim: 'split', hood: [70, 88], frame: [14, 14, 16],
-      shell: [[1.4,9],[0.4,17],[1.4,20.6],[2.6,21.6],[4,22.1],[13,22.7],[20,24],[26,26.4],[33,27.8],[48,27.9],[52,27],[60.5,23.6],[64,22.9],[80,22.2],[92,21.6],[97.4,20.8],[99.4,19.4],[99,12],[96,6.4],[10,6.4],[3,7.4]],
+      wr: 20.6, wf: 79.6, belt: 19.4, rocker: 5.4, rim: 'split', hood: [70, 90], frame: [12, 12, 14],
+      shell: [[97.9,2.7,1],[99.6,4.6],[100,8.8],[99.6,13.7,1],[97.5,15.4,1],[92,16.4],[85.4,17.6],[74,18.6],[63.5,19.6,1],[51,26.8],[48,27.8],[43,28.15],[36,28.0],[30.2,27.5],[22,25.0],[13.5,22.1,1],[5.2,21.7],[2.1,22.3,1],[1.25,21.7],[0.4,19.2,1],[0.4,9.4],[1.25,5.2],[4.2,3.3,1],[90,3.3,1]],
       kit: {
-        rbumper: { stock: { pts: [[3,5],[0.6,7],[0,10],[0.4,14.4],[7,14.6],[9.4,5]],
-          details: [['trim', [[0.6, 5.2], [9.4, 4.8], [9.4, 7.6], [0.8, 8.2]]], ['chrome', rect(1.2, 5.6, 3.4, 7)], ['chrome', rect(4.2, 5.6, 6.4, 7)]] } },
-        fbumper: { stock: { pts: [[90,4.6],[96.4,5],[98,6.6],[98.8,9],[99.6,14],[100,17.6],[99,18.4],[92,16.4],[90,12]],
-          details: [['grille', [[98.7, 17.4], [99.9, 17.3], [99.4, 12.4], [98.4, 12.6]]], ['grille', [[96.4, 6.8], [98.2, 7.2], [98.8, 10], [97, 9.8]]], ['trim', [[91, 4.4], [97.6, 5], [98, 6], [91, 5.4]]]] } },
-        skirt: { stock: { mat: 'trim', pts: rect(22, 4.6, 71, 6.8) } },
-        spoiler: { stock: { pts: [[3.4,21.8],[4,23.2],[10,23.3],[10.6,22.6]] } },
-        mirror: { stock: { pts: [[55.6,24],[59.4,23.8],[59,26],[56.2,25.6]] } }
+        rbumper: { stock: { pts: [[0.4,14.6,1],[0.4,9.4],[1.25,5.2],[4.2,3.3,1],[11,3.3,1],[11,14.6,1]],
+          details: [['trim', [[0.8, 3.6], [11, 3.4], [11, 6.4], [1.2, 6.8]]], ['chrome', [[1.6, 4.4], [4.0, 4.4], [4.0, 5.9], [1.6, 5.9]]], ['chrome', [[4.8, 4.4], [7.2, 4.4], [7.2, 5.9], [4.8, 5.9]]]] } },
+        fbumper: { stock: { pts: [[89,13.4,1],[89,3.3,1],[97.9,2.7,1],[99.6,4.6],[100,8.8],[99.6,13.7,1]],
+          details: [['grille', [[98.4, 13.2], [99.7, 13.3], [99.9, 10.0], [98.6, 10.0]]], ['grille', [[97.2, 4.4], [99.6, 4.8], [99.9, 8.4], [97.6, 8.2]]], ['trim', [[89, 2.7], [98, 2.6], [98.8, 3.8], [89, 3.6]]]] } },
+        skirt: { stock: { mat: 'trim', pts: [[26,3.3,1],[74,3.3,1],[74,5.6,1],[26,5.6,1]] } },
+        spoiler: { stock: { pts: [[1.4,22.1,1],[2.2,23.3],[9.5,23.4],[10.5,22.7],[10,21.9,1]] } },
+        mirror: { stock: { pts: [[57,20.8],[61,20.8],[60.4,23.6],[57.6,23.3]] } }
       },
-      glass: [[[26.6,23.9],[33.4,27.2],[47.8,27.2],[58.4,23.9]]],
-      pillars: [['trim', rect(31, 23.9, 32, 26.6)]],
-      interior: [['seat', [[39.6, 23.9], [42.6, 23.9], [42.2, 26.4], [40.2, 26.8]]], ['wheel', [[51, 24], [53, 26.2], [53.6, 25.4], [52, 23.9]]]],
-      lamps: [['head', [[93.4, 20.2], [99, 19.4], [99.4, 18.2], [94, 18.8]]], ['tail', [[0.3, 17.4], [3, 17.6], [3.3, 20.4], [1.4, 20.4]]],
-        ['amber', rect(90, 15.8, 92, 16.6)], ['tail', rect(6.4, 16, 8.4, 16.8)]],
-      details: [['vent', [[62.6, 13.4], [66.6, 13.4], [66.6, 16.2], [63.2, 15.9]]], ['vent', [[72, 21.1], [80, 20.6], [80, 21.3], [72, 21.8]]], ['handle', rect(34, 22.3, 36.6, 23)], ['badge', rect(68, 12.4, 71, 13.2)]],
-      seams: [[[59.6, 23.5], [60, 8], [59, 6.8]], [[30.6, 23.8], [29.2, 12], [29.8, 6.8]], [[64, 22.9], [90, 21.7]]],
-      creases: [[[66, 17.6], [93, 17.2]], [[8, 19.2], [26, 19.8]]],
-      head: [98.5, 19.4], tail: [1.8, 19], exhaust: [3, 5.8]
+      glass: [[[61.4,21.0,1],[50.4,26.7],[47,27.2],[42.6,27.3],[35,27.0],[30,26.4],[25.2,23.2],[26.6,21.0,1]]],
+      pillars: [['trim', [[33.2, 21.0], [34.2, 21.0], [34.2, 27.0], [33.2, 26.9]]]],
+      interior: [['seat', [[39.4, 21.0], [43.4, 21.0], [43, 23.6], [40, 24.0]]], ['head', [[40.4, 24.0], [43.0, 23.8], [42.8, 25.6], [40.6, 25.8]]],
+        ['wheel', [[51.8, 21.2], [53.4, 24.2], [54.4, 23.6], [53, 21.0]]]],
+      lamps: [['head', [[92.4, 15.9], [97.6, 15.2], [99.2, 14.2], [93, 14.7]]], ['tail', [[0.5, 17.6], [3.4, 17.8], [3.6, 21.0], [1.4, 20.8]]],
+        ['amber', [[89.4, 11.4], [91.6, 11.4], [91.6, 12.3], [89.4, 12.3]]], ['tail', [[7, 13.2], [9.2, 13.2], [9.2, 14.1], [7, 14.1]]]],
+      details: [['gill', [[65, 11.0], [68.6, 11.0], [68.6, 13.2], [65.4, 12.9]]], ['vent', [[72.4, 18.3], [81, 17.6], [81, 18.3], [72.4, 19.0]]],
+        ['handle', [[34.8, 19.9], [37.8, 19.9], [37.8, 20.6], [34.8, 20.6]]], ['badge', [[71, 11.4], [74, 11.4], [74, 12.1], [71, 12.1]]],
+        ['door', [[14, 16.4], [16.8, 16.4], [16.8, 18.6], [14, 18.6]]]],
+      lines: [['#101012', [[63.6, 19.65], [59.8, 21.6]]]],
+      seams: [[[61.8, 20.9], [61.6, 7.0], [60.4, 5.8]], [[32.4, 20.9], [32, 7.0], [33, 5.8]], [[63.4, 19.2], [92, 16.0]]],
+      creases: [[[66, 15.8], [80, 15.4], [94, 14.4]], [[6, 18.2], [20, 18.6], [34, 17.0]], [[34, 9.6], [62, 9.8]]],
+      head: [98.6, 14.8], tail: [1.8, 19.4], exhaust: [3, 5.2]
     },
-    // AE86 Trueno: wedge nose with pop-ups, black bumpers, airy greenhouse,
-    // panda two-tone
+    // AE86 Sprinter Trueno hatch (4.18 m, 2.40 m wb, 1.335 m): wedge nose
+    // with pop-ups, big airy glass, black bumpers, panda two-tone
     hachi: {
-      wr: 21.4, wf: 78.5, belt: 20.6, rocker: 5.2, rim: 'mesh', hood: [70, 90], frame: [18, 18, 20],
-      lower: { y: 12.9, c: [24, 24, 27] },
-      shell: [[1,13.8],[1.4,20.4],[2.4,21.4],[3.6,21.7],[15.5,29.3],[19.5,31.2],[22,31.6],[48,31.8],[50,31.3],[63.5,23.4],[65,23.1],[92,20.3],[97.8,19.2],[99.2,17.8],[99.4,14],[96,13.6],[96,5.2],[5,5.2],[5,13.6]],
+      wr: 22.4, wf: 79.5, belt: 19.8, rocker: 4.2, rim: 'mesh', hood: [72, 92], frame: [18, 18, 20],
+      lower: { y: 13.0, c: [24, 24, 27] },
+      shell: [[1.2,4.0,1],[1.0,12.4,1],[1.2,14.3,1],[2.4,22.1],[4.2,22.9],[8.3,23.3,1],[29.8,31.4],[38,31.85],[46,31.85],[51.2,31.2,1],[66.7,20.1,1],[80,18.6],[95.2,16.7,1],[96.7,15.2],[97.6,12.4,1],[97.6,4.0,1]],
       kit: {
-        rbumper: { stock: { mat: 'bumper', pts: [[0,6.2],[5.4,6],[5.4,14],[0,13.8]] } },
-        fbumper: { stock: { mat: 'bumper', pts: [[95.2,6],[99,6.4],[100,8],[100,13.9],[95.2,13.9]], lamps: [['amber', rect(98.2, 10, 100, 11.8)]] } },
-        skirt: { stock: { mat: 'bumper', pts: rect(5, 12.6, 95.4, 13.6) } },
-        spoiler: { stock: { mat: 'trim', pts: [[1.4,20.4],[3.6,21.7],[5.2,22.9],[1.2,21.2]] } },
-        mirror: { stock: { mat: 'trim', pts: [[58.2,23.7],[61.6,23.7],[61,26.4],[58.4,25.8]] } }
+        rbumper: { stock: { mat: 'bumper', pts: [[0,5.2,1],[0.4,4.4],[6.2,4.2,1],[6.2,12.6,1],[0,12.0,1]] } },
+        fbumper: { stock: { mat: 'bumper', pts: [[93.8,4.2,1],[99.4,4.4],[100,5.4,1],[100,12.0,1],[93.8,12.6,1]], lamps: [['amber', [[98.4, 8.6], [100, 8.6], [100, 10.6], [98.4, 10.6]]]] } },
+        skirt: { stock: { mat: 'bumper', pts: [[6,12.4,1],[94,12.4,1],[94,13.4,1],[6,13.4,1]] } },
+        spoiler: { stock: { mat: 'trim', pts: [[5.6,23.0,1],[9.2,23.4],[10,24.4,1],[6.2,24.2]] } },
+        mirror: { stock: { mat: 'trim', pts: [[62,21.2],[65.6,21.2],[65,24],[62.4,23.6]] } }
       },
-      glass: [[[15,23.6],[19.6,28.8],[22.6,30.3],[31.6,30.4],[31.6,23.7]], [[33.4,23.7],[33.4,30.4],[47.8,30.4],[61.2,23.7]]],
-      pillars: [['trim', rect(31.6, 23.7, 33.4, 30.4)]],
-      interior: [['seat', [[39, 23.7], [42.4, 23.7], [42, 28.6], [39.6, 29.4]]], ['seat', [[24.6, 23.7], [27.6, 23.7], [27.2, 27.4], [25, 27.8]]], ['wheel', [[50.6, 24.4], [52.6, 27.2], [53.4, 26.4], [51.6, 24]]]],
-      lamps: [['amber', [[96.6, 15.2], [99.4, 15.2], [99.3, 16.8], [96.6, 16.8]]], ['tail', [[0.9, 16.6], [3, 16.6], [3, 19.7], [1.4, 19.7]]], ['amber', [[0.8, 15], [3, 15], [3, 16.6], [0.9, 16.6]]]],
-      details: [['handle', rect(34.6, 21.2, 37.2, 21.9)], ['door', rect(9.8, 16.4, 12.4, 18.6)], ['badge', rect(80, 16.4, 83, 17.1)]],
-      seams: [[[62.6, 23.4], [63, 13.8]], [[32.5, 23.6], [32.3, 13.8]], [[86.5, 20.9], [86.5, 19.6], [96.8, 18.6]], [[65, 23.1], [86.5, 20.9]]],
-      head: [99, 16], tail: [2, 17.4], exhaust: [5.5, 5.6]
+      glass: [[[64.6,21.2,1],[52,30.2],[48,30.85],[42,30.95],[36.4,30.85,1],[36.4,21.2,1]],
+              [[34.8,21.2,1],[34.8,30.8,1],[29.8,30.4],[14,24.8],[11.6,22.8],[12.6,21.2,1]]],
+      pillars: [['trim', [[34.8, 21.2], [36.4, 21.2], [36.4, 30.9], [34.8, 30.8]]]],
+      interior: [['seat', [[42.4, 21.2], [46.6, 21.2], [46.2, 26.0], [43, 26.4]]], ['head', [[43.4, 26.4], [46.2, 26.2], [46, 28.2], [43.6, 28.4]]],
+        ['seat', [[26.4, 21.2], [30.2, 21.2], [29.8, 24.4], [26.8, 24.6]]], ['head', [[27, 24.6], [29.8, 24.4], [29.6, 26.2], [27.2, 26.4]]],
+        ['wheel', [[54, 22.0], [56, 25.4], [57, 24.8], [55.2, 21.6]]]],
+      lamps: [['amber', [[96.2, 13.0], [99.4, 13.0], [99.2, 14.8], [96.2, 14.8]]], ['tail', [[1.4, 17.4], [4.0, 17.4], [4.0, 21.6], [2.2, 21.6]]], ['amber', [[1.2, 14.6], [4.0, 14.6], [4.0, 17.4], [1.4, 17.4]]]],
+      details: [['handle', [[37.6, 19.4], [40.8, 19.4], [40.8, 20.2], [37.6, 20.2]]], ['door', [[11.4, 16.0], [14.2, 16.0], [14.2, 18.4], [11.4, 18.4]]],
+        ['badge', [[82, 15.2], [85.6, 15.2], [85.6, 15.9], [82, 15.9]]]],
+      lines: [['#101012', [[66.7, 20.15], [62.4, 23.2]]]],
+      seams: [[[65.6, 21.0], [66, 13.6]], [[35.6, 21.0], [35.4, 13.6]], [[88.6, 17.8], [88.6, 16.4], [96.2, 15.6]], [[66.6, 19.7], [88.6, 17.8]]],
+      head: [99, 13.8], tail: [2.4, 19], exhaust: [6.6, 4.6]
     },
-    // A80 Supra: long rounded nose, bubble roof, hoop wing
+    // A80 Supra (4.52 m, 2.55 m wb, 1.275 m): long low rounded nose, bubble
+    // cabin, short tail and the hoop wing
     supra: {
-      wr: 21, wf: 77.7, belt: 18.2, rocker: 6.4, rim: 'five', hood: [66, 86], frame: [16, 16, 18],
-      shell: [[1.2,10],[0.3,14.5],[1.2,17.6],[3,19.2],[8,20],[16,20.6],[22,22.4],[28,26.2],[33,27.8],[37,28.3],[45,28.1],[49,27.2],[58,22.4],[62,21.2],[74,19.6],[86,17.8],[93,15.8],[97.2,13.6],[98.6,11],[96,6.4],[12,6.4],[3,7]],
+      wr: 19.3, wf: 76, belt: 18.4, rocker: 5.2, rim: 'five', hood: [66, 88], frame: [14, 14, 16],
+      shell: [[97.8,2.9,1],[99.6,5.2],[100,7.6],[99.6,10.4],[97.8,12.9],[95,14.6],[92.2,15.6],[86,16.9],[77.8,18.2],[62.7,20.4,1],[51.2,26.6],[48,27.8],[44,28.25],[38,28.2],[33.3,27.8],[27,25.4],[16.7,21.8,1],[5.6,21.3],[2.6,20.9],[1.1,20.0],[0.2,17.6],[0,14],[0,11.1],[0.4,6.2],[1.4,4.4],[3.3,3.6,1],[90,3.4,1]],
       kit: {
-        rbumper: { stock: { pts: [[3,5.4],[0.6,7.2],[0,10.5],[0.4,13],[7,13.2],[10,5.4]],
-          details: [['trim', [[1, 5.6], [10, 5], [10, 6.6], [1, 7.4]]], ['chrome', rect(1.6, 5.8, 4.4, 7.4)]] } },
-        fbumper: { stock: { pts: [[88,4.6],[97,5],[99.4,6.6],[100,9],[99.4,11.2],[97.4,13.6],[92,13],[88,10]],
-          details: [['grille', [[96.4, 8.8], [100, 9.4], [100, 7], [97, 6.6]]], ['trim', [[89, 4.4], [99, 5], [99.6, 6], [89, 5.4]]]],
-          lamps: [['fog', [[97.4, 10.2], [99.4, 10.5], [99.1, 11.6], [97.4, 11.4]]]] } },
-        skirt: { stock: { pts: rect(24, 4.6, 70, 7.2), details: [['trim', rect(24, 4.6, 70, 5.4)]] } },
-        spoiler: { stock: { pts: [[0.4,24.6],[18,24.8],[19,26.4],[17.6,27.4],[1.6,27.6],[0,26.4]],
-          extra: [[[4.2,19.6],[7.2,19.6],[8.2,25.2],[5.6,25.2]], [[13.4,20.2],[16.4,20.3],[17,25.2],[14.6,25.2]]] } },
-        mirror: { stock: { pts: [[52.4,22],[56,22],[55.2,24.4],[52.8,24]] } }
+        rbumper: { stock: { pts: [[0.1,12.8,1],[0,11.1],[0.4,6.2],[1.4,4.4],[3.3,3.6,1],[12,3.4,1],[12,12.8,1]],
+          details: [['trim', [[1.2, 3.8], [12, 3.5], [12, 5.6], [1.6, 6.0]]], ['chrome', [[2.0, 4.4], [5.4, 4.4], [5.4, 6.4], [2.0, 6.4]]]] } },
+        fbumper: { stock: { pts: [[87,11.4,1],[87,3.4,1],[97.8,2.9,1],[99.6,5.2],[100,7.6],[99.6,10.4],[98.6,11.8,1]],
+          details: [['grille', [[96.6, 4.0], [99.4, 4.6], [99.9, 7.4], [97.2, 7.2]]], ['trim', [[87.6, 2.9], [97.6, 2.8], [98.4, 3.6], [87.6, 3.6]]]],
+          lamps: [['fog', [[97.6, 8.2], [99.7, 8.4], [99.5, 9.8], [97.6, 9.6]]]] } },
+        skirt: { stock: { pts: [[26,3.4,1],[66,3.4,1],[66,6.8,1],[26,6.8,1]], details: [['trim', [[26, 3.4], [66, 3.4], [66, 4.2], [26, 4.2]]]] } },
+        spoiler: { stock: { pts: [[-1.2,25.6],[17.4,25.9],[18.6,27.2],[17.2,28.2],[0,28.4],[-1.6,27.2]],
+          extra: [[[3.8,21.0,1],[7.0,21.0,1],[7.8,26.0,1],[5.2,26.0,1]], [[13.6,21.2,1],[16.6,21.3,1],[17.0,26.0,1],[14.6,26.0,1]]] } },
+        mirror: { stock: { pts: [[55.6,20.8],[59.4,20.8],[58.8,23.4],[56.2,23.0]] } }
       },
-      glass: [[[26.2,21.4],[31.4,26.8],[45,26.9],[56,21.7]]],
-      pillars: [['trim', rect(32.6, 21.5, 33.6, 26.8)]],
-      interior: [['seat', [[38.2, 21.6], [41.4, 21.6], [41, 25.8], [38.6, 26.4]]], ['wheel', [[48.6, 22], [50.6, 24.6], [51.4, 23.8], [49.6, 21.8]]]],
-      lamps: [['head', [[87.6, 16.6], [94.6, 14.9], [96.2, 13.6], [88.6, 15.3]]], ['tail', [[0.3, 14], [2.4, 14.4], [2.7, 17.4], [1, 17.2]]], ['amber', rect(85.6, 12.8, 87.6, 13.6)]],
-      details: [['handle', rect(33.8, 19.6, 36.4, 20.3)], ['door', rect(14, 14.6, 16.6, 16.8)], ['badge', rect(78, 13.6, 81, 14.3)]],
-      seams: [[[57, 22], [57.5, 10], [57, 7.2]], [[29.6, 21.6], [28.2, 12], [28.8, 7.2]], [[62, 21.2], [84, 18]]],
-      creases: [[[8, 16.4], [24, 17]]],
-      head: [95, 15], tail: [1.5, 15.7], exhaust: [3, 6.6]
+      glass: [[[60.2,20.9,1],[50.6,26.2],[47,27.1],[43.4,27.3],[37.6,27.15],[33.6,26.6],[29,24.4],[26.4,21.8],[27,20.9,1]]],
+      pillars: [['trim', [[34.4, 20.9], [35.4, 20.9], [35.4, 26.9], [34.4, 26.7]]]],
+      interior: [['seat', [[40, 20.9], [44, 20.9], [43.6, 23.6], [40.6, 24.0]]], ['head', [[41, 24.0], [43.6, 23.8], [43.4, 25.6], [41.2, 25.8]]],
+        ['wheel', [[51, 21.0], [52.6, 23.8], [53.6, 23.2], [52.2, 20.8]]]],
+      lamps: [['head', [[86.8, 16.5], [93.8, 15.0], [96.6, 13.4], [88, 15.0]]], ['tail', [[0.3, 14.4], [2.6, 14.8], [3.0, 18.4], [1.0, 18.2]]], ['amber', [[85, 11.6], [87, 11.6], [87, 12.4], [85, 12.4]]]],
+      details: [['handle', [[35.8, 18.9], [38.8, 18.9], [38.8, 19.6], [35.8, 19.6]]], ['door', [[15, 14.8], [17.8, 14.8], [17.8, 17.0], [15, 17.0]]],
+        ['badge', [[78.6, 13.0], [82, 13.0], [82, 13.7], [78.6, 13.7]]]],
+      lines: [['#101012', [[62.7, 20.45], [58.6, 22.8]]]],
+      seams: [[[60, 20.8], [60.4, 8.6], [59.4, 7.0]], [[33.6, 20.8], [33.2, 8.6], [34.2, 7.0]], [[62.6, 20.0], [86, 16.6]]],
+      creases: [[[8, 16.8], [26, 17.4], [42, 16.2]]],
+      head: [95.6, 14.2], tail: [1.5, 16.4], exhaust: [3.6, 5.4]
     }
   };
   DR.CAR_ART = ART;
   // slots in draw order; appendages are thin parts shaded on their own
   var SLOTS = ['skirt', 'rbumper', 'fbumper', 'hood', 'spoiler', 'mirror'];
-  var APPENDAGE = { spoiler: 1, mirror: 1, wing: 1, upright: 1 };
+  var APPENDAGE = { spoiler: 1, mirror: 1, wing: 1, upright: 1, addon: 1 };
   var BODYPART = { shell: 1, skirt: 1, rbumper: 1, fbumper: 1, hood: 1 };
 
   // ------------------------------------------------------------ look
@@ -221,14 +274,14 @@
     var kit = look.kit || {};
 
     // ---- assemble the parts
-    var parts = [{ id: 'shell', mat: 'paint', pts: A.shell }];
+    var parts = [{ id: 'shell', mat: 'paint', pts: smooth(A.shell) }];
     var lamps = (A.lamps || []).slice(), details = (A.details || []).slice();
     SLOTS.forEach(function (slot) {
       var vs = A.kit && A.kit[slot]; if (!vs) return;
       if (slot === 'spoiler' && look.wing) return;          // the aftermarket wing replaces it
       var v = vs[kit[slot] || 'stock']; if (!v) return;
-      parts.push({ id: slot, mat: v.mat || 'paint', pts: v.pts });
-      (v.extra || []).forEach(function (e) { parts.push({ id: slot === 'spoiler' ? 'upright' : slot, mat: v.mat || 'paint', pts: e }); });
+      parts.push({ id: slot, mat: v.mat || 'paint', pts: smooth(v.pts) });
+      (v.extra || []).forEach(function (e) { parts.push({ id: slot === 'spoiler' ? 'upright' : slot, mat: v.mat || 'paint', pts: smooth(e) }); });
       if (v.lamps) lamps = lamps.concat(v.lamps);
       if (v.details) details = details.concat(v.details);
     });
@@ -240,6 +293,26 @@
       parts.push({ id: 'wing', mat: 'paint', pts: [[-2, h0], [15, h0 + 0.2], [16, h0 + 1.4], [14.5, h0 + 2.6], [-1.2, h0 + 2.4], [-2.6, h0 + 1.4]] });
       if (big) parts.push({ id: 'upright', mat: 'trim', pts: rect(-3, h0 - 1.8, -1.6, h0 + 3.6) });
     }
+    var shellS = parts[0].pts;
+    if (look.blower || look.scoop) {
+      var hx = (A.hood[0] + A.hood[1]) / 2, hy = topOf(shellS, hx), k5 = 4.6 / look.len;   // ~0.046 m units
+      if (look.blower) {
+        // roots blower: polished case on a black manifold, belt drive in
+        // front, bug-catcher scoop with a red lid on top
+        parts.push({ id: 'addon', mat: 'trim', pts: rect(hx - 6.5 * k5, hy - 0.6, hx + 6.8 * k5, hy + 1.3 * k5) });
+        parts.push({ id: 'addon', mat: 'chrome', pts: rect(hx - 5.6 * k5, hy + 1.3 * k5, hx + 5.6 * k5, hy + 5.6 * k5) });
+        parts.push({ id: 'addon', mat: 'trim', pts: rect(hx + 5.6 * k5, hy + 1.6 * k5, hx + 7.4 * k5, hy + 4.8 * k5) });
+        parts.push({ id: 'addon', mat: 'trim', pts: [[hx - 4.4 * k5, hy + 5.6 * k5, 1], [hx + 4.4 * k5, hy + 5.6 * k5, 1], [hx + 4.0 * k5, hy + 9.4 * k5, 1], [hx - 4.4 * k5, hy + 9.4 * k5, 1]] });
+        parts.push({ id: 'addon', mat: 'red', pts: rect(hx - 4.6 * k5, hy + 9.4 * k5, hx + 4.2 * k5, hy + 10.4 * k5) });
+        details.push(['vent', [[hx + 2.2 * k5, hy + 6.2 * k5], [hx + 4.1 * k5, hy + 6.2 * k5], [hx + 3.9 * k5, hy + 9.0 * k5], [hx + 2.2 * k5, hy + 9.0 * k5]]]);
+        for (var rb = -4.4; rb < 4.6; rb += 1.6) details.push(['rib', rect(hx + rb * k5, hy + 2.0 * k5, hx + (rb + 0.5) * k5, hy + 5.0 * k5)]);
+      } else {
+        parts.push({ id: 'addon', mat: 'paint', pts: [[hx - 8 * k5, hy - 0.4, 1], [hx + 5 * k5, hy - 0.4, 1], [hx + 5 * k5, hy + 2.2 * k5, 1], [hx - 2 * k5, hy + 2.0 * k5], [hx - 6 * k5, hy + 0.8 * k5]] });
+        details.push(['vent', rect(hx + 3.4 * k5, hy + 0.2 * k5, hx + 5 * k5, hy + 2.0 * k5)]);
+      }
+    }
+    parts.forEach(function (p) { p.bb = bbox(p.pts); });
+    var glassS = (A.glass || []).map(function (g) { return smooth(g); });
     var maxY = 0, minX = 0;
     parts.forEach(function (p) { p.pts.forEach(function (q) { if (q[1] > maxY) maxY = q[1]; if (q[0] < minX) minX = q[0]; }); });
     var padL = 8 + Math.ceil(-minX * u), padT = 30;
@@ -262,14 +335,22 @@
 
     // ---- raster: which part owns each pixel (-1 empty, -2 arch, -3 glass)
     var pid = new Int16Array(W * H).fill(-1), px, py, i, k;
-    for (py = 0; py < H; py++) for (px = 0; px < W; px++) {
-      var q = U(px, py), own = -1;
-      for (i = parts.length - 1; i >= 0; i--) if (inPoly(parts[i].pts, q[0], q[1])) { own = i; break; }
-      if (own < 0) continue;
-      var pp = parts[own];
-      if (!A.rail && BODYPART[pp.id] && (inArch(px, py, archR) || inArch(px, py, archF))) own = -2;
-      else if (pp.id === 'shell') { for (k = 0; k < (A.glass || []).length; k++) if (inPoly(A.glass[k], q[0], q[1])) { own = -3; break; } }
-      pid[py * W + px] = own;
+    // scanline fill: each pixel centre takes the last part covering it
+    function fillPoly(pts, fn) {
+      var b = bbox(pts), r0 = Math.max(0, Math.floor(groundY - b[3] * u)), r1 = Math.min(H - 1, Math.ceil(groundY - b[1] * u));
+      for (var yy = r0; yy <= r1; yy++) {
+        var xs = xsAt(pts, (groundY - yy + 0.5) / u);
+        for (var e = 0; e + 1 < xs.length; e += 2) {
+          var a0 = Math.max(0, Math.ceil(padL + xs[e] * u - 0.5)), a1 = Math.min(W - 1, Math.floor(padL + xs[e + 1] * u - 0.5));
+          for (var xx = a0; xx <= a1; xx++) fn(xx, yy);
+        }
+      }
+    }
+    parts.forEach(function (p, idx) { fillPoly(p.pts, function (x, y) { pid[y * W + x] = idx; }); });
+    glassS.forEach(function (g) { fillPoly(g, function (x, y) { if (pid[y * W + x] === 0) pid[y * W + x] = -3; }); });
+    if (!A.rail) for (py = 0; py < H; py++) for (px = 0; px < W; px++) {
+      var o0 = pid[py * W + px];
+      if ((o0 >= 0 && BODYPART[parts[o0].id] || o0 === -3) && (inArch(px, py, archR) || inArch(px, py, archF))) pid[py * W + px] = -2;
     }
     function P(x, y) { return x < 0 || y < 0 || x >= W || y >= H ? -1 : pid[y * W + x]; }
     function isBody(v) { return v === -3 || (v >= 0 && BODYPART[parts[v].id]); }
@@ -335,7 +416,7 @@
         var ic = [12, 14, 19], top3 = P(px, py - 1) !== -3, bot3 = P(px, py + 1) !== -3;
         for (k = 0; k < inter.length; k++) if (inPoly(inter[k][1], q2[0], q2[1])) {
           var it = inter[k][0], itop = !inPoly(inter[k][1], q2[0], q2[1] + 1 / u);
-          ic = it === 'seat' ? (itop ? [70, 66, 72] : [40, 38, 44]) : [30, 30, 34];
+          ic = it === 'seat' || it === 'head' ? (itop ? [74, 70, 78] : [42, 40, 46]) : [26, 26, 30];
         }
         var g = mix(ic, [74, 96, 124], 0.3);
         var streak = ((px * 2 + py * 3) % 29);
@@ -372,9 +453,35 @@
         for (k = 0; k < 4; k++) if (nb[k] >= 0 && nb[k] < v && parts[nb[k]].mat === 'paint' && !APPENDAGE[part.id]) { c = mul(c, 0.62); break; }
       } else if (mat === 'chrome') c = chrome(ny);
       else if (mat === 'bumper') c = plastic(ny, 28);
+      else if (mat === 'red') c = paint([200, 30, 30], ny, 0.3);
       else c = plastic(ny, 20);
       put(px, py, c);
     }
+
+    // ---- soft edges: empty pixels on the silhouette get the outline colour
+    // at the fraction of the pixel the body covers (4x4 supersampling)
+    var edgeC = mix(mul(base, 0.3), [8, 8, 12], 0.35), aaList = [];
+    for (py = 1; py < H - 1; py++) for (px = 1; px < W - 1; px++) {
+      if (P(px, py) !== -1) continue;
+      var nbS = solid(P(px - 1, py)) || solid(P(px + 1, py)) || solid(P(px, py - 1)) || solid(P(px, py + 1));
+      if (!nbS) continue;
+      // horizontal coverage of the pixel by the union of parts, 4 sub-rows
+      var cov = 0, lx = (px - padL) / u, rx = (px + 1 - padL) / u;
+      for (var sy = 0; sy < 4; sy++) {
+        var qy = (groundY - py + 1 - (sy + 0.5) / 4) / u, best = 0;
+        for (i = 0; i < parts.length; i++) {
+          var b2 = parts[i].bb; if (qy < b2[1] || qy > b2[3] || rx < b2[0] || lx > b2[2]) continue;
+          var xs = xsAt(parts[i].pts, qy);
+          for (var e = 0; e + 1 < xs.length; e += 2) best = Math.max(best, Math.max(0, Math.min(rx, xs[e + 1]) - Math.max(lx, xs[e])));
+        }
+        cov += best / (rx - lx);
+      }
+      if (cov >= 0.75) aaList.push([px, py, cov / 4, solid(P(px, py + 1)) ? 1 : 0]);
+    }
+    aaList.forEach(function (e) {
+      var j = (e[1] * W + e[0]) * 4, c = e[3] ? paint(base, 0.85, baseL) : edgeC;   // lit top edge, dark elsewhere
+      d[j] = c[0]; d[j + 1] = c[1]; d[j + 2] = c[2]; d[j + 3] = Math.round(e[2] * 200);
+    });
 
     // ---- details, lamps and panel seams on top
     function polyFill(pts, fn) {
@@ -395,6 +502,8 @@
       soft: function (x, y, e) { return e.top ? [104, 106, 112] : e.bot ? [20, 20, 24] : [50, 51, 56]; },
       handle: function (x, y, e) { return e.top ? [120, 122, 128] : e.bot ? [10, 10, 12] : [36, 36, 40]; },
       badge: function (x, y, e) { return (x + y) % 2 ? [236, 240, 248] : [150, 160, 176]; },
+      rib: function (x, y, e) { return [96, 104, 118]; },
+      gill: function (x, y, e) { return e.edge ? (e.bot ? paint(base, 0.4, baseL) : paint(base, -0.55, baseL)) : (y % 2 ? [40, 40, 46] : paint(base, -0.3, baseL)); },
       chrome: function (x, y, e) { return chrome(e.top ? 0.8 : e.bot ? -0.5 : 0.25); },
       door: function (x, y, e) { return e.edge ? mul(paint(base, -0.2, baseL), 0.55) : null; },
       grille: function (x, y, e) { return e.edge ? [8, 8, 10] : ((x + y) % 2 ? [48, 49, 54] : [14, 14, 16]); },
@@ -408,6 +517,14 @@
     details.forEach(function (f) { polyFill(f[1], MAT[f[0]] || MAT.trim); });
     lamps.forEach(function (f) { polyFill(f[1], MAT[f[0]] || MAT.tail); });
     (A.pillars || []).forEach(function (f) { polyFill(f[1], function (x, y, e) { return e.lf ? [44, 46, 52] : [16, 16, 19]; }); });
+    (A.lines || []).forEach(function (L) {
+      var lc = hexToRgb(L[0]), pl = L[1];
+      for (var s2 = 0; s2 < pl.length - 1; s2++) {
+        var ax = padL + pl[s2][0] * u, ay = groundY - pl[s2][1] * u, bx = padL + pl[s2 + 1][0] * u, by = groundY - pl[s2 + 1][1] * u;
+        var n2 = Math.ceil(Math.max(Math.abs(bx - ax), Math.abs(by - ay)));
+        for (var j2 = 0; j2 <= n2; j2++) put(Math.round(ax + (bx - ax) * j2 / n2), Math.round(ay + (by - ay) * j2 / n2), lc);
+      }
+    });
     (A.seams || []).forEach(function (pl) {
       for (var s = 0; s < pl.length - 1; s++) {
         var ax = padL + pl[s][0] * u, ay = groundY - pl[s][1] * u, bx = padL + pl[s + 1][0] * u, by = groundY - pl[s + 1][1] * u;
@@ -415,7 +532,7 @@
         for (var j = 0; j <= n; j++) {
           var xx = Math.round(ax + (bx - ax) * j / n), yy = Math.round(ay + (by - ay) * j / n), o = P(xx, yy);
           if (o < 0 || parts[o].mat !== 'paint') continue;
-          put(xx, yy, mul(get(xx, yy), 0.42));
+          put(xx, yy, mul(get(xx, yy), 0.55));
           var hx = vert ? xx + 1 : xx, hy = vert ? yy : yy + 1, ho = P(hx, hy);
           if (ho >= 0 && parts[ho].mat === 'paint') { var hc = get(hx, hy); put(hx, hy, mix(hc, [255, 255, 255], 0.12)); }
         }
@@ -429,25 +546,6 @@
       ctx.fillStyle = '#e8e8e8'; circle(ctx, hx0, hy0 - 2, 3.4);
       ctx.fillStyle = '#ffffff'; ctx.fillRect(hx0 - 2, hy0 - 5, 3, 1);
       ctx.fillStyle = '#1a1a1a'; ctx.fillRect(hx0 + 1, hy0 - 3, 3, 2);
-    }
-    if (look.blower) {
-      // polished roots case, belt drive, bug-catcher scoop
-      var hx = (A.hood[0] + A.hood[1]) / 2, top = topAt(hx), bx = Math.round(padL + hx * u) - 10;
-      ctx.fillStyle = '#3a3e45'; ctx.fillRect(bx - 2, top - 3, 24, 4);
-      ctx.fillStyle = '#7d848f'; ctx.fillRect(bx - 2, top - 3, 24, 1);
-      for (var bi = 0; bi < 10; bi++) { ctx.fillStyle = css(chrome(0.95 - bi * 0.17)); ctx.fillRect(bx, top - 13 + bi, 20, 1); }
-      ctx.fillStyle = 'rgba(40,44,52,0.55)'; for (var rb = 2; rb < 20; rb += 3) ctx.fillRect(bx + rb, top - 11, 1, 7);
-      ctx.fillStyle = '#1b1b1b'; ctx.fillRect(bx + 17, top - 10, 6, 8);
-      ctx.fillStyle = '#5a5a5a'; ctx.fillRect(bx + 18, top - 9, 4, 1);
-      ctx.fillStyle = '#26262a'; ctx.fillRect(bx + 2, top - 20, 16, 7);
-      ctx.fillStyle = '#c42a2a'; ctx.fillRect(bx + 2, top - 20, 16, 2);
-      ctx.fillStyle = '#ff8a7a'; ctx.fillRect(bx + 2, top - 20, 16, 1);
-      ctx.fillStyle = '#060606'; ctx.fillRect(bx + 13, top - 18, 5, 4);
-      ctx.fillStyle = '#9aa0aa'; ctx.fillRect(bx + 1, top - 13, 18, 1);
-    } else if (look.scoop) {
-      var hx2 = (A.hood[0] + A.hood[1]) / 2, top2 = topAt(hx2), sx = Math.round(padL + hx2 * u) - 10;
-      for (var si = 0; si < 5; si++) { ctx.fillStyle = css(paint(base, si === 0 ? 0.95 : si === 4 ? -0.5 : 0.35 - si * 0.1, baseL)); ctx.fillRect(sx + (4 - si), top2 - 5 + si, 20 - (4 - si), 1); }
-      ctx.fillStyle = '#060608'; ctx.fillRect(sx + 16, top2 - 4, 4, 4);
     }
     var tl = A.tail || [1, 15], hd = A.head;
     var spr = { canvas: cv, w: W, h: H, padL: padL, lenPx: lenPx, groundY: groundY, wheelR: wheelR, wheelF: wheelF,
@@ -487,7 +585,7 @@
         // tire: tread shoulder, sidewall bulge, raised lettering on drag tires
         var sw = (dist - rimR) / (r - rimR);
         var g = sw > 0.84 ? 12 + (ny > 0.5 ? 14 : 0) : 26 + 20 * clamp01(0.5 + ny * 0.5) * (1 - Math.abs(sw - 0.45));
-        if ((slick || radial) && sw > 0.3 && sw < 0.62 && ny > 0.45 && ((x + y) % 3)) g = 168 + ny * 40;
+        if ((slick || radial) && sw > 0.3 && sw < 0.62 && ny > 0.45 && ((x + y) % 3)) g = 92 + ny * 40;
         if (sw < 0.12) g = 10;
         c = [g, g, g + 3];
       } else {
@@ -561,7 +659,7 @@
     // wheelie bars: bolted to the chassis, the tail wheel touches down when
     // pitch reaches the tuned bar angle.
     if (spr.bar) {
-      var bl = 52, endH = Math.max(3, Math.sin(opts.barRad || 0.05) * bl);
+      var bl = Math.round(1.6 * PPM), endH = Math.max(3, Math.sin(opts.barRad || 0.05) * bl);
       var ay = -spr.wheelR.r * 0.7;
       for (var i = 4; i <= bl; i++) {
         var yy = Math.round(ay + (-endH - ay) * (i / bl));

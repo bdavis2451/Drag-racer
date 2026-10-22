@@ -4,7 +4,7 @@
 // ===========================================================================
 (function () {
   var DR = globalThis.DR;
-  var PPM = 32;                 // pixels per metre
+  var PPM = 44;                 // pixels per metre
   DR.PPM = PPM;
   DR.VIEW_W = 800; DR.VIEW_H = 450;
 
@@ -73,7 +73,7 @@
         // the tire throws smoke back; parked in the box it boils out all round
         vx: still ? (Math.random() * 4.2 - 2.8) : vx * 0.35 - slip * 0.08 - Math.random() * 1.5,
         vy: 0.15 + Math.random() * (still ? 0.9 : 0.6), ph: Math.random() * 6.3,
-        life: (o.engine ? 1.8 : 2.4) + Math.random() * 1.8, age: 0, size: 5 + r * 6, grow: 9 + Math.random() * 10,
+        life: (o.engine ? 1.8 : 2.4) + Math.random() * 1.8, age: 0, size: (5 + r * 6) * PPM / 32, grow: (9 + Math.random() * 10) * PPM / 32,
         dense: (o.dense || 0.75) * (0.7 + Math.random() * 0.5), dark: o.engine ? 1 : 0 });
     }
   };
@@ -175,7 +175,7 @@
   };
 
   // ------------------------------------------------------------ scene
-  var LANE_Y = [392, 336];              // ground y for near (player) and far lane
+  var LANE_Y = [396, 334];              // ground y for near (player) and far lane
   DR.LANE_Y = LANE_Y;
   var HZ = 232;                         // horizon
 
