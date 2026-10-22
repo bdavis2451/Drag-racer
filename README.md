@@ -6,7 +6,7 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
 
 ## Features
 
-- **4 cars to start:** two muscle cars (Fox Stallion '89, Camero SS '19) and two imports
+- **4 cars to start:** two muscle cars (Fox Stallion '89, Camero SS '12) and two imports
   (Hachi Coupe, Supremo Mk4). 39 more cars are written and waiting in `DR.CARS_RESERVE` in
   `www/js/data.js`; moving one into `DR.CARS` adds it to the dealership. Every car has its own weight, weight distribution, wheelbase, center-of-gravity height,
   aerodynamics, drivetrain (RWD/FWD/AWD) and engine location (front/mid/rear).

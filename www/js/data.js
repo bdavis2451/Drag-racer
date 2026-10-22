@@ -109,7 +109,7 @@ DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'dr_275', 'dr_315', 'ets
 DR.CARS = {
   // ---- Muscle ----------------------------------------------------------------
   fox:      { name: 'Fox Stallion \'89',    cat: 'Muscle',  body: 'hatch',    price: 7000,  m: 1420, f: 0.56, wb: 2.55, len: 4.6, h: 0.53, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_50',  trans: 'm5_light', fd: 3.27, tire: 'st_225', diff: 'lsd',  col: '#c01515' },
-  camss:    { name: 'Camero SS \'19',       cat: 'Muscle',  body: 'modern',   price: 36000, m: 1700, f: 0.52, wb: 2.81, len: 4.8, h: 0.51, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_62',  trans: 'a8',       fd: 2.77, tire: 'st_255', diff: 'lsd',  col: '#ffb300' },
+  camss:    { name: 'Camero SS \'12',       cat: 'Muscle',  body: 'modern',   price: 36000, m: 1700, f: 0.52, wb: 2.81, len: 4.8, h: 0.51, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_62',  trans: 'a6',       fd: 3.27, tire: 'st_255', diff: 'lsd',  col: '#ffb300' },
   // ---- Import ----------------------------------------------------------------
   hachi:    { name: 'Hachi Coupe',          cat: 'Import',  body: 'hatch',    price: 6000,  m: 980,  f: 0.53, wb: 2.40, len: 4.2, h: 0.50, cda: 0.60, drive: 'RWD', ep: 'front', engine: 'i4_16',  trans: 'm5_light', fd: 4.30, tire: 'st_195', diff: 'lsd',  col: '#f4f4f4' },
   supra:    { name: 'Supremo Mk4',          cat: 'Import',  body: 'sports',   price: 45000, m: 1560, f: 0.53, wb: 2.55, len: 4.5, h: 0.48, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i6_30tt',trans: 'm6',       fd: 3.27, tire: 'st_255', diff: 'lsd',  col: '#ff7a00' }
