@@ -117,6 +117,8 @@
         this.bk = { t: new Float32Array(8).fill(-1), a: new Float32Array(8), f: new Float32Array(8), big: new Uint8Array(8), bank: new Uint8Array(8), next: 0 };
         this.pend = []; this.bnPrev = 0;
         this.bangLp = [new OnePole(c.bangHz, sr), new OnePole(c.bangHz, sr)];
+        // limiter / 2-step bangs get their own, brighter and louder path
+        this.bigLp = [new OnePole(Math.min(7000, c.bangHz * 1.7), sr), new OnePole(Math.min(7000, c.bangHz * 1.7), sr)];
         this.ring0 = new SVF(c.ringHz, 3.5, sr); this.ring1 = new SVF(c.ringHz * 1.06, 3.5, sr);
         this.ringIn0 = 0; this.ringIn1 = 0;
       }
@@ -146,7 +148,7 @@
         // sequential shift cuts
         this.pop[i] = 0;
         if (load < 0.12 && rpm > 2600 && rnd() < c.crackle * 0.05) this.bang(0.3 + rnd() * 0.45, false, b);
-        if (cut && rnd() < c.bangChance) this.bang(0.75 + rnd() * 0.6, true, b);
+        if (cut && rnd() < c.bangChance) this.bang(0.9 + rnd() * 0.5, true, b);
         this.amp[i] = a; this.t[i] = 0;
         // each power stroke kicks the crank a little: firing timing wobbles,
         // most at idle where the flywheel spins slowly
@@ -295,7 +297,7 @@
           this.bayHp += (bay - this.bayHp) * 0.004;
           bay -= this.bayHp;
           // ---- pops & bangs at the tailpipe(s)
-          var bg0 = 0, bg1 = 0;
+          var bg0 = 0, bg1 = 0, bb0 = 0, bb1 = 0;
           if (this.pend.length) {
             var due = null;
             for (var q = this.pend.length - 1; q >= 0; q--) {
@@ -312,22 +314,27 @@
             var tb = bt / sr, big = K.big[j];
             // the pop itself: one pressure wave, a sharp push then a pull
             // (an N-wave a few ms long), not a burst of noise
-            var w = big ? 0.0042 : 0.0024, nw = 0;
+            var w = big ? 0.0032 : 0.0024, nw = 0;
             if (tb < w) { var u = tb / w; nw = Math.sin(6.2832 * u) * (1 - u) * (u < 0.08 ? u / 0.08 : 1); }
             // big bangs: a low thump of hot gas leaving the pipe
-            var thump = Math.sin(6.2832 * K.f[j] * tb * (1 + 0.5 * Math.exp(-tb / 0.005))) * Math.exp(-tb / (big ? 0.035 : 0.01)) * Math.min(1, tb / 0.0006);
+            var thump = Math.sin(6.2832 * K.f[j] * tb * (1 + 0.5 * Math.exp(-tb / 0.005))) * Math.exp(-tb / (big ? 0.045 : 0.01)) * Math.min(1, tb / 0.0004);
             var grit = wn * Math.exp(-tb / (big ? 0.0035 : 0.0015));
             var pulse = K.a[j] * nw;
-            var bv = pulse * 1.4 + K.a[j] * (thump * (big ? 0.9 : 0.35) + grit * 0.3);
+            var bv = big ? pulse * 2.2 + K.a[j] * (thump * 1.5 + grit * 0.35)
+                         : pulse * 1.4 + K.a[j] * (thump * 0.35 + grit * 0.3);
             // the pulse rings the tailpipe briefly: the "pap" of a pop
             if (K.bank[j] === 1) this.ringIn1 += pulse; else this.ringIn0 += pulse;
-            if (K.bank[j] === 0) bg0 += bv; else if (K.bank[j] === 1) bg1 += bv; else { bg0 += bv; bg1 += bv; }
+            if (big) { if (K.bank[j] === 0) bb0 += bv; else if (K.bank[j] === 1) bb1 += bv; else { bb0 += bv; bb1 += bv; } }
+            else if (K.bank[j] === 0) bg0 += bv; else if (K.bank[j] === 1) bg1 += bv; else { bg0 += bv; bg1 += bv; }
             K.t[j] = tb > (big ? 0.3 : 0.08) ? -1 : bt + 1;
           }
           bg0 += this.ring0.bp(this.ringIn0) * 1.6; bg1 += this.ring1.bp(this.ringIn1 + (this.c.panA === 0.5 ? this.ringIn0 : 0)) * 1.6;
           this.ringIn0 = 0; this.ringIn1 = 0;
           bg0 = this.bangLp[0].tick(bg0); bg1 = this.bangLp[1].tick(bg1);
           bg0 = Math.tanh(bg0 * 1.4) * c.bangLvl; bg1 = Math.tanh(bg1 * 1.4) * c.bangLvl;
+          // big bangs: driven harder and allowed well above the crackle level
+          bg0 += Math.tanh(this.bigLp[0].tick(bb0) * 2.2) * c.bangLvl * 2.1;
+          bg1 += Math.tanh(this.bigLp[1].tick(bb1) * 2.2) * c.bangLvl * 2.1;
           L[s] = r0 * c.panA + r1 * (1 - c.panA) + bay + bg0 * c.panA + bg1 * (1 - c.panA);
           R[s] = r1 * c.panA + r0 * (1 - c.panA) + bay + bg1 * c.panA + bg0 * (1 - c.panA);
         }
