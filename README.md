@@ -6,9 +6,11 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
 
 ## Features
 
-- **4 cars to start:** two muscle cars (Fox Stallion '89, Camero SS '12) and two imports
-  (Hachi Coupe, Supremo Mk4). 39 more cars are written and waiting in `DR.CARS_RESERVE` in
-  `www/js/data.js`; moving one into `DR.CARS` adds it to the dealership. Every car has its own weight, weight distribution, wheelbase, center-of-gravity height,
+- **43 cars** in seven dealer categories (Compact, JDM, Euro, Muscle, Classic, Truck, Pro),
+  from a Geo Metro to a Top Dragster. Names are the real models for now (to be de-branded
+  later). Four have sprites traced from reference shots; the rest use a generic body profile
+  until they get one. See [docs/CAR_ART.md](docs/CAR_ART.md) for which real model each
+  sprite should be drawn from. Every car has its own weight, weight distribution, wheelbase, center-of-gravity height,
   aerodynamics, drivetrain (RWD/FWD/AWD) and engine location (front/mid/rear).
 - **32 swappable engines**, from a 1.0L three-cylinder up to an 8.6L billet Pro Mod V8.
   They include rotaries, a diesel, V10s and V12s.
@@ -46,8 +48,9 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
 - **Game modes:**
   - **Career (Underground 2 style):** 5 stages of 1/4 mile, 1/8 mile, night street,
     knockout, sponsor and night invitational races, each ending in a boss. Wins reveal more races
-    and unlock performance-part levels, body-kit tiers and new cars (Fox and AE86 at
-    the start, Camaro at stage 2, Supra at stage 3).
+    and unlock performance-part levels, body-kit tiers and new cars: each stage boss opens
+    the next price tier at the dealer (up to $9k at the start, then $24k, $48k, $110k and
+    everything). Rivals drive cars from across the roster.
   - **Sponsors:** pick one per stage for a signing bonus, per-win bonuses and a contract
     that must be fulfilled before the boss will race you.
   - **Visual rating:** 0-10 stars from the Body Shop (bumpers, skirts, spoilers, hoods,
@@ -99,7 +102,7 @@ Then open http://localhost:8080. It works on a phone browser too; turn the phone
 
 | Path | What it is |
 |---|---|
-| `www/js/data.js` | **Cars, engines, transmissions, tires.** Add a car (or enable one from the reserve list) or an engine here. |
+| `www/js/data.js` | **Cars, engines, transmissions, tires.** Add a car or an engine here. |
 | `www/js/parts.js` | **Every upgrade part** and what it does. |
 | `www/js/physics.js` | The physics engine: tires, engine, clutch, converter, weight transfer, wheelies. |
 | `www/js/game.js` | Money, saving, buying and selling, and the **rival pool**. |

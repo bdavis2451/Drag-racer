@@ -41,7 +41,9 @@
     function cyc(d) { starterIdx = (starterIdx + d + ids.length) % ids.length; UI.refresh(); }
     return h('div', { class: 'screen' }, UI.top('PICK YOUR FIRST CAR', function () { UI.show(UI.Title); }),
       h('div', { class: 'gwrap' }, cv,
-        h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name), statBars(S, est),
+        h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
+            // the real model the sprite should be drawn from, and whether it still uses the generic placeholder
+            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S, est),
           gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive), gst('EST 1/4', est.et.toFixed(2) + 's', 'good'),
           h('div', { class: 'gsmall dim' }, 'Free to start, plus $6,000 for parts.')),
         h('div', { class: 'gsel' }, btn('◀', function () { cyc(-1); }, 'arrow'),
@@ -380,7 +382,9 @@
     return h('div', { class: 'screen' }, UI.top('DEALERSHIP', function () { UI.show(UI.Garage); }),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'dmain' },
         h('div', { class: 'gwrap' }, cv,
-          h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name), statBars(S, est),
+          h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
+            // the real model the sprite should be drawn from, and whether it still uses the generic placeholder
+            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S, est),
             gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
             gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
             gst('TIRES', S.tire.name), gst('EST 1/4', est.et.toFixed(2) + 's @ ' + Math.round(est.trap), 'good'),

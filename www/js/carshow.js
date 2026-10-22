@@ -48,7 +48,8 @@
   DR.showAppeal = function (inst, show) { return appeal(inst, show); };
   // Rival builds around the show's star range.
   function rival(show, i, rnd) {
-    var ids = Object.keys(DR.CARS), carId = ids[Math.floor(rnd() * ids.length)];
+    // street cars only: no rails or pro mods parked at a meet
+    var ids = Object.keys(DR.CARS).filter(function (id) { return DR.CARS[id].cat !== 'Pro'; }), carId = ids[Math.floor(rnd() * ids.length)];
     var target = show.field[0] + (show.field[1] - show.field[0]) * Math.pow(rnd(), 0.8);
     var inst = { carId: carId, engine: DR.CARS[carId].engine, parts: {}, tune: {}, vis: {}, color: DR.PAINTS[Math.floor(rnd() * DR.PAINTS.length)], stripe: '', rim: ['#c8c8c8', '#151515', '#ffd700', '#ffffff', '#8a8f99'][Math.floor(rnd() * 5)] };
     // fill cosmetic slots in a random order until the rating is near the target

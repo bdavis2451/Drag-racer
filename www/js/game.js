@@ -222,46 +222,46 @@
   // The rival pool in six skill bands (career.js builds the stages from it).
   var BANDS = [
     { name: 'Rookie Night', opps: [
-      O('Grandma Edna', 'hachi', null, {}, {}, 0.25, '#ff8fb8'),
-      O('Tyler', 'hachi', null, BOLT, {}, 0.4, '#3a7bd2'),
-      O('Jess', 'fox', null, {}, {}, 0.5, '#2fb3a8'),
-      O('Danny', 'hachi', null, P(BOLT, { headers: 'h1', cams: 'c1', ecu: 'ecu1', rtires: 'st_225' }), {}, 0.55, '#151515'),
+      O('Grandma Edna', 'pip', null, {}, {}, 0.25, '#ff8fb8'),
+      O('Tyler', 'ronin', null, BOLT, {}, 0.4, '#3a7bd2'),
+      O('Jess', 'monte', null, {}, {}, 0.5, '#2fb3a8'),
+      O('Danny', 'mira', null, P(BOLT, { headers: 'h1', cams: 'c1', ecu: 'ecu1', rtires: 'st_225' }), {}, 0.55, '#151515'),
       O('Mullet Mike', 'fox', null, P(BOLT, { headers: 'h2' }), {}, 0.6, '#c01515')
     ]},
     { name: 'Bracket Bandits', opps: [
-      O('Dale', 'fox', 'v8_57', {}, {}, 0.6, '#2e7d4f'),
-      O('Kenji', 'hachi', 'i4_20t', P(BOLT, { rtires: 'st_225' }), {}, 0.6, '#9aa8b4'),
-      O('Rosa', 'supra', null, {}, {}, 0.6, '#b0b0b0'),
+      O('Dale', 'camaro', null, {}, {}, 0.6, '#2e7d4f'),
+      O('Kenji', 'silvia', null, P(BOLT, { rtires: 'st_225' }), {}, 0.6, '#9aa8b4'),
+      O('Rosa', 'm3', null, {}, {}, 0.6, '#b0b0b0'),
       O('Hiro', 'supra', null, P(BOLT, { ecu: 'ecu1', ic: 'ic1', rtires: 'dr_275' }), { boost: 15 }, 0.65, '#d01818'),
-      O('Big Earl', 'camss', null, P(BOLT, { rtires: 'dr_275', converter: 'tcl' }), {}, 0.7, '#244fa8')
+      O('Big Earl', 'cobra03', 'v8_62', P(BOLT, { rtires: 'dr_275', converter: 'tcl' }), {}, 0.7, '#244fa8')
     ]},
     { name: 'Street Outlaws', opps: [
-      O('Vince', 'supra', null, P(BOLT, { ecu: 'ecu1', ic: 'ic1', fueltype: 'e85', fuelsys: 'f1', rtires: 'dr_275' }), { boost: 18 }, 0.7, '#ff7a00'),
+      O('Vince', 'r34', null, P(BOLT, { ecu: 'ecu1', ic: 'ic1', fueltype: 'e85', fuelsys: 'f1', rtires: 'dr_275' }), { boost: 22 }, 0.7, '#ff7a00'),
       O('Shadow', 'supra', null, P(BOLT, { headers: 'h2', fi: 't_large', ic: 'ic2', fueltype: 'e85', fuelsys: 'f2', internals: 'n2', ecu: 'ecu2', rtires: 'dr_315', clutch: 'cl3', launch: 'l1' }), { boost: 24 }, 0.8, '#151515'),
-      O('Lexi', 'hachi', 'i4_20t', P(BOLT, { headers: 'h2', fi: 't_med', ic: 'ic2', fueltype: 'e85', fuelsys: 'f2', internals: 'n2', ecu: 'ecu2', clutch: 'cl3', rtires: 'dr_275', launch: 'l1' }), { boost: 28 }, 0.72, '#f6f6f6'),
-      O('Marcus', 'fox', 'v8_62', P(BOLT, { headers: 'h2', nitrous: 'n150', rtires: 'dr_315', rearsusp: 'rs1', clutch: 'cl2' }), {}, 0.72, '#1c5bd6'),
-      O('Tank', 'camss', null, P(BOLT, { headers: 'h2', nitrous: 'n250', rtires: 'dr_315', converter: 'tcm', transbrake: 'tb1', rearsusp: 'rs1' }), {}, 0.75, '#4b1a6e')
+      O('Lexi', 'sti', null, P(BOLT, { headers: 'h2', fi: 't_med', ic: 'ic2', fueltype: 'e85', fuelsys: 'f2', internals: 'n2', ecu: 'ecu2', clutch: 'cl3', rtires: 'dr_275', launch: 'l1' }), { boost: 34 }, 0.72, '#f6f6f6'),
+      O('Marcus', 'nova', 'v8_62', P(BOLT, { headers: 'h2', nitrous: 'n150', rtires: 'dr_315', rearsusp: 'rs1', clutch: 'cl2' }), {}, 0.72, '#1c5bd6'),
+      O('Tank', 'chevelle', 'v8_62', P(BOLT, { headers: 'h2', nitrous: 'n250', rtires: 'dr_315', converter: 'tcm', transbrake: 'tb1', rearsusp: 'rs1' }), {}, 0.75, '#4b1a6e')
     ]},
     { name: 'Radial Wars', opps: [
       O('Akira', 'supra', null, { intake: 'i2', exhaust: 'e2', headers: 'h3', fi: 't_large', ic: 'ic2', internals: 'n2', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu2', rtires: 'dr_315', trans: 'seq6', clutch: 'cl3', launch: 'l2', rearsusp: 'rs2', diff: 'spool' }, { boost: 30 }, 0.8, '#ffffff'),
       O('Ricky Radial', 'fox', 'v8_62', { intake: 'i2', exhaust: 'e2', headers: 'h2', fi: 't_med', ic: 'ic1', internals: 'n2', fuelsys: 'f2', fueltype: 'e85', rtires: 'dr_275', rearsusp: 'rs2', trans: 'a3_400', converter: 'tcm', transbrake: 'tb1', diff: 'spool', launch: 'l1' }, { boost: 14 }, 0.75, '#c01515'),
-      O('Nitro Nate', 'camss', 'v8_70', { intake: 'i2', exhaust: 'e2', headers: 'h2', cams: 'c2', nitrous: 'n250', internals: 'n1', rtires: 'dr_315', rearsusp: 'rs2', trans: 'a3_400', converter: 'tcm', transbrake: 'tb1', diff: 'spool' }, {}, 0.78, '#ffb300'),
-      O('Kaz', 'hachi', 'i6_30tt', { intake: 'i2', exhaust: 'e2', headers: 'h2', fi: 't_large', ic: 'ic2', internals: 'n2', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'dr_315', trans: 'seq6', clutch: 'cl4', launch: 'l2', rearsusp: 'rs2', diff: 'spool', wheeliebar: 'wb1' }, { boost: 26, tcSlip: 18 }, 0.8, '#7cd320'),
+      O('Nitro Nate', 'z06', 'v8_70', { intake: 'i2', exhaust: 'e2', headers: 'h2', cams: 'c2', nitrous: 'n250', internals: 'n1', rtires: 'dr_315', rearsusp: 'rs2', trans: 'a3_400', converter: 'tcm', transbrake: 'tb1', diff: 'spool' }, {}, 0.78, '#ffb300'),
+      O('Kaz', 's2k', 'i6_30tt', { intake: 'i2', exhaust: 'e2', headers: 'h2', fi: 't_large', ic: 'ic2', internals: 'n2', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'dr_315', trans: 'seq6', clutch: 'cl4', launch: 'l2', rearsusp: 'rs2', diff: 'spool', wheeliebar: 'wb1' }, { boost: 32, tcSlip: 18 }, 0.8, '#7cd320'),
       O('Murder Fox', 'fox', 'v8_70', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd2', cams: 'c3', fi: 't_twin', ic: 'ic2', internals: 'n3', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'dr_315', trans: 'pg2', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w2', shocks: 'sh2', wheeliebar: 'wb1' }, { boost: 22, tcSlip: 20, barDeg: 3 }, 0.85, '#151515')
     ]},
     { name: 'Big Tire Shootout', opps: [
-      O('Gasser Gus', 'fox', 'bb_94', { fi: 'sc_roots', internals: 'n2', fuelsys: 'f3', fueltype: 'race', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs2', diff: 'spool', wheeliebar: 'wb1' }, { boost: 12, barDeg: 4 }, 0.8, '#efe14b'),
-      O('Godzilla Ken', 'supra', null, { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd3', cams: 'c4', fi: 't_huge', ic: 'ic3', internals: 'n4', fuelsys: 'f4', fueltype: 'meth', ecu: 'ecu3', rtires: 'sl_31', trans: 'seq6', clutch: 'cl4', launch: 'l2', weight: 'w3', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1' }, { boost: 45, tcSlip: 20 }, 0.9, '#3757a8'),
-      O('Lisa Lightning', 'camss', 'v8_70', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd2', cams: 'c3', fi: 't_huge', ic: 'ic3', internals: 'n3', fuelsys: 'f3', fueltype: 'meth', ecu: 'ecu3', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3' }, { boost: 28, tcSlip: 20 }, 0.88, '#ffb300'),
-      O('Hemi Hank', 'camss', 'hemi_70', { heads: 'hd3', cams: 'c3', fi: 'sc_1471', internals: 'n3', fuelsys: 'f4', fueltype: 'meth', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', weight: 'w3', wheeliebar: 'wb1' }, { boost: 20, barDeg: 3.5 }, 0.85, '#ff6a00'),
-      O('Twin Turbo Tina', 'fox', 'bb_94', { intake: 'i3', exhaust: 'e3', headers: 'h3', fi: 't_twin', ic: 'ic2', internals: 'n3', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'sl_33', trans: 'pg2', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w3', wheeliebar: 'wb1', shocks: 'sh2' }, { boost: 20, tcSlip: 22 }, 0.85, '#151515')
+      O('Gasser Gus', 'willys', 'bb_94', { fi: 'sc_roots', internals: 'n2', fuelsys: 'f3', fueltype: 'race', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs2', diff: 'spool', wheeliebar: 'wb1' }, { boost: 12, barDeg: 4 }, 0.8, '#efe14b'),
+      O('Godzilla Ken', 'gtr', 'i6_30tt', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd3', cams: 'c4', fi: 't_huge', ic: 'ic3', internals: 'n4', fuelsys: 'f4', fueltype: 'meth', ecu: 'ecu3', rtires: 'sl_31', trans: 'seq6', clutch: 'cl4', launch: 'l2', weight: 'w3', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1' }, { boost: 45, tcSlip: 20 }, 0.9, '#3757a8'),
+      O('Lisa Lightning', 'lightning', 'v8_70', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd2', cams: 'c3', fi: 't_huge', ic: 'ic3', internals: 'n3', fuelsys: 'f3', fueltype: 'meth', ecu: 'ecu3', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3' }, { boost: 28, tcSlip: 20 }, 0.88, '#ffb300'),
+      O('Hemi Hank', 'cuda', 'hemi_70', { heads: 'hd3', cams: 'c3', fi: 'sc_1471', internals: 'n3', fuelsys: 'f4', fueltype: 'meth', rtires: 'sl_33', trans: 'a3_400', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', weight: 'w3', wheeliebar: 'wb1' }, { boost: 20, barDeg: 3.5 }, 0.85, '#ff6a00'),
+      O('Twin Turbo Tina', 'chevelle', 'bb_94', { intake: 'i3', exhaust: 'e3', headers: 'h3', fi: 't_twin', ic: 'ic2', internals: 'n3', fuelsys: 'f3', fueltype: 'e85', ecu: 'ecu3', rtires: 'sl_33', trans: 'pg2', converter: 'tch', transbrake: 'tb1', rearsusp: 'rs3', diff: 'spool', launch: 'l2', weight: 'w3', wheeliebar: 'wb1', shocks: 'sh2' }, { boost: 20, tcSlip: 22 }, 0.85, '#151515')
     ]},
     { name: 'Pro Mod Legends', opps: [
-      O('Nitrous Nick', 'fox', 'v8_86b', { nitrous: 'n650', internals: 'n2', fuelsys: 'f3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { barDeg: 3 }, 0.85, '#7cd320'),
+      O('Nitrous Nick', 'promod', 'v8_86b', { nitrous: 'n650', internals: 'n2', fuelsys: 'f3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { barDeg: 3 }, 0.85, '#7cd320'),
       O('Rice Rocket Rin', 'hachi', 'v8_86b', { fi: 'sc_1471', fuelsys: 'f4', fueltype: 'meth', internals: 'n3', rtires: 'sl_33', trans: 'pg2', converter: 'tch', transbrake: 'tb1', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 22, barDeg: 3 }, 0.88, '#e31b6d'),
       O('Turbo Tony', 'supra', 'v8_86b', { fi: 't_promod', ic: 'ic3', fuelsys: 'f4', fueltype: 'meth', internals: 'n4', ecu: 'ecu3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', launch: 'l2', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 30, tcSlip: 22, barDeg: 3.5 }, 0.9, '#ff7a00'),
-      O('Blower Bill', 'camss', 'v8_86b', { fi: 'sc_1471', fuelsys: 'f4', fueltype: 'meth', internals: 'n3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 25, barDeg: 3 }, 0.88, '#3a7bd2'),
-      O('THE KING', 'fox', 'v8_86b', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd3', cams: 'c4', fi: 't_promod', ic: 'ic3', fuelsys: 'f4', fueltype: 'meth', internals: 'n4', ecu: 'ecu3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', launch: 'l2', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 36, tcSlip: 15, barDeg: 3, fd: 3.6 }, 0.95, '#ffd700')
+      O('Blower Bill', 'charger', 'v8_86b', { fi: 'sc_1471', fuelsys: 'f4', fueltype: 'meth', internals: 'n3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 25, barDeg: 3 }, 0.88, '#3a7bd2'),
+      O('THE KING', 'promod', 'v8_86b', { intake: 'i3', exhaust: 'e3', headers: 'h3', heads: 'hd3', cams: 'c4', fi: 't_promod', ic: 'ic3', fuelsys: 'f4', fueltype: 'meth', internals: 'n4', ecu: 'ecu3', rtires: 'sl_33', trans: 'lenco5', clutch: 'cl5', launch: 'l2', diff: 'spool', rearsusp: 'rs3', wheeliebar: 'wb1', shocks: 'sh3', springs: 'sp3', weight: 'w4' }, { boost: 36, tcSlip: 15, barDeg: 3, fd: 3.6 }, 0.95, '#ffd700')
     ]}
   ];
   DR.RIVALS = BANDS.map(function (b) { return b.opps; });

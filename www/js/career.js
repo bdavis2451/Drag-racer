@@ -100,7 +100,7 @@
         e('sponsor', [rv(0, 4, { name: 'Mike' })], 900, ['perf:body:2'], 5),
         e('street', [rv(1, 0, { name: 'Dale' })], 750, [], 5)
       ],
-      boss: e('boss', [rv(1, 0, { name: 'Dale "The Mullet" Rhodes', skill: 0.7, vis: { spoiler: 1, rims: 'pony', vinyl: 2, tips: 1 }, stripe: '#ffffff' })], 3500, ['car:camss', 'perf:all:2'], 6) },
+      boss: e('boss', [rv(1, 0, { name: 'Dale "The Mullet" Rhodes', skill: 0.7, vis: { spoiler: 1, rims: 'pony', vinyl: 2, tips: 1 }, stripe: '#ffffff' })], 3500, ['cars:1', 'perf:all:2'], 6) },
 
     { name: 'Bracket Bandits', blurb: 'Bolt-ons are not enough anymore. Real builds, real money.', sponsors: ['boost', 'redline', 'apex'], base: 1800,
       events: [
@@ -115,7 +115,7 @@
         e('sponsor', [rv(2, 0)], 2800, ['perf:body:3'], 5),
         e('eighth', [rv(2, 1)], 2200, [], 5)
       ],
-      boss: e('boss', [rv(2, 2, { name: 'Lexi "Boost" Park', skill: 0.8, vis: { fbumper: 2, skirt: 2, spoiler: 2, vinyl: 2, rims: 'turbine', tint: 2, finish: 1 }, stripe: '#ff2bd6' })], 10000, ['car:supra', 'perf:all:3'], 6) },
+      boss: e('boss', [rv(2, 2, { name: 'Lexi "Boost" Park', skill: 0.8, vis: { fbumper: 2, skirt: 2, spoiler: 2, vinyl: 2, rims: 'turbine', tint: 2, finish: 1 }, stripe: '#ff2bd6' })], 10000, ['cars:2', 'perf:all:3'], 6) },
 
     { name: 'Street Outlaws', blurb: 'Big turbos, nitrous and no excuses. The cops are watching.', sponsors: ['volt', 'night', 'octane'], base: 5000,
       events: [
@@ -130,7 +130,7 @@
         e('sponsor', [rv(3, 2)], 7000, ['perf:body:4'], 5),
         e('eighth', [rv(3, 1, { name: 'Ricky Radial' })], 5500, [], 5)
       ],
-      boss: e('boss', [rv(3, 2, { name: 'Nitro Nate', skill: 0.85, vis: { hood: 2, vinyl: 3, rims: 'drag', skirt: 2, tips: 1 } })], 25000, ['perf:all:4'], 6) },
+      boss: e('boss', [rv(3, 2, { name: 'Nitro Nate', skill: 0.85, vis: { hood: 2, vinyl: 3, rims: 'drag', skirt: 2, tips: 1 } })], 25000, ['cars:3', 'perf:all:4'], 6) },
 
     { name: 'Radial Wars', blurb: 'Drag radials, transbrakes and four-digit horsepower.', sponsors: ['grip', 'pixel', 'hotrod'], base: 12000,
       events: [
@@ -145,7 +145,7 @@
         e('sponsor', [rv(4, 3, { name: 'Hank' })], 16000, ['perf:body:5'], 5),
         e('eighth', [rv(4, 1, { name: 'Godzilla' })], 13000, [], 5)
       ],
-      boss: e('boss', [rv(4, 4, { name: 'Twin Turbo Tina', skill: 0.9, vis: { fbumper: 3, skirt: 3, hood: 3, rims: 'drag', tint: 2, vinyl: 3, finish: 3 } })], 60000, ['perf:all:5'], 6) },
+      boss: e('boss', [rv(4, 4, { name: 'Twin Turbo Tina', skill: 0.9, vis: { fbumper: 3, skirt: 3, hood: 3, rims: 'drag', tint: 2, vinyl: 3, finish: 3 } })], 60000, ['cars:4', 'perf:all:5'], 6) },
 
     { name: 'Pro Mod Legends', blurb: 'Six-second cars. One king.', sponsors: ['turbo', 'king', 'vortex'], base: 30000,
       events: [
@@ -167,7 +167,17 @@
     st.boss.id = si + '.boss'; st.boss.stage = si; st.boss.idx = 'boss';
     st.all = st.events.concat([st.boss]);
   });
-  DR.CAR_STAGE = { fox: 0, hachi: 0, camss: 1, supra: 2 };
+  // The stage a car reaches the dealer at: price tiers, so each stage opens
+  // a batch across every category (beat the boss to open the next batch).
+  DR.CAR_STAGE = {};
+  Object.keys(DR.CARS).forEach(function (id) {
+    var p = DR.CARS[id].price;
+    DR.CAR_STAGE[id] = p <= 9000 ? 0 : p <= 24000 ? 1 : p <= 48000 ? 2 : p <= 110000 ? 3 : 4;
+  });
+  DR.CAR_STAGE.camss = 1;   // the stage 1 boss's headline prize
+  DR.carsAtStage = function (si) {
+    return Object.keys(DR.CARS).filter(function (id) { return DR.CAR_STAGE[id] === si; }).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; });
+  };
 
   // ---------------------------------------------------------------- state
   G.careerDefaults = function () {
@@ -255,6 +265,10 @@
   function unlockText(u) {
     var p = u.split(':');
     if (p[0] === 'car') return 'New car at the dealer: ' + DR.CARS[p[1]].name;
+    if (p[0] === 'cars') {
+      var ids = DR.carsAtStage(+p[1]), names = ids.slice(-3).reverse().map(function (id) { return DR.CARS[id].name; });
+      return ids.length + ' new cars at the dealer: ' + names.join(', ') + (ids.length > 3 ? ' and ' + (ids.length - 3) + ' more' : '');
+    }
     if (p[0] === 'perf') {
       if (p[1] === 'all') return 'All performance parts up to ' + DR.LEVEL_NAMES[+p[2]] + ' level';
       var g = DR.PART_GROUPS.filter(function (x) { return x.id === p[1]; })[0];
