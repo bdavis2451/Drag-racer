@@ -41,6 +41,7 @@
       setup(d) {
         this.pcm = d.pcm; this.s = d.s; this.n = d.n; this.rpm = d.rpm; this.on = d.on; this.end = d.end; this.X = d.xf; this.D = d.d; this.off = 0;
         this.cyc = d.cyc;                     // firings per engine cycle
+        this.hist = [-1, -1, -1, -1, -1, -1, -1, -1]; this.hp = 0;
         // each cycle's loudness, to level-match a splice
         this.rms = new Float32Array(this.s.length);
         for (var g = 0; g < this.s.length; g++) {
@@ -55,7 +56,7 @@
         if (!sets[0].length) sets[0] = sets[1];
         if (!sets[1].length) sets[1] = sets[0];
         this.sets = sets;
-        this.lay = [0, 1].map(function () { return { i: -1, p: 0, r: 1, fi: -1, fp: 0, fr: 1, fade: 0, g: 1 }; });
+        this.lay = [0, 1].map(function () { return { i: -1, p: 0, r: 1, fi: -1, fp: 0, fr: 1, fade: 0, g: 1, jg: 1 }; });
         this.ready = this.s.length > 0;
       }
       // the next cycle to play: carry on through the recording while it stays
@@ -67,7 +68,7 @@
         var lo = 0, hi = set.length - 1;
         while (lo < hi) { var m = (lo + hi) >> 1; if (this.rpm[set[m]] < target) lo = m + 1; else hi = m; }
         var cands = [], k, o, q, j;
-        for (k = Math.max(0, lo - 7); k <= Math.min(set.length - 1, lo + 6); k++) cands.push(set[k]);
+        for (k = Math.max(0, lo - 10); k <= Math.min(set.length - 1, lo + 9); k++) cands.push(set[k]);
         // when the recording runs ahead of or behind the game's rpm, skip or
         // repeat a cycle in the same stretch rather than leave it
         if (cur >= 0) {
@@ -79,9 +80,9 @@
         var best = set[lo], bs = 1e9, bo = 0, D = this.D;
         for (k = 0; k < cands.length; k++) {
           var c = cands[k], dr = Math.abs(Math.log(this.rpm[c] / target));
-          if (dr > 0.07 && c !== set[lo]) continue;
+          if (dr > 0.09 && c !== set[lo]) continue;
           var same = cur >= 0 && Math.abs(c - cur) <= 3 && this.on[c] === this.on[cur];
-          var pen = dr * 5 + (c === this.last1 || c === this.last2 ? 0.25 : 0) - (same ? 0.04 : 0);
+          var pen = dr * 5 + (this.hist.indexOf(c) >= 0 ? 0.3 : 0) - (same ? 0.04 : 0);
           if (cur < 0) { if (pen < bs) { bs = pen; best = c; bo = 0; } continue; }
           // try starting the new cycle at each firing, so an uneven firing
           // pattern (a V8's lope, an odd-fire V10) stays in step, then
@@ -97,7 +98,8 @@
             }
           }
         }
-        this.last2 = this.last1; this.last1 = best; this.off = bo;
+        // remember the last cycles so the same few don't loop (a buzz)
+        this.hist[this.hp] = best; this.hp = (this.hp + 1) % this.hist.length; this.off = bo;
         return best;
       }
       // 4-point cubic (Catmull-Rom) interpolation: cleaner than linear when
@@ -137,7 +139,10 @@
               if (L.fi >= 0 && ni !== L.fi + 1) L.g = Math.max(0.5, Math.min(2, L.g * this.rms[L.fi] / this.rms[ni]));
               else L.g = 1 + (L.g - 1) * 0.7;
               L.i = ni; L.p = this.off;
-              L.r = Math.min(2.2, Math.max(0.45, target / this.rpm[L.i] * dop));
+              // no two combustion cycles are identical: a touch of random
+              // timing and level per cycle keeps it from sounding machine-made
+              L.r = Math.min(2.2, Math.max(0.45, target / this.rpm[L.i] * dop * (1 + (Math.random() - 0.5) * 0.008)));
+              L.jg = 1 + (Math.random() - 0.5) * 0.12;
             }
             var v = this.at(this.s[L.i] + L.p);
             if (L.fade > 0) {
@@ -146,7 +151,7 @@
               L.fp += L.fr; L.fade--;
             }
             L.p += L.r;
-            out[s] += v * wj * L.g;
+            out[s] += v * wj * L.g * L.jg;
           }
         }
         return true;
@@ -242,8 +247,10 @@
     // designers EQ it); level grows with load and rpm; the limiter chops it
     sm.tone.frequency.setTargetAtTime(sm.cut * (0.5 + 0.5 * on), t, 0.05);
     var lvl = v.vol * sm.lvl * (0.3 + 0.7 * sm.load) * (0.45 + 0.55 * Math.min(1, r / (v.b.red || 7000))) * (1 + (st.nos ? 0.15 : 0));
-    var cut = st.cut && thr > 0.5;
-    sm.out.gain.setTargetAtTime(lvl * (cut ? 0.25 : 1) * A.SMP_GAIN, t, cut ? 0.006 : 0.03);
+    // the rev limiter / shift cut flickers on and off many times a second:
+    // smooth it into a stutter rather than a hard electronic chop
+    sm.cutAmt = (sm.cutAmt || 0) + ((st.cut && thr > 0.5 ? 1 : 0) - (sm.cutAmt || 0)) * 0.3;
+    sm.out.gain.setTargetAtTime(lvl * (1 - 0.5 * sm.cutAmt) * A.SMP_GAIN, t, 0.025);
   };
   A.SMP_GAIN = 1.5;
 

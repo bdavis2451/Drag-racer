@@ -113,8 +113,12 @@ def psola(piece, r_dst, ncyc):
     L = int(round(ncyc * CYC * T1)) + 1
     pad = 2 * int(max(widths)) + 4
     out = np.zeros(L + 2 * pad + 4 * int(T1) + 8); wsum = np.zeros_like(out)
+    rng = np.random.default_rng(len(marks) + int(r_dst))
+    ncy = max(1, len(marks) // int(CYC)); cyc_pick = 0
     for m in range(int(ncyc * CYC) + 2):
-        sm = marks[m % len(marks)]; T0 = widths[m % len(widths)]
+        if m % int(CYC) == 0: cyc_pick = int(rng.integers(ncy))   # a random recorded cycle each time
+        mi = cyc_pick * int(CYC) + m % int(CYC)
+        sm = marks[mi % len(marks)]; T0 = widths[mi % len(widths)]
         h = int(T0); src0 = int(sm) - h
         if src0 < 0 or src0 + 2 * h >= len(x): continue
         win = np.hanning(2 * h)
@@ -124,7 +128,7 @@ def psola(piece, r_dst, ncyc):
         # stretched far, an uneven firing pattern gets exaggerated (real engines
         # smooth out at high rpm): blend the same firing from another cycle
         if T0 / T1 > 1.25 and len(marks) > 2 * CYC:
-            sm2 = marks[(m + int(CYC) * (1 + m % 3)) % len(marks)]; s2 = int(sm2) - h
+            sm2 = marks[(mi + int(CYC) * (1 + m % 3)) % len(marks)]; s2 = int(sm2) - h
             if 0 <= s2 and s2 + 2 * h < len(x): g_ = 0.5 * (g_ + x[s2:s2 + 2 * h])
         out[o0:o0 + 2 * h] += g_ * win; wsum[o0:o0 + 2 * h] += win
     out = out / np.maximum(wsum, 0.35)
@@ -135,15 +139,18 @@ for load in ('on', 'off'):
     have = sorted(picked[load])
     if not have: continue
     top = TOPB if load == 'on' else int(RED * 0.85 // BAND)
-    for b in range(min(have), top + 1, 2):
-        if any(abs(b - h) <= 1 for h in have): continue
-        src_b = max([h for h in have if h < b], default=min(have))
-        piece = band_piece(load, src_b)
+    for b in range(min(have), top + 1):
+        if b in have: continue
+        below = sorted([h for h in have if h < b], reverse=True)[:3] or [min(have)]
+        src_b = below[0]
+        # source pulses from up to three nearby recorded stretches, so the
+        # re-spaced cycles never repeat one recorded pattern (a buzz)
+        piece = [i for sb in below for i in band_piece(load, sb)]
         # make two cycles more than needed and keep the fully overlapped
         # middle, with a few ms of margin either side that never plays
-        full, clen = psola(piece, (b + 0.5) * BAND, 8)
+        full, clen = psola(piece, (b + 0.5) * BAND, 12)
         PRE, POST = int(0.004 * SR), int(0.008 * SR)
-        c0 = int(round(clen)); a_ = max(0, c0 - PRE); b_ = min(len(full), int(round(clen * 7)) + POST)
+        c0 = int(round(clen)); a_ = max(0, c0 - PRE); b_ = min(len(full), int(round(clen * 11)) + POST)
         synth[load][b] = (full[a_:b_].copy(), clen, tuple(piece), c0 - a_)
 # timbre matching: pieces were recorded at different distances and angles,
 # so EQ each one (smooth curve, +-9 dB) toward the bank's average spectrum
@@ -201,9 +208,9 @@ for load in ('on', 'off'):
         seg = match(seg, key)
         seg = seg / (np.sqrt(np.mean(seg ** 2)) + 1e-9) * 0.1
         if off0 > 1: seg[:off0] *= np.linspace(0, 1, off0)
-        tail = len(seg) - off0 - int(round(clen * 6))
+        tail = len(seg) - off0 - int(round(clen * 10))
         if tail > 1: seg[-tail:] *= np.linspace(1, 0, tail)
-        for c_ in range(6):
+        for c_ in range(10):
             table.append([int(round(pos + off0 + c_ * clen)), int(round(clen)), round((b + 0.5) * BAND), 1 if load == 'on' else 0])
         table[-1].append(1)
         pcm.append(seg); pos += len(seg); pcm.append(np.zeros(200, np.float32)); pos += 200
