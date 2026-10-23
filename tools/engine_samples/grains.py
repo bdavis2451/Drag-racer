@@ -62,26 +62,42 @@ for load in ('on', 'off'):
             if len(cur) >= MINRUN: runs[load].append(cur)
             cur = [i] if good(g, load) else []
     if len(cur) >= MINRUN: runs[load].append(cur)
-# pick per 150-rpm band the best run pieces (up to 8 cycles), on and off
+# keep long stretches: the best runs first, each cut where its rpm band
+# already holds CAP cycles, so a recorded sweep stays one continuous piece
+# that playback can follow (the way Ginsu plays an acceleration ramp)
 BAND = 150
+CAP = int(os.environ.get('CAP', '6'))
+def band(i): return int(grains[i]['rpm'] // BAND)
+def qual(i): return grains[i]['sim'] * min(1, grains[i]['loud'] * 2)
+pieces = {'on': [], 'off': []}
 picked = {'on': {}, 'off': {}}
+def accept(load, cur):
+    pieces[load].append(cur)
+    for j in cur: picked[load].setdefault(band(j), []).append(j)
 for load in ('on', 'off'):
-    for run in runs[load]:
-        for s0 in range(0, len(run), 4):
-            piece = run[s0:s0 + 8]
-            if len(piece) < MINRUN: continue
-            r = np.mean([grains[i]['rpm'] for i in piece])
-            q = np.mean([grains[i]['sim'] for i in piece]) * np.mean([min(1, grains[i]['loud'] * 2) for i in piece])
-            if load == 'off' and r > RED * 0.85: continue
-            band = int(r // BAND)
-            cand = picked[load].setdefault(band, [])
-            cand.append((q, piece)); cand.sort(key=lambda c: -c[0]); del cand[1:]
+    for run in sorted(runs[load], key=lambda r: -sum(qual(i) for i in r)):
+        cur = []
+        for i in run + [None]:
+            ok = i is not None and not (load == 'off' and grains[i]['rpm'] > RED * 0.85) and len(picked[load].get(band(i), [])) < CAP
+            if ok: cur.append(i); continue
+            if len(cur) >= MINRUN: accept(load, cur)
+            cur = []
 # a layer with no recording at some rpm borrows the other layer's real
 # cycles there (still a recording, just pulling instead of coasting or back)
 for load, other in (('on', 'off'), ('off', 'on')):
-    for b, cand in list(picked[other].items()):
-        if b not in picked[load] and not (load == 'off' and (b + 0.5) * BAND > RED * 0.85):
-            picked[load][b] = cand
+    missing = lambda i: band(i) not in picked[load] and not (load == 'off' and grains[i]['rpm'] > RED * 0.85)
+    for p in list(pieces[other]):
+        cur = []
+        for i in p + [None]:
+            if i is not None and missing(i): cur.append(i); continue
+            if len(cur) >= MINRUN: accept(load, cur)
+            cur = []
+def band_piece(load, b):
+    best = []
+    for p in pieces[load]:
+        sub = [i for i in p if band(i) == b]
+        if len(sub) > len(best): best = sub
+    return best
 # fill the rpm bands the recording never held cleanly by re-spacing its own
 # combustion pulses (pitch-synchronous overlap-add): the pulses keep their
 # shape and the pipe's resonance, only the firing rate changes
@@ -113,7 +129,7 @@ for load in ('on', 'off'):
     for b in range(min(have), top + 1, 2):
         if any(abs(b - h) <= 1 for h in have): continue
         src_b = max([h for h in have if h < b], default=min(have))
-        piece = picked[load][src_b][0][1]
+        piece = band_piece(load, src_b)
         # make two cycles more than needed and keep the fully overlapped
         # middle, with a few ms of margin either side that never plays
         full, clen = psola(piece, (b + 0.5) * BAND, 8)
@@ -131,8 +147,7 @@ def env_of(seg):
     e = 10 * np.log10(acc / max(1, cnt) + 1e-12)
     k = 25; return np.convolve(np.pad(e, k, mode='edge'), np.ones(2 * k + 1) / (2 * k + 1), 'valid')
 def piece_audio(piece): return x[grains[piece[0]]['a']:grains[piece[-1]]['b']]
-allp = [c[0][1] for L_ in picked.values() for c in L_.values()]
-uniq = {tuple(p): p for p in allp}
+uniq = {tuple(p): p for L_ in pieces.values() for p in L_}
 envs = {k_: env_of(piece_audio(p)) for k_, p in uniq.items()}
 mean_env = np.mean([e - e.max() for e in envs.values()], axis=0) if envs else None
 def match(seg, key):
@@ -144,8 +159,8 @@ def match(seg, key):
 # pack: each piece is copied with its cycles; a level-normalised stream
 pcm, table, pos = [np.zeros(400, np.float32)], [], 400
 for load in ('on', 'off'):
-    for band in sorted(picked[load]):
-        for q, piece in picked[load][band]:
+    for piece in pieces[load]:
+        if True:
             # keep some real recording either side of the cycles we use, so
             # the cut edges (and the EQ's ringing) stay outside them
             PRE, POST = int(0.004 * SR), int(0.008 * SR)
@@ -155,7 +170,10 @@ for load in ('on', 'off'):
             # every cycle to the same level, with a smooth gain between them,
             # so pieces from different moments join without level jumps
             rms = np.array([np.sqrt(np.mean(x[grains[i]['a']:grains[i]['b']] ** 2)) + 1e-9 for i in piece])
-            gains = 0.1 / rms
+            # level correction smoothed over ~7 cycles: evens out distance and
+            # mic changes but keeps the natural cycle-to-cycle variation
+            sm_rms = np.convolve(np.pad(rms, 3, mode='edge'), np.ones(7) / 7, 'valid')
+            gains = 0.1 / sm_rms
             env = np.interp(np.arange(len(seg)), [(grains[i]['a'] + grains[i]['b']) / 2 - g0 for i in piece], gains)
             seg = seg * env
             fi = grains[piece[0]]['a'] - a0; fo = b0 - grains[piece[-1]]['b']
@@ -170,7 +188,8 @@ for load in ('on', 'off'):
             pcm.append(np.zeros(200, np.float32)); pos += 200
     for b in sorted(synth[load]):
         seg, clen, key, off0 = synth[load][b]
-        seg = match(seg, key) if key in envs else seg
+        if key not in envs: envs[key] = env_of(piece_audio(list(key)))
+        seg = match(seg, key)
         seg = seg / (np.sqrt(np.mean(seg ** 2)) + 1e-9) * 0.1
         if off0 > 1: seg[:off0] *= np.linspace(0, 1, off0)
         tail = len(seg) - off0 - int(round(clen * 6))
@@ -181,12 +200,12 @@ for load in ('on', 'off'):
         pcm.append(seg); pos += len(seg); pcm.append(np.zeros(200, np.float32)); pos += 200
 y = np.concatenate(pcm); y = y / (np.abs(y).max() + 1e-9) * 0.95
 wavfile.write(f'{OUT}/{ID}.wav', SR, (y * 32767).astype(np.int16))
-subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', f'{OUT}/{ID}.wav', '-c:a', 'libvorbis', '-q:a', '3', f'{OUT}/{ID}.ogg'], check=True)
+subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', f'{OUT}/{ID}.wav', '-c:a', 'libvorbis', '-q:a', '4', f'{OUT}/{ID}.ogg'], check=True)
 on = sorted(set(int(r[2] // 250 * 250) for r in table if r[3])); off = sorted(set(int(r[2] // 250 * 250) for r in table if not r[3]))
 real_on = sorted(r for b in picked['on'] for r in [(b + 0.5) * BAND])
 real_off = sorted(r for b in picked['off'] for r in [(b + 0.5) * BAND])
 json.dump(dict(id=ID, k=K, sr=SR, grains=table, real_on=[real_on[0], real_on[-1], len(real_on)] if real_on else None,
                real_off=[real_off[0], real_off[-1], len(real_off)] if real_off else None), open(f'{OUT}/{ID}.json', 'w'))
 cov = lambda s: '%d-%d (%d bands)' % (s[0], s[-1] + 250, len(s)) if s else 'none'
-nreal = sum(len(p[0][1]) for L_ in picked.values() for p in L_.values())
+nreal = sum(len(p) for L_ in pieces.values() for p in L_)
 print(ID, 'grains', len(table), 'real', nreal, 'on', cov(on), 'off', cov(off), 'ogg', os.path.getsize(f'{OUT}/{ID}.ogg') // 1024, 'KB')

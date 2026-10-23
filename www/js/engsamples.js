@@ -35,10 +35,11 @@
       constructor() {
         super();
         this.alive = true; this.ready = false;
-        this.port.onmessage = (e) => { if (e.data === 'stop') this.alive = false; else this.setup(e.data); };
+        this.st = { cont: 0, jump: 0, mis: 0 };
+        this.port.onmessage = (e) => { if (e.data === 'stop') this.alive = false; else if (e.data === 'stats') this.port.postMessage(this.st); else this.setup(e.data); };
       }
       setup(d) {
-        this.pcm = d.pcm; this.s = d.s; this.n = d.n; this.rpm = d.rpm; this.on = d.on; this.end = d.end; this.X = d.xf;
+        this.pcm = d.pcm; this.s = d.s; this.n = d.n; this.rpm = d.rpm; this.on = d.on; this.end = d.end; this.X = d.xf; this.D = d.d; this.off = 0;
         var sets = [[], []], i;
         for (i = 0; i < this.s.length; i++) sets[this.on[i]].push(i);
         var self = this;
@@ -50,21 +51,46 @@
         this.ready = this.s.length > 0;
       }
       // the next cycle to play: carry on through the recording while it stays
-      // near the target rpm, else the nearest cycle recorded at that rpm
-      pick(set, target, cur) {
-        if (cur >= 0 && !this.end[cur] && cur + 1 < this.s.length && Math.abs(this.rpm[cur + 1] / target - 1) < 0.12) return cur + 1;
+      // near the target rpm; otherwise splice to the cycle (and start offset)
+      // whose opening best matches what would have followed, among those
+      // recorded close to the target rpm (concatenative synthesis)
+      pick(set, target, cur, pos) {
+        if (cur >= 0 && !this.end[cur] && cur + 1 < this.s.length && Math.abs(this.rpm[cur + 1] / target - 1) < 0.15) { this.off = 0; return cur + 1; }
         var lo = 0, hi = set.length - 1;
         while (lo < hi) { var m = (lo + hi) >> 1; if (this.rpm[set[m]] < target) lo = m + 1; else hi = m; }
-        var best = set[lo], bd = 1e9;
-        for (var k = Math.max(0, lo - 3); k <= Math.min(set.length - 1, lo + 2); k++) {
-          var d = Math.abs(Math.log(this.rpm[set[k]] / target)) + Math.random() * 0.012;  // a little variety
-          if (d < bd) { bd = d; best = set[k]; }
+        var cands = [], k, o, q, j;
+        for (k = Math.max(0, lo - 7); k <= Math.min(set.length - 1, lo + 6); k++) cands.push(set[k]);
+        // when the recording runs ahead of or behind the game's rpm, skip or
+        // repeat a cycle in the same stretch rather than leave it
+        if (cur >= 0) {
+          var rs = cur, re = cur;
+          while (rs > 0 && !this.end[rs - 1] && cur - rs < 3) rs--;
+          while (!this.end[re] && re + 1 < this.s.length && re - cur < 3) re++;
+          for (j = rs; j <= re; j++) if (cands.indexOf(j) < 0) cands.push(j);
         }
+        var best = set[lo], bs = 1e9, bo = 0, D = this.D;
+        for (k = 0; k < cands.length; k++) {
+          var c = cands[k], dr = Math.abs(Math.log(this.rpm[c] / target));
+          if (dr > 0.07 && c !== set[lo]) continue;
+          var same = cur >= 0 && Math.abs(c - cur) <= 3 && this.on[c] === this.on[cur];
+          var pen = dr * 5 + (c === this.last1 || c === this.last2 ? 0.25 : 0) - (same ? 0.04 : 0);
+          if (cur < 0) { if (pen < bs) { bs = pen; best = c; bo = 0; } continue; }
+          for (o = -D; o <= D; o += 3) {
+            var e1 = 0, e2 = 0;
+            for (q = 0; q < 48; q += 2) { var u1 = this.pcm[(pos + q) | 0] || 0, u2 = this.pcm[(this.s[c] + o + q) | 0] || 0; e1 += (u1 - u2) * (u1 - u2); e2 += u1 * u1 + u2 * u2; }
+            var sc = e1 / (e2 + 1e-9) + pen;
+            if (sc < bs) { bs = sc; best = c; bo = o; }
+          }
+        }
+        this.last2 = this.last1; this.last1 = best; this.off = bo;
         return best;
       }
+      // 4-point cubic (Catmull-Rom) interpolation: cleaner than linear when
+      // a cycle is resampled to the exact rpm
       at(pos) {
-        var i0 = pos | 0, f = pos - i0, a = this.pcm[i0] || 0, b = this.pcm[i0 + 1] || 0;
-        return a + (b - a) * f;
+        var i1 = pos | 0, f = pos - i1, P = this.pcm;
+        var y0 = P[i1 - 1] || 0, y1 = P[i1] || 0, y2 = P[i1 + 1] || 0, y3 = P[i1 + 2] || 0;
+        return y1 + 0.5 * f * (y2 - y0 + f * (2 * y0 - 5 * y1 + 4 * y2 - y3 + f * (3 * (y1 - y2) + y3 - y0)));
       }
       process(inputs, outputs, P) {
         var out = outputs[0][0];
@@ -78,13 +104,26 @@
           for (var s = 0; s < out.length; s++) {
             if (L.i < 0 || L.p >= this.n[L.i]) {
               // the old cycle runs on into what followed it and fades out
-              L.fi = L.i; L.fp = L.p; L.fr = L.r; L.fade = L.fi < 0 ? 0 : this.X;
-              L.i = this.pick(set, target, L.i); L.p = 0;
+              L.fi = L.i; L.fp = L.p; L.fr = L.r;
+              var ni = this.pick(set, target, L.i, L.i < 0 ? 0 : this.s[L.i] + L.p);
+              // a straight continuation needs no blend; a splice gets one about
+              // a third of a cycle long (2-8 ms)
+              L.fade = L.fi < 0 || ni === L.fi + 1 ? 0 : Math.max(this.X, Math.min(this.X * 4, Math.round(this.n[ni] * 0.3)));
+              L.fl = L.fade;
+              if (L.i >= 0 && wj > 0.3) {
+                if (ni === L.i + 1) this.st.cont++; else {
+                  // how far the new cycle's start is from what would have followed
+                  this.st.jump++; var e1 = 0, e2 = 0;
+                  for (var q = 0; q < 32; q++) { var u1 = this.at(this.s[L.i] + this.n[L.i] + q), u2 = this.at(this.s[ni] + this.off + q); e1 += (u1 - u2) * (u1 - u2); e2 += u1 * u1 + u2 * u2; }
+                  this.st.mis += e1 / (e2 + 1e-9);
+                }
+              }
+              L.i = ni; L.p = this.off;
               L.r = Math.min(2.2, Math.max(0.45, target / this.rpm[L.i] * dop));
             }
             var v = this.at(this.s[L.i] + L.p);
             if (L.fade > 0) {
-              var u = 1 - L.fade / this.X;
+              var u = 1 - L.fade / L.fl;
               v = v * Math.sin(u * Math.PI / 2) + this.at(this.s[L.fi] + L.fp) * Math.cos(u * Math.PI / 2);
               L.fp += L.fr; L.fade--;
             }
@@ -143,12 +182,16 @@
     for (var i = 0; i < n; i++) { arr.s[i] = g[i][0] * k; arr.n[i] = g[i][1] * k; arr.rpm[i] = g[i][2]; arr.on[i] = g[i][3]; arr.end[i] = g[i][4] ? 1 : 0; }
     var sm = v.smp = { bank: bank };
     sm.node = new AudioWorkletNode(c, 'pd-grains', { numberOfInputs: 0, outputChannelCount: [1] });
-    sm.node.port.postMessage({ pcm: buf.getChannelData(0).slice(), s: arr.s, n: arr.n, rpm: arr.rpm, on: arr.on, end: arr.end, xf: Math.round(buf.sampleRate * 0.002) });
+    sm.node.port.postMessage({ pcm: buf.getChannelData(0).slice(), s: arr.s, n: arr.n, rpm: arr.rpm, on: arr.on, end: arr.end, xf: Math.round(buf.sampleRate * 0.002), d: Math.round(buf.sampleRate * 0.0006) });
     sm.np = sm.node.parameters;
     sm.cut = TONE.cut[ex] * (build.turbo ? 0.78 : 1);
     sm.tone = c.createBiquadFilter(); sm.tone.type = 'lowpass'; sm.tone.Q.value = 0.6; sm.tone.frequency.value = sm.cut;
     sm.out = c.createGain(); sm.out.gain.value = 0;
-    sm.node.connect(sm.tone); sm.tone.connect(sm.out); sm.out.connect(v.bus);
+    // the recordings come from camera mics: thin lows and a harsh top, so warm
+    // them up (a low shelf for body, a gentle high shelf off the fizz)
+    sm.low = c.createBiquadFilter(); sm.low.type = 'lowshelf'; sm.low.frequency.value = 110; sm.low.gain.value = 4;
+    sm.high = c.createBiquadFilter(); sm.high.type = 'highshelf'; sm.high.frequency.value = 7000; sm.high.gain.value = -2.5;
+    sm.node.connect(sm.low); sm.low.connect(sm.high); sm.high.connect(sm.tone); sm.tone.connect(sm.out); sm.out.connect(v.bus);
     sm.lvl = TONE.lvl[ex] * (build.turbo ? 0.85 : 1) * (bank.gain || 1);
     // the recording carries the engine: silence the modelled exhaust note and
     // engine-bay sounds, keeping its limiter cuts, pops, bangs and blower
