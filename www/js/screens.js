@@ -92,7 +92,7 @@
       var p = DR.cityPlaceOf(ev.type), pin = pins[p.id] || (pins[p.id] = { n: 0 });
       pin.n++;
       if (ev === next) pin.next = true;
-      if (ev.type === 'boss' && !G.eventLock(ev)) pin.boss = true;
+      if (ev.type === 'boss') pin.boss = true;
     });
     pins.highway = { street: true };
     if (!selPlace) selPlace = next ? DR.cityPlaceOf(next.type).id : 'strip';
@@ -126,10 +126,10 @@
     if (p.go) return h('div', {}, head, btn(p.go === 'Garage' ? 'Go Home' : 'Go to ' + p.name, function () { UI.show(UI[p.go]); }, 'go'));
     if (p.street) return streetView(inst);
     var grid = h('div', { class: 'egrid' }), n = 0;
-    st.all.forEach(function (ev) {
-      if (!G.eventVisible(ev) || DR.cityPlaceOf(ev.type) !== p) return;
-      n++; grid.appendChild(eventCard(ev, ev === next));
-    });
+    // races still to win first, then the ones already won
+    st.all.filter(function (ev) { return G.eventVisible(ev) && DR.cityPlaceOf(ev.type) === p; })
+      .sort(function (a, b) { return G.eventWon(a) - G.eventWon(b); })
+      .forEach(function (ev) { n++; grid.appendChild(eventCard(ev, ev === next)); });
     if (!n) grid = h('div', { class: 'dim cityempty' }, 'No races here in stage ' + (selStage + 1) + ' yet. Keep winning to open this spot up.');
     return h('div', {}, head, grid, p.test ? h('div', { style: { marginTop: '8px' } }, btn('Test & Tune', function () { UI.show(UI.RaceMenu, 'test'); }, 'small')) : null);
   }
@@ -172,7 +172,7 @@
     var who = ev.opps.length > 1 ? ev.opps.map(function (x) { return x.name; }).join(' → ') : o.name;
     var cls = 'ecard t-' + ev.type + (lock ? ' locked' : '') + (won ? ' won' : '') + (isNext ? ' next' : '');
     return h('div', { class: cls },
-      h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, ev.type === 'boss' ? '★ BOSS' : T.name), won ? h('span', { class: 'ewon' }, 'WON') : null,
+      h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, ev.type === 'boss' ? 'BOSS' : T.name), won ? h('span', { class: 'ewon' }, 'WON') : null,
         isNext ? h('span', { class: 'enext' }, 'NEXT UP') : null),
       h('div', { class: 'acc ename' }, who),
       h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name),
