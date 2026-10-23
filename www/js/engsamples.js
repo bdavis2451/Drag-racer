@@ -40,6 +40,14 @@
       }
       setup(d) {
         this.pcm = d.pcm; this.s = d.s; this.n = d.n; this.rpm = d.rpm; this.on = d.on; this.end = d.end; this.X = d.xf; this.D = d.d; this.off = 0;
+        this.cyc = d.cyc;                     // firings per engine cycle
+        // each cycle's loudness, to level-match a splice
+        this.rms = new Float32Array(this.s.length);
+        for (var g = 0; g < this.s.length; g++) {
+          var e = 0, a0 = this.s[g] | 0, n0 = this.n[g] | 0;
+          for (var t = 0; t < n0; t += 2) { var v = this.pcm[a0 + t] || 0; e += v * v; }
+          this.rms[g] = Math.sqrt(e / Math.max(1, n0 / 2)) + 1e-6;
+        }
         var sets = [[], []], i;
         for (i = 0; i < this.s.length; i++) sets[this.on[i]].push(i);
         var self = this;
@@ -47,7 +55,7 @@
         if (!sets[0].length) sets[0] = sets[1];
         if (!sets[1].length) sets[1] = sets[0];
         this.sets = sets;
-        this.lay = [0, 1].map(function () { return { i: -1, p: 0, r: 1, fi: -1, fp: 0, fr: 1, fade: 0 }; });
+        this.lay = [0, 1].map(function () { return { i: -1, p: 0, r: 1, fi: -1, fp: 0, fr: 1, fade: 0, g: 1 }; });
         this.ready = this.s.length > 0;
       }
       // the next cycle to play: carry on through the recording while it stays
@@ -75,11 +83,18 @@
           var same = cur >= 0 && Math.abs(c - cur) <= 3 && this.on[c] === this.on[cur];
           var pen = dr * 5 + (c === this.last1 || c === this.last2 ? 0.25 : 0) - (same ? 0.04 : 0);
           if (cur < 0) { if (pen < bs) { bs = pen; best = c; bo = 0; } continue; }
-          for (o = -D; o <= D; o += 3) {
-            var e1 = 0, e2 = 0;
-            for (q = 0; q < 48; q += 2) { var u1 = this.pcm[(pos + q) | 0] || 0, u2 = this.pcm[(this.s[c] + o + q) | 0] || 0; e1 += (u1 - u2) * (u1 - u2); e2 += u1 * u1 + u2 * u2; }
-            var sc = e1 / (e2 + 1e-9) + pen;
-            if (sc < bs) { bs = sc; best = c; bo = o; }
+          // try starting the new cycle at each firing, so an uneven firing
+          // pattern (a V8's lope, an odd-fire V10) stays in step, then
+          // fine-tune the start by up to D samples
+          var fp = this.n[c] / this.cyc, W = Math.min(fp * 0.9, this.D * 6), st = Math.max(1, W / 24);
+          for (var f = 0; f < this.cyc; f++) {
+            for (o = -D; o <= D; o += 4) {
+              var oo = f * fp + o; if (f > 0 && oo > this.n[c] * 0.9) continue;
+              var e1 = 0, e2 = 0;
+              for (q = 0; q < W; q += st) { var u1 = this.pcm[(pos + q) | 0] || 0, u2 = this.pcm[(this.s[c] + oo + q) | 0] || 0; e1 += (u1 - u2) * (u1 - u2); e2 += u1 * u1 + u2 * u2; }
+              var sc = e1 / (e2 + 1e-9) + pen;
+              if (sc < bs) { bs = sc; best = c; bo = oo; }
+            }
           }
         }
         this.last2 = this.last1; this.last1 = best; this.off = bo;
@@ -118,6 +133,9 @@
                   this.st.mis += e1 / (e2 + 1e-9);
                 }
               }
+              // match the level across a splice, then ease back over a few cycles
+              if (L.fi >= 0 && ni !== L.fi + 1) L.g = Math.max(0.5, Math.min(2, L.g * this.rms[L.fi] / this.rms[ni]));
+              else L.g = 1 + (L.g - 1) * 0.7;
               L.i = ni; L.p = this.off;
               L.r = Math.min(2.2, Math.max(0.45, target / this.rpm[L.i] * dop));
             }
@@ -128,7 +146,7 @@
               L.fp += L.fr; L.fade--;
             }
             L.p += L.r;
-            out[s] += v * wj;
+            out[s] += v * wj * L.g;
           }
         }
         return true;
@@ -182,7 +200,7 @@
     for (var i = 0; i < n; i++) { arr.s[i] = g[i][0] * k; arr.n[i] = g[i][1] * k; arr.rpm[i] = g[i][2]; arr.on[i] = g[i][3]; arr.end[i] = g[i][4] ? 1 : 0; }
     var sm = v.smp = { bank: bank };
     sm.node = new AudioWorkletNode(c, 'pd-grains', { numberOfInputs: 0, outputChannelCount: [1] });
-    sm.node.port.postMessage({ pcm: buf.getChannelData(0).slice(), s: arr.s, n: arr.n, rpm: arr.rpm, on: arr.on, end: arr.end, xf: Math.round(buf.sampleRate * 0.002), d: Math.round(buf.sampleRate * 0.0006) });
+    sm.node.port.postMessage({ pcm: buf.getChannelData(0).slice(), s: arr.s, n: arr.n, rpm: arr.rpm, on: arr.on, end: arr.end, xf: Math.round(buf.sampleRate * 0.002), d: Math.round(buf.sampleRate * 0.0006), cyc: Math.round(2 * bank.k) });
     sm.np = sm.node.parameters;
     sm.cut = TONE.cut[ex] * (build.turbo ? 0.78 : 1);
     sm.tone = c.createBiquadFilter(); sm.tone.type = 'lowpass'; sm.tone.Q.value = 0.6; sm.tone.frequency.value = sm.cut;

@@ -12,28 +12,31 @@ SIM = float(os.environ.get('SIM', '0.42'))
 CONT = float(os.environ.get('CONT', '0.08')); MINRUN = int(os.environ.get('MINRUN', '3'))
 OUT = 'gbanks'; os.makedirs(OUT, exist_ok=True)
 SR = 32000
-tr = T.track(WAV, K, RED)
-x = X.highpass(resample_poly(tr['x'], 320, 441).astype(np.float32), SR, 30)
-t, f = tr['t'], X.smooth(tr['f'], 3)
-rpm_fr = f / K * 60
-slope = np.gradient(X.smooth(rpm_fr, 5), t[1] - t[0])
-loud_fr = tr['rms'] / (np.percentile(tr['rms'], 98) + 1e-9)
-ts = np.arange(len(x)) / SR
-fs = np.interp(ts, t, f)                       # firing freq per sample
-ph = np.cumsum(fs) / SR                          # firing phase (cycles)
+# several recordings of the same engine type can share a bank ("a.wav+b.wav"):
+# each is tracked on its own and the cycles are pooled
+xs, grains, off = [], [], 0
+for si, wav in enumerate(WAV.split('+')):
+    tr = T.track(wav, K, RED)
+    xi = X.highpass(resample_poly(tr['x'], 320, 441).astype(np.float32), SR, 30)
+    t, f = tr['t'], X.smooth(tr['f'], 3)
+    slope = np.gradient(X.smooth(f / K * 60, 5), t[1] - t[0])
+    loud_fr = tr['rms'] / (np.percentile(tr['rms'], 98) + 1e-9)
+    fs = np.interp(np.arange(len(xi)) / SR, t, f)   # firing freq per sample
+    ph = np.cumsum(fs) / SR                          # firing phase (cycles)
+    cyc_idx = np.floor(ph / (2 * K)).astype(np.int64)
+    starts = np.flatnonzero(np.diff(cyc_idx) > 0) + 1
+    for a_, b_ in zip(starts[:-1], starts[1:]):
+        tm = (a_ + b_) / 2 / SR
+        j = min(len(t) - 1, max(0, int(np.searchsorted(t, tm))))
+        grains.append(dict(a=int(a_) + off, b=int(b_) + off, src=si, rpm=float(SR / (b_ - a_) * 60 * 2), conf=float(tr['conf'][j]), sl=float(slope[j]), loud=float(loud_fr[j])))
+    xs.append(xi); xs.append(np.zeros(SR // 2, np.float32)); off += len(xi) + SR // 2
+x = np.concatenate(xs)
 CYC = 2 * K                                      # firings per engine cycle (720 deg)
-cyc_idx = np.floor(ph / CYC).astype(np.int64)
-starts = np.flatnonzero(np.diff(cyc_idx) > 0) + 1
-grains = []
-for a, b in zip(starts[:-1], starts[1:]):
-    tm = (a + b) / 2 / SR
-    j = min(len(t) - 1, max(0, int(np.searchsorted(t, tm))))
-    grains.append(dict(a=int(a), b=int(b), rpm=float(SR / (b - a) * 60 * 2), conf=float(tr['conf'][j]), sl=float(slope[j]), loud=float(loud_fr[j])))
 # similarity of each cycle to the next: an engine repeats itself, noise doesn't
 def resamp(seg, n): return np.interp(np.linspace(0, len(seg) - 1, n), np.arange(len(seg)), seg)
 for i in range(len(grains) - 1):
     g, h = grains[i], grains[i + 1]
-    if g['b'] - g['a'] < 40 or h['b'] - h['a'] < 40: g['sim'] = 0; continue
+    if g['b'] - g['a'] < 40 or h['b'] - h['a'] < 40 or g['src'] != h['src']: g['sim'] = 0; continue
     n = 256; u = resamp(x[g['a']:g['b']], n); v = resamp(x[h['a']:h['b']], n)
     u = u - u.mean(); v = v - v.mean()
     g['sim'] = float(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v) + 1e-9))
@@ -57,7 +60,7 @@ runs = {'on': [], 'off': []}
 for load in ('on', 'off'):
     cur = []
     for i, g in enumerate(grains):
-        if good(g, load) and (not cur or abs(g['rpm'] / grains[cur[-1]]['rpm'] - 1) < CONT): cur.append(i)
+        if good(g, load) and (not cur or (abs(g['rpm'] / grains[cur[-1]]['rpm'] - 1) < CONT and grains[cur[-1]]['src'] == g['src'])): cur.append(i)
         else:
             if len(cur) >= MINRUN: runs[load].append(cur)
             cur = [i] if good(g, load) else []
@@ -117,7 +120,13 @@ def psola(piece, r_dst, ncyc):
         win = np.hanning(2 * h)
         o0 = int(round(pad + (m + 0.5) * T1)) - h
         if o0 < 0 or o0 + 2 * h > len(out): continue
-        out[o0:o0 + 2 * h] += x[src0:src0 + 2 * h] * win; wsum[o0:o0 + 2 * h] += win
+        g_ = x[src0:src0 + 2 * h]
+        # stretched far, an uneven firing pattern gets exaggerated (real engines
+        # smooth out at high rpm): blend the same firing from another cycle
+        if T0 / T1 > 1.25 and len(marks) > 2 * CYC:
+            sm2 = marks[(m + int(CYC) * (1 + m % 3)) % len(marks)]; s2 = int(sm2) - h
+            if 0 <= s2 and s2 + 2 * h < len(x): g_ = 0.5 * (g_ + x[s2:s2 + 2 * h])
+        out[o0:o0 + 2 * h] += g_ * win; wsum[o0:o0 + 2 * h] += win
     out = out / np.maximum(wsum, 0.35)
     return out[pad:pad + L].astype(np.float32), T1 * CYC
 TOPB = int(RED * 1.02 // BAND)
