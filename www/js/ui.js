@@ -54,6 +54,49 @@
     if (jobs.length || warmJobs.length) requestAnimationFrame(pump); else pumping = false;
   }
   function kick() { if (!pumping) { pumping = true; requestAnimationFrame(pump); } }
+  // Draggable camera on a car view (garage, dealer, body shop, paint):
+  // dragging zooms in a little and pans so the nose or tail can be seen up
+  // close on small screens; pinch / mouse wheel zoom, double-tap resets.
+  // The view never pans past its own edges.
+  UI.dragCam = function (el) {
+    var z = 1, tx = 0, ty = 0, pts = {}, last = null, pinch = null, lastTap = 0, moved = false;
+    el.classList.add('dragcam');
+    function apply(anim) {
+      var w = el.clientWidth, hh = el.clientHeight, mx = (z - 1) / 2 * w, my = (z - 1) / 2 * hh;
+      tx = Math.max(-mx, Math.min(mx, tx)); ty = Math.max(-my, Math.min(my, ty));
+      el.style.transition = anim ? 'transform .2s ease-out' : 'none';
+      el.style.transform = z === 1 ? '' : 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) scale(' + z.toFixed(3) + ')';
+    }
+    function zoomTo(nz, anim) { var k = nz / z; tx *= k; ty *= k; z = Math.max(1, Math.min(2.6, nz)); apply(anim); }
+    function ids() { return Object.keys(pts); }
+    el.addEventListener('pointerdown', function (e) {
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      moved = false; last = { x: e.clientX, y: e.clientY };
+      if (ids().length === 2) { var a = pts[ids()[0]], b = pts[ids()[1]]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: z }; }
+    });
+    el.addEventListener('pointermove', function (e) {
+      if (!pts[e.pointerId]) return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (pinch && ids().length >= 2) { var a = pts[ids()[0]], b = pts[ids()[1]]; zoomTo(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.d)); moved = true; return; }
+      var dx = e.clientX - last.x, dy = e.clientY - last.y;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      if (!moved && z === 1) zoomTo(1.6, true);
+      moved = true; last = { x: e.clientX, y: e.clientY };
+      tx += dx; ty += dy; apply(false);
+    });
+    function up(e) {
+      delete pts[e.pointerId];
+      if (ids().length < 2) pinch = null;
+      if (!moved && e.type === 'pointerup') {
+        var now = Date.now();
+        if (now - lastTap < 320) { z = 1; tx = 0; ty = 0; apply(true); lastTap = 0; } else lastTap = now;
+      }
+    }
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('wheel', function (e) { e.preventDefault(); zoomTo(z * (e.deltaY < 0 ? 1.12 : 1 / 1.12), true); }, { passive: false });
+    return el;
+  };
   UI.later = function (fn) { jobs.push(fn); kick(); };
   UI.warm = function (fn) { warmJobs.push(fn); kick(); };
   // A car preview canvas that draws itself a frame or two later.
@@ -224,6 +267,7 @@
         p('Spend your winnings in the Parts Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod, colour-coded grey, green, blue, purple and orange) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
         p('Bought parts go into your inventory. Fit them in the garage under Install Parts: the old part comes off and goes back on the shelf, so you can swap it back, move it to another car or sell it for half price. Engine parts are built for one engine; swapping engines takes its parts off with it. Use the arrows in the garage to switch cars.'),
         p('Watch the risk warnings: too much power for your weakest bottom-end part (pistons, rods, crank or block), boost past your fuel\'s knock limit, or more torque than the gearbox or axles can hold can break parts mid-race. Repairs cost money!'),
+        p('Drag the garage, dealer, body shop or paint shop view to look around the car up close (pinch or scroll to zoom, double-tap to reset).'),
         p('In a hurry? Parts Shop > Packages sells Street, Pro and Extreme kits for each group (or the whole car) at 10% off. They fit a matched set of parts sized to your car and skip anything you already have that is as good.'),
         p('Builds are only as strong as their weakest part. The shop marks the parts holding you back with a red "!": maxed-out injectors or pump, an ignition that misfires under boost, valve springs that float, axles that will snap.'),
         h('h2', {}, 'Tuning'),

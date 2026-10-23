@@ -95,10 +95,12 @@
     S.boostSet = mods.boost != null ? mods.boost : (e.fi ? e.fi.boost : 0);
     S.maxBoost = fi.maxBoost || 0;
     if (fi.type === 'turbo') {
-      var ds = clamp(Math.sqrt(3.0 / e.disp), 0.6, 1.5);
-      S.spoolHi = fi.spool * ds;
-      S.spoolLo = S.spoolHi * 0.55;
+      // exhaust flow sets the spool: a rotary fires every rotor face once
+      // per shaft turn, so a 1.3L 13B flows like a 2.6L piston engine
+      var ds = clamp(Math.sqrt(3.0 / airDisp(e)), 0.55, 1.6);
+      S.spool15 = fi.spool * ds;
       S.lag = fi.lag;
+      setSpool(S);
     }
     S.paras = fi.paras || 0;
     S.flowW = fi.flow ? fi.flow * DR.HP : 0;
@@ -108,11 +110,34 @@
     return S;
   }
 
+  function airDisp(e) { return e.rotary ? e.disp * 2 : e.disp; }
+  DR.airDisp = airDisp;
+  // full-boost rpm for the boost asked for: more boost needs more exhaust
+  // energy, so the turbo gets there later (about 14% later per 10 psi over
+  // 15, in line with dyno boost curves). A turbo too big for the engine may
+  // not reach it before the limiter.
+  function spoolAt(S, boost) { return S.spool15 * clamp(1 + 0.14 * (boost - 15) / 10, 0.8, 1.8); }
+  function setSpool(S, sized) {
+    if (!S.spool15) return;
+    S.spoolHi = spoolAt(S, S.boostSet);
+    // a bolt-on turbo far too big for the engine: if the power the engine
+    // asks for is under ~40% of what the turbo is built to flow, it sits
+    // way left on its compressor map and needs a lot more revs to light
+    if (sized && S.flowW && DR.FI[S.fiId].price) {
+      var want = shapePeak(S) * S.Tpk * (1 + S.boostSet / 14.7 * S.icEff), frac = want / S.flowW;
+      if (frac < 0.4) S.spoolHi *= Math.min(1.6, Math.sqrt(0.4 / Math.max(0.05, frac)));
+    }
+    S.spoolLo = S.spoolHi * 0.55;
+  }
+
   // ---------------------------------------------------------------- spec builder
   DR.buildSpec = function (inst, tuneOverride) {
     var car = DR.CARS[inst.carId];
     var engId = inst.engine || car.engine, e = DR.ENGINES[engId];
-    var o = function (cat) { return DR.getOption(cat, inst); };
+    // a part that does not apply to this car (no cams on a rotary, no
+    // ignition on a diesel...) counts as the stock one
+    var o = function (cat) { return DR.partApplies(cat, inst) ? DR.getOption(cat, inst) : DR.getOption(cat, inst, 'stock'); };
+    var rotary = !!DR.ENGINES[inst.engine || car.engine].rotary;
     var air = o('airfilter'), intake = o('intake'), tb = o('throttle'), exh = o('exhaust'), hdr = o('headers');
     var cams = o('cams'), heads = o('heads'), vtrain = o('valvetrain');
     var pist = o('pistons'), rods = o('rods'), crank = o('crank'), block = o('block'), oil = o('oiling');
@@ -148,10 +173,12 @@
     // ---- rev limits: the hardware sets how high the engine can safely
     // spin (valvetrain & bottom end), the ECU sets where the limiter is
     S.factoryRed = e.red;
-    S.vtLimit = e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0);
-    S.beLimit = e.red + Math.min(pist.be, rods.be, crank.be, oil.be);
-    var beBy = [['pistons', pist.be], ['rods', rods.be], ['crank', crank.be], ['oiling', oil.be]].sort(function (a, b) { return a[1] - b[1]; });
+    // a rotary has no valves to float: its ports never run out of time
+    S.vtLimit = rotary ? e.red + 3000 : e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0);
+    var beBy = [['pistons', pist.be], ['rods', rods.be], ['crank', crank.be], ['oiling', oil.be]].filter(function (p) { return !rotary || p[0] !== 'rods'; }).sort(function (a, b) { return a[1] - b[1]; });
+    S.beLimit = e.red + beBy[0][1];
     S.beWeak = beBy[0][0];
+    S.rotary = rotary;
     S.partRpm = { pistons: e.red + pist.be, rods: e.red + rods.be, crank: e.red + crank.be, oiling: e.red + oil.be };
     S.mech = Math.min(S.vtLimit, S.beLimit);
     var safeRed = Math.max(e.red, S.mech - 200);
@@ -163,7 +190,7 @@
     S.red = Math.round(S.red / 50) * 50;
     S.limit = S.red;
     // the bottom end is as strong as its weakest part
-    var holdBy = [['pistons', pist.hold], ['rods', rods.hold], ['crank', crank.hold], ['block', block.hold]].sort(function (a, b) { return a[1] - b[1]; });
+    var holdBy = [['pistons', pist.hold], ['rods', rods.hold], ['crank', crank.hold], ['block', block.hold]].filter(function (p) { return !rotary || p[0] !== 'rods'; }).sort(function (a, b) { return a[1] - b[1]; });
     S.safeHp = e.safe * holdBy[0][1];
     S.safeWeak = holdBy[0][0];
     S.partHold = { pistons: e.safe * pist.hold, rods: e.safe * rods.hold, crank: e.safe * crank.hold, block: e.safe * block.hold };
@@ -241,6 +268,7 @@
     var T = DR.fullTune(inst, S, tuneOverride);
     S.tune = T;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
+    setSpool(S, true);
     S.ratios = tr.adj ? T.gears.slice() : tr.ratios.slice();
     S.fd = T.fd;
 
@@ -302,7 +330,10 @@
     var fiDef = S.eng.fi && S.fiId === S.eng.fi.part ? S.eng.fi.boost : Math.min(8, S.maxBoost);
     return {
       boost: fiDef,
-      launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) : S.tqRpm * 0.85) / 100) * 100,
+      // manuals launch near peak torque, or for a turbo near its full-boost
+      // rpm (a 2-step builds boost there before the clutch drops)
+      launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) :
+        S.spool15 ? Math.min(S.red - 700, Math.max(S.tqRpm * 0.85, spoolAt(S, (inst.tune && inst.tune.boost) || fiDef) * 0.95)) : S.tqRpm * 0.85) / 100) * 100,
       psi: S.tire.optP,
       fd: S.car.fd,
       gears: tr.ratios.slice(),
@@ -470,7 +501,7 @@
   DR.riskOf = function (S) {
     var r = { engine: 0, trans: 0, notes: [] };
     var over = (S.peakHp + S.nosHp) / S.safeHp;
-    var WEAK = { pistons: 'pistons', rods: 'connecting rods', crank: 'crankshaft', block: 'block', oiling: 'oiling' };
+    var WEAK = S.rotary ? { pistons: 'apex seals', crank: 'eccentric shaft', block: 'housings', oiling: 'oiling' } : { pistons: 'pistons', rods: 'connecting rods', crank: 'crankshaft', block: 'block', oiling: 'oiling' };
     if (over > 1) { r.engine += Math.min(0.85, (over - 1) * 1.6); r.notes.push('Power is ' + Math.round(over * 100) + '% of what the ' + (WEAK[S.safeWeak] || 'internals') + ' can take'); }
     if (S.red > S.mech) {
       r.engine += Math.min(0.7, (S.red - S.mech) / 1000 * 0.8);

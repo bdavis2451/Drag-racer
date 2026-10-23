@@ -53,7 +53,12 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
   shock rebound and compression, anti-squat, wheelie-bar height, and nitrous delay and ramp.
 - **Realistic physics:**
   - **Engine:** torque curves, turbo spool and lag, supercharger drive losses, knock
-    limits and fuel-flow limits.
+    limits and fuel-flow limits. Turbo spool follows exhaust flow: bigger engines (and
+    rotaries, which flow like a piston engine twice their size) spool a turbo sooner,
+    more boost takes more revs, and a turbo far too big for the engine may never reach
+    its boost before the limiter. Engine weights are real dressed weights.
+  - **Rotaries** have their own parts (porting, rotors and apex seals, eccentric shaft,
+    housings) and no rods, cams or valves; diesels have no ignition or throttle body.
   - **Drivetrain:** a clutch you can slip or dump, a torque converter with stall speed,
     shift times, and engine/transmission inertia.
   - **Tires:** slip-based grip that peaks and then falls off when you spin, plus tire

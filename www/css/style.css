@@ -611,3 +611,8 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .pkgrow { display: grid; grid-template-columns: 22px 120px 1fr; align-items: center; gap: 6px; font-size: 16px; }
 .pkgrow .dim { font-family: 'Press Start 2P', monospace; font-size: 7px; }
 .pkgrow.bad { opacity: .6; }
+/* draggable camera on car views */
+.dragcam { touch-action: none; cursor: grab; transform-origin: 50% 50%; will-change: transform; }
+.dragcam:active { cursor: grabbing; }
+.bodyhead { overflow: hidden; clip-path: var(--notch); }
+.bodyhead canvas.preview { clip-path: none; }

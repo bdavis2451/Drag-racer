@@ -6,20 +6,23 @@
   var DR = globalThis.DR;
 
   // Forced-induction units. type: turbo | roots | screw | cent
-  //  maxBoost psi, flow = max crank hp the unit can feed, spool = rpm of full
-  //  boost on a 3.0L engine, lag = seconds, paras = supercharger drive loss
+  //  maxBoost psi, flow = max crank hp the unit can feed, spool = rpm where a
+  //  3.0L piston engine reaches 15 psi with it (bigger engines and rotaries
+  //  spool it sooner, more boost takes more revs), lag = seconds,
+  //  paras = supercharger drive loss. Spool grows with the turbine: a unit
+  //  sized for twice the power needs about 1.4x the exhaust flow.
   DR.FI = {
     none:        { name: 'Naturally Aspirated', type: 'none' },
     fi_oem_s:    { name: 'Factory Turbo',             type: 'turbo', maxBoost: 20, flow: 380,  spool: 3200, lag: 0.30, w: 15 },
-    fi_oem_tt:   { name: 'Factory Twin Turbos',       type: 'turbo', maxBoost: 22, flow: 620,  spool: 3600, lag: 0.30, w: 25 },
+    fi_oem_tt:   { name: 'Factory Twin Turbos',       type: 'turbo', maxBoost: 22, flow: 620,  spool: 3700, lag: 0.30, w: 25 },
     fi_oem_sc:   { name: 'Factory Supercharger',      type: 'screw', maxBoost: 16, flow: 850,  paras: 0.10, w: 30 },
     fi_oem_vgt:  { name: 'Factory VGT Turbo',         type: 'turbo', maxBoost: 40, flow: 800,  spool: 2900, lag: 0.45, w: 20 },
     t_small:     { name: 'Small Turbo 54mm',          type: 'turbo', maxBoost: 24, flow: 480,  spool: 3300, lag: 0.30, w: 18, price: 3500,  desc: 'Quick spool, runs out of air up top.' },
     t_med:       { name: 'Medium Turbo 64mm',         type: 'turbo', maxBoost: 32, flow: 780,  spool: 3900, lag: 0.42, w: 22, price: 6000,  desc: 'The street/strip sweet spot.' },
-    t_large:     { name: 'Large Turbo 76mm',          type: 'turbo', maxBoost: 40, flow: 1150, spool: 4500, lag: 0.55, w: 26, price: 9500,  desc: 'Big power, big lag. Pairs well with a 2-step.' },
-    t_twin:      { name: 'Twin 67mm Turbos',          type: 'turbo', maxBoost: 42, flow: 1500, spool: 4000, lag: 0.45, w: 40, price: 16000, desc: 'Two medium turbos: spools faster than one big one.' },
-    t_huge:      { name: 'Huge Turbo 88mm',           type: 'turbo', maxBoost: 50, flow: 2000, spool: 5000, lag: 0.70, w: 32, price: 19000, desc: 'Radial-tire monster. Needs revs and an anti-lag.' },
-    t_promod:    { name: 'Twin 98mm Pro Mod Turbos',  type: 'turbo', maxBoost: 60, flow: 3600, spool: 5300, lag: 0.80, w: 55, price: 45000, desc: 'Big-tire Pro Mod power.' },
+    t_large:     { name: 'Large Turbo 76mm',          type: 'turbo', maxBoost: 40, flow: 1150, spool: 4900, lag: 0.55, w: 26, price: 9500,  desc: 'Big power, big lag. Pairs well with a 2-step.' },
+    t_twin:      { name: 'Twin 67mm Turbos',          type: 'turbo', maxBoost: 42, flow: 1500, spool: 4300, lag: 0.45, w: 40, price: 16000, desc: 'Two medium turbos: spools faster than one big one.' },
+    t_huge:      { name: 'Huge Turbo 88mm',           type: 'turbo', maxBoost: 50, flow: 2000, spool: 5300, lag: 0.70, w: 32, price: 19000, desc: 'Radial-tire monster. Needs revs and an anti-lag.' },
+    t_promod:    { name: 'Twin 98mm Pro Mod Turbos',  type: 'turbo', maxBoost: 60, flow: 3600, spool: 7600, lag: 0.80, w: 55, price: 45000, desc: 'Big-tire Pro Mod power.' },
     sc_roots:    { name: 'Roots Blower 6-71',         type: 'roots', maxBoost: 16, flow: 900,  paras: 0.14, w: 40, price: 7000,  desc: 'Instant boost from idle. Sticks out of the hood.' },
     sc_screw:    { name: 'Twin-Screw 2.9L',           type: 'screw', maxBoost: 22, flow: 1250, paras: 0.10, w: 35, price: 9000,  desc: 'Efficient positive-displacement blower.' },
     sc_cent:     { name: 'Centrifugal Supercharger',  type: 'cent',  maxBoost: 30, flow: 1350, paras: 0.07, w: 25, price: 8000,  desc: 'Boost climbs with RPM. Gentle on tires off the line.' },
@@ -351,6 +354,14 @@
     return Math.max(0.6, Math.min(3, 0.5 + e.hp / 400));
   };
 
+  // "2.0L inline-4, turbocharged" style summary of an engine
+  DR.engineLayout = function (e) {
+    var lay = e.rotary ? 'twin-rotor Wankel' : (e.name.indexOf('Flat') >= 0 || e.name.indexOf('Boxer') >= 0 ? 'flat-' : e.cyl >= 6 && e.name.indexOf(' I6') < 0 ? 'V' : 'inline-') + (e.rotary ? '' : e.cyl);
+    var fi = e.fi ? DR.FI[e.fi.part] : null;
+    var asp = !fi ? 'naturally aspirated' : fi.type === 'turbo' ? (fi.name.indexOf('Twin') >= 0 ? 'twin-turbo' : fi.name.indexOf('VGT') >= 0 ? 'variable-geometry turbo' : 'turbocharged') : 'supercharged';
+    return e.disp.toFixed(1) + 'L ' + lay + ', ' + asp + (e.diesel ? ' diesel' : '');
+  };
+
   // Stock option id for a category on this car instance.
   DR.stockPart = function (cat, inst) {
     var car = DR.CARS[inst.carId];
@@ -382,7 +393,7 @@
       for (i = 0; i < ids.length; i++) {
         var e = DR.ENGINES[ids[i]];
         list.push({ id: ids[i], name: e.name, price: ids[i] === car.engine ? 0 : e.price,
-          desc: e.hp + ' hp stock, ' + e.w + ' kg' + (e.fi ? ', factory boosted' : '') + (e.diesel ? ', diesel' : '') + '. Your current engine parts come off with the old engine.' });
+          desc: e.hp + ' hp at ' + e.pk + ' rpm. ' + DR.engineLayout(e) + '. Weighs ' + e.w + ' kg (' + Math.round(e.w * 2.2046) + ' lb) dressed.' });
       }
       return list;
     }
@@ -410,8 +421,9 @@
         .map(function (o) { return o.id === 'stock' ? Object.assign({}, o, { name: 'Factory ' + car.drive }) : o; });
     }
     var c = C[cat], mul = c.engineScaled ? DR.enginePriceMul(inst.engine || car.engine) : 1;
-    var eng = DR.ENGINES[inst.engine || car.engine];
-    return c.options.map(function (o) {
+    var eng = DR.ENGINES[inst.engine || car.engine], rot = eng.rotary && ROTARY[cat];
+    return c.options.map(function (o, i) {
+      if (rot) { var r = rot.options[i]; o = Object.assign({}, o, { name: r[0], desc: r[1] }, r[2] || {}); }
       var x = Object.assign({}, o, { price: Math.round(o.price * mul / 50) * 50, lvl: lvlOf(o) });
       if (o.hold) x.desc = (o.desc ? o.desc + ' ' : '') + 'About ' + Math.round(eng.safe * o.hold / 10) * 10 + ' hp on this engine.';
       return x;
@@ -419,7 +431,43 @@
   }
 
   // Whether a category applies to this car right now (e.g. clutch vs converter).
+  // ---------------------------------------------------------------- engine kinds
+  // A rotary has no pistons, rods, crank, cams or valves: it breathes through
+  // ports in its housings, and its rotors, apex seals, eccentric shaft and
+  // housings take the place of the bottom end. A diesel has no spark, no
+  // throttle body and does not run gasoline or alcohol.
+  DR.engineKind = function (inst) { var e = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine]; return e.rotary ? 'rotary' : e.diesel ? 'diesel' : 'piston'; };
+  var NOT_FOR = { rotary: { rods: 1, cams: 1, valvetrain: 1 }, diesel: { ignition: 1, throttle: 1, fueltype: 1 } };
+  // rotary versions of the bottom-end and head categories: same jobs (hold,
+  // be, bw), rotary parts. Porting carries the breathing heads and cams give
+  // a piston engine (0.30 + 0.33).
+  var ROTARY = {
+    heads: { name: 'Porting', options: [
+      ['Factory Ports', 'Stock port timing.'],
+      ['Street Port', 'Enlarged side ports: more air up top, a little lumpier idle.', { bw: 0.2, low: 0.05 }],
+      ['Bridge Port', 'A second port bridged over each side port. Big top end, rough idle.', { bw: 0.42, low: 0.15 }],
+      ['Peripheral Port', 'Race ports through the rotor housings: all top end.', { bw: 0.63, low: 0.3 }]] },
+    pistons: { name: 'Rotors & Apex Seals', options: [
+      ['Factory Rotors, 2mm Seals', 'The thin factory apex seals are the first thing to let go.'],
+      ['Low-Comp Rotors + 3mm Seals', 'Holds 2x stock power. Lower compression: -2% power, +3 psi before detonation.'],
+      ['High-Comp Rotors + 3mm Seals', 'Holds 1.7x stock power. Higher compression: +4% power, 3 psi less before detonation.'],
+      ['Ceramic Apex Seals', 'Holds 3.4x stock power.'],
+      ['Billet Rotors + Race Seals', 'Holds 6x stock power.']] },
+    crank: { name: 'Eccentric Shaft', options: [
+      ['Factory E-Shaft', 'Good for 1.5x stock power.'], ['Lightened E-Shaft', 'Holds 2.8x stock power.'],
+      ['Billet E-Shaft', 'Holds 4.5x stock power.'], ['Pro Billet E-Shaft', 'Holds 6.5x stock power and revs quicker.']] },
+    block: { name: 'Housings & Irons', options: [
+      ['Factory Housings', 'The irons flex and the housings walk around 1.8x stock power.'], ['Studded Irons + Dowels', 'Holds 2.5x stock power.'],
+      ['Studded Billet Plates', 'Holds 4x stock power.'], ['Billet Housings & Irons', 'Holds 7x stock power.']] }
+  };
+  // false for parts this kind of engine simply does not have (hidden, not
+  // just 'does not fit')
+  DR.partExists = function (cat, inst) { var nf = NOT_FOR[DR.engineKind(inst)]; return !(nf && nf[cat]); };
+  // icon for a category on this car (a rotary's 'pistons' are rotors)
+  DR.iconCat = function (cat, inst) { return cat === 'pistons' && inst && DR.engineKind(inst) === 'rotary' ? 'rotor' : cat; };
   DR.partApplies = function (cat, inst) {
+    var nf = NOT_FOR[DR.engineKind(inst)];
+    if (nf && nf[cat]) return false;
     var c = C[cat];
     if (!c) return true;
     var tr = DR.TRANS[DR.partId('trans', inst)];
@@ -431,7 +479,10 @@
     return true;
   };
 
-  DR.catName = function (cat) { return DR.CAT_NAMES[cat] || (C[cat] && C[cat].name) || cat; };
+  DR.catName = function (cat, inst) {
+    if (inst && ROTARY[cat] && DR.engineKind(inst) === 'rotary') return ROTARY[cat].name;
+    return DR.CAT_NAMES[cat] || (C[cat] && C[cat].name) || cat;
+  };
 
   DR.getOption = function (cat, inst, id) {
     id = id || DR.partId(cat, inst);

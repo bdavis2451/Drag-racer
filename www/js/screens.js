@@ -329,8 +329,8 @@
       S.nosHp ? gst('W/ NITROUS', Math.round(dy.peakHp + S.nosHp) + ' hp', 'acc') : null,
       S.fiType !== 'none' ? gst('BOOST', S.boostSet.toFixed(1) + ' psi') : null,
       gst('LIMITER', S.red + ' rpm' + (S.ecu === 0 ? ' (stock)' : ''), S.red > S.mech ? 'bad' : ''),
-      gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst('BOTTOM END', S.beLimit + ' rpm (' + DR.catName(S.beWeak).toLowerCase() + ')', S.red > S.beLimit ? 'bad' : ''),
-      gst('SAFE POWER', Math.round(S.safeHp) + ' hp (' + DR.catName(S.safeWeak).toLowerCase() + ')', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),
+      S.rotary ? null : gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst(S.rotary ? 'ROTATING' : 'BOTTOM END', S.beLimit + ' rpm (' + DR.catName(S.beWeak, inst).toLowerCase() + ')', S.red > S.beLimit ? 'bad' : ''),
+      gst('SAFE POWER', Math.round(S.safeHp) + ' hp (' + DR.catName(S.safeWeak, inst).toLowerCase() + ')', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),
       gst('FUEL', Math.round(S.fuelW / DR.HP) + ' hp (' + (S.fuelInj < S.fuelPump ? 'injectors' : S.fuelPump < S.fuelInj ? 'pump' : 'stock') + ')', S.fuelW < dy.peakHp * DR.HP * 1.001 ? 'bad' : ''),
       S.fiType !== 'none' && !S.diesel ? gst('IGNITION', S.sparkPsi + ' psi', S.boostSet > S.sparkPsi ? 'bad' : '') : null,
       UI.riskBox(S));
@@ -403,7 +403,7 @@
     var all = Object.keys(DR.CARS).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; }), ai = all.indexOf(id);
     function stockInst(cid) { var c3 = DR.CARS[cid]; return { carId: cid, engine: c3.engine, parts: {}, tune: {}, color: c3.col }; }
     var side = all.length > 1 ? [stockInst(all[(ai - 1 + all.length) % all.length]), stockInst(all[(ai + 1) % all.length])] : [];
-    var cv = DR.roomCanvas(inst, { theme: 'lot', side: side });
+    var cv = UI.dragCam(DR.roomCanvas(inst, { theme: 'lot', side: side }));
     function cyc(d) { dealerIdx = (dealerIdx + d + ids.length) % ids.length; UI.refresh(); }
     var strip = h('div', { class: 'dstrip' }, ids.map(function (cid, k) {
       var c2 = DR.CARS[cid], i2 = { carId: cid, engine: c2.engine, parts: {}, tune: {}, color: c2.col };
@@ -466,7 +466,7 @@
     var d = paintDraft;
     function look() { return { carId: inst.carId, engine: inst.engine, parts: inst.parts, vis: inst.vis, color: d.color, stripe: d.stripe, rim: d.rim }; }
     function cost() { return (d.color !== inst.color ? 400 : 0) + (d.stripe !== inst.stripe ? 200 : 0) + (d.rim !== inst.rim ? 150 : 0); }
-    var cv = DR.roomCanvas(look(), { theme: 'garage' });
+    var cv = UI.dragCam(DR.roomCanvas(look(), { theme: 'garage' }));
     var costEl = h('span', { class: 'pix acc' });
     function redraw() { DR.drawRoom(cv, look(), cv._opts); costEl.textContent = 'COST ' + DR.money(cost()); }
     var rail = h('div', { class: 'srail' }, PAINT_TABS.map(function (t) {

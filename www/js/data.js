@@ -17,7 +17,8 @@ DR.FT = 0.3048;
 // ENGINES (stock figures are the published ratings of the real engine)
 //  hp      : stock crank hp (with stock forced induction if any)
 //  pk      : rpm of peak hp        tq : rpm of peak torque
-//  red     : redline rpm           w  : weight kg
+//  red     : redline rpm           w  : weight kg, dressed (accessories,
+//            manifolds and factory turbos / blower; no transmission)
 //  safe    : hp the stock internals survive
 //  fi      : factory forced induction {part, boost}
 //  bg, bp  : the race-build potential. With every breathing upgrade
@@ -27,44 +28,44 @@ DR.FT = 0.3048;
 //            (Fox 5.0, 454, 350) have far more to gain than modern ones.
 // ---------------------------------------------------------------------------
 DR.ENGINES = {
-  i3_10:   { name: '1.0L I3 (Geo G10)',           cyl: 3,  disp: 1.0, hp: 55,   pk: 5700, tq: 3300, red: 6000, w: 70,  price: 800,   safe: 120, bg: 1.85, bp: 7600 },
-  f4_16:   { name: '1.6L Air-Cooled Flat-4',      cyl: 4,  disp: 1.6, hp: 60,   pk: 4400, tq: 2800, red: 5000, w: 95,  price: 900,   safe: 150, bg: 1.9,  bp: 6600 },
-  i4_15:   { name: '1.5L I4 SOHC (D15)',          cyl: 4,  disp: 1.5, hp: 102,  pk: 5900, tq: 4900, red: 6800, w: 100, price: 1200,  safe: 220, bg: 1.5,  bp: 8000 },
-  i4_16:   { name: '1.6L I4 DOHC (4A-GE)',        cyl: 4,  disp: 1.6, hp: 128,  pk: 6600, tq: 5200, red: 7600, w: 110, price: 2000,  safe: 240, bg: 1.5,  bp: 8800 },
-  i4_18:   { name: '1.8L I4 DOHC VTEC (B18C)',    cyl: 4,  disp: 1.8, hp: 195,  pk: 8000, tq: 7500, red: 8400, w: 120, price: 4500,  safe: 330, bg: 1.25, bp: 9200 },
-  i4_20:   { name: '2.0L I4 DOHC',                cyl: 4,  disp: 2.0, hp: 150,  pk: 6500, tq: 5500, red: 6800, w: 125, price: 2500,  safe: 300, bg: 1.45, bp: 8000 },
-  i4_20hi: { name: '2.0L I4 High-Rev (F20C)',     cyl: 4,  disp: 2.0, hp: 240,  pk: 8300, tq: 7500, red: 9000, w: 120, price: 9000,  safe: 380, bg: 1.2,  bp: 9500 },
-  i4_20t:  { name: '2.0L I4 Turbo',               cyl: 4,  disp: 2.0, hp: 250,  pk: 6000, tq: 3800, red: 7000, w: 135, price: 7000,  safe: 480, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.3, bp: 7800 },
-  i4_20tev:{ name: '2.0L I4 Turbo (4G63)',        cyl: 4,  disp: 2.0, hp: 286,  pk: 6500, tq: 3500, red: 7000, w: 140, price: 9000,  safe: 520, fi: { part: 'fi_oem_s', boost: 19 }, bg: 1.3, bp: 8000 },
-  f4_25t:  { name: '2.5L Boxer-4 Turbo (EJ257)',  cyl: 4,  disp: 2.5, hp: 300,  pk: 6000, tq: 4000, red: 7000, w: 150, price: 8000,  safe: 460, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.25, bp: 7600 },
-  rot_13t: { name: '1.3L Twin-Rotor Turbo (13B)', cyl: 2,  disp: 1.3, hp: 255,  pk: 6500, tq: 5000, red: 8000, w: 110, price: 9000,  safe: 420, fi: { part: 'fi_oem_tt', boost: 10 }, rotary: true, bg: 1.35, bp: 9000 },
-  i6_30:   { name: '3.0L I6 DOHC (2JZ-GE)',       cyl: 6,  disp: 3.0, hp: 220,  pk: 5800, tq: 4800, red: 6800, w: 175, price: 4000,  safe: 450, bg: 1.4,  bp: 7500 },
-  i6_32:   { name: '3.2L I6 High-Rev (S54)',      cyl: 6,  disp: 3.2, hp: 333,  pk: 7900, tq: 4900, red: 8000, w: 180, price: 9000,  safe: 480, bg: 1.2,  bp: 8600 },
-  i6_26tt: { name: '2.6L I6 Twin-Turbo (RB26)',   cyl: 6,  disp: 2.6, hp: 280,  pk: 6800, tq: 4400, red: 8000, w: 220, price: 14000, safe: 650, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.3, bp: 8500 },
-  i6_30tt: { name: '3.0L I6 Twin-Turbo (2JZ-GTE)', cyl: 6, disp: 3.0, hp: 320,  pk: 5600, tq: 4000, red: 6800, w: 230, price: 15000, safe: 900, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.35, bp: 7800 },
-  v6_35:   { name: '3.5L V6 DOHC (VQ35)',         cyl: 6,  disp: 3.5, hp: 287,  pk: 6200, tq: 4800, red: 6600, w: 165, price: 3500,  safe: 420, bg: 1.3,  bp: 7600 },
-  v6_38t:  { name: '3.8L V6 Turbo (Buick)',       cyl: 6,  disp: 3.8, hp: 245,  pk: 4400, tq: 3000, red: 5500, w: 200, price: 6000,  safe: 520, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.45, bp: 6200 },
-  v6_38gnx:{ name: '3.8L V6 Turbo (GNX)',         cyl: 6,  disp: 3.8, hp: 276,  pk: 4400, tq: 3000, red: 5500, w: 205, price: 8500,  safe: 560, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.45, bp: 6200 },
-  v6_38tt: { name: '3.8L V6 Twin-Turbo (VR38)',   cyl: 6,  disp: 3.8, hp: 565,  pk: 6800, tq: 3300, red: 7100, w: 210, price: 28000, safe: 900, fi: { part: 'fi_oem_tt', boost: 14 }, bg: 1.2, bp: 7600 },
-  f6_38tt: { name: '3.8L Flat-6 Twin-Turbo',      cyl: 6,  disp: 3.8, hp: 530,  pk: 6250, tq: 2500, red: 7000, w: 205, price: 30000, safe: 850, fi: { part: 'fi_oem_tt', boost: 15 }, bg: 1.2, bp: 7800 },
-  v8_46sc: { name: '4.6L V8 Supercharged (Terminator)', cyl: 8, disp: 4.6, hp: 390, pk: 6000, tq: 3500, red: 6500, w: 215, price: 9000, safe: 650, fi: { part: 'fi_oem_sc', boost: 12 }, bg: 1.3, bp: 7200 },
-  v8_305:  { name: '5.0L Small Block 305',        cyl: 8,  disp: 5.0, hp: 180,  pk: 4000, tq: 2400, red: 5200, w: 210, price: 1800,  safe: 380, bg: 2.2,  bp: 6800 },
-  v8_50:   { name: '5.0L V8 Pushrod (302 HO)',    cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 6250, w: 205, price: 2500,  safe: 450, bg: 2.2,  bp: 7200 },
-  v8_50d:  { name: '5.0L V8 DOHC (Coyote)',       cyl: 8,  disp: 5.0, hp: 460,  pk: 7000, tq: 4600, red: 7500, w: 200, price: 9000,  safe: 750, bg: 1.3,  bp: 8000 },
+  i3_10:   { name: '1.0L I3 (Geo G10)',           cyl: 3,  disp: 1.0, hp: 55,   pk: 5700, tq: 3300, red: 6000, w: 68,  price: 800,   safe: 120, bg: 1.85, bp: 7600 },
+  f4_16:   { name: '1.6L Air-Cooled Flat-4',      cyl: 4,  disp: 1.6, hp: 60,   pk: 4400, tq: 2800, red: 5000, w: 105,  price: 900,   safe: 150, bg: 1.9,  bp: 6600 },
+  i4_15:   { name: '1.5L I4 SOHC (D15)',          cyl: 4,  disp: 1.5, hp: 102,  pk: 5900, tq: 4900, red: 6800, w: 110, price: 1200,  safe: 220, bg: 1.5,  bp: 8000 },
+  i4_16:   { name: '1.6L I4 DOHC (4A-GE)',        cyl: 4,  disp: 1.6, hp: 128,  pk: 6600, tq: 5200, red: 7600, w: 120, price: 2000,  safe: 240, bg: 1.5,  bp: 8800 },
+  i4_18:   { name: '1.8L I4 DOHC VTEC (B18C)',    cyl: 4,  disp: 1.8, hp: 195,  pk: 8000, tq: 7500, red: 8400, w: 130, price: 4500,  safe: 330, bg: 1.25, bp: 9200 },
+  i4_20:   { name: '2.0L I4 DOHC',                cyl: 4,  disp: 2.0, hp: 150,  pk: 6500, tq: 5500, red: 6800, w: 135, price: 2500,  safe: 300, bg: 1.45, bp: 8000 },
+  i4_20hi: { name: '2.0L I4 High-Rev (F20C)',     cyl: 4,  disp: 2.0, hp: 240,  pk: 8300, tq: 7500, red: 9000, w: 150, price: 9000,  safe: 380, bg: 1.2,  bp: 9500 },
+  i4_20t:  { name: '2.0L I4 Turbo',               cyl: 4,  disp: 2.0, hp: 250,  pk: 6000, tq: 3800, red: 7000, w: 160, price: 7000,  safe: 480, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.3, bp: 7800 },
+  i4_20tev:{ name: '2.0L I4 Turbo (4G63)',        cyl: 4,  disp: 2.0, hp: 286,  pk: 6500, tq: 3500, red: 7000, w: 180, price: 9000,  safe: 520, fi: { part: 'fi_oem_s', boost: 19 }, bg: 1.3, bp: 8000 },
+  f4_25t:  { name: '2.5L Boxer-4 Turbo (EJ257)',  cyl: 4,  disp: 2.5, hp: 300,  pk: 6000, tq: 4000, red: 7000, w: 175, price: 8000,  safe: 460, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.25, bp: 7600 },
+  rot_13t: { name: '1.3L Twin-Rotor Turbo (13B)', cyl: 2,  disp: 1.3, hp: 255,  pk: 6500, tq: 5000, red: 8000, w: 180, price: 9000,  safe: 420, fi: { part: 'fi_oem_tt', boost: 10 }, rotary: true, bg: 1.7, bp: 9200 },
+  i6_30:   { name: '3.0L I6 DOHC (2JZ-GE)',       cyl: 6,  disp: 3.0, hp: 220,  pk: 5800, tq: 4800, red: 6800, w: 200, price: 4000,  safe: 450, bg: 1.4,  bp: 7500 },
+  i6_32:   { name: '3.2L I6 High-Rev (S54)',      cyl: 6,  disp: 3.2, hp: 333,  pk: 7900, tq: 4900, red: 8000, w: 210, price: 9000,  safe: 480, bg: 1.2,  bp: 8600 },
+  i6_26tt: { name: '2.6L I6 Twin-Turbo (RB26)',   cyl: 6,  disp: 2.6, hp: 280,  pk: 6800, tq: 4400, red: 8000, w: 255, price: 14000, safe: 650, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.3, bp: 8500 },
+  i6_30tt: { name: '3.0L I6 Twin-Turbo (2JZ-GTE)', cyl: 6, disp: 3.0, hp: 320,  pk: 5600, tq: 4000, red: 6800, w: 240, price: 15000, safe: 900, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.35, bp: 7800 },
+  v6_35:   { name: '3.5L V6 DOHC (VQ35)',         cyl: 6,  disp: 3.5, hp: 287,  pk: 6200, tq: 4800, red: 6600, w: 190, price: 3500,  safe: 420, bg: 1.3,  bp: 7600 },
+  v6_38t:  { name: '3.8L V6 Turbo (Buick)',       cyl: 6,  disp: 3.8, hp: 245,  pk: 4400, tq: 3000, red: 5500, w: 215, price: 6000,  safe: 520, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.45, bp: 6200 },
+  v6_38gnx:{ name: '3.8L V6 Turbo (GNX)',         cyl: 6,  disp: 3.8, hp: 276,  pk: 4400, tq: 3000, red: 5500, w: 220, price: 8500,  safe: 560, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.45, bp: 6200 },
+  v6_38tt: { name: '3.8L V6 Twin-Turbo (VR38)',   cyl: 6,  disp: 3.8, hp: 565,  pk: 6800, tq: 3300, red: 7100, w: 265, price: 28000, safe: 900, fi: { part: 'fi_oem_tt', boost: 14 }, bg: 1.2, bp: 7600 },
+  f6_38tt: { name: '3.8L Flat-6 Twin-Turbo',      cyl: 6,  disp: 3.8, hp: 530,  pk: 6250, tq: 2500, red: 7000, w: 225, price: 30000, safe: 850, fi: { part: 'fi_oem_tt', boost: 15 }, bg: 1.2, bp: 7800 },
+  v8_46sc: { name: '4.6L V8 Supercharged (Terminator)', cyl: 8, disp: 4.6, hp: 390, pk: 6000, tq: 3500, red: 6500, w: 270, price: 9000, safe: 650, fi: { part: 'fi_oem_sc', boost: 12 }, bg: 1.3, bp: 7200 },
+  v8_305:  { name: '5.0L Small Block 305',        cyl: 8,  disp: 5.0, hp: 180,  pk: 4000, tq: 2400, red: 5200, w: 250, price: 1800,  safe: 380, bg: 2.2,  bp: 6800 },
+  v8_50:   { name: '5.0L V8 Pushrod (302 HO)',    cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 6250, w: 210, price: 2500,  safe: 450, bg: 2.2,  bp: 7200 },
+  v8_50d:  { name: '5.0L V8 DOHC (Coyote)',       cyl: 8,  disp: 5.0, hp: 460,  pk: 7000, tq: 4600, red: 7500, w: 202, price: 9000,  safe: 750, bg: 1.3,  bp: 8000 },
   v8_283:  { name: '4.6L Small Block 283',        cyl: 8,  disp: 4.6, hp: 220,  pk: 4800, tq: 3000, red: 5500, w: 240, price: 2500,  safe: 400, bg: 2.0,  bp: 6800 },
   sbc350:  { name: '5.7L Small Block 350',        cyl: 8,  disp: 5.7, hp: 295,  pk: 4800, tq: 3200, red: 5800, w: 250, price: 3000,  safe: 520, bg: 2.0,  bp: 7000 },
-  v8_57tbi:{ name: '5.7L V8 TBI (truck)',         cyl: 8,  disp: 5.7, hp: 210,  pk: 4000, tq: 2800, red: 5000, w: 250, price: 2000,  safe: 450, bg: 2.4,  bp: 6800 },
-  v8_57:   { name: '5.7L V8 Pushrod (LS1)',       cyl: 8,  disp: 5.7, hp: 345,  pk: 5600, tq: 4000, red: 6200, w: 190, price: 5000,  safe: 650, bg: 1.55, bp: 7200 },
-  v8_62:   { name: '6.2L V8 Pushrod (LS3)',       cyl: 8,  disp: 6.2, hp: 430,  pk: 5900, tq: 4600, red: 6600, w: 192, price: 8000,  safe: 750, bg: 1.45, bp: 7200 },
-  v8_70:   { name: '7.0L V8 Pushrod (LS7)',       cyl: 8,  disp: 7.0, hp: 505,  pk: 6300, tq: 4800, red: 7100, w: 200, price: 15000, safe: 800, bg: 1.3,  bp: 7400 },
-  v8_62sc: { name: '6.2L Hemi Supercharged',      cyl: 8,  disp: 6.2, hp: 707,  pk: 6000, tq: 4800, red: 6200, w: 260, price: 25000, safe: 1000, fi: { part: 'fi_oem_sc', boost: 11.6 }, bg: 1.25, bp: 7000 },
-  hemi_70: { name: '7.0L Hemi V8 (426)',          cyl: 8,  disp: 7.0, hp: 425,  pk: 5000, tq: 4000, red: 6000, w: 290, price: 20000, safe: 800, bg: 1.5,  bp: 7000 },
-  bb_74:   { name: '7.4L Big Block V8 (454 LS6)', cyl: 8,  disp: 7.4, hp: 450,  pk: 5600, tq: 3600, red: 6000, w: 300, price: 7000,  safe: 750, bg: 1.6,  bp: 6800 },
-  bb_94:   { name: '9.4L Big Block V8 (572)',     cyl: 8,  disp: 9.4, hp: 720,  pk: 6000, tq: 4500, red: 6800, w: 290, price: 25000, safe: 1400, bg: 1.25, bp: 7200 },
-  v10_84:  { name: '8.4L V10',                    cyl: 10, disp: 8.4, hp: 645,  pk: 6200, tq: 5000, red: 6400, w: 230, price: 28000, safe: 900, bg: 1.25, bp: 7200 },
+  v8_57tbi:{ name: '5.7L V8 TBI (truck)',         cyl: 8,  disp: 5.7, hp: 210,  pk: 4000, tq: 2800, red: 5000, w: 260, price: 2000,  safe: 450, bg: 2.4,  bp: 6800 },
+  v8_57:   { name: '5.7L V8 Pushrod (LS1)',       cyl: 8,  disp: 5.7, hp: 345,  pk: 5600, tq: 4000, red: 6200, w: 207, price: 5000,  safe: 650, bg: 1.55, bp: 7200 },
+  v8_62:   { name: '6.2L V8 Pushrod (LS3)',       cyl: 8,  disp: 6.2, hp: 430,  pk: 5900, tq: 4600, red: 6600, w: 210, price: 8000,  safe: 750, bg: 1.45, bp: 7200 },
+  v8_70:   { name: '7.0L V8 Pushrod (LS7)',       cyl: 8,  disp: 7.0, hp: 505,  pk: 6300, tq: 4800, red: 7100, w: 208, price: 15000, safe: 800, bg: 1.3,  bp: 7400 },
+  v8_62sc: { name: '6.2L Hemi Supercharged',      cyl: 8,  disp: 6.2, hp: 707,  pk: 6000, tq: 4800, red: 6200, w: 290, price: 25000, safe: 1000, fi: { part: 'fi_oem_sc', boost: 11.6 }, bg: 1.25, bp: 7000 },
+  hemi_70: { name: '7.0L Hemi V8 (426)',          cyl: 8,  disp: 7.0, hp: 425,  pk: 5000, tq: 4000, red: 6000, w: 340, price: 20000, safe: 800, bg: 1.5,  bp: 7000 },
+  bb_74:   { name: '7.4L Big Block V8 (454 LS6)', cyl: 8,  disp: 7.4, hp: 450,  pk: 5600, tq: 3600, red: 6000, w: 310, price: 7000,  safe: 750, bg: 1.6,  bp: 6800 },
+  bb_94:   { name: '9.4L Big Block V8 (572)',     cyl: 8,  disp: 9.4, hp: 720,  pk: 6000, tq: 4500, red: 6800, w: 300, price: 25000, safe: 1400, bg: 1.25, bp: 7200 },
+  v10_84:  { name: '8.4L V10',                    cyl: 10, disp: 8.4, hp: 645,  pk: 6200, tq: 5000, red: 6400, w: 290, price: 28000, safe: 900, bg: 1.25, bp: 7200 },
   v12_65:  { name: '6.5L V12',                    cyl: 12, disp: 6.5, hp: 770,  pk: 8500, tq: 6750, red: 8700, w: 235, price: 60000, safe: 1000, bg: 1.12, bp: 9000 },
-  d_67:    { name: '6.7L I6 Turbo Diesel (Cummins)', cyl: 6, disp: 6.7, hp: 400, pk: 2800, tq: 1600, red: 3200, w: 510, price: 15000, safe: 1200, fi: { part: 'fi_oem_vgt', boost: 30 }, diesel: true, bg: 1.4, bp: 3600 },
-  v8_86b:  { name: '8.6L Billet Pro Mod V8',      cyl: 8,  disp: 8.6, hp: 1250, pk: 7800, tq: 6500, red: 8800, w: 220, price: 95000, safe: 4500, bg: 1.15, bp: 8600 }
+  d_67:    { name: '6.7L I6 Turbo Diesel (Cummins)', cyl: 6, disp: 6.7, hp: 400, pk: 2800, tq: 1600, red: 3200, w: 522, price: 15000, safe: 1200, fi: { part: 'fi_oem_vgt', boost: 30 }, diesel: true, bg: 1.4, bp: 3600 },
+  v8_86b:  { name: '8.6L Billet Pro Mod V8',      cyl: 8,  disp: 8.6, hp: 1250, pk: 7800, tq: 6500, red: 8800, w: 260, price: 95000, safe: 4500, bg: 1.15, bp: 8600 }
 };
 
 // ---------------------------------------------------------------------------
