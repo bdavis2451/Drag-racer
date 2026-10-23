@@ -192,10 +192,14 @@
           this.muf[0][0].set(c.mufHz * mk, sr); this.muf[0][1].set(c.mufHz * mk, sr);
           this.muf[1][0].set(c.mufHz * 1.04 * mk, sr); this.muf[1][1].set(c.mufHz * 1.04 * mk, sr);
         }
-        var drive = c.drive * (1 + nos * 0.6), norm = 1 / Math.tanh(drive);
+        // VTEC: past the crossover the high-lift cam lobes harden the exhaust
+        // note and open up the intake howl
+        var vt = c.vtec ? Math.max(0, Math.min(1, (rpm - c.vtec) / 250)) * load : 0;
+        var drive = c.drive * (1 + nos * 0.6) * (1 + vt * 0.5), norm = 1 / Math.tanh(drive);
         // intake gulps last longer than exhaust blowdown (a few ms)
         var tauIn = Math.max(2, Math.min(70 / dphi, 0.0045 * sr)), invTauIn = 1 / tauIn, lifeIn = tauIn * 6;
         var inLvl = c.inLevel * (0.35 + 0.65 * load);
+        inLvl *= 1 + vt * 2.5;
         var hissLvl = c.hissLvl * (1 - load) * Math.min(1, rpm / 900) * (rpm < 2500 ? 1 : 0.5);
         var accHz = rpm / 60 * 2.7 * 12, accAmp = Math.min(1, rpm / 3000);
         var bHz = rpm / 60 * c.blowerRatio * c.blowerLobes;
@@ -281,7 +285,7 @@
           ip = this.inLp[1].tick(this.inLp[0].tick(ip));
           this.inHp += (ip - this.inHp) * this.hpK;
           var bay = (ip - this.inHp) * inLvl;
-          bay += this.inNz.bp(rnd() * 2 - 1) * this.inFlow * inLvl * c.inRoar;    // air rushing in
+          bay += this.inNz.bp(rnd() * 2 - 1) * this.inFlow * inLvl * c.inRoar * (1 + vt * 0.6);    // air rushing in
           bay += this.hiss.bp(rnd() * 2 - 1) * hissLvl;                          // throttle plate hiss
           bay += this.valve.bp(kv) * 6 + this.valve2.bp(kv) * 3;                // valve & lifter tick
           bay += this.block1.bp(kb) * 5 + this.block2.bp(kb) * 3;               // combustion thump
@@ -378,10 +382,17 @@
     v6:     { cycle: 720, angles: [0, 120, 240, 360, 480, 600],           banks: [0, 1, 0, 1, 0, 1], twin: true },
     // cross-plane V8, firing order 1-8-4-3-6-5-7-2: L R R L R L L R
     v8:     { cycle: 720, angles: [0, 90, 180, 270, 360, 450, 540, 630], banks: [0, 1, 1, 0, 1, 0, 0, 1], twin: true },
-    v10:    { cycle: 720, angles: [0, 72, 144, 216, 288, 360, 432, 504, 576, 648], banks: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1], twin: true },
+    v8ls:   { cycle: 720, angles: [0, 90, 180, 270, 360, 450, 540, 630], banks: [0, 1, 0, 1, 1, 0, 1, 0], twin: true },
+    v8ford: { cycle: 720, angles: [0, 90, 180, 270, 360, 450, 540, 630], banks: [1, 1, 0, 1, 0, 0, 1, 0], twin: true },
+    // Viper: odd-fire 90 deg V10, firing intervals alternate 90 and 54 deg
+    v10:    { cycle: 720, angles: [0, 90, 144, 234, 288, 378, 432, 522, 576, 666], banks: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1], twin: true },
     v12:    { cycle: 720, angles: [0, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660], banks: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], twin: true },
     // rotary: each rotor's peripheral exhaust port opens once per shaft turn
     rotary: { cycle: 360, angles: [0, 180],                               banks: [0, 0], sharp: true },
+    // Porsche flat-6, 1-6-2-4-3-5: alternates banks, one turbo per side
+    flat6:  { cycle: 720, angles: [0, 120, 240, 360, 480, 600],           banks: [0, 1, 0, 1, 0, 1], twin: true },
+    // VW air-cooled flat-4, 1-4-3-2: equal-length heater boxes into one muffler
+    flat4:  { cycle: 720, angles: [0, 180, 360, 540],                     banks: [0, 1, 1, 0] },
     diesel: { cycle: 720, angles: [0, 120, 240, 360, 480, 600],           banks: [0, 1, 0, 1, 0, 1], diesel: true }
   };
   //            stock   cat-back straight race(open)
@@ -404,6 +415,7 @@
 
   // Everything the audio thread needs to sound like this engine with these parts.
   A.engineConfig = function (eng, build) {
+    if (build.oemSc && eng.scSound) build = Object.assign({}, build, { blowerType: eng.scSound });
     var lay = A.layoutOf(eng), Lc = LAYOUTS[lay], n = Lc.angles.length;
     var ex = build.exhaust, hd = build.headers, cam = build.cam;
     var r = cfgRand(eng.disp * 1000 + eng.cyl * 7 + 3), i;
@@ -460,7 +472,9 @@
       blockHz: Lc.diesel ? 1500 : 1100 - Math.min(300, eng.disp * 30),
       blockLvl: Lc.diesel ? 0.12 : 0.02,
       accLvl: 0.0035,
-      // superchargers: whine at rotor speed x lobes, belt-driven from the crank
+      vtec: eng.vtec || 0,
+      // superchargers: whine at rotor speed x lobes, belt-driven from the crank.
+      // A factory blower can be a Roots (Eaton M112 on the Terminator).
       blowerType: build.blowerType || '',
       blowerRatio: { roots: 1.7, screw: 2.2, cent: 3.4 }[build.blowerType] || 0,
       blowerLobes: { roots: 6, screw: 5, cent: 11 }[build.blowerType] || 0,

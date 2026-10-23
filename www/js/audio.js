@@ -60,20 +60,27 @@
     i3:     { amps: [1, 0.8, 0.9], jit: [0, 0.02, -0.02], width: 0.6, bright: 1.0, grit: 1.6 },
     i4:     { amps: [1, 0.88, 0.96, 0.86], jit: [0, 0.01, 0, -0.01], width: 0.5, bright: 1.3, grit: 1.8, drive: 1.1 },
     i6:     { amps: [1, 0.96, 0.99, 0.95, 1, 0.97], jit: [0, 0, 0, 0, 0, 0], width: 0.6, bright: 1.0, grit: 1.4 },
-    v10:    { amps: [1, 0.6, 0.95, 0.55, 0.9, 0.7, 1, 0.55, 0.9, 0.65], jit: [0, 0.05, -0.03, 0.04, 0, -0.05, 0.03, -0.04, 0.02, 0], width: 0.8, bright: 0.85, grit: 1.5, drive: 0.8 },
+    v10:    { amps: [1, 0.6, 0.95, 0.55, 0.9, 0.7, 1, 0.55, 0.9, 0.65], jit: [0, 0.25, 0, 0.25, 0, 0.25, 0, 0.25, 0, 0.25], width: 0.8, bright: 0.85, grit: 1.5, drive: 0.8 },
     v12:    { amps: [1, 0.95, 0.98, 0.94, 1, 0.96, 0.99, 0.95, 1, 0.96, 0.98, 0.95], jit: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], width: 0.55, bright: 1.25, grit: 1.4 },
     rotary: { amps: [1, 0.95], jit: [0, 0.01], width: 0.22, bright: 2.2, grit: 2.4, drive: 1.3, perRev: true },
+    flat4:  { amps: [1, 0.7, 0.92, 0.68], jit: [0, 0.03, 0, -0.03], width: 0.7, bright: 0.85, grit: 1.6, drive: 0.9 },
     diesel: { amps: [1, 0.85, 0.95, 0.8, 1, 0.9], jit: [0, 0.02, -0.01, 0.02, 0, -0.02], width: 0.45, bright: 0.5, grit: 2.6 }
   };
+  PROFILES.v8ls = PROFILES.v8ford = PROFILES.v8; PROFILES.flat6 = PROFILES.v6;
+
+  // V8 families differ in firing order, which changes how each bank's
+  // pulses bunch up: GM LS 1-8-7-2-6-5-4-3, Ford 1-3-7-2-6-5-4-8, and the
+  // classic 1-8-4-3-6-5-7-2 of the small/big block Chevy and the Hemi.
+  // The Viper V10 is odd-fire (90 deg V, shared crank pins: 90/54 deg).
   function layoutOf(eng) {
     var n = eng.name || '';
     if (eng.rotary) return 'rotary';
     if (eng.diesel) return 'diesel';
-    if (/V8|Hemi|Big Block/.test(n)) return 'v8';
-    if (/V10/.test(n)) return 'v10';
-    if (/V12/.test(n)) return 'v12';
+    if (eng.cyl === 8) return /\(LS|Coyote|Terminator|302/.test(n) ? (/\(LS/.test(n) ? 'v8ls' : 'v8ford') : 'v8';
+    if (eng.cyl === 10) return 'v10';
+    if (eng.cyl === 12) return 'v12';
+    if (/Flat|Boxer/.test(n)) return eng.cyl === 6 ? 'flat6' : /Air-Cooled/.test(n) ? 'flat4' : 'boxer';
     if (/V6/.test(n)) return 'v6';
-    if (/Flat|Boxer/.test(n)) return eng.cyl === 6 ? 'i6' : 'boxer';
     return { 3: 'i3', 4: 'i4', 6: 'i6' }[eng.cyl] || 'i4';
   }
   A.layoutOf = layoutOf;
@@ -121,6 +128,7 @@
       exhaust: stage(parts.exhaust, ['stock', 'e1', 'e2', 'e3']),
       intake: Math.max(stage(parts.airfilter, ['stock', 'af1', 'af2', 'af3']), stage(parts.intake, ['stock', 'i1', 'i2', 'i3'])),
       blowerType: fi === 'roots' || fi === 'screw' || fi === 'cent' ? fi : '',
+      oemSc: S.fiId === 'fi_oem_sc',
       headers: stage(parts.headers, ['stock', 'h1', 'h2', 'h3']),
       cam: stage(parts.cams, ['stock', 'c1', 'c2', 'c3', 'c4']),
       turbo: fi === 'turbo',
@@ -147,7 +155,7 @@
     // Turbos muffle the exhaust; blowers are a bit louder.
     v.loud = EXHAUST.loud[ex] * (build.turbo ? 0.75 : 1) * (build.blower ? 1.1 : 1);
     v.bright = P.bright * EXHAUST.bright[ex] * HEADERS.bright[hd] * (build.turbo ? 0.82 : 1) * (1 + build.cam * 0.04);
-    v.lope = CAM_LOPE[build.cam] * (layout === 'v8' || layout === 'v6' ? 1 : 0.6);
+    v.lope = CAM_LOPE[build.cam] * (/^v[68]/.test(layout) ? 1 : 0.6);
     v.crackle = Math.max(EXHAUST.crackle[ex] * (build.turbo ? 0.5 : 1), build.antilag ? 0.8 : 0);
     v.out = c.createGain(); v.out.gain.value = 0; v.out.connect(A.master);
     v.wk = A.wk && !A.forceSynth;
