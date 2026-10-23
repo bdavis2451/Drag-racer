@@ -89,6 +89,95 @@
     lampsR.forEach(function (lp, j) { lamp(W - 57 + j * 17, lp); });
   }
 
+  // ---------------------------------------------------------------- pedals
+  // The touch controls are pixel art too, drawn small and scaled up crisp:
+  // a drilled aluminium race pedal with a throttle meter, a round arcade
+  // button whose cap takes the colour of what it does, and a nitrous button.
+  var PEDAL = { gas: [52, 72], act: [64, 72], nos: [40, 26] };
+  var ACT_COL = { go: ['#fff1a8', '#ffcc00', '#d19a00', '#6a4a00'], launch: ['#ffb0a4', '#ff3b30', '#bf2018', '#5a0c08'], shift: ['#bcd8ff', '#3b8bff', '#1d55c0', '#0a2460'] };
+  function disc(c, cx, cy, r, col) { for (var y = -r; y <= r; y++) { var w = Math.floor(Math.sqrt(r * r + r * 0.8 - y * y)); px(c, cx - w, cy + y, w * 2 + 1, 1, col); } }
+  function label(c, str, cx, y, col) {
+    var tw = DR.pixTextW(str), lx = Math.round(cx - tw / 2);
+    px(c, lx - 3, y, tw + 6, 9, 'rgba(8,9,12,0.82)'); px(c, lx - 2, y - 1, tw + 4, 1, 'rgba(8,9,12,0.82)'); px(c, lx - 2, y + 9, tw + 4, 1, 'rgba(8,9,12,0.82)');
+    DR.pixText(c, str, lx, y + 2, col);
+  }
+  function shade(rgb, k) { return 'rgb(' + rgb.map(function (v) { return Math.max(0, Math.min(255, Math.round(v * k))); }).join(',') + ')'; }
+  function drawGasPedal(c, held, level) {
+    var W = PEDAL.gas[0], H = PEDAL.gas[1], cx = 24;
+    c.clearRect(0, 0, W, H);
+    // floor hinge and shadow; pressing tilts the plate back, so it
+    // foreshortens (the top drops) and darkens
+    px(c, 6, 61, 36, 3, 'rgba(0,0,0,0.4)');
+    px(c, 15, 55, 18, 7, '#141519'); px(c, 16, 56, 16, 5, '#3c4049'); px(c, 16, 56, 16, 1, '#6b707c'); px(c, 18, 58, 2, 2, '#1d1f24'); px(c, 28, 58, 2, 2, '#1d1f24');
+    var top = held ? 9 : 1, bot = 55, rows = bot - top, lit = held ? 0.84 : 1;
+    for (var y = 0; y < rows; y++) {
+      var k = y / rows, half = Math.round(21 - 4 * k), yy = top + y;
+      px(c, cx - half - 1, yy, half * 2 + 2, 1, '#121317');
+      if (y === 0 || y === rows - 1) continue;
+      var base = [200 - 46 * k, 205 - 44 * k, 214 - 40 * k];
+      for (var x = -half; x < half; x++) {
+        var b = base, f = lit * (1 + ((x + y * 3) % 5 === 0 ? 0.035 : 0));          // brushed grain
+        if (x === -half || x === -half + 1) f = lit * 1.18;                           // lit left bevel
+        else if (x >= half - 2) f = lit * 0.72;                                        // shaded right bevel
+        px(c, cx + x, yy, 1, 1, shade(b, f));
+      }
+    }
+    px(c, cx - 19, top + 1, 38, 1, held ? '#dfe2e7' : '#ffffff');
+    // drilled holes in three columns, each with a shadowed top and a lit lower rim
+    var step = held ? 6 : 7, hh = held ? 2 : 3;
+    for (var hy = top + 5; hy < bot - 8; hy += step) {
+      var kk = (hy - top) / rows, hw = Math.round(21 - 4 * kk);
+      [-hw + 6, -2, hw - 10].forEach(function (dx) {
+        px(c, cx + dx + 1, hy, 4, hh, '#202227'); px(c, cx + dx, hy + 1, 6, hh - 1, '#202227');
+        px(c, cx + dx + 1, hy, 4, 1, '#0d0e11');
+        px(c, cx + dx + 1, hy + hh, 4, 1, held ? '#c9cdd4' : '#eef0f3');
+      });
+    }
+    // green anodised toe strip
+    px(c, cx - 17, bot - 6, 34, 4, held ? '#26a457' : '#3fd472'); px(c, cx - 17, bot - 6, 34, 1, held ? '#7dff9a' : '#b4ffca'); px(c, cx - 17, bot - 3, 34, 1, '#1a7a3e');
+    // throttle meter up the right side
+    var n = held ? Math.max(1, Math.round(level * 10)) : 0;
+    for (var i = 0; i < 10; i++) {
+      var on = i < n, sy = bot - 4 - i * 5;
+      px(c, 47, sy, 4, 4, '#0c0d10'); px(c, 48, sy + 1, 2, 2, on ? (i > 7 ? '#d4ff6a' : '#46e07a') : '#2a2d33');
+      if (on) px(c, 48, sy + 1, 2, 1, '#c8ffd8');
+    }
+    label(c, 'GAS', cx, 63, held ? '#7dff9a' : '#46e07a');
+  }
+  function drawActButton(c, mode, str, held) {
+    var W = PEDAL.act[0], H = PEDAL.act[1], col = ACT_COL[mode] || ACT_COL.go, cx = 32, cy = 29, t = performance.now();
+    c.clearRect(0, 0, W, H);
+    disc(c, cx, cy + 3, 28, 'rgba(0,0,0,0.4)');                       // shadow
+    disc(c, cx, cy, 28, '#121317');                                    // bezel ring
+    disc(c, cx, cy, 27, '#6a707c'); disc(c, cx, cy + 1, 26, '#4a4f5a'); disc(c, cx, cy + 2, 24, '#383c45');
+    px(c, cx - 14, cy - 26, 28, 1, '#a3a9b4'); px(c, cx - 19, cy - 24, 6, 1, '#8a909c'); px(c, cx + 13, cy - 24, 6, 1, '#8a909c');
+    [[-18, -18], [18, -18], [-18, 18], [18, 18]].forEach(function (o) { px(c, cx + o[0] - 1, cy + o[1] - 1, 3, 3, '#1d1f24'); px(c, cx + o[0], cy + o[1], 1, 1, '#9aa0ab'); });
+    disc(c, cx, cy + 1, 21, '#08090b');                                // well
+    var d = held ? 3 : 0;
+    if (!held) disc(c, cx, cy + 3, 19, col[3]);                        // cap skirt
+    disc(c, cx, cy + d, 19, col[2]);                                   // cap: a darker crescent low right
+    disc(c, cx - 1, cy - 1 + d, 17, held ? col[2] : col[1]);
+    // curved highlight and specular
+    for (var i = 0; i < 9; i++) { var a = Math.PI * (1.05 + i * 0.06); px(c, Math.round(cx + Math.cos(a) * 14), Math.round(cy + d + Math.sin(a) * 14), 2, 2, col[0]); }
+    px(c, cx - 9, cy - 9 + d, 4, 3, '#ffffff'); px(c, cx - 10, cy - 6 + d, 2, 2, col[0]);
+    px(c, cx - 2, cy + 16 + d, 10, 1, col[2]); px(c, cx + 8, cy + 13 + d, 4, 1, col[2]);
+    if (mode === 'launch' && !held && Math.floor(t / 220) % 2) { disc(c, cx, cy, 9, col[0]); disc(c, cx, cy, 5, '#ffffff'); }
+    label(c, str, cx, 62, col[1]);
+  }
+  function drawNosButton(c, armed) {
+    var W = PEDAL.nos[0], H = PEDAL.nos[1], t = performance.now();
+    c.clearRect(0, 0, W, H);
+    px(c, 3, H - 3, W - 6, 3, 'rgba(0,0,0,0.4)');
+    px(c, 1, 0, W - 2, H - 2, '#121317'); px(c, 0, 1, W, H - 4, '#121317');
+    px(c, 1, 1, W - 2, H - 4, '#3a3e47'); px(c, 1, 1, W - 2, 1, '#6a707c');
+    px(c, 3, 3, 1, 1, '#9aa0ab'); px(c, W - 4, 3, 1, 1, '#9aa0ab'); px(c, 3, H - 6, 1, 1, '#9aa0ab'); px(c, W - 4, H - 6, 1, 1, '#9aa0ab');
+    var on = armed && Math.floor(t / 140) % 2;
+    var cap = armed ? (on ? '#c49aff' : '#a26bff') : '#6b44b8';
+    px(c, 6, 4, W - 12, H - 10, '#140a28'); px(c, 7, 5, W - 14, H - 12, cap);
+    px(c, 7, 5, W - 14, 1, armed ? '#efe2ff' : '#a98ae6'); px(c, 7, H - 8, W - 14, 1, '#3a2068');
+    DR.pixText(c, 'N2O', 14, 9, armed ? '#ffffff' : '#e3d6ff');
+  }
+
   function rollFailure(S) {
     var r = S.risk, est = DR.simulate(S, {}).et;
     var span = Math.max(1.5, Math.min(est, 12) * 0.8);
@@ -125,11 +214,23 @@
     var ribbon = h('div', { class: 'ribbon' }, msgEl, subEl);
     var hud = h('div', { class: 'hud' }, infoEl, ribbon, dash);
 
-    var gasFill = h('div', { class: 'fill', style: { height: '0%' } });
-    var gasBtn = h('div', { class: 'pad gas' }, gasFill, h('span', { class: 'plab' }, 'GAS'));
-    var actLabel = h('span', { class: 'plab' }, 'STAGE');
-    var actBtn = h('div', { class: 'pad act go' }, actLabel);
-    var nosBtn = h('div', { class: 'pad nos', style: { display: S.nosW && !S.prog ? 'flex' : 'none' } }, h('span', { class: 'plab' }, 'NOS'));
+    function pcv(k) { return h('canvas', { class: 'pcv', width: PEDAL[k][0], height: PEDAL[k][1] }); }
+    var gasCv = pcv('gas'), actCv = pcv('act'), nosCv = pcv('nos');
+    var gasBtn = h('div', { class: 'pad gas' }, gasCv);
+    var actLabel = { textContent: 'STAGE' };
+    var actBtn = h('div', { class: 'pad act go' }, actCv);
+    var nosBtn = h('div', { class: 'pad nos', style: { display: S.nosW && !S.prog ? 'flex' : 'none' } }, nosCv);
+    var padKey = '';
+    function drawPads() {
+      var mode = actBtn.classList.contains('shift') ? 'shift' : actBtn.classList.contains('go') ? 'go' : 'launch';
+      var k = [input.gasHeld, Math.round(input.gas * 8), mode, actLabel.textContent, actBtn.classList.contains('on'), input.nos].join('|');
+      var anim = mode === 'launch' || input.nos;
+      if (k === padKey && !anim) return;
+      padKey = k;
+      drawGasPedal(gasCv.getContext('2d'), input.gasHeld, input.gas);
+      drawActButton(actCv.getContext('2d'), mode, actLabel.textContent, actBtn.classList.contains('on'));
+      if (S.nosW && !S.prog) drawNosButton(nosCv.getContext('2d'), input.nos);
+    }
     var burnBtn = btn('Burnout', function () { startBurnout(); }, 'primary');
     var stageBar = h('div', { class: 'stagebar' }, burnBtn);
     var quitBtn = btn('✖', function () { quit(); }, 'small back quit');
@@ -148,7 +249,8 @@
     function gasUp() { input.gasHeld = false; input.gas = 0; }
     gasBtn.addEventListener('pointerup', gasUp); gasBtn.addEventListener('pointercancel', gasUp);
     actBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); A.init(); A.resume(); input.act = true; actBtn.classList.add('on'); });
-    actBtn.addEventListener('pointerup', function () { actBtn.classList.remove('on'); });
+    function actUp() { actBtn.classList.remove('on'); }
+    actBtn.addEventListener('pointerup', actUp); actBtn.addEventListener('pointercancel', actUp); actBtn.addEventListener('pointerleave', actUp);
     nosBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); input.nos = !input.nos; nosBtn.classList.toggle('on', input.nos); });
     function key(e, down) {
       if (e.repeat) return;
@@ -470,7 +572,7 @@
       var html = lines.join('<br>');
       if (html !== infoEl._h) { infoEl.innerHTML = html; infoEl._h = html; }
       gasBtn.classList.toggle('on', input.gasHeld);
-      gasFill.style.height = (input.gasHeld ? input.gas * 100 : 0) + '%';
+      drawPads();
       if (phase === 'tree' && greenAt === null && !redLight) setMsg('', tree.amber ? '' : 'Hold GAS to rev. Tap LAUNCH on green.');
       ribbon.classList.toggle('on', !!(msgEl.textContent || subEl.textContent));
     }

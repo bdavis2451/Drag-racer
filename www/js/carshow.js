@@ -98,7 +98,7 @@
         h('div', { class: 'gsmall' }, '🥇' + st.places[0] + '  🥈' + st.places[1] + '  🥉' + st.places[2] + (st.best ? '  • best crowd ' + st.best : '')),
         bored ? h('div', { class: 'warn gsmall' }, 'The regulars have seen this build — change it up for a bigger crowd.') : null,
         !ok ? h('div', { class: 'warn gsmall' }, '🔒 Needs a ' + sh.minStars + '-star car') : null,
-        h('div', { class: 'efoot' }, h('span', { class: 'price' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free entry'),
+        h('div', { class: 'efoot' }, h('span', { class: 'efee' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free entry'),
           btn('Enter', function () {
             if (!ok) return UI.toast('Your car needs a ' + sh.minStars + '-star rating for this show');
             if (inst.damage) return UI.toast('Fix your car first — broken cars stay home');
