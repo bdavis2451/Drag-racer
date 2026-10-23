@@ -455,6 +455,152 @@
   DR.ENGINE_BOUND = ['airfilter', 'intake', 'throttle', 'exhaust', 'headers', 'heads', 'cams', 'valvetrain',
     'pistons', 'rods', 'crank', 'block', 'oiling', 'fi', 'ic', 'wastegate', 'bov'];
 
+  // ---------------------------------------------------------------- packages
+  // Quick upgrade packages (like Need for Speed: Underground 2's Street / Pro
+  // / Extreme kits): a matched set of parts per shop group, bought and fitted
+  // in one go at a discount. An entry is [cat, id] or [cat, fn(inst) -> id]
+  // so a package can suit the car (automatic vs manual, boosted vs NA).
+  DR.PKG_TIERS = [{ id: 'street', name: 'Street', lvl: 2 }, { id: 'pro', name: 'Pro', lvl: 3 }, { id: 'extreme', name: 'Extreme', lvl: 4 }];
+  DR.PKG_DISCOUNT = 0.1;
+  function auto(inst) { return DR.TRANS[DR.partId('trans', inst)].type === 'auto'; }
+  function boosted(inst) { return DR.partId('fi', inst) !== 'none'; }
+  function aftermarketFI(inst) { var f = DR.FI[DR.partId('fi', inst)]; return !!f.price || f.type === 'none'; }
+  // parts sized to the car rather than fixed: a turbo that suits the
+  // engine, fuel that feeds the power, a gearbox / clutch / axles that hold
+  // the torque
+  // a turbo that feeds about k x the engine's stock power; only the
+  // Extreme kit (replace) swaps out a factory turbo, and only for a bigger one
+  function turboFor(k, replace) { return function (inst) {
+    if (!aftermarketFI(inst) && !replace) return null;
+    var want = DR.ENGINES[inst.engine].hp * k, cur = DR.FI[DR.partId('fi', inst)];
+    var t = DR.FI_SHOP.filter(function (f) { return DR.FI[f].type === 'turbo'; }).sort(function (a, b) { return DR.FI[a].flow - DR.FI[b].flow; });
+    var pick = t[t.length - 1];
+    for (var i = 0; i < t.length; i++) if (DR.FI[t[i]].flow >= want) { pick = t[i]; break; }
+    return DR.FI[pick].flow > (cur.flow || 0) ? pick : null;
+  }; }
+  function withParts(inst, p) { var c = JSON.parse(JSON.stringify(inst)); for (var k in p) c.parts[k] = p[k]; return c; }
+  function fuelFor(cat, min) { return function (inst) {
+    // power the engine would make with unlimited fuel, plus a margin
+    var S = DR.buildSpec(withParts(inst, { injectors: 'inj5', fuelpump: 'fp4' }));
+    var need = S.peakHp * 1.12 / (S.diesel ? 1 : DR.getOption('fueltype', inst).ff);
+    var opts = C[cat].options;
+    for (var i = Math.max(1, min); i < opts.length; i++) if (opts[i].fuel >= need) return opts[i].id;
+    return opts[opts.length - 1].id;
+  }; }
+  function torqueNm(inst) { var S = DR.buildSpec(inst); return S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * Math.PI / 30) : 0); }
+  function transFor(inst) {
+    var tr = DR.TRANS[DR.partId('trans', inst)], need = torqueNm(inst) * 1.08;
+    if (tr.maxTq >= need) return null;
+    // same kind of box if one holds it, else a manual steps up to a
+    // sequential (still on a clutch); the strongest of its kind otherwise
+    var fam = tr.type === 'auto' ? ['auto'] : [tr.type, 'manual', 'seq'];
+    for (var f = 0; f < fam.length; f++) {
+      var ok = DR.TRANS_SHOP.filter(function (t) { return DR.TRANS[t].type === fam[f] && DR.TRANS[t].maxTq >= need; }).sort(function (a, b) { return DR.TRANS[a].price - DR.TRANS[b].price; });
+      if (ok.length) return ok[0];
+    }
+    return DR.TRANS_SHOP.filter(function (t) { return fam.indexOf(DR.TRANS[t].type) >= 0; }).sort(function (a, b) { return DR.TRANS[b].maxTq - DR.TRANS[a].maxTq; })[0];
+  }
+  function clutchFor(min) { return function (inst) {
+    var need = torqueNm(inst) * 1.1, opts = C.clutch.options;
+    for (var i = min; i < opts.length; i++) if (opts[i].cap >= need) return opts[i].id;
+    return opts[opts.length - 1].id;
+  }; }
+  function axleFor(min) { return function (inst) {
+    var S = DR.buildSpec(inst), need = S.risk.hit * 1.05, opts = C.rearend.options;
+    for (var i = min; i < opts.length; i++) if (opts[i].axle >= need) return opts[i].id;
+    return opts[opts.length - 1].id;
+  }; }
+  DR.PACKAGES = {
+    engine: [
+      [['airfilter', 'af2'], ['intake', 'i1'], ['throttle', 'tb1'], ['headers', 'h1'], ['exhaust', 'e1']],
+      [['airfilter', 'af2'], ['intake', 'i2'], ['throttle', 'tb2'], ['headers', 'h2'], ['exhaust', 'e2']],
+      [['airfilter', 'af3'], ['intake', 'i3'], ['throttle', 'tb3'], ['headers', 'h3'], ['exhaust', 'e3']]],
+    top: [
+      [['heads', 'hd1'], ['cams', 'c1'], ['valvetrain', 'vt1']],
+      [['heads', 'hd2'], ['cams', 'c2'], ['valvetrain', 'vt2']],
+      [['heads', 'hd3'], ['cams', 'c3'], ['valvetrain', 'vt3']]],
+    bottom: [
+      [['pistons', function (i) { return boosted(i) ? 'p1' : 'p2'; }], ['rods', 'r1'], ['oiling', 'o1']],
+      [['pistons', function (i) { return boosted(i) ? 'p1' : 'p2'; }], ['rods', 'r2'], ['crank', 'k1'], ['block', 'b1'], ['oiling', 'o1']],
+      [['pistons', 'p3'], ['rods', 'r3'], ['crank', 'k2'], ['block', 'b2'], ['oiling', 'o2']]],
+    fuel: [
+      [['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)]],
+      [['fueltype', 'e85'], ['ignition', 'ig2'], ['ecu', 'ecu2'], ['injectors', fuelFor('injectors', 2)], ['fuelpump', fuelFor('fuelpump', 2)]],
+      [['fueltype', 'e85'], ['ignition', 'ig3'], ['ecu', 'ecu3'], ['injectors', fuelFor('injectors', 3)], ['fuelpump', fuelFor('fuelpump', 3)]]],
+    power: [
+      [['fi', turboFor(1.5)], ['ic', 'ic1'], ['wastegate', 'wg1'], ['bov', 'bov1'], ['launch', 'l1']],
+      [['fi', turboFor(2.5)], ['ic', 'ic2'], ['wastegate', 'wg2'], ['bov', 'bov1'], ['launch', 'l1']],
+      [['fi', turboFor(4, true)], ['ic', 'ic3'], ['wastegate', 'wg2'], ['bov', 'bov2'], ['launch', 'l2']]],
+    drive: [
+      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', 'tcl'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', 'tcm'], ['transbrake', 'tb1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', 'tch'], ['transbrake', 'tb1'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)]]],
+    susp: [
+      [['springs', 'sp1'], ['shocks', 'sh1'], ['rearsusp', 'rs1'], ['chassis', 'cg1']],
+      [['springs', 'sp2'], ['shocks', 'sh2'], ['rearsusp', 'rs2'], ['chassis', 'cg2'], ['frontsusp', 'fs1']],
+      [['springs', 'sp3'], ['shocks', 'sh3'], ['rearsusp', 'rs3'], ['chassis', 'cg3'], ['frontsusp', 'fs2'], ['wheeliebar', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? null : 'wb1'; }]]],
+    tires: [
+      [['rtires', 'dr_275'], ['wheels', 'wh1']],
+      [['rtires', 'dr_315'], ['wheels', 'wh2'], ['brakes', 'br1']],
+      [['rtires', 'sl_31'], ['wheels', 'wh3'], ['brakes', 'br2'], ['ftires', 'ft1']]],
+    body: [
+      [['weight', 'w1'], ['battery', 'bt1']],
+      [['weight', 'w2'], ['battery', 'bt2']],
+      [['weight', 'w3'], ['battery', 'bt2']]]
+  };
+  // boost a package leaves the car on, if it fits a turbo / blower
+  DR.PKG_BOOST = [10, 15, 20];
+  // the full-car package fits the power adders first, so the bottom end
+  // and fuel pick parts for a boosted engine
+  DR.PKG_ORDER = ['power', 'engine', 'top', 'bottom', 'fuel', 'drive', 'susp', 'tires', 'body'];
+
+  // where an option ranks in its category (higher = better), for 'never
+  // downgrade' checks
+  function rank(cat, inst, id) {
+    if (cat === 'fi') { var f = DR.FI[id]; return f.type === 'none' ? 0 : f.flow; }
+    if (cat === 'rtires') return DR.TIRE_SHOP.indexOf(id);
+    if (cat === 'diff') return ['open', 'lsd', 'spool'].indexOf(id);
+    if (cat === 'trans') return DR.TRANS[id].maxTq;
+    var opts = DR.partOptions(cat, inst);
+    for (var i = 0; i < opts.length; i++) if (opts[i].id === id) return i;
+    return -1;
+  }
+  // The parts a package would fit to this car: [{cat, id, opt}], plus the
+  // car as it would be afterwards. Skips parts that do not fit and anything
+  // already as good or better.
+  DR.packagePlan = function (inst, groups, tier) {
+    var copy = JSON.parse(JSON.stringify(inst)), steps = [];
+    copy.parts = copy.parts || {}; copy.tune = copy.tune || {};
+    // power packages turn the boost up to suit, within the fuel's knock
+    // limit, the ignition and the turbo (never below what it was); done
+    // straight after the power parts so the rest is sized for it
+    function setBoost() {
+      var S = DR.buildSpec(copy);
+      if (S.fiType === 'none') return;
+      var want = Math.min(DR.PKG_BOOST[tier], S.knock - 1, S.sparkPsi, S.maxBoost);
+      copy.tune.boost = Math.max(S.boostSet, Math.round(want * 2) / 2);
+    }
+    var boostPkg = groups.indexOf('power') >= 0;
+    groups.forEach(function (gid) {
+      if (gid !== 'power' && boostPkg && steps.length) setBoost();
+      (DR.PACKAGES[gid] || [])[tier].forEach(function (e) {
+        var cat = e[0], id = typeof e[1] === 'function' ? e[1](copy) : e[1];
+        if (!id || !DR.partApplies(cat, copy)) return;
+        var cur = DR.partId(cat, copy);
+        if (rank(cat, copy, id) <= rank(cat, copy, cur)) return;
+        var opt = DR.getOption(cat, copy, id);
+        if (!opt || opt.id !== id) return;
+        if (cat === 'fi') delete copy.tune.boost;
+        if (id === DR.stockPart(cat, copy)) delete copy.parts[cat]; else copy.parts[cat] = id;
+        steps.push({ cat: cat, id: id, opt: opt });
+        if (boostPkg && (cat === 'ignition' || cat === 'fueltype' || cat === 'wastegate')) setBoost();
+      });
+    });
+    if (boostPkg && steps.length) setBoost();
+    var price = steps.reduce(function (a, s) { return a + (s.opt.price || 0); }, 0);
+    return { steps: steps, after: copy, full: price, price: Math.round(price * (1 - DR.PKG_DISCOUNT) / 50) * 50 };
+  };
+
   // Older builds used combined parts (engine internals, fuel system, cams
   // with springs). Expands a parts map to today's catalog, keeping what the
   // old part did. Also used for the rivals' builds.

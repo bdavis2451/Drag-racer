@@ -44,6 +44,10 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
     lightweight brakes.
   - **Weight:** weight reduction up to a tube chassis, and battery relocation.
   - The shop and install bay flag the parts holding a build back with a red "!".
+  - **Quick upgrade packages** (like Need for Speed: Underground 2): Street, Pro and Extreme
+    kits for each shop group or the whole car, 10% off. The turbo, fuel system, gearbox,
+    clutch and axles are sized to the car's power, boost is set to suit, and parts you
+    already have that are as good or better are skipped.
 - **Tuning:** boost, launch RPM, launch throttle, throttle ramp, traction control,
   shift point, final drive, individual gear ratios, tire pressure, spring rates,
   shock rebound and compression, anti-squat, wheelie-bar height, and nitrous delay and ramp.

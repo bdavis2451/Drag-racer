@@ -217,6 +217,22 @@
     G.save();
     return true;
   };
+  // A quick upgrade package (DR.packagePlan): pay the package price, then
+  // each part goes on the car (at its share of the discount) and anything
+  // it replaces goes to the shelf. Leaves the boost where the package set it.
+  G.buyPackage = function (inst, plan) {
+    if (!plan.steps.length || !G.canAfford(plan.price)) return false;
+    G.pay(plan.price);
+    var k = plan.full ? plan.price / plan.full : 1;
+    plan.steps.forEach(function (s) {
+      var item = { uid: G.state.uid++, cat: s.cat, id: s.id, price: Math.round((s.opt.price || 0) * k), eng: G.isEngineBound(s.cat) ? inst.engine : undefined };
+      G.state.inv.push(item);
+      G.installPart(inst, item.uid);
+    });
+    if (plan.after.tune && plan.after.tune.boost != null) inst.tune.boost = plan.after.tune.boost;
+    G.save();
+    return true;
+  };
   G.sellPart = function (uid) {
     var inv = G.state.inv;
     for (var i = 0; i < inv.length; i++) if (inv[i].uid === uid) {

@@ -363,13 +363,16 @@
     // jump only when arriving (a refresh replays the same argument)
     if (jump && !UI.refreshing) { shopCat = jump; DR.PART_GROUPS.forEach(function (g) { if (g.cats.indexOf(jump) >= 0) shopGroup = g.id; }); }
     var group = groupById(shopGroup), weak = DR.bottlenecks(G.spec(inst));
-    if (group.cats.indexOf(shopCat) < 0) shopCat = firstCat(group, inst);
-    var rail = h('div', { class: 'srail' }, DR.PART_GROUPS.map(function (g) {
+    if (group && group.cats.indexOf(shopCat) < 0) shopCat = firstCat(group, inst);
+    var rail = h('div', { class: 'srail' }, h('div', { class: 'srail-i pkg' + (shopGroup === 'pkg' ? ' on' : ''), onclick: function () { shopGroup = 'pkg'; UI.refresh(); } },
+      iconEl('g_shop', 4, '', 26), h('span', {}, 'Packages')), DR.PART_GROUPS.map(function (g) {
       var hot = g.cats.some(function (c) { return weak[c]; });
       return h('div', { class: 'srail-i' + (g.id === shopGroup ? ' on' : '') + (hot ? ' hot' : ''), onclick: function () { shopGroup = g.id; shopCat = firstCat(g, inst); UI.refresh(); } },
         iconEl(g.icon || g.cats[0], 2, '', 26), h('span', {}, g.name));
     }), h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Body); } }, iconEl('aero', 4, '', 26), h('span', {}, 'Body Kits')),
       h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Paint); } }, iconEl('fueltype', 1, '', 26), h('span', {}, 'Paint')));
+    if (shopGroup === 'pkg') return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts); }, 'small blue')),
+      h('div', { class: 'shopwrap' }, rail, packagesMain(inst)));
     var chips = h('div', { class: 'schips' }, group.cats.map(function (c) {
       var fits = DR.partApplies(c, inst);
       return btn((weak[c] ? '! ' : '') + DR.catName(c), function () { shopCat = c; UI.refresh(); }, 'chip' + (c === shopCat ? ' on' : '') + (fits ? '' : ' nofit') + (weak[c] ? ' hot' : ''));
@@ -393,6 +396,73 @@
     return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts, shopCat); }, 'small blue')),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, storeHead(), chips, note, grid)));
   };
+
+  // ---------------------------------------------------------------- PACKAGES
+  // Quick upgrade kits (Street / Pro / Extreme per shop group, or the whole
+  // car): one tap buys and fits a matched set of parts at a discount.
+  var PKG_LVL = [2, 3, 5];
+  function pkgGroups() { return [{ id: 'all', name: 'Full Car', groups: DR.PKG_ORDER }].concat(DR.PKG_ORDER.map(function (gid) { var g = groupById(gid); return { id: gid, name: g.name, groups: [gid], icon: g.icon }; })); }
+  function pkgLocked(plan) { var l = plan.steps.filter(function (s) { return !G.partUnlocked(s.cat, s.opt.lvl); }); return l.length ? l : null; }
+  function pkgCard(inst, pg, t) {
+    var plan = DR.packagePlan(inst, pg.groups, t), tier = DR.PKG_TIERS[t], lvl = PKG_LVL[t], locked = pkgLocked(plan);
+    var done = !plan.steps.length;
+    return h('div', { class: 'pcard pkgcard l' + lvl + (locked ? ' locked' : '') + (done ? ' inst' : ''), onclick: function () { if (!done) pkgModal(inst, pg, t, plan); } },
+      h('div', { class: 'plvl' }, tier.name),
+      h('div', { class: 'pname' }, tier.name + ' ' + (pg.id === 'all' ? 'Build' : 'Package')),
+      done ? h('span', { class: 'gain dim' }, 'all fitted') : h('div', { class: 'dim', style: { fontSize: '15px' } }, plan.steps.length + ' parts'),
+      done ? null : pkgGain(inst, plan),
+      h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 LOCKED') : done ? h('span', { class: 'tag g' }, 'ON CAR') :
+        h('span', { class: 'price' + (G.canAfford(plan.price) ? '' : ' bad') }, DR.money(plan.price)),
+        !locked && !done ? h('span', { class: 'tag b' }, '-' + Math.round(DR.PKG_DISCOUNT * 100) + '%') : null));
+  }
+  function pkgGain(inst, plan) {
+    var S0 = G.spec(inst), S1 = DR.buildSpec(plan.after), out = [];
+    var dhp = Math.round(S1.peakHp + S1.nosHp - S0.peakHp - S0.nosHp), dlb = Math.round((S1.m - S0.m) * 2.2046);
+    if (dhp) out.push(h('span', { class: dhp > 0 ? 'good' : 'bad' }, (dhp > 0 ? '+' : '') + dhp + 'hp'));
+    if (dlb) out.push(h('span', { class: dlb < 0 ? 'good' : 'bad' }, (dlb > 0 ? '+' : '') + dlb + 'lb'));
+    var rk = Math.max(S1.risk.engine, S1.risk.trans, S1.risk.axle);
+    if (rk > 0.005) out.push(h('span', { class: 'bad' }, '⚠' + Math.round(rk * 100) + '%'));
+    return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'handling & grip');
+  }
+  function packagesMain(inst) {
+    var main = h('div', { class: 'smain' }, storeHead(),
+      h('div', { class: 'tipline' }, 'Quick upgrades: a matched set of parts in one go, ' + Math.round(DR.PKG_DISCOUNT * 100) + '% off. Parts you already have that are as good or better are skipped; replaced parts go to your shelf.'));
+    pkgGroups().forEach(function (pg, gi) {
+      main.appendChild(h('h2', { style: { marginTop: '10px' } }, pg.name));
+      var grid = h('div', { class: 'pgrid' });
+      main.appendChild(grid);
+      // the full-car row now, the rest a frame or two later
+      var fillRow = function () { [0, 1, 2].forEach(function (t) { grid.appendChild(pkgCard(inst, pg, t)); }); };
+      if (gi === 0) fillRow(); else UI.later(fillRow);
+    });
+    return main;
+  }
+  function pkgModal(inst, pg, t, plan) {
+    var tier = DR.PKG_TIERS[t], lvl = PKG_LVL[t], locked = pkgLocked(plan);
+    var S0 = G.spec(inst), S1 = DR.buildSpec(plan.after), close;
+    var list = h('div', { class: 'pkglist' }, plan.steps.map(function (s) {
+      var lk = !G.partUnlocked(s.cat, s.opt.lvl);
+      return h('div', { class: 'pkgrow' + (lk ? ' bad' : '') }, iconEl(s.cat, s.opt.lvl, s.id, 20), h('span', { class: 'dim' }, DR.catName(s.cat)), h('span', {}, (lk ? '🔒 ' : '') + s.opt.name.replace(' (Factory)', '')));
+    }));
+    close = UI.modal(h('div', { class: 'col pmodal l' + lvl },
+      h('div', { class: 'plvl' }, tier.name + ' • ' + (pg.id === 'all' ? 'Full car' : pg.name)), h('div', { class: 'pix acc' }, tier.name + ' ' + (pg.id === 'all' ? 'Build' : pg.name + ' Package')),
+      UI.statsGrid([
+        ['Power', deltaRow(S0.peakHp + S0.nosHp, S1.peakHp + S1.nosHp, ' hp')],
+        ['Weight', deltaRow(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)],
+        S0.red !== S1.red ? ['Rev limiter', deltaRow(S0.red, S1.red, ' rpm')] : null,
+        S1.fiType !== 'none' ? ['Boost', deltaRow(S0.boostSet, S1.boostSet, ' psi', 1)] : null,
+        ['Parts', plan.steps.length + ' (' + DR.money(plan.full) + ' separately)'],
+        ['Package price', DR.money(plan.price), 'good']
+      ]),
+      UI.riskBox(S1),
+      locked ? h('div', { class: 'warnbox' }, '🔒 ' + locked.length + ' of these parts unlock as you win career races.') :
+        h('div', { class: 'row' }, btn('Buy & Install ' + DR.money(plan.price), function () {
+          if (!G.canAfford(plan.price)) return UI.toast('Not enough money');
+          G.buyPackage(inst, plan); A.cash(); close(); UI.toast(tier.name + ' ' + (pg.id === 'all' ? 'build' : 'package') + ' installed!'); UI.refresh();
+        }, 'go grow' + (G.canAfford(plan.price) ? '' : ' disabled')), btn('Close', function () { close(); }, 'small')),
+      h('h3', {}, 'IN THIS PACKAGE'), list,
+      locked ? btn('Close', function () { close(); }, 'small') : null));
+  }
 
   var storeImg = null;
   function storeHead() {
