@@ -52,7 +52,7 @@ for s in srcs:
     good = (s['conf'] > 0.4) & (s['loud'] > 0.2)
     cover.append(len(np.unique(np.round(np.log(s['rpm'][good]) / np.log(SP) * 2))))
 rank = np.argsort(-np.array(cover))
-spref = {int(si): 1.0 - 0.12 * min(3, r) for r, si in enumerate(rank)}
+spref = {int(si): 1.0 - 0.3 * min(3, r) for r, si in enumerate(rank)}
 
 hp3k = butter(4, 3000, 'hp', fs=SR, output='sos')
 # highs that jump far above the recording's usual level around them: a pop,
@@ -218,71 +218,104 @@ def clean_runs(y, N, drop=4.5):
     if st < len(lv): runs.append((lv[st][1], len(y)))
     return runs
 
+# how much a loop's voice wobbles by itself (its spectral shape, level taken
+# out, moving at 2-20 Hz): a loop stitched from stretches that don't quite
+# agree, held at one rpm (a 2-step, the limiter), sounds like a garbled word
+def wobble(y):
+    z = np.tile(y, int(np.ceil(1.6 * SR / len(y))) + 1)[:int(1.6 * SR)]
+    N, H = 2048, 320
+    fr = np.lib.stride_tricks.sliding_window_view(z, N)[::H] * np.hanning(N)
+    S_ = np.abs(np.fft.rfft(fr, axis=1)) ** 2; f = np.fft.rfftfreq(N, 1 / SR)
+    ed = np.geomspace(150, 6000, 13)
+    B = np.stack([S_[:, (f >= a) & (f < b)].sum(1) for a, b in zip(ed[:-1], ed[1:])], 1)
+    Ld = 10 * np.log10(B + 1e-12); Ld = Ld - Ld.mean(1, keepdims=True)
+    sh = np.stack([smooth(Ld[:, i], 5) for i in range(Ld.shape[1])], 1)
+    w = sh - np.stack([smooth(sh[:, i], 50) for i in range(sh.shape[1])], 1)
+    return float(np.mean(np.std(w[25:-25], 0)))
 def build(P, layer):
     if P > E('REALCAP', 1e9): return None
     dur = DUR_ON if layer == 'on' else DUR_OFF
     N = SR * 120 / P                       # engine cycle, samples
     C = int(np.clip(N, 0.015 * SR, 0.05 * SR))
-    pieces, got, used = [], 0, []
-    taken = []
     cands = stretches(P, layer) + [c for c in stretches(P, layer, TOL * 1.7) if c[0] > 0]
-    for sc, si, i0, i1 in cands:
-        if got >= dur * SR + C or len(pieces) >= 10: break
-        if any(si == q and i0 <= b1 and i1 >= a1 for q, a1, b1 in taken): continue
-        y = flatten(srcs[si], i0, i1, P)
-        if y is None or len(y) < max(E("MINCYC", 2.0) * N, 2 * C + 16): continue
-        pr = periodicity(y, N)
-        if pr < E('PMIN', 0.4): continue
-        if burst_src(srcs[si], int(srcs[si]['t'][i0] * SR), int(srcs[si]['t'][i1] * SR)) > 1: continue
-        y = detrend(y, N)
-        if cstep(y, N) > E('CSTEP', 1.5): continue      # rough: level jumps cycle to cycle
-        # a cycle that drops well below the rest (a gear change, a limiter
-        # cut, a misfire) would be a hole in the loop: keep the runs between
-        for a_, b_ in clean_runs(y, N):
-            seg = y[a_:b_]
-            if len(seg) < max(E("MINCYC", 2.0) * N, 2 * C + 16) or got >= dur * SR + C: continue
-            seg = seg / (np.sqrt(np.mean(seg ** 2)) + 1e-9) * 0.1
-            pieces.append(seg[:int(dur * SR + 3 * C + N) - got]); got += len(pieces[-1]) - C
-        taken.append((si, i0, i1))
-        used.append((srcs[si]['name'][:8], round(len(y) / SR, 2), round(pr, 2), round(cstep(detrend(y, N), N), 2)))
-    if got < MINDUR * SR or not pieces: return None
-    # timbre: each stretch toward the loop's average
-    envs = [env_db(p) for p in pieces]; me = np.mean(envs, axis=0)
-    pieces = [eq_to(p, e, me, 4.0) for p, e in zip(pieces, envs)]
-    # join, each next stretch started at the offset whose waveform best
-    # continues the last one (keeps the firing pulses in step)
-    y = pieces[0]
-    for p in pieces[1:]:
-        lag, c = xcorr_best(y[-C:], p, min(int(N) + 1, len(p) - C - 1))
-        b = p[lag:]
+    def gather(cands):
+        pieces, got, used, taken = [], 0, [], []
+        for sc, si, i0, i1 in cands:
+            if got >= dur * SR + C or len(pieces) >= 10: break
+            if any(si == q and i0 <= b1 and i1 >= a1 for q, a1, b1 in taken): continue
+            y = flatten(srcs[si], i0, i1, P)
+            if y is None or len(y) < max(E("MINCYC", 2.0) * N, 2 * C + 16): continue
+            pr = periodicity(y, N)
+            if pr < E('PMIN', 0.4): continue
+            if burst_src(srcs[si], int(srcs[si]['t'][i0] * SR), int(srcs[si]['t'][i1] * SR)) > 1: continue
+            y = detrend(y, N)
+            if cstep(y, N) > E('CSTEP', 1.5): continue      # rough: level jumps cycle to cycle
+            # a cycle that drops well below the rest (a gear change, a limiter
+            # cut, a misfire) would be a hole in the loop: keep the runs between
+            for a_, b_ in clean_runs(y, N):
+                seg = y[a_:b_]
+                if len(seg) < max(E("MINCYC", 2.0) * N, 2 * C + 16) or got >= dur * SR + C: continue
+                seg = seg / (np.sqrt(np.mean(seg ** 2)) + 1e-9) * 0.1
+                pieces.append(seg[:int(dur * SR + 3 * C + N) - got]); got += len(pieces[-1]) - C
+            taken.append((si, i0, i1))
+            used.append((srcs[si]['name'][:8], round(len(y) / SR, 2), round(pr, 2), round(cstep(detrend(y, N), N), 2)))
+        return pieces, got, used
+    # one car per loop: stretches of different cars strung together change
+    # voice every tenth of a second, which held at one rpm repeats like a
+    # garbled word. The recording with the most material here (preferring
+    # the bank's main one) is used; another only if it has none.
+    def assemble(pieces, used):
+        # timbre: each stretch toward the loop's average
+        envs = [env_db(p) for p in pieces]; me = np.mean(envs, axis=0)
+        pieces = [eq_to(p, e, me, 6.0) for p, e in zip(pieces, envs)]
+        # join, each next stretch started at the offset whose waveform best
+        # continues the last one (keeps the firing pulses in step)
+        y = pieces[0]
+        for p in pieces[1:]:
+            lag, c = xcorr_best(y[-C:], p, min(int(N) + 1, len(p) - C - 1))
+            b = p[lag:]
+            r = np.linspace(0, 1, C, endpoint=False).astype(np.float32)
+            fo, fi = xfade(r, c)
+            y = np.concatenate([y[:-C], y[-C:] * fo + b[:C] * fi, b[C:]])
+        # close the loop: an end point whose continuation looks like the start
+        if len(y) < 2 * C + N + 8: return None
         r = np.linspace(0, 1, C, endpoint=False).astype(np.float32)
-        fo, fi = xfade(r, c)
-        y = np.concatenate([y[:-C], y[-C:] * fo + b[:C] * fi, b[C:]])
-    # close the loop: an end point whose continuation looks like the start
-    if len(y) < 2 * C + N + 8: return None
-    r = np.linspace(0, 1, C, endpoint=False).astype(np.float32)
+        best = None
+        # the loop holds exactly a whole number of engine cycles, so its pitch
+        # is exact and every loop keeps the engine's cycle phase; of the last few
+        # cycle ends, the one that blends into the start best is used
+        j0 = int((len(y) - C - 1) // N)
+        for back in range(0, 4):
+            j = j0 - back
+            if j < 3 or (back and j * N < 2 * C + N): break     # 3+ cycles: one cycle over and over is a buzz
+            L = int(round(j * N))
+            if L < C or L + C > len(y): continue
+            a_, b_ = y[:C], y[L:L + C]
+            c = float(np.dot(a_, b_) / (np.linalg.norm(a_) * np.linalg.norm(b_) + 1e-9))
+            fo, fi = xfade(r, c)
+            cand = y[:L].copy(); cand[:C] = y[L:L + C] * fo + y[:C] * fi
+            lv = [q[0] for q in cyc_levels(np.concatenate([cand[-int(2 * N):], cand[:int(2 * N)]]), N)[0]]
+            dip = (np.median(lv) - min(lv)) if lv else 0
+            sc = c - 0.15 * max(0, dip - 2)
+            if best is None or sc > best[0]: best = (sc, cand)
+        if best is None: return None
+        loop = best[1]
+        if periodicity(np.concatenate([loop, loop]), N) < E('LPMIN', 0.3): return None   # no clear pitch
+        return dict(y=loop, rpm=P, real=True, used=used, per=cstep(np.concatenate([loop, loop]), N))
+    amt = {}
+    for sc, si, i0, i1 in cands: amt[si] = amt.get(si, 0) + (i1 - i0) * spref[si]
+    # first recording (in that order) whose loop is steady enough; else the
+    # steadiest one made
     best = None
-    # the loop holds exactly a whole number of engine cycles, so its pitch
-    # is exact and every loop keeps the engine's cycle phase; of the last few
-    # cycle ends, the one that blends into the start best is used
-    j0 = int((len(y) - C - 1) // N)
-    for back in range(0, 4):
-        j = j0 - back
-        if j < 3 or (back and j * N < 2 * C + N): break     # 3+ cycles: one cycle over and over is a buzz
-        L = int(round(j * N))
-        if L < C or L + C > len(y): continue
-        a_, b_ = y[:C], y[L:L + C]
-        c = float(np.dot(a_, b_) / (np.linalg.norm(a_) * np.linalg.norm(b_) + 1e-9))
-        fo, fi = xfade(r, c)
-        cand = y[:L].copy(); cand[:C] = y[L:L + C] * fo + y[:C] * fi
-        lv = [q[0] for q in cyc_levels(np.concatenate([cand[-int(2 * N):], cand[:int(2 * N)]]), N)[0]]
-        dip = (np.median(lv) - min(lv)) if lv else 0
-        sc = c - 0.15 * max(0, dip - 2)
-        if best is None or sc > best[0]: best = (sc, cand)
-    if best is None: return None
-    loop = best[1]
-    if periodicity(np.concatenate([loop, loop]), N) < E('LPMIN', 0.3): return None   # no clear pitch
-    return dict(y=loop, rpm=P, real=True, used=used, per=cstep(np.concatenate([loop, loop]), N))
+    for si in sorted(amt, key=lambda q: -amt[q])[:int(E('MAXSRC', 4))]:
+        pieces, got, used = gather([c for c in cands if c[1] == si])
+        if got < MINDUR * SR or not pieces: continue
+        lp = assemble(pieces, used)
+        if lp is None: continue
+        lp['wob'] = wobble(lp['y'])
+        if best is None or lp['wob'] < best['wob']: best = lp
+        if lp['wob'] <= E('WOBMAX', 1.5): break
+    return best
 
 def psola(base, P0, P1):
     """re-space a constant-pitch loop's firing pulses from P0 to P1 rpm
@@ -407,7 +440,20 @@ _dbg('built')
 for layer in ('on', 'off'):
     for k_, lp in bank[layer].items(): lp['y'] = declick(lp['y'])
 _dbg('declick')
-# fill gaps and the top from the nearest real loop below (or above)
+for layer in ('on', 'off'):
+    for k_ in list(bank[layer]):
+        bank[layer][k_]['wob'] = wobble(bank[layer][k_]['y'])
+    # the unsteady ones are remade from a steady neighbour (if enough are left)
+    # (relative to the bank: a boxer's burble is a wobble that is its voice;
+    # only the loops much rougher than the engine's others go)
+    wv = [lp['wob'] for lp in bank[layer].values()]
+    thr = max(E('WOBMAX', 1.5), 1.35 * float(np.median(wv))) if wv else 9
+    rough = [k_ for k_, lp in bank[layer].items() if lp['wob'] > thr]
+    if len(bank[layer]) - len(rough) >= 4 and not os.environ.get('NODROP'):
+        for k_ in rough: del bank[layer][k_]
+    if VERB: print(layer, 'dropped unsteady', rough, sorted((k_, round(lp['wob'], 2)) for k_, lp in bank[layer].items()))
+# fill gaps and the top from the nearest real loop below (or above): the
+# closest, longest and steadiest
 for layer in ('on', 'off'):
     real = sorted(bank[layer])
     if not real: continue
@@ -415,7 +461,7 @@ for layer in ('on', 'off'):
     for P in ladder:
         Pr = round(P)
         if P > top or Pr in bank[layer] or P < real[0] / 1.3: continue
-        near = min(real, key=lambda q: abs(np.log(q / P)) * 3 - min(0.9, len(bank[layer][q]['y']) / SR) * 0.6)
+        near = min(real, key=lambda q: abs(np.log(q / P)) * 3 - min(0.9, len(bank[layer][q]['y']) / SR) * 0.6 + 0.5 * bank[layer][q]['wob'])
         if abs(np.log(near / P)) > np.log(E('MAXEXT', 2.2)): continue
         lp = bank[layer][near]
         bank[layer][Pr] = dict(y=extend(lp['y'], lp['rpm'], P), rpm=P, real=False, used=['from %d' % near], per=0)
@@ -423,9 +469,10 @@ for layer in ('on', 'off'):
 # lengthen it by stringing its own engine cycles together in a shuffled
 # order. Every cycle is the same length and in the same phase, so each joins
 # the next on a short crossfade.
-def lengthen(y, P, target=E('LMIN', 0.45), seed=0):
+def lengthen(y, P, target=E('LMIN', 0.45), seed=0, force=False):
     N = SR * 120 / P; m = max(1, int(round(len(y) / N)))
-    if len(y) >= target * SR or m < 3: return y
+    if force: target = max(target, len(y) / SR)
+    if (len(y) >= target * SR and not force) or m < 3: return y
     N = len(y) / m; X = max(8, int(N / 4))
     rng = np.random.default_rng(seed + int(P)); M = int(np.ceil(target * SR / N))
     order, last = [], -1
@@ -449,24 +496,43 @@ def lengthen(y, P, target=E('LMIN', 0.45), seed=0):
     return out[:L].astype(np.float32)
 for layer in ('on', 'off'):
     for k_, lp in bank[layer].items():
-        if not lp.get('borrowed'): lp['y'] = lengthen(lp['y'], lp['rpm'])
+        # loops made from the same real one would comb against each other
+        # when two play together (a flanging, talking sound): each gets its
+        # cycles in its own order
+        if not lp.get('borrowed'): lp['y'] = lengthen(lp['y'], lp['rpm'], force=not lp['real'])
 # a layer missing at an rpm the other layer has: borrow it
 for layer, other in (('on', 'off'), ('off', 'on')):
     for Pr, lp in list(bank[other].items()):
         if Pr not in bank[layer] and lp['real'] and (layer == 'on' or Pr < RED * 0.92) and not bank[layer]:
             bank[layer][Pr] = lp
 _dbg('lengthen')
-# smooth timbre across the ladder: EQ each loop gently toward the average
-# of itself and its neighbours, so sweeping rpm doesn't hop between colours
+# smooth timbre along the ladder: each loop's spectral shape is EQ'd onto a
+# smooth trend over rpm (a local straight-line fit across the neighbouring
+# loops), so sweeping the revs glides through one engine's voice instead of
+# hopping between colours, and each loop is set to the same perceived
+# loudness (energy above ~300 Hz, which the ear weighs most; plain RMS is all
+# bass and let the highs jump 10-18 dB between neighbours)
+hp_loud = butter(2, 300, 'hp', fs=SR, output='sos')
+def loudness(y):
+    h = sosfiltfilt(hp_loud, np.concatenate([y, y, y]).astype(np.float64))[len(y):2 * len(y)]
+    return float(np.sqrt(np.mean(h ** 2)) + 1e-9)
 for layer in ('on', 'off'):
-    ks = sorted(bank[layer]); envs = {k: env_db(bank[layer][k]['y']) for k in ks}
+    ks = sorted(bank[layer])
+    if not ks: continue
+    envs = np.array([env_db(bank[layer][k]['y']) for k in ks])
+    shp = envs - envs.mean(1, keepdims=True)                       # shape, level removed
+    x = np.log(np.array(ks, float)) / np.log(SP)                    # ladder steps
+    sig = E('TSMW', 2.0)
     for j, k in enumerate(ks):
-        nb = [envs[ks[q]] for q in range(max(0, j - 1), min(len(ks), j + 2))]
+        w = np.exp(-0.5 * ((x - x[j]) / sig) ** 2)
+        X = np.stack([np.ones_like(x), x - x[j]], 1); WX = X * w[:, None]
+        coef = np.linalg.lstsq(WX.T @ X + 1e-6 * np.eye(2), WX.T @ shp, rcond=None)[0]
+        tgt = coef[0]                                               # the trend's value here
         y = bank[layer][k]['y']
         # EQ a wrapped copy so the loop point stays seamless
-        yy = eq_to(np.concatenate([y, y, y]), envs[k], np.mean(nb, axis=0), 3.0)[len(y):2 * len(y)]
+        yy = eq_to(np.concatenate([y, y, y]), shp[j], tgt, E('TSML', 10.0))[len(y):2 * len(y)]
         yy = level(yy, SR * 120 / k, E('LEVEL', 0.7))
-        bank[layer][k]['y'] = yy / (np.sqrt(np.mean(yy ** 2)) + 1e-9) * 0.1
+        bank[layer][k]['y'] = (yy / loudness(yy) * 0.04).astype(np.float32)
 
 _dbg('eq')
 # whole engine cycles per loop, and the exact rpm that makes

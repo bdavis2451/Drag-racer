@@ -1,7 +1,7 @@
 // Offline runner for the engine-sound worklets (no browser): renders a bank
 // along an rpm/load curve.  usage:
 //   node wk.js loops BANK.json BANK.wav CTRL.json OUT.wav [engsamples.js]
-//   node wk.js grains BANK.json BANK.wav CTRL.json OUT.wav OLD_ENGSAMPLES.js   (the earlier granular player, for A/B)
+//   node wk.js grains BANK.json BANK.wav CTRL.json OUT.wav [old engsamples.js]
 // CTRL.json: {sr: 32000, block: 128, rpm: [...], load: [...]} one value per block
 const fs = require('fs');
 const [mode, bankJ, bankW, ctrlJ, outW, src] = process.argv.slice(2);
@@ -52,7 +52,7 @@ const nb = ctrl.rpm.length, out = new Float32Array(nb * BL);
 const buf = new Float32Array(BL);
 for (let i = 0; i < nb; i++) {
   buf.fill(0);
-  p.process([], [[buf]], { rpm: [ctrl.rpm[i]], load: [ctrl.load[i]], dop: [1] });
+  p.process([], [[buf]], { rpm: [ctrl.rpm[i]], load: [ctrl.load[i]], dop: [1], cut: [ctrl.cut ? ctrl.cut[i] : 0] });
   out.set(buf, i * BL);
 }
 writeWav(outW, out, SR);

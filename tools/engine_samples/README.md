@@ -9,7 +9,11 @@ most racing games do: a ladder of seamless loops, one every 10% of rpm, each
 holding the engine at one steady rpm, for pulling (throttle open) and
 coasting. The two loops either side of the engine's rpm play together,
 resampled a few percent to land on it and crossfaded by distance; throttle
-blends pulling and coasting. Nothing is spliced while playing.
+blends pulling and coasting; a soft spread over the nearest three loops
+keeps fast rpm changes gliding. Each loop now and then jumps to another of
+its cycles on a short crossfade, so a held rpm (a 2-step, the limiter) never
+repeats a pattern. An ignition cut (limiter, 2-step, shift) swaps the pulling
+sound for the coasting one, crisply, for the cut.
 
 An earlier version strung single engine cycles together at run time
 (granular, NFSU2 "Ginsu" style). With these recordings - short YouTube revs,
@@ -37,6 +41,10 @@ rpm with re-spaced copies of a few cycles, which sounded choppy and buzzy.
      takes out each stretch's crescendo (revs climbing get louder; joined
      stretches would otherwise make a sawtooth of level) and splits it around
      any cycle that drops out (a gear change, a limiter cut);
+   - builds each loop from one car only (stretches of different cars strung
+     together change voice every tenth of a second, which held at one rpm
+     sounds like a garbled word), trying the bank's main recording first and
+     the next one if the loop comes out unsteady;
    - EQs the stretches to their average and joins them with phase-aligned
      crossfades (amplitude- or power-complementary by how alike the sides
      are), then closes the loop on a whole number of engine cycles (3+);
@@ -45,10 +53,17 @@ rpm with re-spaced copies of a few cycles, which sounded choppy and buzzy.
      (pitch-synchronous overlap-add, so the pulse shape and exhaust
      resonance stay the car's) and 30% by plain resampling - the mix that
      came closest to real high-rpm loops in a held-out test;
-   - lengthens loops under 0.45 s by stringing their own cycles together in
-     a shuffled order (no fast repeat), evens out timbre between neighbouring
-     loops and cycle-to-cycle level, and lines every loop's engine cycle up
-     with its neighbour's, so loops crossfading fire in step;
+   - measures how much each loop's spectral shape wobbles by itself (2-20 Hz,
+     level removed; real engines held steady measure about 1.0) and remakes
+     the ones far rougher than the engine's others from a steady neighbour;
+   - lengthens loops under 0.45 s, and reshuffles every made loop, by
+     stringing its own cycles together in a new order (no fast repeat, and
+     loops made from one real loop don't comb against each other);
+   - EQs every loop's spectral shape onto a smooth trend along the ladder and
+     sets it to the same perceived loudness (energy above ~300 Hz), so a fast
+     rev up or down glides through one voice; evens cycle-to-cycle level, and
+     lines every loop's engine cycle up with its neighbour's, so loops
+     crossfading fire in step;
    - writes `lbanks/ID.ogg` (Vorbis, 32 kHz) and `lbanks/ID.json` (per loop:
      offset, length, rpm, layer, real/made, engine cycles, likeness to the
      next loop up, which sets the crossfade law).

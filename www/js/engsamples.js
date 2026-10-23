@@ -32,7 +32,8 @@
         return [
           { name: 'rpm', defaultValue: 900, minValue: 0, maxValue: 20000, automationRate: 'k-rate' },
           { name: 'load', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-          { name: 'dop', defaultValue: 1, minValue: 0.5, maxValue: 2, automationRate: 'k-rate' }
+          { name: 'dop', defaultValue: 1, minValue: 0.5, maxValue: 2, automationRate: 'k-rate' },
+          { name: 'cut', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' }
         ];
       }
       constructor() {
@@ -55,6 +56,12 @@
         this.tg = new Float32Array(n);
         this.q = new Float64Array(n);       // where each loop is, in engine cycles
         this.on = new Uint8Array(n); this.act = [];
+        // every so often each loop jumps to another of its cycles (on a short
+        // crossfade), so an rpm held for long - a 2-step, the limiter, a
+        // cruise - never repeats the same stretch over and over
+        this.jt = new Float64Array(n); this.qo = new Float64Array(n); this.xf = new Int32Array(n);
+        this.XF = Math.round(sampleRate * 0.012); this.jump = d.jump !== false;
+        this.spread = d.spread == null ? 0.7 : d.spread;    // in ladder steps
         this.ph = 0;                        // the engine's cycle phase (0-1)
         this.gk = 1 - Math.exp(-1 / (sampleRate * 0.01));   // ~10 ms crossfade glide
         // doubling (a V12 from an inline six): a second read half a firing
@@ -69,6 +76,24 @@
         if (i1 >= L) i1 -= L;
         var y0 = P_[st + i0], y1 = P_[st + i1], y2 = P_[st + i2], y3 = P_[st + i3];
         return y1 + 0.5 * f * (y2 - y0 + f * (2 * y0 - 5 * y1 + 4 * y2 - y3 + f * (3 * (y1 - y2) + y3 - y0)));
+      }
+      // a soft spread over the nearest few loops (by distance in pitch), so a
+      // fast rev up or down glides through their voices instead of flicking
+      // from one to the next; equal power, corrected for how alike they are
+      weighSpread(list, target, w) {
+        var tg = this.tg, rpm = this.rpm, S = this.spread, lt = Math.log(target), n = list.length, i, k;
+        var lo = 0, hi = n - 1;
+        while (hi - lo > 1) { var md = (lo + hi) >> 1; if (rpm[list[md]] <= target) lo = md; else hi = md; }
+        var a = Math.max(0, lo - 2), b = Math.min(n - 1, hi + 2), ws = [], sp = Math.log(1.1) * S, tot = 0, cr = 0;
+        for (i = a; i <= b; i++) {
+          // outside the ladder the end loop takes it all
+          var d = Math.max(0, i === 0 ? Math.log(rpm[list[0]] / target) : 0) || Math.abs(Math.log(rpm[list[i]]) - lt);
+          if ((i === 0 && target < rpm[list[0]]) || (i === n - 1 && target > rpm[list[n - 1]])) d = 0;
+          var x = Math.exp(-0.5 * (d / sp) * (d / sp)); ws.push(x); tot += x * x;
+        }
+        for (k = 0; k + 1 < ws.length; k++) cr += 2 * this.rho[list[a + k]] * ws[k] * ws[k + 1];
+        var nrm = w / Math.sqrt(tot + cr);
+        for (k = 0; k < ws.length; k++) if (ws[k] > 0.02) tg[list[a + k]] += ws[k] * nrm;
       }
       // the two loops either side of the rpm, equal-power by distance in pitch
       weigh(list, target, w) {
@@ -88,16 +113,21 @@
         if (!this.alive) return false;
         out.fill(0);
         if (!this.ready) return true;
-        var target = Math.max(200, P.rpm[0]), load = P.load[0], dop = P.dop[0];
+        var target = Math.max(200, P.rpm[0]), dop = P.dop[0];
+        // ignition cut (rev limiter, 2-step, shift cut): no combustion, so the
+        // pulling sound gives way to the coasting one for the cut
+        var load = P.load[0] * (1 - 0.85 * P.cut[0]);
         this.tg.fill(0);
-        this.weigh(this.lay[0], target, Math.cos(load * Math.PI / 2));
-        this.weigh(this.lay[1], target, Math.sin(load * Math.PI / 2));
+        var W = this.spread ? this.weighSpread : this.weigh;
+        W.call(this, this.lay[0], target, Math.cos(load * Math.PI / 2));
+        W.call(this, this.lay[1], target, Math.sin(load * Math.PI / 2));
         // a loop coming in starts on the engine's current cycle phase, at a
         // random whole cycle (so two loops never line up the same stretch)
         for (i = 0; i < this.tg.length; i++) {
           if (this.tg[i] > 0 && !this.on[i]) {
             this.on[i] = 1; this.act.push(i);
             this.q[i] = this.ph + Math.floor(Math.random() * this.m[i]);
+            this.jt[i] = sampleRate * (0.2 + Math.random() * 0.35); this.xf[i] = 0;
           }
         }
         // engine cycles (two crank turns) per sample
@@ -105,15 +135,26 @@
         for (j = 0; j < act.length; j++) {
           i = act[j];
           var g = this.g[i], tgi = this.tg[i], q = this.q[i], m = this.m[i], st = this.s[i], N = this.n[i] / m, L = this.ni[i];
-          var q2 = this.dbl ? this.dbl + Math.floor(m / 2) : 0;
+          var q2 = this.dbl ? this.dbl + Math.floor(m / 2) : 0, qo = this.qo[i], xf = this.xf[i], XF = this.XF, jt = this.jt[i] - out.length;
+          if (jt <= 0 && xf === 0 && m > 2 && this.jump) {
+            // jump a whole number of cycles: same phase, other material
+            qo = q; q += 1 + Math.floor(Math.random() * (m - 1)); if (q >= m) q -= m;
+            xf = XF; jt = sampleRate * (0.2 + Math.random() * 0.35);
+          }
           for (k = 0; k < out.length; k++) {
             g += (tgi - g) * gk;
             q += dq; if (q >= m) q -= m;
             var v = this.read(st, q * N, L);
             if (q2) { var qq = q + q2; if (qq >= m) qq -= m; v = 0.72 * (v + this.read(st, qq * N, L)); }
+            if (xf > 0) {
+              qo += dq; if (qo >= m) qo -= m;
+              var vo = this.read(st, qo * N, L);
+              if (q2) { var qr = qo + q2; if (qr >= m) qr -= m; vo = 0.72 * (vo + this.read(st, qr * N, L)); }
+              var u = 1 - xf / XF; v = v * Math.sin(u * Math.PI / 2) + vo * Math.cos(u * Math.PI / 2); xf--;
+            }
             out[k] += g * v;
           }
-          this.g[i] = g; this.q[i] = q;
+          this.g[i] = g; this.q[i] = q; this.qo[i] = qo; this.xf[i] = xf; this.jt[i] = jt;
         }
         // the engine phase moves on; loops that faded out leave
         this.ph = (this.ph + dq * out.length) % 1;
@@ -233,10 +274,12 @@
     // designers EQ it); level grows with load and rpm; the limiter chops it
     sm.tone.frequency.setTargetAtTime(sm.cut * (0.5 + 0.5 * on), t, 0.05);
     var lvl = v.vol * sm.lvl * (0.3 + 0.7 * sm.load) * (0.45 + 0.55 * Math.min(1, r / (v.b.red || 7000))) * (1 + (st.nos ? 0.15 : 0));
-    // the rev limiter / shift cut flickers on and off many times a second:
-    // smooth it into a stutter rather than a hard electronic chop
-    sm.cutAmt = (sm.cutAmt || 0) + ((st.cut && thr > 0.5 ? 1 : 0) - (sm.cutAmt || 0)) * 0.3;
-    sm.out.gain.setTargetAtTime(lvl * (1 - 0.5 * sm.cutAmt) * A.SMP_GAIN, t, 0.025);
+    // the rev limiter / 2-step / shift cut: each cut swaps the pulling sound
+    // for the coasting one and drops the level, crisply (a slow swell on
+    // every flicker of the limiter sounds like a wah, not an engine)
+    var cut = st.cut && thr > 0.5 ? 1 : 0;
+    sm.np.get('cut').setTargetAtTime(cut, t, 0.004);
+    sm.out.gain.setTargetAtTime(lvl * (1 - 0.4 * cut) * A.SMP_GAIN, t, cut ? 0.005 : 0.01);
   };
   A.SMP_GAIN = 1.5;
 

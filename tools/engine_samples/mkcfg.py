@@ -28,7 +28,7 @@ for bid in src:
     ro = json.load(open(fn)).get('real_on') or []
     # gate: real recorded loops from near idle to 3200+ rpm
     # (the Viper's recording is sparse, but it is the only V10)
-    if ro and ro[0] <= 1800 and ro[-1] >= 3200 and len(ro) >= (6 if bid == 'v10_viper' else 8): ok[bid] = ro
+    if ro and ro[0] <= 1800 and ro[-1] >= 2900 and len(ro) >= (6 if bid == 'v10_viper' else 8): ok[bid] = ro
 banks, by_engine = {}, {}
 for eng, prefs in PREF.items():
     for b in prefs:
