@@ -81,7 +81,7 @@
   }
 
   // the city map: tap a place to see what races are there, or to go shopping
-  var selPlace = null;
+  var selPlace = null, cityView = null;
   function mapView(inst) {
     var c = G.careerState();
     if (selStage == null || selStage > c.stage) selStage = c.stage;
@@ -97,29 +97,30 @@
     pins.highway = { street: true };
     if (!selPlace) selPlace = next ? DR.cityPlaceOf(next.type).id : 'strip';
     var place = DR.CITY.filter(function (p) { return p.id === selPlace; })[0] || DR.CITY[0];
-    var cv = h('canvas', { class: 'citycv', width: DR.CITY_W, height: DR.CITY_H });
-    var t0 = Date.now(), last = -1;
+    var cv = h('canvas', { class: 'citycv' }), t0 = Date.now(), last = -1, dirty = true;
+    if (!cityView) cityView = DR.cityView();
+    function redraw() { dirty = true; }
     (function frame() {
       if (!cv.isConnected && last >= 0) return;
-      var f = Math.floor((Date.now() - t0) / 100);
-      if (f !== last) { last = f; DR.drawCityMap(cv, pins, selPlace, f / 10); }
+      var f = Math.floor((Date.now() - t0) / 80);
+      if (f !== last || dirty) { last = f; dirty = false; DR.drawCityMap(cv, pins, selPlace, (Date.now() - t0) / 1000, cityView); }
       requestAnimationFrame(frame);
     })();
-    cv.addEventListener('click', function (e) {
-      var r = cv.getBoundingClientRect();
-      var p = DR.cityHit((e.clientX - r.left) / r.width * DR.CITY_W, (e.clientY - r.top) / r.height * DR.CITY_H);
+    var ctl = DR.cityMapControl(cv, cityView, function (p) {
       if (!p) return;
       if (p.id === selPlace && p.go) return UI.show(UI[p.go]);
       selPlace = p.id; A.click(); UI.refresh();
-    });
+    }, redraw);
+    var zoomBar = h('div', { class: 'cityzoom' },
+      btn('+', function () { ctl.zoomBy(1.5); }, 'small'), btn('−', function () { ctl.zoomBy(1 / 1.5); }, 'small'), btn('⤢', function () { ctl.reset(); }, 'small'));
     var wins = G.stageWins(selStage);
     var legend = h('div', { class: 'gsmall dim citylegend' },
-      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg g' }, 'street $'), h('span', { class: 'lg b' }, 'places'),
+      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg g' }, 'street $'), h('span', { class: 'lg b' }, 'shops & home'), h('span', {}, 'drag / pinch to zoom'),
       h('span', {}, 'Stage ' + (selStage + 1) + ': ' + wins + ' / ' + st.events.length + ' won'));
     var spBar = c.sponsor[selStage] ? null : h('div', { class: 'warnbox citysp' }, h('span', { class: 'grow' }, 'No sponsor for stage ' + (selStage + 1) + ' yet. Sponsors pay per win, and the boss only races sponsored drivers.'),
       btn('Choose Sponsor', function () { sponsorPicker(selStage); }, 'small go'));
     return h('div', {}, stageChips(), spBar,
-      h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, cv, legend), h('div', { class: 'cityside' }, placePanel(place, st, next, inst))));
+      h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, h('div', { class: 'cityframe' }, cv, zoomBar), legend), h('div', { class: 'cityside' }, placePanel(place, st, next, inst))));
   }
   function placePanel(p, st, next, inst) {
     var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, p.go ? 'VISIT' : 'RACE SPOT'), h('div', { class: 'pix acc' }, p.name), h('div', { class: 'dim' }, p.blurb)));
