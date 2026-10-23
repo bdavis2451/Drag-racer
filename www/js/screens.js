@@ -114,7 +114,7 @@
     });
     var wins = G.stageWins(selStage);
     var legend = h('div', { class: 'gsmall dim citylegend' },
-      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg b' }, 'shops'),
+      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg g' }, 'street $'), h('span', { class: 'lg b' }, 'places'),
       h('span', {}, 'Stage ' + (selStage + 1) + ': ' + wins + ' / ' + st.events.length + ' won'));
     var spBar = c.sponsor[selStage] ? null : h('div', { class: 'warnbox citysp' }, h('span', { class: 'grow' }, 'No sponsor for stage ' + (selStage + 1) + ' yet. Sponsors pay per win, and the boss only races sponsored drivers.'),
       btn('Choose Sponsor', function () { sponsorPicker(selStage); }, 'small go'));

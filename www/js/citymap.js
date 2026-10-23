@@ -1,27 +1,29 @@
 // ===========================================================================
-// CITY MAP — a top-down pixel-art map of the city for the race menu. The
-// places on it host the races (drag strip, runway, highway, downtown, the
-// docks) or lead to the dealer, parts store, home garage and car shows.
-// Drawn once at 320x180 (deterministic), then pins are drawn on top.
-// Light comes from the top left; buildings cast short shadows down-right.
+// CITY MAP — a dark top-down map of the city for the race menu, styled
+// after the Need for Speed Underground 2 world map: dark land, teal water,
+// a glowing highway loop and faint street grids. The places on it host the
+// races (drag strip, runway, highway, downtown, the docks) or lead to the
+// dealer, parts store, home garage and car shows.
+// Laid out in 480x270 map units and drawn at 2x (deterministic), with the
+// pins drawn on top each frame.
 // ===========================================================================
 (function () {
   var DR = globalThis.DR;
-  var W = 320, H = 180;
+  var W = 480, H = 270, S = 2;
   DR.CITY_W = W; DR.CITY_H = H;
 
   // places: x, y = pin position. events: which career event types happen
   // there. go: a screen to open instead.
   DR.CITY = [
-    { id: 'strip', name: 'Pixel Dragway', x: 66, y: 118, blurb: 'The prepped quarter mile: grandstands, a timing tower and full grip.', events: ['quarter', 'eighth', 'sponsor', 'boss'], test: true },
-    { id: 'runway', name: 'Airfield Runway', x: 248, y: 16, blurb: 'Knockout night on the old runway. Wide, flat and fast.', events: ['knockout'] },
-    { id: 'highway', name: 'Route 99', x: 112, y: 32, blurb: 'Street racers meet at the on-ramp. Bet on yourself.', street: true },
-    { id: 'downtown', name: 'Downtown', x: 196, y: 70, blurb: 'Stoplight to stoplight between the towers. Cold asphalt, less grip.', events: ['street'] },
-    { id: 'docks', name: 'Harbor Docks', x: 268, y: 148, blurb: 'Invitation-only night races between the container stacks.', events: ['showcase'] },
-    { id: 'dealer', name: 'Pixel Motors', x: 118, y: 108, blurb: 'New and used cars.', go: 'Dealer' },
-    { id: 'parts', name: 'Parts Store', x: 172, y: 108, blurb: 'Performance parts and quick upgrade packages.', go: 'Shop' },
-    { id: 'home', name: 'Your Garage', x: 40, y: 64, blurb: 'Home base.', go: 'Garage' },
-    { id: 'shows', name: 'Convention Center', x: 286, y: 82, blurb: 'Car shows: park your build and win over the crowd.', go: 'Shows' }
+    { id: 'strip', name: 'Pixel Dragway', x: 229, y: 234, blurb: 'The prepped quarter mile out on the island: grandstands, a timing tower and full grip.', events: ['quarter', 'eighth', 'sponsor', 'boss'], test: true },
+    { id: 'runway', name: 'Airfield Runway', x: 446, y: 160, blurb: 'Knockout night on the old runway. Wide, flat and fast.', events: ['knockout'] },
+    { id: 'highway', name: 'Route 99', x: 374, y: 104, blurb: 'Street racers meet on the loop. Bet on yourself.', street: true },
+    { id: 'downtown', name: 'Downtown', x: 306, y: 128, blurb: 'Stoplight to stoplight between the towers. Cold asphalt, less grip.', events: ['street'] },
+    { id: 'docks', name: 'Harbor Docks', x: 210, y: 166, blurb: 'Invitation-only night races between the container stacks.', events: ['showcase'] },
+    { id: 'dealer', name: 'Pixel Motors', x: 270, y: 104, blurb: 'New and used cars.', go: 'Dealer' },
+    { id: 'parts', name: 'Parts Store', x: 342, y: 152, blurb: 'Performance parts and quick upgrade packages.', go: 'Shop' },
+    { id: 'home', name: 'Your Garage', x: 432, y: 48, blurb: 'Home base.', go: 'Garage' },
+    { id: 'shows', name: 'Convention Center', x: 356, y: 64, blurb: 'Car shows: park your build and win over the crowd.', go: 'Shows' }
   ];
   DR.cityPlaceOf = function (evType) {
     for (var i = 0; i < DR.CITY.length; i++) if ((DR.CITY[i].events || []).indexOf(evType) >= 0) return DR.CITY[i];
@@ -29,192 +31,215 @@
   };
 
   // ---------------------------------------------------------------- drawing
-  var BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-  function dith(x, y) { return BAYER[(y & 3) * 4 + (x & 3)] / 16; }
   function rnd(seed) { var s = seed >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
   var base = null;
 
-  function build() {
-    var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    var c = cv.getContext('2d'), R = rnd(2024);
-    function px(x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
-    // ---- ground: grass with a dithered two-tone texture
-    var img = c.createImageData(W, H), d = img.data;
-    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
-      var n = (Math.sin(x * 0.21 + y * 0.13) + Math.sin(x * 0.07 - y * 0.19)) * 0.25 + 0.5;
-      var col = n + dith(x, y) * 0.5 > 0.78 ? [86, 142, 70] : n + dith(x, y) * 0.5 > 0.42 ? [74, 128, 62] : [64, 114, 56];
-      var i = (y * W + x) * 4; d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
-    }
-    // ---- the bay (bottom right) with a sandy shore and wave glints
-    function inWater(x, y) { return y > 182 - (x - 186) * 0.62 + Math.sin(x * 0.09) * 4 && x > 150; }
-    for (y = 0; y < H; y++) for (x = 150; x < W; x++) {
-      if (!inWater(x, y)) { if (inWater(x + 2, y + 2) || inWater(x + 1, y + 3)) { i = (y * W + x) * 4; d[i] = 196; d[i + 1] = 180; d[i + 2] = 128; } continue; }
-      var deep = inWater(x - 10, y - 10);
-      i = (y * W + x) * 4;
-      var wv = (x * 3 + y * 7) % 23 === 0 || ((x + y * 2) % 31 === 0);
-      var wc = wv ? [120, 178, 214] : deep ? (dith(x, y) > 0.5 ? [36, 92, 150] : [40, 98, 158]) : [52, 118, 176];
-      d[i] = wc[0]; d[i + 1] = wc[1]; d[i + 2] = wc[2];
-    }
-    c.putImageData(img, 0, 0);
+  // geography, in map units
+  var MAINLAND = [[150, -6], [486, -6], [486, 198], [446, 205], [418, 194], [392, 200], [364, 192], [336, 195], [312, 186], [286, 188], [262, 178], [240, 172], [222, 162],
+    [204, 154], [186, 150], [170, 138], [158, 120], [144, 110], [126, 102], [116, 86], [122, 68], [108, 54], [96, 40], [100, 22], [118, 8]];
+  var BAY = [[266, 46], [290, 34], [322, 40], [334, 56], [318, 72], [292, 77], [272, 70], [260, 58]];
+  var ISLAND = [[166, 224], [194, 208], [232, 205], [268, 211], [300, 207], [338, 213], [364, 226], [372, 244], [352, 259], [310, 265], [260, 263], [214, 259], [180, 251], [160, 239]];
+  var ISLET = [[40, 150], [60, 140], [80, 148], [76, 164], [52, 168]];
+  // the city proper is darker than the hills around it
+  var ZONES = [
+    [[236, 92], [262, 74], [306, 70], [352, 76], [386, 98], [392, 136], [376, 168], [334, 182], [288, 180], [250, 168], [228, 140]],     // downtown
+    [[380, 18], [440, 12], [476, 28], [478, 84], [446, 96], [402, 88], [382, 58]],                                                      // northeast suburbs
+    [[396, 140], [476, 138], [478, 188], [440, 196], [404, 180]],                                                                     // airfield
+    [[180, 132], [214, 120], [242, 136], [236, 168], [204, 158], [184, 150]],                                                         // docks
+    [[176, 226], [234, 210], [300, 212], [352, 226], [360, 246], [312, 258], [230, 254], [178, 246]]                                   // island
+  ];
+  var LOOP = [[246, 100], [270, 84], [306, 80], [346, 86], [374, 104], [380, 134], [366, 160], [332, 172], [292, 170], [258, 160], [240, 136], [238, 114]];
 
-    // ---- helpers: roads, buildings, trees
-    function road(x, y, w, h, horiz, lanes) {
-      px(x, y, w, h, '#3a3c42');
-      px(x, y, horiz ? w : 1, horiz ? 1 : h, '#4e5058'); px(horiz ? x : x + w - 1, horiz ? y + h - 1 : y, horiz ? w : 1, horiz ? 1 : h, '#2a2b30');
-      if (horiz) for (var k = x + 2; k < x + w - 3; k += 7) px(k, y + (h >> 1), 3, 1, lanes ? '#e8e8e8' : '#d8b234');
-      else for (var j = y + 2; j < y + h - 3; j += 7) px(x + (w >> 1), j, 1, 3, lanes ? '#e8e8e8' : '#d8b234');
+  // a smooth closed or open curve through points (Catmull-Rom as Beziers)
+  function curve(c, pts, closed) {
+    var n = pts.length, i;
+    function P(k) { return closed ? pts[(k + n) % n] : pts[Math.max(0, Math.min(n - 1, k))]; }
+    c.moveTo(pts[0][0], pts[0][1]);
+    for (i = 0; i < (closed ? n : n - 1); i++) {
+      var p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+      c.bezierCurveTo(p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6, p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6, p2[0], p2[1]);
     }
-    function shadow(x, y, w, h, k) { c.fillStyle = 'rgba(10,20,10,' + (0.32 * (k || 1)) + ')'; c.fillRect(x + 2, y + 2, w, h); }
-    function building(x, y, w, h, roof, tall) {
-      var s = tall ? 4 : 2;
-      c.fillStyle = 'rgba(10,18,12,0.35)'; c.fillRect(x + s, y + s, w, h);
-      px(x, y, w, h, roof);
-      px(x, y, w, 1, shadeHex(roof, 0.3)); px(x, y, 1, h, shadeHex(roof, 0.18));
-      px(x, y + h - 1, w, 1, shadeHex(roof, -0.35)); px(x + w - 1, y, 1, h, shadeHex(roof, -0.25));
-      // rooftop kit: AC boxes and vents
-      if (w > 7 && h > 6) { px(x + 2, y + 2, 2, 2, '#cfd3da'); px(x + 2, y + 4, 2, 1, '#7d828c'); if (w > 12) { px(x + w - 5, y + h - 5, 3, 2, '#9aa0aa'); } }
-      if (tall) { px(x + 1, y + 1, w - 2, 1, shadeHex(roof, 0.45)); for (var k2 = x + 3; k2 < x + w - 3; k2 += 4) px(k2, y + h - 3, 2, 1, '#ffe9a0'); }
+    if (closed) c.closePath();
+  }
+  function shape(c, pts, fill) { c.beginPath(); curve(c, pts, true); c.fillStyle = fill; c.fill(); }
+  function road(c, pts, w, col, closed) { c.beginPath(); curve(c, pts, closed); c.lineWidth = w; c.strokeStyle = col; c.lineCap = 'round'; c.lineJoin = 'round'; c.stroke(); }
+  function inPoly(pts, x, y) {
+    var ins = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      if ((pts[i][1] > y) !== (pts[j][1] > y) && x < (pts[j][0] - pts[i][0]) * (y - pts[i][1]) / (pts[j][1] - pts[i][1]) + pts[i][0]) ins = !ins;
     }
-    function tree(x, y, r2) {
-      c.fillStyle = 'rgba(8,24,8,0.35)'; c.beginPath(); c.arc(x + 1.5, y + 1.5, r2, 0, 7); c.fill();
-      for (var yy = -r2; yy <= r2; yy++) for (var xx = -r2; xx <= r2; xx++) {
-        var dd = xx * xx + yy * yy; if (dd > r2 * r2 + r2 * 0.6) continue;
-        px(x + xx, y + yy, 1, 1, xx + yy < -r2 * 0.5 ? '#5fae4c' : xx + yy > r2 * 0.7 ? '#245c26' : '#3a8a38');
+    return ins;
+  }
+  // a wandering suburban street from (x, y)
+  function wander(R, x, y, a, steps, len, area) {
+    var pts = [[x, y]];
+    for (var i = 0; i < steps; i++) {
+      a += (R() - 0.5) * 0.7;
+      var nx = x + Math.cos(a) * len, ny = y + Math.sin(a) * len;
+      if (area && !inPoly(area, nx, ny)) { a += Math.PI * 0.6; continue; }
+      x = nx; y = ny; pts.push([x, y]);
+    }
+    return pts;
+  }
+
+  function build() {
+    var cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
+    var c = cv.getContext('2d'), R = rnd(99), i, j;
+    c.scale(S, S);
+    // ---- sea: deep teal, a touch lighter toward the middle of the map
+    var g = c.createRadialGradient(W * 0.45, H * 0.55, 20, W * 0.45, H * 0.55, W * 0.75);
+    g.addColorStop(0, '#173843'); g.addColorStop(1, '#0b1d24');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    // shallows: a soft lighter rim around every coast
+    [[14, 'rgba(60,120,130,0.10)'], [8, 'rgba(70,135,145,0.14)'], [3.5, 'rgba(90,155,160,0.20)']].forEach(function (r) {
+      [MAINLAND, ISLAND, ISLET].forEach(function (pts) { c.beginPath(); curve(c, pts, true); c.lineWidth = r[0]; c.strokeStyle = r[1]; c.lineJoin = 'round'; c.stroke(); });
+    });
+    // ---- land: grey-green hills
+    shape(c, MAINLAND, '#353b37'); shape(c, ISLAND, '#353b37'); shape(c, ISLET, '#353b37');
+    // terrain: soft lighter ridges in the hills, clipped to the land
+    c.save(); c.beginPath(); curve(c, MAINLAND, true); curve(c, ISLAND, true); c.clip();
+    for (i = 0; i < 26; i++) {
+      var hx = 110 + R() * 140, hy = R() * 110, hr = 10 + R() * 26;
+      if (hx > 230 && hy > 60) continue;
+      var hg = c.createRadialGradient(hx, hy, 0, hx, hy, hr);
+      hg.addColorStop(0, 'rgba(78,88,80,0.35)'); hg.addColorStop(1, 'rgba(78,88,80,0)');
+      c.fillStyle = hg; c.fillRect(hx - hr, hy - hr, hr * 2, hr * 2);
+    }
+    // the city districts are darker, with soft edges
+    c.filter = 'blur(3px)';
+    ZONES.forEach(function (z) { shape(c, z, '#1d2120'); });
+    c.filter = 'none';
+    c.restore();
+    // the bay inside the mainland
+    [[6, 'rgba(70,135,145,0.16)'], [2.5, 'rgba(90,155,160,0.22)']].forEach(function (r) { c.beginPath(); curve(c, BAY, true); c.lineWidth = r[0]; c.strokeStyle = r[1]; c.stroke(); });
+    shape(c, BAY, '#123039');
+
+    // ---- streets
+    var STREET = 'rgba(150,158,152,0.55)', LANE = 'rgba(170,178,172,0.8)';
+    // downtown: a slightly skewed grid, clipped to the inside of the loop
+    c.save(); c.beginPath(); curve(c, LOOP, true); c.clip();
+    c.translate(306, 128); c.rotate(-0.28);
+    c.strokeStyle = STREET; c.lineWidth = 0.7;
+    for (i = -90; i <= 90; i += 8 + Math.floor(R() * 4)) {
+      for (j = -70; j < 70; j += 10 + R() * 12) {
+        if (R() < 0.12) continue;                                     // a missing block here and there
+        var l = 10 + R() * 14;
+        c.beginPath(); c.moveTo(i, j); c.lineTo(i + (R() - 0.5) * 1.5, j + l); c.stroke();
       }
     }
-    function sign(x, y, text, bg, fg) {
-      var w = DR.pixTextW(text) + 4;
-      px(x - 1, y - 1, w + 2, 9, '#101014'); px(x, y, w, 7, bg); DR.pixText(c, text, x + 2, y + 1, fg);
+    for (j = -70; j <= 70; j += 7 + Math.floor(R() * 4)) {
+      for (i = -90; i < 90; i += 12 + R() * 14) {
+        if (R() < 0.15) continue;
+        var l2 = 12 + R() * 16;
+        c.beginPath(); c.moveTo(i, j); c.lineTo(i + l2, j + (R() - 0.5) * 1.5); c.stroke();
+      }
     }
-
-    // ---- highway: a sweeping 4-lane road along the top with a median
-    for (x = 0; x < W; x++) {
-      var hy = Math.round(30 + Math.sin(x * 0.012 + 0.4) * 8 - (x > 220 ? (x - 220) * 0.05 : 0));
-      px(x, hy - 1, 1, 13, '#2e3036');
-      px(x, hy, 1, 11, '#3d3f46');
-      if (x % 8 < 4) { px(x, hy + 3, 1, 1, '#e6e6e6'); px(x, hy + 8, 1, 1, '#e6e6e6'); }
-      px(x, hy + 5, 1, 1, '#b8a040'); px(x, hy + 6, 1, 1, '#6a6c72');                   // median barrier
-      px(x, hy - 2, 1, 1, '#7a7c84'); px(x, hy + 12, 1, 1, '#22242a');               // guard rails
-    }
-    // ---- streets: the avenue north-south, cross street, ring roads
-    road(146, 40, 9, 140, false); road(0, 92, 300, 9, true); road(0, 142, 150, 7, true);
-    road(250, 40, 7, 62, false); road(26, 40, 7, 54, false); road(155, 120, 95, 7, true);
-    // on-ramp curling up to the highway at the pin
-    for (var t = 0; t < 1; t += 0.01) { var rx = 112 + Math.cos(t * 3.1) * 14, ry = 52 - Math.sin(t * 3.1) * 10; px(Math.round(rx), Math.round(ry), 5, 5, '#3d3f46'); }
-    px(108, 38, 9, 14, '#3d3f46');
-
-    // ---- airfield (top right): runway with numbers and threshold bars,
-    // a taxiway, hangars and the tower
-    px(176, 2, 140, 22, '#5c7a4a');
-    px(184, 9, 128, 12, '#4a4c52'); px(184, 9, 128, 1, '#5e6068'); px(184, 20, 128, 1, '#36383d');
-    for (x = 192; x < 304; x += 8) px(x, 15, 4, 1, '#eeeeee');
-    for (var k3 = 0; k3 < 4; k3++) { px(186, 11 + k3 * 2, 4, 1, '#eeeeee'); px(306, 11 + k3 * 2, 4, 1, '#eeeeee'); }
-    DR.pixText(c, '09', 192, 11, '#e0e0e0'); DR.pixText(c, '27', 296, 11, '#e0e0e0');
-    px(184, 21, 70, 3, '#55575d');
-    building(186, 24, 14, 9, '#a8b0bc'); building(202, 24, 14, 9, '#a8b0bc');
-    building(220, 25, 5, 5, '#d0d4da', true); px(221, 26, 3, 2, '#5ad0ff');
-    // a parked plane
-    px(232, 12, 16, 2, '#f0f2f6'); px(238, 7, 3, 12, '#e0e4ea'); px(232, 11, 2, 4, '#e0e4ea'); px(246, 12, 2, 2, '#d23a3a');
-
-    // ---- downtown (north-east of the crossroads): towers and blocks
-    var blocks = [[160, 46, 14, 12, '#7f8a9c', 1], [178, 44, 12, 18, '#5d6b80', 1], [194, 48, 16, 10, '#9a8f86', 0], [214, 44, 12, 14, '#6f7c8f', 1],
-      [230, 50, 14, 10, '#8a7f74', 0], [160, 62, 10, 12, '#a4978a', 0], [174, 66, 14, 10, '#7c8696', 1], [192, 62, 10, 14, '#5a6474', 1],
-      [206, 64, 16, 10, '#958a82', 0], [226, 64, 18, 12, '#6b7688', 1], [160, 78, 12, 10, '#8d8274', 0], [190, 80, 18, 8, '#7d8899', 0], [212, 79, 10, 9, '#a39a90', 0], [228, 80, 16, 8, '#86909e', 1]];
-    blocks.forEach(function (b) { building(b[0], b[1], b[2], b[3], b[4], b[5]); });
-    px(172, 44, 1, 46, '#3a3c42'); px(188, 44, 1, 46, '#3a3c42'); px(204, 44, 1, 46, '#3a3c42'); px(224, 44, 1, 46, '#3a3c42');
-
-    // ---- convention center (east): big white roof with skylights
-    building(262, 70, 34, 22, '#dfe3e8');
-    for (x = 266; x < 292; x += 6) px(x, 74, 3, 14, '#9fc4e0');
-    px(262, 94, 34, 6, '#4a4c52'); for (x = 264; x < 294; x += 4) px(x, 95, 2, 4, ['#d23a3a', '#3a7bd2', '#efe14b', '#f4f4f4'][(x >> 2) % 4]);
-
-    // ---- residential west side: houses and trees, your garage
-    for (var hx = 4; hx < 140; hx += 13) for (var hyy = 48; hyy < 88; hyy += 14) {
-      if (hx > 22 && hx < 38) continue;
-      if (R() < 0.75) building(hx + Math.floor(R() * 2), hyy + Math.floor(R() * 2), 8, 7, ['#a0503c', '#8a5a44', '#6e6a74', '#b06a4a', '#5a6a78'][Math.floor(R() * 5)]);
-      else tree(hx + 4, hyy + 4, 3);
-    }
-    building(34, 58, 14, 11, '#c9a24a'); px(36, 68, 10, 3, '#2a2c32'); px(37, 69, 8, 1, '#f0c040');   // your garage
-
-    // ---- dealership: showroom, flags, rows of cars on the lot
-    building(100, 102, 18, 9, '#e8ecf2'); px(100, 102, 18, 2, '#d23a3a');
-    var lotCols = ['#d23a3a', '#3a7bd2', '#f4f4f4', '#151515', '#efe14b', '#2fb3a8', '#ff7a00'];
-    px(100, 113, 44, 16, '#55575d');
-    for (var lr = 0; lr < 2; lr++) for (var lc = 0; lc < 7; lc++) { var cx2 = 102 + lc * 6, cy2 = 115 + lr * 7; px(cx2, cy2, 4, 5, lotCols[(lc + lr * 3) % 7]); px(cx2 + 1, cy2 + 1, 2, 2, '#1d2a3a'); }
-    for (var fg = 0; fg < 3; fg++) { px(121 + fg * 7, 101, 1, 6, '#c8c8c8'); px(122 + fg * 7, 101, 3, 2, ['#d23a3a', '#ffcc00', '#3a7bd2'][fg]); }
-
-    // ---- parts store: a long box store with a big sign and a lot
-    building(160, 101, 24, 14, '#c7c0b4'); px(160, 101, 24, 3, '#e05a14');
-    px(186, 102, 12, 13, '#55575d'); for (var pl = 104; pl < 114; pl += 3) px(188, pl, 8, 1, '#d8d8d8');
-
-    // ---- the dragway (south-west): two lanes, timing tower, grandstands,
-    // the tree, return road, parking
-    px(6, 104, 140, 36, '#5f8f4c');
-    px(10, 120, 132, 10, '#55575d'); px(10, 124, 132, 2, '#3f4146');                  // the strip, lane divider
-    px(10, 120, 132, 1, '#6c6e76'); px(10, 129, 132, 1, '#2e3035');
-    for (x = 14; x < 138; x += 2) { px(x, 120, 1, 1, '#e6e6e6'); px(x, 129, 1, 1, '#e6e6e6'); }   // lane lines
-    px(22, 120, 1, 10, '#f4f4f4'); px(128, 120, 1, 10, '#f4f4f4');                     // start / finish
-    px(13, 121, 2, 8, '#2a2c32'); px(14, 121, 1, 2, '#ffcc00'); px(14, 124, 1, 2, '#ffcc00'); px(14, 127, 1, 1, '#2bd45a');   // the tree
-    building(24, 108, 60, 7, '#8a93a2'); for (x = 26; x < 82; x += 3) px(x, 109, 2, 4, ['#d23a3a', '#3a7bd2', '#efe14b', '#f4f4f4', '#7cd320'][(x / 3) % 5 | 0]);   // grandstand crowd
-    building(88, 109, 7, 6, '#c8ccd4', true); px(89, 110, 5, 2, '#5ad0ff');               // timing tower
-    px(10, 132, 132, 4, '#4a4c52');                                                     // return road
-    px(96, 108, 40, 9, '#4a4c52'); for (var pk = 0; pk < 6; pk++) px(98 + pk * 6, 110, 4, 5, lotCols[(pk + 2) % 7]);
-
-    // ---- harbor docks: piers, container stacks, a crane, a ship
-    px(226, 128, 70, 14, '#7a7468');
-    for (var pr = 0; pr < 3; pr++) px(236 + pr * 20, 142, 8, 22, '#8a8272');
-    var cc = ['#c8402c', '#2c6ea8', '#e0a020', '#3a8a48', '#9a4ab0'];
-    for (var cy3 = 0; cy3 < 2; cy3++) for (var cx3 = 0; cx3 < 7; cx3++) { var col3 = cc[(cx3 * 3 + cy3) % 5]; shadow(230 + cx3 * 9, 130 + cy3 * 5, 8, 4, 0.6); px(230 + cx3 * 9, 130 + cy3 * 5, 8, 4, col3); px(230 + cx3 * 9, 130 + cy3 * 5, 8, 1, shadeHex(col3, 0.3)); }
-    px(288, 118, 2, 26, '#e0a020'); px(278, 118, 22, 2, '#e0a020'); px(282, 120, 1, 6, '#30323a');
-    px(246, 160, 40, 9, '#2a2c34'); px(248, 161, 36, 3, '#c8402c'); px(278, 158, 6, 4, '#e8e8e8');
-
-    // ---- parks and street trees
-    [[60, 22], [70, 18], [140, 20], [8, 100], [150, 166], [120, 160], [30, 160], [60, 162], [90, 168], [20, 170], [252, 108], [300, 106], [134, 62], [300, 54]].forEach(function (t2) { tree(t2[0], t2[1], 3); });
-    for (x = 4; x < 140; x += 9) tree(x, 154 + (x % 3), 2);
-    // a pond in the park
-    c.fillStyle = '#3a7ab8'; c.beginPath(); c.ellipse(90, 158, 10, 5, 0, 0, 7); c.fill(); px(84, 156, 3, 1, '#8ac4e8');
-    return cv;
-  }
-  function shadeHex(h, k) {
-    var c = [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-    c = c.map(function (v) { return Math.max(0, Math.min(255, Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k)))); });
-    return 'rgb(' + c.join(',') + ')';
-  }
-
-  // pins: { id: { n, next, boss } }. sel: selected place id.
-  DR.drawCityMap = function (canvas, pins, sel, t) {
-    if (!base) base = build();
-    canvas.width = W; canvas.height = H;
-    var c = canvas.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.drawImage(base, 0, 0);
-    function px(x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
-    DR.CITY.forEach(function (p) {
-      var info = pins[p.id] || {}, on = p.id === sel, bob = on ? Math.round(Math.sin((t || 0) * 5)) : 0;
-      var col = info.boss ? '#ff3a3a' : p.go ? '#4da3ff' : info.n || info.street ? '#ffcc00' : '#9aa0aa';
-      var x = p.x, y = p.y - 14 + bob, hi = info.boss ? '#ff9a9a' : p.go ? '#a8d4ff' : info.n || info.street ? '#fff0a0' : '#d0d4dc';
-      // selection ring on the ground
-      if (on) { c.strokeStyle = 'rgba(255,255,255,0.85)'; c.setLineDash([2, 2]); c.strokeRect(p.x - 8.5, p.y - 3.5, 17, 7); c.setLineDash([]); }
-      px(p.x - 3, p.y - 1, 7, 2, 'rgba(0,0,0,0.35)');
-      // map pin: a rounded 9x9 head with the glyph inside, then a point
-      px(x - 5, y + 1, 11, 7, '#101014'); px(x - 4, y, 9, 9, '#101014');
-      px(x - 4, y + 1, 9, 7, col); px(x - 3, y, 7, 9, '#101014'); px(x - 3, y + 1, 7, 7, col);
-      px(x - 3, y + 1, 7, 1, hi); px(x - 4, y + 2, 1, 2, hi);
-      px(x - 2, y + 9, 5, 2, '#101014'); px(x - 1, y + 11, 3, 2, '#101014'); px(x - 1, y + 9, 3, 1, col); px(x, y + 10, 1, 2, col);
-      var glyph = info.boss ? '!' : info.next ? '*' : info.street ? '$' : info.n ? String(Math.min(9, info.n)) : p.go === 'Dealer' ? 'D' : p.go === 'Shop' ? 'P' : p.go === 'Garage' ? 'H' : p.go === 'Shows' ? 'S' : '';
-      if (glyph) DR.pixText(c, glyph, x - 1, y + 2, '#101014');
-      if (info.next) { var f = Math.floor((t || 0) * 4) % 2 ? '#ffffff' : '#ffcc00'; px(x + 5, y - 3, 1, 5, f); px(x + 3, y - 1, 5, 1, f); }
-      // label when selected
-      if (on) {
-        var w = DR.pixTextW(p.name.toUpperCase()) + 6, lx = Math.max(1, Math.min(W - w - 1, x - (w >> 1))), ly = y - 10 < 1 ? y + 16 : y - 10;
-        px(lx - 1, ly - 1, w + 2, 9, '#101014'); px(lx, ly, w, 7, '#ffcc00'); DR.pixText(c, p.name.toUpperCase(), lx + 3, ly + 1, '#101014');
+    // a couple of curving boulevards and a central plaza
+    c.restore();
+    road(c, [[262, 150], [290, 138], [318, 120], [350, 110]], 1.2, LANE);
+    road(c, [[280, 96], [300, 118], [312, 146], [330, 166]], 1.2, LANE);
+    c.beginPath(); c.arc(306, 128, 4, 0, Math.PI * 2); c.fillStyle = 'rgba(170,178,172,0.7)'; c.fill();
+    // suburbs: winding streets and cul-de-sacs
+    [[ZONES[1], 412, 40, 14], [ZONES[3], 206, 140, 6], [ZONES[4], 300, 236, 12], [ZONES[2], 430, 184, 4]].forEach(function (z) {
+      for (i = 0; i < z[3]; i++) {
+        var pts = wander(R, z[1] + (R() - 0.5) * 40, z[2] + (R() - 0.5) * 24, R() * 6.28, 3 + Math.floor(R() * 4), 7 + R() * 5, z[0]);
+        if (pts.length > 2) road(c, pts, 0.8, STREET);
+        var e = pts[pts.length - 1];
+        c.beginPath(); c.arc(e[0], e[1], 1.1, 0, Math.PI * 2); c.fillStyle = STREET; c.fill();
       }
     });
+    // arterial roads out of the city
+    road(c, [[402, 88], [420, 70], [430, 48], [452, 30]], 1.1, LANE);
+    road(c, [[392, 64], [416, 60], [446, 66], [470, 60]], 0.9, STREET);
+    road(c, [[214, 122], [222, 140], [214, 156], [200, 160]], 0.9, STREET);
+    road(c, [[260, 210], [240, 222], [206, 232], [186, 240]], 1.0, LANE);
+    road(c, [[300, 226], [330, 236], [350, 244]], 0.9, STREET);
+    // the canyon run: a switchback road up into the hills
+    var canyon = [[186, 62]];
+    for (i = 1; i <= 16; i++) { var t = i / 16; canyon.push([186 - t * 74 + Math.sin(t * 19) * 9, 62 - t * 48 + Math.cos(t * 23) * 7]); }
+    road(c, canyon, 1.1, 'rgba(160,168,162,0.75)');
+    road(c, [[150, 40], [140, 64], [146, 88], [158, 104]], 0.9, STREET);
+
+    // ---- landmarks: plain light-grey footprints, like the shops on the NFSU2 map
+    var LM = '#7d847f';
+    function block(x, y, w, h, a) { c.save(); c.translate(x, y); c.rotate(a || 0); c.fillStyle = LM; c.fillRect(-w / 2, -h / 2, w, h); c.restore(); }
+    // drag strip: twin lanes, start and finish, grandstand
+    c.save(); c.translate(229, 234); c.rotate(-0.06);
+    c.fillStyle = '#8d9590'; c.fillRect(-34, -3, 68, 6); c.fillStyle = '#1d2120'; c.fillRect(-34, -0.3, 68, 0.6);
+    c.fillStyle = '#e8ece8'; c.fillRect(-34, -3, 1, 6); c.fillRect(31, -3, 1, 6);
+    c.fillStyle = LM; c.fillRect(-20, -9, 30, 4); c.fillRect(-38, 5, 10, 7);
+    c.restore();
+    // airfield: runway with markings, taxiway and apron
+    c.save(); c.translate(446, 160); c.rotate(-0.12);
+    c.fillStyle = '#8d9590'; c.fillRect(-34, -4, 68, 8);
+    c.fillStyle = '#c9cec9'; for (i = -30; i < 30; i += 6) c.fillRect(i, -0.4, 3, 0.8);
+    c.fillStyle = LM; c.fillRect(-26, 8, 52, 2); c.fillRect(-12, 10, 20, 8); c.fillRect(12, 11, 6, 6);
+    c.restore();
+    // docks: piers and container yards
+    for (i = 0; i < 4; i++) block(196 + i * 7, 172 + i * 3, 2.5, 10, 0.35);
+    block(214, 156, 12, 5, 0.35); block(224, 160, 8, 4, 0.35);
+    // dealer lot, parts store, convention center, home
+    block(270, 112, 12, 6, -0.28); block(342, 160, 10, 6, -0.28); block(356, 72, 18, 9, -0.1); block(432, 56, 5, 4, 0.2);
+
+    // ---- highways: the white loop, its cross-town link and the spurs, with a soft glow
+    var HW = [
+      [LOOP, 3.2, true],
+      [[[270, 84], [292, 112], [314, 146], [332, 172]], 2.2],
+      [[[246, 100], [226, 86], [204, 74], [186, 62]], 2.4],
+      [[[332, 172], [328, 192], [318, 212], [298, 226], [268, 232]], 2.4],
+      [[[380, 134], [408, 142], [430, 150]], 2.2],
+      [[[374, 104], [392, 92], [404, 86]], 2.0]
+    ];
+    c.save(); c.shadowColor = 'rgba(255,255,255,0.55)'; c.shadowBlur = 6;
+    HW.forEach(function (h) { road(c, h[0], h[1] + 1.4, 'rgba(255,255,255,0.18)', h[2]); });
+    c.restore();
+    HW.forEach(function (h) { road(c, h[0], h[1], '#f2f4f2', h[2]); });
+    // the bridge to the island: railings over the water
+    road(c, [[331, 184], [328, 194], [323, 204]], 0.5, 'rgba(30,40,40,0.9)');
+    return cv;
+  }
+
+  DR.drawCityMap = function (canvas, pins, sel, t) {
+    if (!base) base = build();
+    if (canvas.width !== W * S) { canvas.width = W * S; canvas.height = H * S; }
+    var c = canvas.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(base, 0, 0);
+    c.imageSmoothingEnabled = false;
+    var T = t || 0, label = null;
+    DR.CITY.forEach(function (p) {
+      var info = pins[p.id] || {}, on = p.id === sel;
+      var col = info.boss ? '#ff4040' : p.go ? '#4aa8ff' : info.street ? '#3ee07a' : info.n ? '#ffd030' : '#8a918c';
+      var x = p.x * S, y = p.y * S, r = 15;
+      // pulse rings: the selected place, and your next race
+      if (on || info.next || info.boss) {
+        var ph = (T * (on ? 0.9 : 0.6)) % 1;
+        c.beginPath(); c.arc(x, y, r + 2 + ph * 14, 0, Math.PI * 2);
+        c.strokeStyle = on ? 'rgba(255,255,255,' + (0.8 * (1 - ph)) + ')' : col; c.globalAlpha = on ? 1 : 0.7 * (1 - ph);
+        c.lineWidth = 2; c.stroke(); c.globalAlpha = 1;
+      }
+      // a glowing dot with a dark rim
+      c.save(); c.shadowColor = col; c.shadowBlur = on ? 16 : 10;
+      c.beginPath(); c.arc(x, y, r + 2, 0, Math.PI * 2); c.fillStyle = '#0c0e0d'; c.fill();
+      c.restore();
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = col; c.fill();
+      c.beginPath(); c.arc(x - 7, y - 7, 3, 0, Math.PI * 2); c.fillStyle = 'rgba(255,255,255,0.4)'; c.fill();
+      var glyph = info.boss ? '!' : info.next ? '*' : info.street ? '$' : info.n ? String(Math.min(9, info.n)) : p.go === 'Dealer' ? 'D' : p.go === 'Shop' ? 'P' : p.go === 'Garage' ? 'H' : p.go === 'Shows' ? 'S' : '';
+      if (glyph) DR.pixText(c, glyph, x - 4, y - 7, '#0c0e0d', 3);
+      if (on) label = p;
+    });
+    if (label) {
+      var str = label.name.toUpperCase(), w = DR.pixTextW(str, 3) + 18, lx = Math.max(4, Math.min(W * S - w - 4, label.x * S - (w >> 1)));
+      var ly = label.y * S - 60 < 4 ? label.y * S + 26 : label.y * S - 60;
+      c.fillStyle = 'rgba(8,10,9,0.9)'; c.fillRect(lx, ly, w, 29);
+      c.strokeStyle = '#ffd030'; c.lineWidth = 2; c.strokeRect(lx + 1, ly + 1, w - 2, 27);
+      DR.pixText(c, str, lx + 9, ly + 7, '#ffd030', 3);
+    }
   };
-  // which place is under a canvas pixel (x, y), within a few pixels of its pin
+  // which place is near map point (x, y), in map units
   DR.cityHit = function (x, y) {
-    var best = null, bd = 196;
-    DR.CITY.forEach(function (p) { var d = (p.x - x) * (p.x - x) + (p.y - 8 - y) * (p.y - 8 - y); if (d < bd) { bd = d; best = p; } });
+    var best = null, bd = 16 * 16;
+    DR.CITY.forEach(function (p) { var d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y); if (d < bd) { bd = d; best = p; } });
     return best;
   };
 })();
