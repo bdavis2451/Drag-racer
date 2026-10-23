@@ -22,8 +22,14 @@
   // between walls and grandstands instead of inside the speaker.
   A.buildMaster = function (ctx) {
     var comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 3; comp.attack.value = 0.005; comp.release.value = 0.2;
-    comp.connect(ctx.destination);
+    // slow enough to let a pop or a limiter bark through, gentle enough not
+    // to pump the engine after every one
+    comp.threshold.value = -12; comp.knee.value = 14; comp.ratio.value = 2.2; comp.attack.value = 0.02; comp.release.value = 0.3;
+    // a last safety catch on the peaks (two cars and a bang at once) so the
+    // output never hard-clips, which crackles digitally
+    var lim = ctx.createDynamicsCompressor();
+    lim.threshold.value = -3; lim.knee.value = 2; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.12;
+    comp.connect(lim); lim.connect(ctx.destination);
     A.master = ctx.createGain(); A.master.gain.value = 0.55 * A.volume; A.master.connect(comp);
     try {
       var rate = ctx.sampleRate, n = Math.floor(rate * 0.9), ir = ctx.createBuffer(2, n, rate);
@@ -215,9 +221,14 @@
     // the whistle itself: air through a narrow band, not a pure (electronic) tone
     v.wn = c.createBiquadFilter(); v.wn.type = 'bandpass'; v.wn.Q.value = 28; v.wn.frequency.value = 3000;
     v.wng = c.createGain(); v.wng.gain.value = 0; v.en.connect(v.wn); v.wn.connect(v.wng); v.wng.connect(v.bus);
-    // straight-cut gear whine (sequential / Lenco boxes)
-    v.go = c.createOscillator(); v.go.type = 'triangle'; v.gg = c.createGain(); v.gg.gain.value = 0; v.go.connect(v.gg); v.gg.connect(v.bus);
-    [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { if (n) n.start(); });
+    // straight-cut gear whine (sequential / Lenco boxes): the teeth meshing
+    // whine in a narrow, slightly unsteady band (and its octave) - not a pure
+    // oscillator tone, which sounds electronic
+    v.gb = c.createBiquadFilter(); v.gb.type = 'bandpass'; v.gb.Q.value = 30; v.gb.frequency.value = 1000;
+    v.gb2 = c.createBiquadFilter(); v.gb2.type = 'bandpass'; v.gb2.Q.value = 30; v.gb2.frequency.value = 2000;
+    v.gg = c.createGain(); v.gg.gain.value = 0; v.gg2 = c.createGain(); v.gg2.gain.value = 0;
+    v.en.connect(v.gb); v.gb.connect(v.gg); v.gg.connect(v.bus); v.en.connect(v.gb2); v.gb2.connect(v.gg2); v.gg2.connect(v.bus);
+    [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo].forEach(function (n) { if (n) n.start(); });
     A.voices.push(v);
     return v;
   };
@@ -288,8 +299,9 @@
     v.air.frequency.setTargetAtTime(Math.max(1500, Math.min(18000, 18000 * Math.pow(near, 1.6))), t, 0.1);
     if (v.send) v.send.gain.setTargetAtTime(0.35 * (1 - near), t, 0.1);
     if (st.gearWhine) {
-      v.go.frequency.setTargetAtTime(rpm / 60 * 21, t, k);
-      v.gg.gain.setTargetAtTime(v.vol * (0.004 + thr * 0.01) * Math.min(1, rpm / 4000), t, k);
+      var mesh = rpm / 60 * 21, wob = 1 + (Math.random() - 0.5) * 0.004, gw = v.vol * (0.5 + thr * 1.3) * Math.min(1, rpm / 4000) * (0.85 + Math.random() * 0.3);
+      v.gb.frequency.setTargetAtTime(mesh * wob, t, k); v.gb2.frequency.setTargetAtTime(mesh * 2 * wob, t, k);
+      v.gg.gain.setTargetAtTime(gw * 0.05, t, 0.06); v.gg2.gain.setTargetAtTime(gw * 0.02, t, 0.06);
     }
     if (fiType === 'turbo') {
       // The turbo is a spinning shaft: it takes time to spool up, winds down
@@ -307,7 +319,7 @@
       v.tw.frequency.setTargetAtTime(1600 + sp * 3600, t, 0.05);
       v.twg.gain.setTargetAtTime(v.vol * 0.12 * sp * sp * (0.3 + 0.7 * thr), t, 0.08);
       // lifting with boost up: blow-off valve
-      if (v.lastThr - thr > 0.5 && sp > 0.3 && t > (v.bovT || 0)) { A.burst(0.5, 2600, 0.7, v.vol * 0.07 * sp, 'highpass'); v.bovT = t + 0.8; }
+      if (v.lastThr - thr > 0.5 && sp > 0.3 && t > (v.bovT || 0)) { A.blowoff(v.vol * sp); v.bovT = t + 0.8; }
     } else if (fiType && fiType !== 'none' && !v.wk) {
       v.wo.frequency.setTargetAtTime(500 + rpm * 0.4, t, 0.05);
       v.wg.gain.setTargetAtTime(v.vol * (0.012 + 0.028 * thr), t, 0.1);
@@ -330,7 +342,17 @@
     s.connect(f); f.connect(g); g.connect(A.master); s.start(t); s.stop(t + dur + 0.05);
   };
   A.pop = function () { A.burst(0.08, 300 + Math.random() * 200, 1, 0.5, 'lowpass'); };
-  A.blowoff = function () { A.burst(0.45, 2600, 0.7, 0.07, 'highpass'); };
+  // blow-off valve: boost bleeding out through the valve - a whoosh that
+  // sweeps down as the pressure falls, not a flat burst of hiss
+  A.blowoff = function (amt) {
+    if (!A.ctx || !A.on) return;
+    var c = A.ctx, s = noiseSrc(), f = c.createBiquadFilter(), h = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime;
+    var a = 0.09 * (amt == null ? 1 : amt), d = 0.32 + Math.random() * 0.12;
+    f.type = 'bandpass'; f.Q.value = 1.4; f.frequency.setValueAtTime(3400, t); f.frequency.exponentialRampToValueAtTime(1100, t + d);
+    h.type = 'highpass'; h.frequency.value = 500;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(a, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0005, t + d + 0.08);
+    s.connect(f); f.connect(h); h.connect(g); g.connect(A.master); s.start(t); s.stop(t + d + 0.15);
+  };
   A.boom = function () { A.burst(0.9, 120, 0.7, 0.9, 'lowpass'); };
   A.beep = function (freq, dur) {
     if (!A.ctx || !A.on) return;

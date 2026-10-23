@@ -490,7 +490,10 @@
     }
     function soundState(r) {
       var seqShift = r.sim.shifting && (r.S.trType === 'seq' || r.S.trType === 'dct');
-      var st = { nos: r.sim.nosOn, cut: r.sim.cut || seqShift, tire: r.S.tire.kind, gearWhine: r.S.trType === 'seq' };
+      // share of the time since the last frame the ignition was cut
+      var cutFrac = r.sim.stepT > 0 ? r.sim.cutT / r.sim.stepT : (r.sim.cut ? 1 : 0);
+      r.sim.cutT = 0; r.sim.stepT = 0;
+      var st = { nos: r.sim.nosOn, cut: r.sim.cut || seqShift, cutFrac: seqShift ? 1 : cutFrac, shiftCut: seqShift, pre: !r.sim.launched, twostep: !!r.S.twostep, tire: r.S.tire.kind, gearWhine: r.S.trType === 'seq' };
       if (r !== you) {
         // The camera rides along with your car, about 10 m off the track.
         // The other car is placed by where it is, gets quieter (1/distance)

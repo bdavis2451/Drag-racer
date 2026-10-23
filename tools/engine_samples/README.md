@@ -13,7 +13,19 @@ blends pulling and coasting; a soft spread over the nearest three loops
 keeps fast rpm changes gliding. Each loop now and then jumps to another of
 its cycles on a short crossfade, so a held rpm (a 2-step, the limiter) never
 repeats a pattern. An ignition cut (limiter, 2-step, shift) swaps the pulling
-sound for the coasting one, crisply, for the cut.
+sound for the coasting one for the cut.
+
+The rev limiter bounces on its own. The physics cuts and restores the
+ignition many times a frame (a few rpm either side of the limit), far faster
+than a real engine bounces, and a frame only ever saw a sample of it - an
+irregular, digital-sounding chop. Now the physics only reports how much of
+the time it is cutting, and the worklet bounces the way real limiters do:
+the revs sag a few percent and the note dies away over ~15 ms as the pipe
+stops ringing, then the charge lights again with a bark and the revs climb
+back. A stock (fuel-cut) limiter bounces slowly and deeply ("bap-bap-bap",
+~7 Hz free revving), an ignition cut (2-step, race exhaust / ECU) fast and
+shallow (~13-16 Hz) with real pops; in gear the car holds the revs up, so
+the dips are shallower. No two bounces are alike.
 
 An earlier version strung single engine cycles together at run time
 (granular, NFSU2 "Ginsu" style). With these recordings - short YouTube revs,
@@ -71,7 +83,16 @@ rpm with re-spaced copies of a few cycles, which sounded choppy and buzzy.
    maps each game engine to its bank, writing `banks.json` with credits and
    per-engine options (the V12 plays the inline-six loops doubled half a
    firing apart: a V12 is two sixes firing in between each other).
-6. `build_engbanks.py lbanks banks.json` writes `www/js/engbanks.js`.
+6. `popfind.py` finds real exhaust pops in the recordings (short transients
+   standing well above the engine around them, with both a low thump and a
+   crack); the good ones, picked by eye from a sheet of their waveforms
+   (`popsel.json` indices), are cut and levelled by `popbank.py` into
+   `lbanks/pops.ogg`. They replace the modelled pops and bangs: the 2-step and
+   ignition-cut limiter pop with them, and a free-flowing exhaust crackles
+   with them on a lift.
+7. `build_engbanks.py lbanks banks.json` writes `www/js/engbanks.js` (Vorbis
+   quality 7: lower settings fill the 1-4 kHz rasp with codec noise, a
+   swirly, digital texture once loops crossfade).
 
 ## Checking against the real thing
 

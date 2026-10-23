@@ -534,7 +534,7 @@
     this.we = S.idle * RPM2W; this.ww = 0;
     this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = S.engage || 0.3; this.locked = false;
     this.launched = false; this.t = 0; this.time = 0;
-    this.boost = 0; this.thr = 0; this.cut = false;
+    this.boost = 0; this.thr = 0; this.cut = false; this.cutT = 0; this.stepT = 0;
     this.phi = 0; this.dphi = 0; this.z = 0; this.dz = 0;   // body pitch (nose up +) and heave (up +) on the springs
     this.wheelie = false; this.th = 0; this.dth = 0; this.unload = 0; this.onBar = false;
     this.tireT = opts.tireT != null ? opts.tireT : 28;
@@ -647,6 +647,9 @@
     if (rpm > limit) this.cut = true; else if (rpm < limit - (this.launched ? 120 : 60)) this.cut = false;
     var seqCut = this.shifting && (S.trType === 'seq' || S.trType === 'dct');
     var firing = !this.cut && !seqCut;
+    // how much of the time the ignition was cut, for the sound (the limiter
+    // flickers many times between two frames)
+    this.cutT += firing ? 0 : dt; this.stepT += dt;
     if (this.cut && pre && S.twostep && Math.random() < dt * 25) this.events.push('backfire');
 
     // -------- boost

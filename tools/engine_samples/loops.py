@@ -571,7 +571,7 @@ for li, layer in enumerate(('off', 'on')):
         if VERB: print(layer, k, 'final_cstep', round(cstep(np.concatenate([y, y]), SR * 120 / k), 2), round(len(y) / SR, 2), bank[layer][k]['used'], round(bank[layer][k]['per'], 2))
 y = np.concatenate(pcm); pk = np.abs(y).max() + 1e-9; y = y / pk * 0.95
 wavfile.write(f'{OUT}/{ID}.wav', SR, (y * 32767).astype(np.int16))
-subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', f'{OUT}/{ID}.wav', '-c:a', 'libvorbis', '-q:a', os.environ.get('Q', '3'), f'{OUT}/{ID}.ogg'], check=True)
+subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', f'{OUT}/{ID}.wav', '-c:a', 'libvorbis', '-q:a', os.environ.get('Q', '7'), f'{OUT}/{ID}.ogg'], check=True)
 real_on = sorted(k for k in bank['on'] if bank['on'][k]['real'])
 real_off = sorted(k for k in bank['off'] if bank['off'][k]['real'])
 json.dump(dict(id=ID, k=K, sr=SR, loops=table, real_on=real_on, real_off=real_off), open(f'{OUT}/{ID}.json', 'w'))

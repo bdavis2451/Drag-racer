@@ -18,6 +18,13 @@ for n, i in enumerate(ids):
     out.append('    %s: { k: %s, sr: %d, gain: %s, credit: %s,\n      loops: %s,\n      data: %s }%s' % (
         i, meta['k'], meta['sr'], b.get('gain', 1), json.dumps(b['credit']), json.dumps(meta['loops'], separators=(',', ':')), json.dumps(data), ',' if n < len(ids) - 1 else ''))
 out.append('  };')
+# real exhaust pops shared by every engine
+pc = cfg.get('pops')
+if pc and os.path.exists(os.path.join(bdir, 'pops.json')):
+    pm = json.load(open(os.path.join(bdir, 'pops.json')))
+    pdata = base64.b64encode(open(os.path.join(bdir, 'pops.ogg'), 'rb').read()).decode()
+    out.append('  // %s' % pc['credit'])
+    out.append('  DR.ENG_POPS = { sr: %d, credit: %s, pops: %s, data: %s };' % (pm['sr'], json.dumps(pc['credit']), json.dumps(pm['pops'], separators=(',', ':')), json.dumps(pdata)))
 out.append('  DR.ENG_BANK_BY_LAYOUT = %s;' % json.dumps(cfg.get('by_layout', {})))
 out.append('  DR.ENG_BANK_BY_ENGINE = %s;' % json.dumps(cfg.get('by_engine', {})))
 out.append('  DR.ENG_BANK_OPTS = %s;' % json.dumps(cfg.get('opts', {})))

@@ -1,6 +1,6 @@
 # banks.json for the loop banks: credits, engine -> bank (first that passes
 # the gate), per-engine playback options
-import json, os
+import json, os, re
 sel = json.load(open('sel.json')); src = json.load(open('sources.json')); src.update(json.load(open('sources_extra.json')))
 LB = os.environ.get('LBDIR', 'lbanks')
 I6, V6, V8M, V8C, I4 = ['i6_pool', 'i6_r34'], ['v6_pool', 'v6_nsx'], ['v8_modern', 'v8_z06'], ['v8_classic', 'v8_modern'], ['i4_mx5', 'i4_ctr']
@@ -41,7 +41,16 @@ for b in sorted(set(by_engine.values())):
         info = sel[car]; title = info['title'].replace('File:', '').rsplit('.', 1)[0]
         parts.append('%s: "%s" by %s, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/%s)' % (car, title, info['artist'].replace(' (YouTube)', '').replace('<', '').replace('>', ''), info['title'].replace(' ', '_')))
     banks[b] = {'credit': '; '.join(parts)}
-json.dump({'banks': banks, 'by_layout': {}, 'by_engine': by_engine, 'opts': {e: o for e, o in OPTS.items() if e in by_engine}}, open('banks.json', 'w'), indent=1)
+# the pop bank's recordings
+pops = None
+if os.path.exists(f'{LB}/pops.json'):
+    pj = json.load(open(f'{LB}/pops.json')); parts = []
+    names = {re.sub(r'[^A-Za-z0-9]+', '_', k).strip('_'): k for k in sel}
+    for w in pj['sources']:
+        car = names[w]; info = sel[car]; title = info['title'].replace('File:', '').rsplit('.', 1)[0]
+        parts.append('%s (exhaust pops): "%s" by %s, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/%s)' % (car, title, info['artist'].replace(' (YouTube)', '').replace('<', '').replace('>', ''), info['title'].replace(' ', '_')))
+    pops = {'credit': '; '.join(parts)}
+json.dump({'pops': pops, 'banks': banks, 'by_layout': {}, 'by_engine': by_engine, 'opts': {e: o for e, o in OPTS.items() if e in by_engine}}, open('banks.json', 'w'), indent=1)
 print('banks', len(banks), sorted(banks), 'engines voiced', len(by_engine), 'of', len(PREF))
 print('unvoiced:', sorted(set(PREF) - set(by_engine)))
 for e in sorted(by_engine): print(' ', e, by_engine[e], ok[by_engine[e]][0], ok[by_engine[e]][-1], len(ok[by_engine[e]]))

@@ -33,7 +33,10 @@
           { name: 'rpm', defaultValue: 900, minValue: 0, maxValue: 20000, automationRate: 'k-rate' },
           { name: 'load', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
           { name: 'dop', defaultValue: 1, minValue: 0.5, maxValue: 2, automationRate: 'k-rate' },
-          { name: 'cut', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' }
+          { name: 'lim', defaultValue: 0, minValue: 0, maxValue: 2, automationRate: 'k-rate' },  // share of time the ignition is cut (2: a shift cut)
+          { name: 'pre', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },  // free revving (not launched)
+          { name: 'ign', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },  // ignition-cut limiter (2-step, race ECU)
+          { name: 'crk', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' }   // how readily it pops on a lift
         ];
       }
       constructor() {
@@ -61,6 +64,16 @@
         // cruise - never repeats the same stretch over and over
         this.jt = new Float64Array(n); this.qo = new Float64Array(n); this.xf = new Int32Array(n);
         this.XF = Math.round(sampleRate * 0.012); this.jump = d.jump !== false;
+        this.gkf = 1 - Math.exp(-1 / (sampleRate * 0.005));   // quick swap on an ignition cut
+        // rev limiter: a bounce of its own (see limiter())
+        this.lh = 0; this.bph = 0; this.bT = 0; this.bD = 0; this.depth = 0; this.wasCut = false;
+        this.cg = 1; this.bark = 0; this.popAt = -1; this.env = new Float32Array(128);
+        this.ck = 1 - Math.exp(-1 / (sampleRate * 0.003));      // firing again: straight back
+        this.ckf = 1 - Math.exp(-1 / (sampleRate * 0.012));     // cut: the pipe rings down
+        this.cutLvl = 0.45; this.barkAmt = 0.35;
+        // real exhaust pops (a shared bank cut from the recordings)
+        this.pp = d.pops || null; this.pv = []; this.popLvl = d.popLvl || 0.3;
+        this.prevLoad = 0; this.crkT = 0;
         this.spread = d.spread == null ? 0.7 : d.spread;    // in ladder steps
         this.ph = 0;                        // the engine's cycle phase (0-1)
         this.gk = 1 - Math.exp(-1 / (sampleRate * 0.01));   // ~10 ms crossfade glide
@@ -108,15 +121,63 @@
         var ca = Math.cos(x * Math.PI / 2), cb = Math.sin(x * Math.PI / 2), nrm = w / Math.sqrt(1 + 2 * this.rho[a] * ca * cb);
         tg[a] += ca * nrm; tg[b] += cb * nrm;
       }
+      // The rev limiter. The game's physics cuts and restores the ignition
+      // many times a frame (a few rpm either side of the limit), far faster
+      // than any real engine bounces, and a frame only sees a sample of it.
+      // So the sound bounces on its own, the way a real limiter does: cut
+      // (no combustion - the revs sag, the note collapses to the dry pumping
+      // of the engine), then the charge lights again with a bark and the
+      // revs climb back, over and over. A stock fuel cut bounces slowly and
+      // deeply ("bap-bap-bap"), an ignition cut (2-step, race ECU) fast and
+      // shallow with the exhaust popping; in gear the car holds the revs up,
+      // so the dips are shallower. A sustained cut (a sequential shift) is
+      // just a cut.
+      limiter(lim, pre, ign, crk, B) {
+        var sr = sampleRate;
+        if (lim > 0.02) this.lh = sr * 0.08; else this.lh -= B;
+        if (this.lh <= 0) { this.bph = this.bT = 0; this.wasCut = false; return 0; }
+        if (lim > 1.5) { this.wasCut = true; this.bph = this.bT = 0; return -1; }
+        if (this.bph >= this.bT) {
+          var f = ign ? (pre ? 16 : 13) : (pre ? 7 : 10);
+          f *= 0.85 + 0.3 * Math.random();
+          this.bT = sr / f; this.bD = this.bT * Math.min(0.62, Math.max(0.35, lim)); this.bph = 0;
+          this.depth = (ign ? 0.022 : 0.05) * (pre ? 1 : 0.5) * (0.8 + 0.4 * Math.random());
+          // no two bounces alike: how far the note falls and how hard it barks
+          this.cutLvl = (ign ? 0.45 : 0.4) * (0.8 + 0.4 * Math.random()); this.barkAmt = 0.2 + 0.3 * Math.random();
+          // unburnt charge lighting off in the hot pipe: an ignition cut pops
+          // (more with a free-flowing exhaust), a fuel cut hardly ever
+          var pc = ign ? (pre ? 0.22 + 0.35 * crk : 0.1 + 0.25 * crk) : 0.02 + 0.08 * crk;
+          this.popAt = this.pp && Math.random() < pc ? Math.random() * 0.7 * this.bD : -1;
+        }
+        var c = this.bph < this.bD;
+        var off = c ? -this.depth * this.bph / this.bD : -this.depth * (1 - (this.bph - this.bD) / (this.bT - this.bD));
+        if (!c && this.wasCut) this.bark = this.barkAmt;   // the first firing after a cut
+        this.wasCut = c;
+        if (this.popAt >= 0 && this.bph >= this.popAt) { this.pop(0.6 + Math.random() * 0.4); this.popAt = -1; }
+        this.bph += B;
+        return c ? 1 + off : -(1 + off);              // sign: cut or firing; size: pitch factor
+      }
+      pop(g) {
+        if (!this.pp || this.pv.length >= 4) return;
+        var i = Math.floor(Math.random() * this.pp.s.length);
+        this.pv.push({ s: this.pp.s[i], n: this.pp.n[i], p: 0, r: (0.88 + Math.random() * 0.24) * this.pp.k, g: g * this.popLvl });
+      }
       process(inputs, outputs, P) {
-        var out = outputs[0][0], k, j, i;
+        var out = outputs[0][0], k, j, i, B = out.length;
         if (!this.alive) return false;
         out.fill(0);
         if (!this.ready) return true;
-        var target = Math.max(200, P.rpm[0]), dop = P.dop[0];
-        // ignition cut (rev limiter, 2-step, shift cut): no combustion, so the
-        // pulling sound gives way to the coasting one for the cut
-        var load = P.load[0] * (1 - 0.85 * P.cut[0]);
+        var target = Math.max(200, P.rpm[0]), dop = P.dop[0], rawLoad = P.load[0];
+        var lm = this.limiter(P.lim[0], P.pre[0] > 0.5, P.ign[0] > 0.5, P.crk[0], B);
+        var cutNow = lm > 0 || lm === -1;
+        if (lm !== 0 && lm !== -1) target *= Math.abs(lm);
+        // cut: no combustion, so the pulling sound gives way to the coasting one
+        var load = cutNow ? rawLoad * 0.05 : rawLoad;
+        // a lift at high revs with a free-flowing exhaust: unburnt fuel
+        // lighting off in the pipe for a moment (crackles and pops)
+        if (this.prevLoad - rawLoad > 0.03 && rawLoad < 0.3 && target > 2800) this.crkT = sampleRate * 0.9;
+        this.prevLoad += (rawLoad - this.prevLoad) * 0.02;
+        if (this.crkT > 0) { this.crkT -= B; if (Math.random() < P.crk[0] * 7 * B / sampleRate) this.pop(0.25 + Math.random() * 0.45); }
         this.tg.fill(0);
         var W = this.spread ? this.weighSpread : this.weigh;
         W.call(this, this.lay[0], target, Math.cos(load * Math.PI / 2));
@@ -131,7 +192,7 @@
           }
         }
         // engine cycles (two crank turns) per sample
-        var dq = target / 120 / sampleRate * dop, gk = this.gk, act = this.act;
+        var dq = target / 120 / sampleRate * dop, gk = this.lh > 0 ? this.gkf : this.gk, act = this.act;
         for (j = 0; j < act.length; j++) {
           i = act[j];
           var g = this.g[i], tgi = this.tg[i], q = this.q[i], m = this.m[i], st = this.s[i], N = this.n[i] / m, L = this.ni[i];
@@ -155,6 +216,23 @@
             out[k] += g * v;
           }
           this.g[i] = g; this.q[i] = q; this.qo[i] = qo; this.xf[i] = xf; this.jt[i] = jt;
+        }
+        // the cut's level: the note collapses during a cut, and the first
+        // firing after it barks
+        // (the note dies away over ~15 ms as the pipe stops ringing, and comes
+        // straight back when the charge lights)
+        var cgT = cutNow ? (lm === -1 ? 0.45 : this.cutLvl) : 1, cg = this.cg, ck = cgT < cg ? this.ckf : this.ck, bark = this.bark, bd = Math.exp(-1 / (sampleRate * 0.02));
+        for (k = 0; k < B; k++) { cg += (cgT - cg) * ck; bark *= bd; out[k] *= cg * (1 + bark); }
+        this.cg = cg; this.bark = bark;
+        // pops on top
+        for (j = this.pv.length - 1; j >= 0; j--) {
+          var pv = this.pv[j], PP = this.pp.pcm;
+          for (k = 0; k < B && pv.p < pv.n - 1; k++) {
+            var i0 = pv.p | 0, fr = pv.p - i0;
+            out[k] += pv.g * (PP[pv.s + i0] * (1 - fr) + PP[pv.s + i0 + 1] * fr);
+            pv.p += pv.r;
+          }
+          if (pv.p >= pv.n - 1) this.pv.splice(j, 1);
         }
         // the engine phase moves on; loops that faded out leave
         this.ph = (this.ph + dq * out.length) % 1;
@@ -193,14 +271,17 @@
     pending[id] = fn ? [fn] : [];
     var done = function (buf) { decoded[id] = buf || false; var q = pending[id]; delete pending[id]; q.forEach(function (f) { f(buf || null); }); };
     try {
-      var p = A.ctx.decodeAudioData(b64ToBuf(DR.ENG_BANKS[id].data), done, function () { done(null); });
+      var p = A.ctx.decodeAudioData(b64ToBuf(id === '__pops' ? DR.ENG_POPS.data : DR.ENG_BANKS[id].data), done, function () { done(null); });
       if (p && p.catch) p.catch(function () { done(null); });
     } catch (e) { done(null); }
   };
   A.banksReady = function (engs) {
-    return engs.every(function (e) { var id = DR.engineBank(e); return !id || decoded[id] !== undefined; });
+    return (!DR.ENG_POPS || decoded.__pops !== undefined) && engs.every(function (e) { var id = DR.engineBank(e); return !id || decoded[id] !== undefined; });
   };
-  A.preloadEngines = function (engs) { engs.forEach(function (e) { var id = DR.engineBank(e); if (id) A.loadBank(id); }); };
+  A.preloadEngines = function (engs) {
+    if (DR.ENG_POPS) A.loadBank('__pops');
+    engs.forEach(function (e) { var id = DR.engineBank(e); if (id) A.loadBank(id); });
+  };
 
   // How the car's parts colour the recording: a stock muffler is darker and
   // quieter, straight pipes open it up. Turbos muffle the exhaust a bit.
@@ -213,6 +294,17 @@
     var L = bank.loops, k = sr / bank.sr, n = L.length;
     var d = { dbl: !!(opts && opts.dbl), k: bank.k, pcm: pcm.slice(), s: new Int32Array(n), n: new Float64Array(n), rpm: new Float32Array(n), lay: new Uint8Array(n), m: new Int32Array(n), rho: new Float32Array(n) };
     for (var i = 0; i < n; i++) { d.s[i] = Math.round(L[i][0] * k); d.n[i] = L[i][1] * k; d.rpm[i] = L[i][2]; d.lay[i] = L[i][3]; d.m[i] = L[i][5]; d.rho[i] = L[i][6] || 0; }
+    // pops land about 10 dB over the engine's level
+    var e = 0, cnt = 0;
+    for (i = 0; i < d.pcm.length; i += 7) { e += d.pcm[i] * d.pcm[i]; cnt++; }
+    d.popLvl = 3.2 * Math.sqrt(e / Math.max(1, cnt));
+    var pb = decoded.__pops, PB = DR.ENG_POPS;
+    if (pb && PB) {
+      var pk = pb.sampleRate / PB.sr, np = PB.pops.length;
+      d.pops = { pcm: pb.getChannelData(0).slice(), s: new Int32Array(np), n: new Int32Array(np), k: 1 };
+      for (i = 0; i < np; i++) { d.pops.s[i] = Math.round(PB.pops[i][0] * pk); d.pops.n[i] = Math.round(PB.pops[i][1] * pk); }
+      d.pops.k = pb.sampleRate / sr;
+    }
     return d;
   };
 
@@ -233,19 +325,24 @@
     sm.high = c.createBiquadFilter(); sm.high.type = 'highshelf'; sm.high.frequency.value = 7000; sm.high.gain.value = -2.5;
     sm.node.connect(sm.low); sm.low.connect(sm.high); sm.high.connect(sm.tone); sm.tone.connect(sm.out); sm.out.connect(v.bus);
     sm.lvl = TONE.lvl[ex] * (build.turbo ? 0.85 : 1) * (bank.gain || 1);
+    // how the limiter cuts: a race exhaust / ECU or a 2-step cuts the
+    // ignition (fast, popping); a stock car cuts fuel (slow, deep bounce)
+    sm.ign = build.twostep || build.antilag || ex >= 2 ? 1 : 0;
+    // how readily it pops and crackles on a lift
+    sm.crk = Math.min(1, [0.05, 0.25, 0.6, 0.9][ex] * (build.turbo ? 0.6 : 1) + (build.antilag ? 0.5 : 0));
+    if (!decoded.__pops && DR.ENG_POPS) A.loadBank('__pops');
     // the recording carries the engine: silence the modelled exhaust note and
     // engine-bay sounds, keeping its limiter cuts, pops, bangs and blower
     if (v.np) { v.np.get('exh').value = 0; v.np.get('mech').value = 0; }
     return true;
   }
 
-  // with a recording carrying the engine, the modelled pops and limiter
-  // bangs come far less often (a real limiter pops now and then; synthetic
-  // bangs on every cut sound electronic)
+  // with a recording carrying the engine, its pops and bangs are real ones
+  // too (played by the loop worklet): the modelled ones stay quiet
   var baseCfg = A.engineConfig;
   A.engineConfig = function (eng, build) {
     var c = baseCfg(eng, build), id = DR.engineBank(eng);
-    if (id && decoded[id] && A.loopsWk && !A.forceSynth && !A.noSamples) { c.bangChance *= 0.3; c.bangLvl *= 0.7; c.crackle *= 0.5; }
+    if (id && decoded[id] && A.loopsWk && !A.forceSynth && !A.noSamples) { c.bangChance = 0; c.crackle = 0; }
     return c;
   };
 
@@ -267,19 +364,23 @@
     // load: throttle, smoothed so the pull / coast blend doesn't click
     sm.load = sm.load == null ? thr : sm.load + (thr - sm.load) * 0.25;
     var on = Math.min(1, Math.max(0, (sm.load - 0.05) / 0.45));
-    sm.np.get('rpm').setTargetAtTime(r, t, 0.012);
+    // the physics flickers a few rpm either side of the limit many times a
+    // frame; on the limiter the worklet makes the bounce, so smooth it out
+    var cf = Math.min(1, Math.max(0, st.cutFrac != null ? st.cutFrac : (st.cut ? 1 : 0))) * (thr > 0.5 || st.shiftCut ? 1 : 0);
+    sm.np.get('rpm').setTargetAtTime(r, t, cf > 0 || sm.limT > t ? 0.05 : 0.012);
+    if (cf > 0) sm.limT = t + 0.15;
+    sm.np.get('lim').setValueAtTime(st.shiftCut ? 2 : cf, t);
+    sm.np.get('pre').setValueAtTime(st.pre ? 1 : 0, t);
+    sm.np.get('ign').setValueAtTime(sm.ign || (st.pre && st.twostep) ? 1 : 0, t);
+    sm.np.get('crk').setValueAtTime(sm.crk, t);
     sm.np.get('load').setTargetAtTime(on, t, 0.03);
     sm.np.get('dop').setTargetAtTime(st.doppler || 1, t, 0.05);
     // off throttle the exhaust note loses its top end (as racing-game sound
-    // designers EQ it); level grows with load and rpm; the limiter chops it
+    // designers EQ it); level grows with load and rpm
     sm.tone.frequency.setTargetAtTime(sm.cut * (0.5 + 0.5 * on), t, 0.05);
     var lvl = v.vol * sm.lvl * (0.3 + 0.7 * sm.load) * (0.45 + 0.55 * Math.min(1, r / (v.b.red || 7000))) * (1 + (st.nos ? 0.15 : 0));
-    // the rev limiter / 2-step / shift cut: each cut swaps the pulling sound
-    // for the coasting one and drops the level, crisply (a slow swell on
-    // every flicker of the limiter sounds like a wah, not an engine)
-    var cut = st.cut && thr > 0.5 ? 1 : 0;
-    sm.np.get('cut').setTargetAtTime(cut, t, 0.004);
-    sm.out.gain.setTargetAtTime(lvl * (1 - 0.4 * cut) * A.SMP_GAIN, t, cut ? 0.005 : 0.01);
+    // (the limiter's cuts and the pops are shaped in the worklet)
+    sm.out.gain.setTargetAtTime(lvl * A.SMP_GAIN, t, 0.02);
   };
   A.SMP_GAIN = 1.5;
 
