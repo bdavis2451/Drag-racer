@@ -43,8 +43,7 @@
     return h('div', { class: 'screen' }, UI.top('PICK YOUR FIRST CAR', function () { UI.show(UI.Title); }),
       h('div', { class: 'gwrap' }, cv,
         h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
-            // the real model the sprite should be drawn from, and whether it still uses the generic placeholder
-            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S),
+            h('div', { class: 'gsmall dim' }, car.real), statBars(S),
           gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive),
           h('div', { class: 'gsmall dim' }, 'Free to start, plus $6,000 for parts.')),
         h('div', { class: 'gsel' }, btn('◀', function () { cyc(-1); }, 'arrow'),
@@ -480,8 +479,7 @@
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'dmain' },
         h('div', { class: 'gwrap' }, cv,
           h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
-            // the real model the sprite should be drawn from, and whether it still uses the generic placeholder
-            h('div', { class: 'gsmall dim' }, car.real + (DR.CAR_ART[id] ? '' : ' • placeholder art')), statBars(S),
+            h('div', { class: 'gsmall dim' }, car.real), statBars(S),
             gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
             gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
             gst('TIRES', S.tire.name),
@@ -554,7 +552,7 @@
     }, 'go');
     return h('div', { class: 'screen' }, UI.top('PAINT SHOP', function () { paintDraft = null; UI.show(UI.Garage); }, btn('Body Shop ▶', function () { UI.show(UI.Body); }, 'small')),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'dmain' },
-        h('div', { class: 'gwrap' }, cv, h('div', { class: 'gsel' }, costEl, btn('Undo', function () { paintDraft = null; UI.refresh(); }, 'small'), apply)),
+        h('div', { class: 'gwrap' }, cv, h('div', { class: 'gsel topsel' }, costEl, btn('Undo', function () { paintDraft = null; UI.refresh(); }, 'small'), apply)),
         h('div', { class: 'paintbar' }, h('div', { class: 'plvl' }, paintTab === 'stripe' ? 'STRIPE • +0.25 STARS' : paintTab === 'rim' ? 'WHEEL COLOR' : 'BODY COLOR'), sw))));
   };
 })();

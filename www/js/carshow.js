@@ -93,7 +93,7 @@
       grid.appendChild(h('div', { class: 'ecard' + (ok ? '' : ' locked') + (sh.theme === 'hall' ? ' t-showcase' : '') },
         h('div', { class: 'ecvwrap' }, showThumb(sh, inst), h('span', { class: 'etype' }, sh.minStars ? sh.minStars + '+ STARS' : 'OPEN TO ALL'), sh.night ? h('span', { class: 'ewon', style: { background: '#3a2a7a' } }, 'NIGHT') : null),
         h('div', { class: 'acc ename' }, sh.name),
-        h('div', { class: 'gsmall dim' }, sh.where + ' • ~' + sh.crowd + ' visitors • ' + DR.money(sh.pay) + '/visitor'),
+        h('div', { class: 'gsmall dim' }, sh.where + ' • about ' + sh.crowd + ' visitors • ' + DR.money(sh.pay) + '/visitor'),
         h('div', { class: 'gsmall' }, 'Prizes ' + sh.prizes.map(DR.money).join(' / ')),
         h('div', { class: 'gsmall' }, '🥇' + st.places[0] + '  🥈' + st.places[1] + '  🥉' + st.places[2] + (st.best ? '  • best crowd ' + st.best : '')),
         bored ? h('div', { class: 'warn gsmall' }, 'The regulars have seen this build — change it up for a bigger crowd.') : null,
@@ -428,7 +428,7 @@
     for (var l = 1; l <= 10; l++) {
       var cover = got[l];
       grid.appendChild(h('div', { class: 'card' + (cover ? '' : ' locked') }, cover ? coverCanvas(cover) : h('div', { class: 'pix dim', style: { padding: '40px 8px', textAlign: 'center' } }, '?'),
-        h('div', { class: 't acc' }, DR.starText(l) + ' cover'), h('div', { class: 'dim' }, cover ? DR.CARS[cover.inst.carId].name + ' • ' + DR.money(cover.bonus) : 'Reach ' + DR.starText(l) + ' to make the cover')));
+        h('div', { class: 't acc' }, l + '-star cover'), h('div', { class: 'dim' }, cover ? DR.CARS[cover.inst.carId].name + ' • ' + DR.money(cover.bonus) : 'Reach ' + DR.starText(l) + ' to make the cover')));
     }
     return h('div', { class: 'screen' }, UI.top('MAGAZINE COVERS', function () { UI.show(UI.Shows); }), h('div', { class: 'content' }, grid));
   };
