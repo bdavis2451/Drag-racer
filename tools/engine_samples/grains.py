@@ -172,6 +172,16 @@ def match(seg, key):
     S = np.fft.rfft(np.pad(seg, (1024, m - n - 1024), mode='reflect' if n > 1100 else 'constant'))
     g = 10 ** (np.interp(np.linspace(0, 1, len(S)), np.linspace(0, 1, len(corr)), corr) / 20)
     return np.fft.irfft(S * g, m)[1024:1024 + n].astype(np.float32)
+# last check on everything packed: a segment whose highs burst (a pop,
+# crackle or click that slipped through) is left out; playback uses a
+# neighbouring one instead
+_hp = butter(4, 3500, 'hp', fs=SR, output='sos')
+def hf_bad(seg):
+    h = sosfilt(_hp, seg); w = int(0.002 * SR)
+    if len(h) < 10 * w: return False
+    e = np.sqrt(np.convolve(h ** 2, np.ones(w) / w, 'valid')[::w // 2])
+    return np.max(e) > float(os.environ.get('HFBAD', '3.2')) * np.median(e) + 1e-9
+dropped = [0, 0]
 # pack: each piece is copied with its cycles; a level-normalised stream
 pcm, table, pos = [np.zeros(400, np.float32)], [], 400
 for load in ('on', 'off'):
@@ -193,6 +203,7 @@ for load in ('on', 'off'):
             env = np.interp(np.arange(len(seg)), [(grains[i]['a'] + grains[i]['b']) / 2 - g0 for i in piece], gains)
             seg = seg * env
             fi = grains[piece[0]]['a'] - a0; fo = b0 - grains[piece[-1]]['b']
+            if hf_bad(seg[fi:len(seg) - fo]): dropped[0] += 1; continue
             if fi > 1: seg[:fi] *= np.linspace(0, 1, fi)
             if fo > 1: seg[-fo:] *= np.linspace(1, 0, fo)
             for i in piece:
@@ -207,6 +218,7 @@ for load in ('on', 'off'):
         if key not in envs: envs[key] = env_of(piece_audio(list(key)))
         seg = match(seg, key)
         seg = seg / (np.sqrt(np.mean(seg ** 2)) + 1e-9) * 0.1
+        if hf_bad(seg[off0:off0 + int(round(clen * 10))]): dropped[1] += 1; continue
         if off0 > 1: seg[:off0] *= np.linspace(0, 1, off0)
         tail = len(seg) - off0 - int(round(clen * 10))
         if tail > 1: seg[-tail:] *= np.linspace(1, 0, tail)
@@ -224,4 +236,4 @@ json.dump(dict(id=ID, k=K, sr=SR, grains=table, real_on=[real_on[0], real_on[-1]
                real_off=[real_off[0], real_off[-1], len(real_off)] if real_off else None), open(f'{OUT}/{ID}.json', 'w'))
 cov = lambda s: '%d-%d (%d bands)' % (s[0], s[-1] + 250, len(s)) if s else 'none'
 nreal = sum(len(p) for L_ in pieces.values() for p in L_)
-print(ID, 'grains', len(table), 'real', nreal, 'on', cov(on), 'off', cov(off), 'ogg', os.path.getsize(f'{OUT}/{ID}.ogg') // 1024, 'KB')
+print(ID, 'grains', len(table), 'real', nreal, 'dropped', dropped, 'on', cov(on), 'off', cov(off), 'ogg', os.path.getsize(f'{OUT}/{ID}.ogg') // 1024, 'KB')

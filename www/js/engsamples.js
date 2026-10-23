@@ -222,6 +222,16 @@
     return true;
   }
 
+  // with a recording carrying the engine, the modelled pops and limiter
+  // bangs come far less often (a real limiter pops now and then; synthetic
+  // bangs on every cut sound electronic)
+  var baseCfg = A.engineConfig;
+  A.engineConfig = function (eng, build) {
+    var c = baseCfg(eng, build), id = DR.engineBank(eng);
+    if (id && decoded[id] && A.grainsWk && !A.forceSynth && !A.noSamples) { c.bangChance *= 0.3; c.bangLvl *= 0.7; c.crackle *= 0.5; }
+    return c;
+  };
+
   var baseEngine = A.engine;
   A.engine = function (eng, vol, build) {
     var v = baseEngine(eng, vol, build);

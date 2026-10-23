@@ -212,6 +212,9 @@
     // turbo whoosh: airflow noise through the compressor (shares the noise source)
     v.tw = c.createBiquadFilter(); v.tw.type = 'bandpass'; v.tw.Q.value = 2.2; v.tw.frequency.value = 2000;
     v.twg = c.createGain(); v.twg.gain.value = 0; v.en.connect(v.tw); v.tw.connect(v.twg); v.twg.connect(v.bus);
+    // the whistle itself: air through a narrow band, not a pure (electronic) tone
+    v.wn = c.createBiquadFilter(); v.wn.type = 'bandpass'; v.wn.Q.value = 28; v.wn.frequency.value = 3000;
+    v.wng = c.createGain(); v.wng.gain.value = 0; v.en.connect(v.wn); v.wn.connect(v.wng); v.wng.connect(v.bus);
     // straight-cut gear whine (sequential / Lenco boxes)
     v.go = c.createOscillator(); v.go.type = 'triangle'; v.gg = c.createGain(); v.gg.gain.value = 0; v.go.connect(v.gg); v.gg.connect(v.bus);
     [v.osc, v.lfo, v.sub, v.en, v.tn, v.wo, v.go].forEach(function (n) { if (n) n.start(); });
@@ -298,7 +301,9 @@
       v.spool += (flow - v.spool) * Math.min(1, dt / (flow > v.spool ? 0.45 : 1.1));
       var sp = v.spool;
       v.wo.frequency.setTargetAtTime((2400 + sp * 5200) * dop, t, 0.05);
-      v.wg.gain.setTargetAtTime(v.vol * 0.02 * sp * sp, t, 0.08);
+      v.wg.gain.setTargetAtTime(v.vol * 0.004 * sp * sp, t, 0.08);
+      v.wn.frequency.setTargetAtTime((2400 + sp * 5200) * dop, t, 0.05);
+      v.wng.gain.setTargetAtTime(v.vol * 0.32 * sp * sp, t, 0.08);
       v.tw.frequency.setTargetAtTime(1600 + sp * 3600, t, 0.05);
       v.twg.gain.setTargetAtTime(v.vol * 0.12 * sp * sp * (0.3 + 0.7 * thr), t, 0.08);
       // lifting with boost up: blow-off valve
