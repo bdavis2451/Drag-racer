@@ -174,6 +174,7 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .slip.peek { background: transparent; pointer-events: none; align-items: flex-end; }
 .slip.peek .panel { transform: translateY(calc(100% - 34px)); pointer-events: auto; }
 .slip .peekbtn { position: absolute; right: 8px; top: 6px; font-size: 8px; padding: 4px 8px; }
+.slip .slipside { padding-top: 22px; }   /* clear of the Watch button */
 .slip .panel { position: relative; }
 .slip .margin { text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--dim); }
 
@@ -183,6 +184,7 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 /* ---------------------------------------------------------------- misc */
 #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #000; color: var(--accent); font-family: 'Press Start 2P', monospace; font-size: 10px; padding: 10px 14px; box-shadow: 0 0 0 2px var(--accent); display: none; z-index: 50; max-width: 90%; text-align: center; line-height: 1.5; }
 #toast.show { display: block; }
+#toast { pointer-events: none; }   /* never swallow a tap meant for the button under it */
 .title { align-items: center; justify-content: center; text-align: center; background: radial-gradient(circle at 50% 30%, #2b2244, #101116 70%); }
 .title .logo { font-family: 'Press Start 2P', monospace; font-size: clamp(26px, 6vw, 54px); color: var(--accent); text-shadow: 4px 4px 0 #b52a2a, 8px 8px 0 #000; margin-bottom: 8px; }
 .title .tag2 { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dim); margin-bottom: 18px; }

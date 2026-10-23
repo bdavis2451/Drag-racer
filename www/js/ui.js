@@ -110,6 +110,8 @@
     if (UI.cleanup) { try { UI.cleanup(); } catch (e) { /* ignore */ } }
     UI.cleanup = null;
     jobs.length = 0;
+    // a dialog belongs to the screen it was opened on: leaving closes it
+    if (!UI.refreshing) document.querySelectorAll('.modal').forEach(function (m) { m.parentNode.removeChild(m); });
     UI.app.innerHTML = '';
     UI.app.appendChild(fn(arg));
     UI.cur = { fn: fn, arg: arg };

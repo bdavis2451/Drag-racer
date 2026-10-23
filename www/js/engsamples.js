@@ -278,6 +278,14 @@
   A.banksReady = function (engs) {
     return (!DR.ENG_POPS || decoded.__pops !== undefined) && engs.every(function (e) { var id = DR.engineBank(e); return !id || decoded[id] !== undefined; });
   };
+  // fn once every bank these engines need (and the pops) is decoded (or failed)
+  A.whenBanks = function (engs, fn) {
+    var ids = engs.map(function (e) { return DR.engineBank(e); }).filter(Boolean);
+    if (DR.ENG_POPS) ids.push('__pops');
+    var left = ids.length;
+    if (!left) return fn();
+    ids.forEach(function (id) { A.loadBank(id, function () { if (--left === 0) fn(); }); });
+  };
   A.preloadEngines = function (engs) {
     if (DR.ENG_POPS) A.loadBank('__pops');
     engs.forEach(function (e) { var id = DR.engineBank(e); if (id) A.loadBank(id); });

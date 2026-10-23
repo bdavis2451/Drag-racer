@@ -653,7 +653,7 @@
           tbl,
           h('div', { class: 'pfoot2' }, '* THANKS FOR RACING *'),
           win != null ? h('div', { class: 'stamp ' + (win ? 'w' : 'l') }, win ? 'WIN' : 'LOSS') : null),
-        h('div', { class: 'col', style: { width: '38%', minWidth: '210px' } },
+        h('div', { class: 'col slipside', style: { width: '38%', minWidth: '210px' } },
         h('div', { class: 'pix big ' + (win === false ? 'bad' : 'good'), style: { textAlign: 'center' } }, head),
         margin ? h('div', { class: 'margin' }, margin) : null,
         moneyDelta ? h('div', { class: 'pix ' + (moneyDelta > 0 ? 'good' : 'bad'), style: { textAlign: 'center' } }, (moneyDelta > 0 ? '+' : '') + DR.money(moneyDelta)) : null,

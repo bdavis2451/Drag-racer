@@ -527,7 +527,40 @@
     var t = DR.FI_SHOP.filter(function (f) { return DR.FI[f].type === 'turbo'; }).sort(function (a, b) { return DR.FI[a].flow - DR.FI[b].flow; });
     var pick = t[t.length - 1];
     for (var i = 0; i < t.length; i++) if (DR.FI[t[i]].flow >= want) { pick = t[i]; break; }
-    return DR.FI[pick].flow > (cur.flow || 0) ? pick : null;
+    if (DR.FI[pick].flow <= (cur.flow || 0)) return null;
+    // A factory turbo is only swapped for one that really makes more power
+    // where the engine lives (sized from the stock power of an engine that
+    // already has boost, "k x" would pick a turbo that never spools): try
+    // the bigger turbos smallest first, at the package's boost
+    if (cur.type !== 'none' && !cur.price) {
+      var base = bandPower(inst), best = null, bestP = base * 1.08;
+      t.forEach(function (id) {
+        if (DR.FI[id].flow <= cur.flow) return;
+        var c = withParts(inst, { fi: id }); c.tune = Object.assign({}, c.tune); delete c.tune.boost;
+        var S0 = DR.buildSpec(c); c.tune.boost = Math.max(S0.boostSet, Math.min(DR.PKG_BOOST[2], S0.knock - 1, S0.sparkPsi, S0.maxBoost));
+        var pw = bandPower(c);
+        if (pw > bestP) { bestP = pw; best = id; }
+      });
+      return best;
+    }
+    return pick;
+  }; }
+  // average power over the top half of the rev range (where a drag car lives)
+  function bandPower(inst) {
+    var S = DR.buildSpec(inst), d = DR.dyno(S), sum = 0, n = 0;
+    d.pts.forEach(function (q) { if (q.rpm >= S.red * 0.5 && q.rpm <= S.red) { sum += q.hp; n++; } });
+    return n ? sum / n : d.peakHp;
+  }
+  // a converter that flashes to a useful rpm for this engine: never past
+  // about 60% of the redline (a diesel or a low-revving big block bogs on a
+  // converter made for a high-revving engine)
+  function converterFor(maxId) { return function (inst) {
+    var red = DR.buildSpec(inst).red, opts = C.converter.options, pick = null;
+    for (var i = 1; i < opts.length; i++) {
+      if (opts[i].stall <= red * 0.62) pick = opts[i].id;
+      if (opts[i].id === maxId) break;
+    }
+    return pick;
   }; }
   function withParts(inst, p) { var c = JSON.parse(JSON.stringify(inst)); for (var k in p) c.parts[k] = p[k]; return c; }
   function fuelFor(cat, min) { return function (inst) {
@@ -544,7 +577,8 @@
     if (tr.maxTq >= need) return null;
     // same kind of box if one holds it, else a manual steps up to a
     // sequential (still on a clutch); the strongest of its kind otherwise
-    var fam = tr.type === 'auto' ? ['auto'] : [tr.type, 'manual', 'seq'];
+    // (a dual-clutch only ever steps up to a sequential: a manual shifts slower)
+    var fam = tr.type === 'auto' ? ['auto'] : tr.type === 'dct' ? ['dct', 'seq'] : [tr.type, 'manual', 'seq'];
     for (var f = 0; f < fam.length; f++) {
       var ok = DR.TRANS_SHOP.filter(function (t) { return DR.TRANS[t].type === fam[f] && DR.TRANS[t].maxTq >= need; }).sort(function (a, b) { return DR.TRANS[a].price - DR.TRANS[b].price; });
       if (ok.length) return ok[0];
@@ -583,9 +617,9 @@
       [['fi', turboFor(2.5)], ['ic', 'ic2'], ['wastegate', 'wg2'], ['bov', 'bov1'], ['launch', 'l1']],
       [['fi', turboFor(4, true)], ['ic', 'ic3'], ['wastegate', 'wg2'], ['bov', 'bov2'], ['launch', 'l2']]],
     drive: [
-      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', 'tcl'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', 'tcm'], ['transbrake', 'tb1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', 'tch'], ['transbrake', 'tb1'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)]]],
+      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tch')], ['transbrake', 'tb1'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)]]],
     susp: [
       [['springs', 'sp1'], ['shocks', 'sh1'], ['rearsusp', 'rs1'], ['chassis', 'cg1']],
       [['springs', 'sp2'], ['shocks', 'sh2'], ['rearsusp', 'rs2'], ['chassis', 'cg2'], ['frontsusp', 'fs1']],

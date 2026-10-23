@@ -26,8 +26,38 @@
     if (s.v === 3) migrate3(s);
     for (var k in d) if (s[k] == null) s[k] = d[k];
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
+    try { sanitize(s); } catch (e) { /* keep what loaded */ }
     G.state = s;
   };
+  // A save is checked against today's catalog: cars, engines and parts the
+  // game no longer has are dropped (one bad entry must not stop the garage
+  // from opening), missing fields get defaults, and spare engine parts from
+  // old saves that never said which engine they fit get the current one.
+  function sanitize(s) {
+    function carOf(id) { return DR.CARS[id] || (DR.CARS_RESERVE && DR.CARS_RESERVE[id]); }
+    function fits(cat, inst, id) {
+      if (cat === 'engine') return !!DR.ENGINES[id];
+      if (!DR.PART_CATS[cat]) return false;
+      try { return DR.partOptions(cat, inst).some(function (o) { return o.id === id; }); } catch (e) { return false; }
+    }
+    s.cars = (s.cars || []).filter(function (c) { return c && carOf(c.carId); });
+    s.cars.forEach(function (c) {
+      if (!DR.ENGINES[c.engine]) c.engine = carOf(c.carId).engine;
+      c.parts = c.parts || {}; c.tune = c.tune || {}; c.vis = c.vis || {};
+      if (typeof c.spent !== 'number' || !isFinite(c.spent)) c.spent = 0;
+      Object.keys(c.parts).forEach(function (cat) { if (!fits(cat, c, c.parts[cat])) delete c.parts[cat]; });
+    });
+    if (!s.cars.some(function (c) { return c.uid === s.active; })) s.active = s.cars.length ? s.cars[0].uid : null;
+    if (!s.cars.length) s.started = false;
+    var cur = s.cars.filter(function (c) { return c.uid === s.active; })[0];
+    s.inv = (s.inv || []).filter(function (it) {
+      if (!it || !it.cat) return false;
+      if (G.isEngineBound(it.cat) && !DR.ENGINES[it.eng]) { if (!cur) return false; it.eng = cur.engine; }
+      var ctx = { carId: cur ? cur.carId : 'fox', engine: it.eng || (cur ? cur.engine : 'v8_50'), parts: {}, tune: {} };
+      return fits(it.cat, ctx, it.id);
+    });
+    if (typeof s.money !== 'number' || !isFinite(s.money)) s.money = 0;
+  }
   // v1 -> v2: the car list was narrowed, converters were renamed and the
   // career ladder was rebuilt. Keep money, settings and any cars still sold.
   function migrate1(s) {
@@ -140,7 +170,7 @@
   };
   // '' when the item can go on this car, otherwise why not.
   G.partFitIssue = function (item, inst) {
-    if (G.isEngineBound(item.cat) && item.eng !== inst.engine) return 'Made for the ' + DR.ENGINES[item.eng].name;
+    if (G.isEngineBound(item.cat) && item.eng !== inst.engine) return DR.ENGINES[item.eng] ? 'Made for the ' + DR.ENGINES[item.eng].name : 'Made for another engine';
     if (!DR.partApplies(item.cat, inst)) {
       if (item.cat === 'clutch' || item.cat === 'flywheel') return 'Needs a manual gearbox';
       if (item.cat === 'converter' || item.cat === 'transbrake') return 'Needs an automatic';

@@ -44,10 +44,9 @@
       h('div', { class: 'gwrap' }, cv,
         h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
             h('div', { class: 'gsmall dim' }, car.real), statBars(S),
-          gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive),
-          h('div', { class: 'gsmall dim' }, 'Free to start, plus $6,000 for parts.')),
+          gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive)),
         h('div', { class: 'gsel' }, btn('◀', function () { cyc(-1); }, 'arrow'),
-          h('div', { class: 'gname' }, h('div', { class: 'pix acc' }, car.name), h('div', { class: 'dim' }, (starterIdx % ids.length + 1) + ' / ' + ids.length + ' • starter car')),
+          h('div', { class: 'gname' }, h('div', { class: 'pix acc' }, car.name), h('div', { class: 'dim' }, (starterIdx % ids.length + 1) + ' / ' + ids.length + ' • free, plus $6,000 for parts')),
           btn('▶', function () { cyc(1); }, 'arrow'),
           btn('Choose', function () { G.newGame(id); UI.toast('Welcome to the strip! You have ' + DR.money(G.state.money) + ' to spend.'); UI.show(UI.Garage); }, 'go'))));
   };
@@ -409,7 +408,7 @@
       A.init(); A.resume();
       if (voice) return;
       if (A.wkPending) { A.whenReady(run); return; }
-      if (A.banksReady && !A.banksReady([S.eng])) { A.loadBank(DR.engineBank(S.eng), run); return; }
+      if (A.banksReady && !A.banksReady([S.eng])) { if (!run.wait) { run.wait = true; A.whenBanks([S.eng], function () { run.wait = false; run(); }); } return; }
       voice = A.engine(S.eng, 0.8, A.buildOf(S));
       var t0 = performance.now(), ang = 0, last = t0;
       sweep.p = 0;
@@ -549,8 +548,8 @@
       if (!G.canAfford(c)) return UI.toast('Not enough money');
       G.pay(c); inst.color = d.color; inst.stripe = d.stripe; inst.rim = d.rim; G.save(); A.cash(); UI.toast('Fresh paint!');
       paintDraft = null;
-      UI.afterStars(G.noteStars());
       UI.show(UI.Garage);
+      UI.afterStars(G.noteStars());
     }, 'go');
     return h('div', { class: 'screen' }, UI.top('PAINT SHOP', function () { paintDraft = null; UI.show(UI.Garage); }, btn('Body Shop ▶', function () { UI.show(UI.Body); }, 'small')),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'dmain' },
