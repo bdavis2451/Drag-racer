@@ -176,11 +176,16 @@ def match(seg, key):
 # crackle or click that slipped through) is left out; playback uses a
 # neighbouring one instead
 _hp = butter(4, 3500, 'hp', fs=SR, output='sos')
-def hf_bad(seg):
+def hf_ratio(seg):
     h = sosfilt(_hp, seg); w = int(0.002 * SR)
-    if len(h) < 10 * w: return False
+    if len(h) < 10 * w: return 0
     e = np.sqrt(np.convolve(h ** 2, np.ones(w) / w, 'valid')[::w // 2])
-    return np.max(e) > float(os.environ.get('HFBAD', '3.2')) * np.median(e) + 1e-9
+    return np.max(e) / (np.median(e) + 1e-9)
+# the threshold adapts to the recording: some engines (a boxer with crackle)
+# are bursty all the time, and that is their sound; only outliers go
+_base = [hf_ratio(x[grains[p[0]]['a']:grains[p[-1]]['b']]) for L_ in pieces.values() for p in L_]
+HF_THR = max(float(os.environ.get('HFBAD', '3.2')), 1.3 * float(np.median(_base)) if _base else 0)
+def hf_bad(seg): return hf_ratio(seg) > HF_THR
 dropped = [0, 0]
 # pack: each piece is copied with its cycles; a level-normalised stream
 pcm, table, pos = [np.zeros(400, np.float32)], [], 400

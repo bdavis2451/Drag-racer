@@ -42,13 +42,8 @@
         this.pcm = d.pcm; this.s = d.s; this.n = d.n; this.rpm = d.rpm; this.on = d.on; this.end = d.end; this.X = d.xf; this.D = d.d; this.off = 0;
         this.cyc = d.cyc;                     // firings per engine cycle
         this.hist = [-1, -1, -1, -1, -1, -1, -1, -1]; this.hp = 0;
-        // each cycle's loudness, to level-match a splice
-        this.rms = new Float32Array(this.s.length);
-        for (var g = 0; g < this.s.length; g++) {
-          var e = 0, a0 = this.s[g] | 0, n0 = this.n[g] | 0;
-          for (var t = 0; t < n0; t += 2) { var v = this.pcm[a0 + t] || 0; e += v * v; }
-          this.rms[g] = Math.sqrt(e / Math.max(1, n0 / 2)) + 1e-6;
-        }
+        this.gk = 1 - Math.exp(-1 / (sampleRate * 0.004));   // ~4 ms level glide
+
         var sets = [[], []], i;
         for (i = 0; i < this.s.length; i++) sets[this.on[i]].push(i);
         var self = this;
@@ -56,7 +51,7 @@
         if (!sets[0].length) sets[0] = sets[1];
         if (!sets[1].length) sets[1] = sets[0];
         this.sets = sets;
-        this.lay = [0, 1].map(function () { return { i: -1, p: 0, r: 1, fi: -1, fp: 0, fr: 1, fade: 0, g: 1, jg: 1 }; });
+        this.lay = [0, 1].map(function () { return { i: -1, p: 0, r: 1, fi: -1, fp: 0, fr: 1, fade: 0, jg: 1, jc: 1 }; });
         this.ready = this.s.length > 0;
       }
       // the next cycle to play: carry on through the recording while it stays
@@ -135,9 +130,6 @@
                   this.st.mis += e1 / (e2 + 1e-9);
                 }
               }
-              // match the level across a splice, then ease back over a few cycles
-              if (L.fi >= 0 && ni !== L.fi + 1) L.g = Math.max(0.5, Math.min(2, L.g * this.rms[L.fi] / this.rms[ni]));
-              else L.g = 1 + (L.g - 1) * 0.7;
               L.i = ni; L.p = this.off;
               // no two combustion cycles are identical: a touch of random
               // timing and level per cycle keeps it from sounding machine-made
@@ -151,7 +143,9 @@
               L.fp += L.fr; L.fade--;
             }
             L.p += L.r;
-            out[s] += v * wj * L.g * L.jg;
+            // glide to each cycle's level rather than stepping (a step clicks)
+            L.jc += (L.jg - L.jc) * this.gk;
+            out[s] += v * wj * L.jc;
           }
         }
         return true;
