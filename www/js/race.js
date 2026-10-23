@@ -661,7 +661,7 @@
           btn('Tune', function () { UI.show(UI.Tune); }),
           !damaged && nextRound != null ? btn('Next Round', function () { DR.Race.careerEvent(ev, nextRound); }, 'primary') : null,
           !damaged && nextRound == null ? btn(them ? (cfg.mode === 'street' ? 'Back to Street' : 'Back to Career') : 'Run Again', function () {
-            if (them) UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : 'career');
+            if (them) UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career');
             else DR.Race.start(cfg);
           }, 'primary') : null,
           !damaged && them && cfg.mode === 'career' && !win ? btn(ev.type === 'knockout' ? 'Retry Knockout' : 'Rematch', function () { DR.Race.careerEvent(ev, 0); }, 'red') : null,
@@ -674,14 +674,14 @@
       root.appendChild(slip);
       controls.style.display = 'none';
       slipEl = slip;
-      root._back = testDrive ? function () { UI.show(UI.Dealer); } : function () { UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : cfg.mode === 'test' ? 'test' : 'career'); };
+      root._back = testDrive ? function () { UI.show(UI.Dealer); } : function () { UI.show(UI.RaceMenu, cfg.mode === 'test' ? 'test' : UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career'); };
     }
 
     function quit() {
       if (you.sim.launched && cfg.mode === 'street' && !resultShown) {
-        UI.confirm('Leaving now forfeits your ' + DR.money(cfg.bet) + ' bet. Quit?', function () { G.earn(-cfg.bet); G.state.stats.races++; G.save(); UI.show(UI.RaceMenu, 'street'); });
+        UI.confirm('Leaving now forfeits your ' + DR.money(cfg.bet) + ' bet. Quit?', function () { G.earn(-cfg.bet); G.state.stats.races++; G.save(); UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : 'street'); });
       } else if (testDrive) UI.show(UI.Dealer);
-      else UI.show(UI.RaceMenu, cfg.mode === 'street' ? 'street' : cfg.mode === 'test' ? 'test' : 'career');
+      else UI.show(UI.RaceMenu, cfg.mode === 'test' ? 'test' : UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career');
     }
 
     return root;

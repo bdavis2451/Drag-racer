@@ -56,25 +56,90 @@
   // ---------------------------------------------------------------- RACE MENU
   var streetOpps = null, selStage = null, betSel = 1000;
   UI.RaceMenu = function (tab) {
-    tab = tab || 'career';
+    tab = tab || 'map';
+    UI.raceTab = tab;
     var inst = G.car();
     var rail = h('div', { class: 'srail' },
+      railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
       railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }),
       railItem('u_street', 2, 'Street $', tab === 'street', function () { UI.show(UI.RaceMenu, 'street'); }),
       railItem('u_test', 2, 'Test & Tune', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }));
-    var body = tab === 'career' ? careerView() : tab === 'street' ? streetView(inst) : testView(inst);
+    var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'street' ? streetView(inst) : testView(inst);
     return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, DR.CARS[inst.carId].name + ' • ' + bestText(inst))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
   };
+
+  function stageChips() {
+    return h('div', { class: 'schips' }, DR.STAGES.map(function (st, si) {
+      var un = G.stageUnlocked(si), boss = G.eventWon(st.boss);
+      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Beat the stage ' + si + ' boss first'); selStage = si; selPlace = null; UI.refresh(); }, un ? '' : 'nofit');
+    }));
+  }
+  function nextEvent(st) {
+    var next = null;
+    st.all.forEach(function (ev) { if (!next && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) next = ev; });
+    return next;
+  }
+
+  // the city map: tap a place to see what races are there, or to go shopping
+  var selPlace = null;
+  function mapView(inst) {
+    var c = G.careerState();
+    if (selStage == null || selStage > c.stage) selStage = c.stage;
+    G.checkContracts().forEach(function (m) { UI.toast(m); });
+    var st = DR.STAGES[selStage], next = nextEvent(st), pins = {};
+    st.all.forEach(function (ev) {
+      if (!G.eventVisible(ev) || G.eventWon(ev)) return;
+      var p = DR.cityPlaceOf(ev.type), pin = pins[p.id] || (pins[p.id] = { n: 0 });
+      pin.n++;
+      if (ev === next) pin.next = true;
+      if (ev.type === 'boss' && !G.eventLock(ev)) pin.boss = true;
+    });
+    pins.highway = { street: true };
+    if (!selPlace) selPlace = next ? DR.cityPlaceOf(next.type).id : 'strip';
+    var place = DR.CITY.filter(function (p) { return p.id === selPlace; })[0] || DR.CITY[0];
+    var cv = h('canvas', { class: 'citycv', width: DR.CITY_W, height: DR.CITY_H });
+    var t0 = Date.now(), last = -1;
+    (function frame() {
+      if (!cv.isConnected && last >= 0) return;
+      var f = Math.floor((Date.now() - t0) / 100);
+      if (f !== last) { last = f; DR.drawCityMap(cv, pins, selPlace, f / 10); }
+      requestAnimationFrame(frame);
+    })();
+    cv.addEventListener('click', function (e) {
+      var r = cv.getBoundingClientRect();
+      var p = DR.cityHit((e.clientX - r.left) / r.width * DR.CITY_W, (e.clientY - r.top) / r.height * DR.CITY_H);
+      if (!p) return;
+      if (p.id === selPlace && p.go) return UI.show(UI[p.go]);
+      selPlace = p.id; A.click(); UI.refresh();
+    });
+    var wins = G.stageWins(selStage);
+    var legend = h('div', { class: 'gsmall dim citylegend' },
+      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg b' }, 'shops'),
+      h('span', {}, 'Stage ' + (selStage + 1) + ': ' + wins + ' / ' + st.events.length + ' won'));
+    var spBar = c.sponsor[selStage] ? null : h('div', { class: 'warnbox citysp' }, h('span', { class: 'grow' }, 'No sponsor for stage ' + (selStage + 1) + ' yet. Sponsors pay per win, and the boss only races sponsored drivers.'),
+      btn('Choose Sponsor', function () { sponsorPicker(selStage); }, 'small go'));
+    return h('div', {}, stageChips(), spBar,
+      h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, cv, legend), h('div', { class: 'cityside' }, placePanel(place, st, next, inst))));
+  }
+  function placePanel(p, st, next, inst) {
+    var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, p.go ? 'VISIT' : 'RACE SPOT'), h('div', { class: 'pix acc' }, p.name), h('div', { class: 'dim' }, p.blurb)));
+    if (p.go) return h('div', {}, head, btn(p.go === 'Garage' ? 'Go Home' : 'Go to ' + p.name, function () { UI.show(UI[p.go]); }, 'go'));
+    if (p.street) return streetView(inst);
+    var grid = h('div', { class: 'egrid' }), n = 0;
+    st.all.forEach(function (ev) {
+      if (!G.eventVisible(ev) || DR.cityPlaceOf(ev.type) !== p) return;
+      n++; grid.appendChild(eventCard(ev, ev === next));
+    });
+    if (!n) grid = h('div', { class: 'dim cityempty' }, 'No races here in stage ' + (selStage + 1) + ' yet. Keep winning to open this spot up.');
+    return h('div', {}, head, grid, p.test ? h('div', { style: { marginTop: '8px' } }, btn('Test & Tune', function () { UI.show(UI.RaceMenu, 'test'); }, 'small')) : null);
+  }
 
   function careerView() {
     var c = G.careerState();
     if (selStage == null || selStage > c.stage) selStage = c.stage;
     G.checkContracts().forEach(function (m) { UI.toast(m); });
-    var chips = h('div', { class: 'schips' }, DR.STAGES.map(function (st, si) {
-      var un = G.stageUnlocked(si), boss = G.eventWon(st.boss);
-      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Beat the stage ' + si + ' boss first'); selStage = si; UI.refresh(); }, un ? '' : 'nofit');
-    }));
+    var chips = stageChips();
     var st = DR.STAGES[selStage], wins = G.stageWins(selStage);
     var head = h('div', { class: 'stagehead' },
       h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STAGE ' + (selStage + 1)), h('div', { class: 'pix acc' }, st.name), h('div', { class: 'dim' }, st.blurb),

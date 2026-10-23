@@ -616,3 +616,18 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .dragcam:active { cursor: grabbing; }
 .bodyhead { overflow: hidden; clip-path: var(--notch); }
 .bodyhead canvas.preview { clip-path: none; }
+
+/* city map on the race menu */
+.citywrap { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.citymap { flex: 3 1 340px; max-width: 720px; min-width: 0; }
+.citycv { display: block; width: 100%; aspect-ratio: 16 / 9; image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #3b3f4c, 0 4px 0 rgba(0,0,0,.35); background: #2f6b3a; }
+.cityside { flex: 2 1 260px; min-width: 0; }
+.cityside .egrid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.citylegend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.citylegend .lg::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 4px; box-shadow: 0 0 0 1px #000; vertical-align: middle; }
+.citylegend .lg.y::before { background: #ffcc00; }
+.citylegend .lg.r::before { background: #ff3a3a; }
+.citylegend .lg.b::before { background: #4da3ff; }
+.citymap { max-width: min(720px, calc((100vh - 150px) * 16 / 9)); }
+.citysp { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.cityempty { padding: 10px 4px; }

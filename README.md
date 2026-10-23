@@ -75,6 +75,9 @@ from a 110 hp hatchback to a 3000 hp Pro Mod.
     and unlock performance-part levels, body-kit tiers and new cars: each stage boss opens
     the next price tier at the dealer (up to $9k at the start, then $24k, $48k, $110k and
     everything). Rivals drive cars from across the roster.
+  - **City map:** the race menu opens on a top-down pixel map of the city. Pins show where
+    this stage's races are (the dragway, the airfield runway, downtown, the harbor docks), the
+    Route 99 street-race meet, and the dealer, parts store, car shows and your garage.
   - **Sponsors:** pick one per stage for a signing bonus, per-win bonuses and a contract
     that must be fulfilled before the boss will race you.
   - **Visual rating:** 0-10 stars from the Body Shop (bumpers, skirts, spoilers, hoods,
