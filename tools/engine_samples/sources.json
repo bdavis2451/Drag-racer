@@ -168,5 +168,45 @@
   "Renault Laguna II V6",
   3,
   6500
+ ],
+ "v6_buick": [
+  "Buick Skylark",
+  3,
+  5500
+ ],
+ "d_defender": [
+  "Land Rover Defender",
+  2.5,
+  4500
+ ],
+ "d_passat": [
+  "Volkswagen Passat B5 1.9 TDI",
+  2,
+  4500
+ ],
+ "v8_elcamino": [
+  "Chevrolet El Camino",
+  4,
+  6000
+ ],
+ "v8_firebird": [
+  "Pontiac Firebird",
+  4,
+  6000
+ ],
+ "v8_blazer": [
+  "Chevrolet Blazer",
+  4,
+  5000
+ ],
+ "v8_dart": [
+  "Dodge Dart",
+  4,
+  6000
+ ],
+ "v8_duster": [
+  "Plymouth Duster",
+  4,
+  6000
  ]
 }

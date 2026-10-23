@@ -71,7 +71,9 @@
           { name: 'nos', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
           { name: 'boost', defaultValue: 0, minValue: 0, maxValue: 100, automationRate: 'k-rate' },
           // how much of the modelled exhaust note to play (lower when a recording carries it)
-          { name: 'exh', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' }
+          { name: 'exh', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+          // engine-bay sounds (intake, valvetrain, block, belts); off when a recording plays
+          { name: 'mech', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' }
         ];
       }
       constructor() {
@@ -179,7 +181,7 @@
         var out = outputs[0], L = out[0], R = out[1] || out[0];
         if (!this.c) return;
         var c = this.c, n = c.angles.length, sr = sampleRate, i;
-        var rpm = Math.max(200, P.rpm[0]), load = P.load[0], cut = P.cut[0] > 0.5, nos = P.nos[0], exh = P.exh[0];
+        var rpm = Math.max(200, P.rpm[0]), load = P.load[0], cut = P.cut[0] > 0.5, nos = P.nos[0], exh = P.exh[0], mech = P.mech[0];
         var dphi = rpm * 6 / sr * (c.cycle === 360 ? 1 : 1);   // crank degrees per sample
         // pulse rise time: the blowdown is a gas event lasting a millisecond or
         // two whatever the rpm, so at idle each pulse stays crisp
@@ -201,8 +203,8 @@
         // intake gulps last longer than exhaust blowdown (a few ms)
         var tauIn = Math.max(2, Math.min(70 / dphi, 0.0045 * sr)), invTauIn = 1 / tauIn, lifeIn = tauIn * 6;
         var inLvl = c.inLevel * (0.35 + 0.65 * load);
-        inLvl *= 1 + vt * 2.5;
-        var hissLvl = c.hissLvl * (1 - load) * Math.min(1, rpm / 900) * (rpm < 2500 ? 1 : 0.5);
+        inLvl *= (1 + vt * 2.5) * mech;
+        var hissLvl = c.hissLvl * mech * (1 - load) * Math.min(1, rpm / 900) * (rpm < 2500 ? 1 : 0.5);
         var accHz = rpm / 60 * 2.7 * 12, accAmp = Math.min(1, rpm / 3000);
         var bHz = rpm / 60 * c.blowerRatio * c.blowerLobes;
         var bAmp = c.blowerLvl ? c.blowerLvl * (0.3 + 0.7 * load) * (c.blowerType === 'cent' ? Math.pow(Math.min(1, rpm / c.red), 2) * 1.6 : Math.min(1, rpm / 2500)) : 0;
@@ -289,10 +291,10 @@
           var bay = (ip - this.inHp) * inLvl;
           bay += this.inNz.bp(rnd() * 2 - 1) * this.inFlow * inLvl * c.inRoar * (1 + vt * 0.6);    // air rushing in
           bay += this.hiss.bp(rnd() * 2 - 1) * hissLvl;                          // throttle plate hiss
-          bay += this.valve.bp(kv) * 6 + this.valve2.bp(kv) * 3;                // valve & lifter tick
-          bay += this.block1.bp(kb) * 5 + this.block2.bp(kb) * 3;               // combustion thump
+          bay += (this.valve.bp(kv) * 6 + this.valve2.bp(kv) * 3) * mech;               // valve & lifter tick
+          bay += (this.block1.bp(kb) * 5 + this.block2.bp(kb) * 3) * mech;              // combustion thump
           this.accPh += accHz / sr; if (this.accPh > 1) this.accPh -= 1;
-          bay += Math.sin(2 * Math.PI * this.accPh) * c.accLvl * accAmp;        // alternator / belts
+          bay += Math.sin(2 * Math.PI * this.accPh) * c.accLvl * accAmp * mech;       // alternator / belts
           if (c.blowerLvl) {
             this.bPh += bHz / sr; if (this.bPh > 1) this.bPh -= 1;
             var ph = 2 * Math.PI * this.bPh, w;
