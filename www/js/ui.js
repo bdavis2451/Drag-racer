@@ -274,6 +274,9 @@
         h('h2', {}, 'Tuning'),
         p('Grip comes from tire compound, tire pressure (each tire has an ideal psi), tire temperature and weight transfer. Ladder bars / 4-links, springs and shocks change how hard the car hits the tires. Gearing, launch RPM, boost, and throttle management decide whether you hook or go up in smoke.'),
         p('Use the Dyno to see your power curve. There are no predicted times: make a Test & Tune pass (free) to see whether a change helped.'),
-        p('Suspension: with coilovers and adjustable shocks you can set ride height, spring rates, bump and rebound at each end, a front travel limiter, anti-squat and wheelie bar height. A soft, loose front lets the nose rise and pushes weight onto the rear tires; too loose and it wheelies and bounces. Too low and the rear bottoms out on the bump stops.'))));
+        p('Suspension: with coilovers and adjustable shocks you can set ride height, spring rates, bump and rebound at each end, a front travel limiter, anti-squat and wheelie bar height. A soft, loose front lets the nose rise and pushes weight onto the rear tires; too loose and it wheelies and bounces. Too low and the rear bottoms out on the bump stops.'),
+        h('h2', {}, 'Engine sounds'),
+        p('Most engines are voiced by recordings of the real thing, cut into steady-rpm loops and blended with a physical model of the exhaust (which also does the rev limiter, pops, turbos and blowers, and how your exhaust parts change the sound). Recordings from Wikimedia Commons, licensed CC BY 3.0:'),
+        h('div', { class: 'gsmall dim credits' }, Object.keys(DR.ENG_BANKS || {}).map(function (k) { return h('div', {}, DR.ENG_BANKS[k].credit); })))));
   };
 })();

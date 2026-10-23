@@ -67,6 +67,7 @@ DR.ENGINES = {
   d_67:    { name: '6.7L I6 Turbo Diesel (Cummins)', cyl: 6, disp: 6.7, hp: 400, pk: 2800, tq: 1600, red: 3200, w: 522, price: 15000, safe: 1200, fi: { part: 'fi_oem_vgt', boost: 30 }, diesel: true, bg: 1.4, bp: 3600 },
   v8_86b:  { name: '8.6L Billet Pro Mod V8',      cyl: 8,  disp: 8.6, hp: 1250, pk: 7800, tq: 6500, red: 8800, w: 260, price: 95000, safe: 4500, bg: 1.15, bp: 8600 }
 };
+Object.keys(DR.ENGINES).forEach(function (k) { DR.ENGINES[k].id = k; });
 
 // ---------------------------------------------------------------------------
 // TRANSMISSIONS

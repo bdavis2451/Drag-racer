@@ -1,0 +1,81 @@
+{
+ "banks": {
+  "boxer_sti": {
+   "credit": "Subaru WRX STI: \"Subaru WRX STI - engine and exhaust sound (YouTube--bynUdphkbc)\" by Hungarian Supercar Spotters, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Subaru_WRX_STI_-_engine_and_exhaust_sound_(YouTube--bynUdphkbc).opus)"
+  },
+  "flat6_996": {
+   "credit": "Porsche 996: \"Porsche 996 - engine and exhaust sound (YouTube axY2PGvMPdk)\" by Robin, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Porsche_996_-_engine_and_exhaust_sound_(YouTube_axY2PGvMPdk).opus)"
+  },
+  "i3_up": {
+   "credit": "Volkswagen up! GTI: \"Volkswagen up! GTI - engine and exhaust sound (YouTube X5nj5rDeoJI)\" by Supercars67, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Volkswagen_up!_GTI_-_engine_and_exhaust_sound_(YouTube_X5nj5rDeoJI).opus)"
+  },
+  "i4_ctr": {
+   "credit": "Honda Civic Type R: \"Honda Civic Type R - engine and exhaust sound (YouTube qxhgUfPQ4Cc)\" by Vigor, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Honda_Civic_Type_R_-_engine_and_exhaust_sound_(YouTube_qxhgUfPQ4Cc).opus)"
+  },
+  "i4_evo": {
+   "credit": "Mitsubishi Lancer Evolution VI: \"Mitsubishi Lancer Evolution VI - engine and exhaust sound (YouTube p2UANOqploM)\" by prone, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Mitsubishi_Lancer_Evolution_VI_-_engine_and_exhaust_sound_(YouTube_p2UANOqploM).opus)"
+  },
+  "i4_mx5": {
+   "credit": "Mazda MX-5 Miata: \"Mazda MX-5 Miata - engine and exhaust sound (YouTube wKeTXxwpkS0)\" by Ride in Japan, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Mazda_MX-5_Miata_-_engine_and_exhaust_sound_(YouTube_wKeTXxwpkS0).opus)"
+  },
+  "i4_s2k": {
+   "credit": "Honda S2000: \"Honda S2000 - engine and exhaust sound (YouTube aTd8viYxxnU)\" by Y Racing, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Honda_S2000_-_engine_and_exhaust_sound_(YouTube_aTd8viYxxnU).opus)"
+  },
+  "i6_r34": {
+   "credit": "Nissan Skyline R34: \"Nissan Skyline R34 - engine and exhaust sound (YouTube 2L4tuUZNQ Q)\" by ApelSINKA, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Nissan_Skyline_R34_-_engine_and_exhaust_sound_(YouTube_2L4tuUZNQ_Q).opus)"
+  },
+  "rotary_rx7": {
+   "credit": "Mazda RX-7: \"Mazda RX-7 - engine and exhaust sound (YouTube 4z0y1H2REvE)\" by Taz Ringer, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Mazda_RX-7_-_engine_and_exhaust_sound_(YouTube_4z0y1H2REvE).opus)"
+  },
+  "v12_f12": {
+   "credit": "Ferrari F12: \"Ferrari F12 - engine and exhaust sound (YouTube JNvonF5LGYQ)\" by Supercars1989, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ferrari_F12_-_engine_and_exhaust_sound_(YouTube_JNvonF5LGYQ).opus)"
+  },
+  "v6_nsx": {
+   "credit": "Honda NSX (2016): \"Honda NSX (2016) - engine and exhaust sound (YouTube- xqpIXpkUGk)\" by Motor1, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Honda_NSX_(2016)_-_engine_and_exhaust_sound_(YouTube-_xqpIXpkUGk).opus)"
+  },
+  "v8_suburban": {
+   "credit": "Chevrolet Suburban: \"Chevrolet Suburban - engine and exhaust sound (YouTube HkY1Ap3iQVw)\" by Luciano's Classics, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Suburban_-_engine_and_exhaust_sound_(YouTube_HkY1Ap3iQVw).opus)"
+  },
+  "v8_z06": {
+   "credit": "Chevrolet Corvette Z06: \"Chevrolet Corvette Z06 - engine and exhaust sound (YouTube 8kg9FOz-zR8)\" by Odonnell Chevy Buick, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Corvette_Z06_-_engine_and_exhaust_sound_(YouTube_8kg9FOz-zR8).opus)"
+  }
+ },
+ "by_layout": {},
+ "by_engine": {
+  "i3_10": "i3_up",
+  "i4_15": "i4_ctr",
+  "i4_16": "i4_mx5",
+  "i4_18": "i4_ctr",
+  "i4_20": "i4_mx5",
+  "i4_20hi": "i4_s2k",
+  "i4_20t": "i4_evo",
+  "i4_20tev": "i4_evo",
+  "f4_25t": "boxer_sti",
+  "rot_13t": "rotary_rx7",
+  "i6_30": "i6_r34",
+  "i6_32": "i6_r34",
+  "i6_26tt": "i6_r34",
+  "i6_30tt": "i6_r34",
+  "v6_35": "v6_nsx",
+  "v6_38t": "v6_nsx",
+  "v6_38gnx": "v6_nsx",
+  "v6_38tt": "v6_nsx",
+  "f6_38tt": "flat6_996",
+  "v8_46sc": "v8_z06",
+  "v8_305": "v8_z06",
+  "v8_50": "v8_z06",
+  "v8_50d": "v8_z06",
+  "v8_283": "v8_z06",
+  "sbc350": "v8_z06",
+  "v8_57tbi": "v8_suburban",
+  "v8_57": "v8_z06",
+  "v8_62": "v8_z06",
+  "v8_70": "v8_z06",
+  "v8_62sc": "v8_z06",
+  "hemi_70": "v8_z06",
+  "bb_74": "v8_z06",
+  "bb_94": "v8_z06",
+  "v8_86b": "v8_z06",
+  "v12_65": "v12_f12"
+ }
+}

@@ -1,0 +1,172 @@
+{
+ "i4_s2k": [
+  "Honda S2000",
+  2,
+  9000
+ ],
+ "i4_evo": [
+  "Mitsubishi Lancer Evolution VI",
+  2,
+  7500
+ ],
+ "i4_240": [
+  "Nissan 240SX",
+  2,
+  7000
+ ],
+ "i4_neon": [
+  "Dodge Neon",
+  2,
+  6800
+ ],
+ "i4_ctr": [
+  "Honda Civic Type R",
+  2,
+  8600
+ ],
+ "boxer_sti": [
+  "Subaru WRX STI",
+  2,
+  7500
+ ],
+ "vw_beetle": [
+  "Volkswagen Beetle 1300",
+  2,
+  5000
+ ],
+ "i3_up": [
+  "Volkswagen up! GTI",
+  1.5,
+  6500
+ ],
+ "rotary_rx7": [
+  "Mazda RX-7",
+  2,
+  8000
+ ],
+ "i6_supra": [
+  "Toyota Supra (A80)",
+  3,
+  7000
+ ],
+ "i6_r34": [
+  "Nissan Skyline R34",
+  3,
+  8000
+ ],
+ "i6_e46": [
+  "BMW E46",
+  3,
+  8000
+ ],
+ "v6_omega": [
+  "Opel Omega B 3.0 V6",
+  3,
+  6500
+ ],
+ "flat6_gt2": [
+  "Porsche 911 GT2",
+  3,
+  7000
+ ],
+ "v8_nova": [
+  "Chevrolet Nova",
+  4,
+  6000
+ ],
+ "v8_z28": [
+  "Chevrolet Camaro Z28",
+  4,
+  6500
+ ],
+ "v8_belair": [
+  "Chevrolet Bel Air",
+  4,
+  5500
+ ],
+ "v8_monte": [
+  "Chevrolet Monte Carlo",
+  4,
+  5500
+ ],
+ "v8_bee": [
+  "Dodge Super Bee",
+  4,
+  6000
+ ],
+ "v8_suburban": [
+  "Chevrolet Suburban",
+  4,
+  5000
+ ],
+ "v8_z06": [
+  "Chevrolet Corvette Z06",
+  4,
+  7000
+ ],
+ "v8_s550": [
+  "Ford Mustang GT (S550)",
+  4,
+  7500
+ ],
+ "v8_gt500": [
+  "Shelby GT500 (2012)",
+  4,
+  6500
+ ],
+ "v10_viper": [
+  "Dodge Viper GTS",
+  5,
+  6000
+ ],
+ "v12_f12": [
+  "Ferrari F12",
+  6,
+  8900
+ ],
+ "v8_coronet": [
+  "Dodge Coronet",
+  4,
+  6000
+ ],
+ "v8_gto": [
+  "Pontiac GTO",
+  4,
+  6000
+ ],
+ "v8_transam": [
+  "Pontiac Trans Am",
+  4,
+  6000
+ ],
+ "v8_442": [
+  "Oldsmobile 442",
+  4,
+  6000
+ ],
+ "v12_countach": [
+  "Lamborghini Countach",
+  6,
+  8000
+ ],
+ "flat6_996": [
+  "Porsche 996",
+  3,
+  7500
+ ],
+ "v6_nsx": [
+  "Honda NSX (2016)",
+  3,
+  7500
+ ],
+ "i4_mx5": [
+  "Mazda MX-5 Miata",
+  2,
+  7000
+ ],
+ "v6_laguna": [
+  "Renault Laguna II V6",
+  3,
+  6500
+ ]
+}

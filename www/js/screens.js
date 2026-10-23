@@ -408,6 +408,7 @@
       A.init(); A.resume();
       if (voice) return;
       if (A.wkPending) { A.whenReady(run); return; }
+      if (A.banksReady && !A.banksReady([S.eng])) { A.loadBank(DR.engineBank(S.eng), run); return; }
       voice = A.engine(S.eng, 0.8, A.buildOf(S));
       var t0 = performance.now(), ang = 0, last = t0;
       sweep.p = 0;

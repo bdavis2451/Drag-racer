@@ -319,6 +319,9 @@
 
     function ensureVoices() {
       if (voices.length || !A.ctx || A.wkPending) return;
+      // wait the moment it takes to decode the recordings of both engines
+      var engs = [S.eng].concat(opp ? [opp.S.eng] : []);
+      if (A.banksReady && !A.banksReady(engs)) { A.preloadEngines(engs); return; }
       you.voice = A.engine(S.eng, 1, A.buildOf(S));
       if (opp) opp.voice = A.engine(opp.S.eng, 0.45, A.buildOf(opp.S));
       voices = [you.voice, opp && opp.voice];

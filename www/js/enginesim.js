@@ -69,7 +69,9 @@
           { name: 'load', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
           { name: 'cut', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
           { name: 'nos', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-          { name: 'boost', defaultValue: 0, minValue: 0, maxValue: 100, automationRate: 'k-rate' }
+          { name: 'boost', defaultValue: 0, minValue: 0, maxValue: 100, automationRate: 'k-rate' },
+          // how much of the modelled exhaust note to play (lower when a recording carries it)
+          { name: 'exh', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' }
         ];
       }
       constructor() {
@@ -177,7 +179,7 @@
         var out = outputs[0], L = out[0], R = out[1] || out[0];
         if (!this.c) return;
         var c = this.c, n = c.angles.length, sr = sampleRate, i;
-        var rpm = Math.max(200, P.rpm[0]), load = P.load[0], cut = P.cut[0] > 0.5, nos = P.nos[0];
+        var rpm = Math.max(200, P.rpm[0]), load = P.load[0], cut = P.cut[0] > 0.5, nos = P.nos[0], exh = P.exh[0];
         var dphi = rpm * 6 / sr * (c.cycle === 360 ? 1 : 1);   // crank degrees per sample
         // pulse rise time: the blowdown is a gas event lasting a millisecond or
         // two whatever the rpm, so at idle each pulse stays crisp
@@ -268,8 +270,8 @@
           this.dc[0] += (r0 - this.dc[0]) * this.hpK; this.dc[1] += (r1 - this.dc[1]) * this.hpK;
           r0 -= this.dc[0]; r1 -= this.dc[1];
           this.dc2[0] += (r0 - this.dc2[0]) * this.hpK; this.dc2[1] += (r1 - this.dc2[1]) * this.hpK;
-          r0 = Math.tanh((r0 - this.dc2[0]) * c.gain * drive) * norm;
-          r1 = Math.tanh((r1 - this.dc2[1]) * c.gain * drive) * norm;
+          r0 = Math.tanh((r0 - this.dc2[0]) * c.gain * drive) * norm * exh;
+          r1 = Math.tanh((r1 - this.dc2[1]) * c.gain * drive) * norm * exh;
           // ---- engine bay: intake, valvetrain, block, accessories, blower
           var ins = 0, flow = 0;
           for (i = 0; i < n; i++) {
