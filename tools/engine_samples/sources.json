@@ -208,5 +208,55 @@
   "Plymouth Duster",
   4,
   6000
+ ],
+ "v8_classic": [
+  [
+   "Pontiac Trans Am",
+   "Chevrolet Bel Air",
+   "Chevrolet Nova",
+   "Oldsmobile 442",
+   "Dodge Super Bee",
+   "Ford Bronco (1979)",
+   "Ford Thunderbird (1955)",
+   "Shelby Cobra",
+   "Cadillac DeVille",
+   "Chevrolet Monte Carlo",
+   "Plymouth Fury"
+  ],
+  4,
+  6000
+ ],
+ "v8_ls": [
+  [
+   "Chevrolet Corvette Z06",
+   "Chevrolet Corvette Stingray",
+   "Cadillac CTS-V"
+  ],
+  4,
+  7000
+ ],
+ "v8_coyote": [
+  [
+   "Ford Mustang GT (S550)",
+   "Ford Mustang Mach 1 (2021)"
+  ],
+  4,
+  7500
+ ],
+ "i3_pool": [
+  [
+   "Volkswagen up! GTI",
+   "BMW i8"
+  ],
+  1.5,
+  6500
+ ],
+ "d_pool": [
+  [
+   "Volkswagen Passat B5 1.9 TDI",
+   "Hyundai Santa Fe"
+  ],
+  2,
+  4500
  ]
 }
