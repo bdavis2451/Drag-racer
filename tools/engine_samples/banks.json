@@ -3,11 +3,11 @@
   "boxer_sti": {
    "credit": "Subaru WRX STI: \"Subaru WRX STI - engine and exhaust sound (YouTube--bynUdphkbc)\" by Hungarian Supercar Spotters, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Subaru_WRX_STI_-_engine_and_exhaust_sound_(YouTube--bynUdphkbc).opus)"
   },
-  "d_defender": {
-   "credit": "Land Rover Defender: \"Land Rover Defender - engine and exhaust sound (YouTube 7xkpPsM DWM)\" by Land Rover Defender Tunisie, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Land_Rover_Defender_-_engine_and_exhaust_sound_(YouTube_7xkpPsM_DWM).opus)"
+  "d_pool": {
+   "credit": "Volkswagen Passat B5 1.9 TDI: \"Volkswagen Passat B5 1.9 TDI (remapped, 185 hp) - engine and exhaust sound (YouTube 12P7SQ 48k4)\" by tomeko0o3769, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B5_1.9_TDI_(remapped,_185_hp)_-_engine_and_exhaust_sound_(YouTube_12P7SQ_48k4).opus); Hyundai Santa Fe: \"Hyundai Santa Fe - engine and exhaust sound (YouTube rrzahPn Wlw)\" by CARSCRAZYS, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Hyundai_Santa_Fe_-_engine_and_exhaust_sound_(YouTube_rrzahPn_Wlw).opus)"
   },
-  "flat6_996": {
-   "credit": "Porsche 996: \"Porsche 996 - engine and exhaust sound (YouTube axY2PGvMPdk)\" by Robin, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Porsche_996_-_engine_and_exhaust_sound_(YouTube_axY2PGvMPdk).opus)"
+  "flat6_pool": {
+   "credit": "Porsche 996: \"Porsche 996 - engine and exhaust sound (YouTube axY2PGvMPdk)\" by Robin, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Porsche_996_-_engine_and_exhaust_sound_(YouTube_axY2PGvMPdk).opus); Porsche 911 GT2: \"Porsche 911 GT2 - engine and exhaust sound (YouTube JyuTsneBJy8)\" by timur_kiev_carspotter, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Porsche_911_GT2_-_engine_and_exhaust_sound_(YouTube_JyuTsneBJy8).opus)"
   },
   "i3_pool": {
    "credit": "Volkswagen up! GTI: \"Volkswagen up! GTI - engine and exhaust sound (YouTube X5nj5rDeoJI)\" by Supercars67, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Volkswagen_up!_GTI_-_engine_and_exhaust_sound_(YouTube_X5nj5rDeoJI).opus); BMW i8: \"BMW i8 - engine and exhaust sound (YouTube IzZtX5KCbvs)\" by Erwin Lindsen, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:BMW_i8_-_engine_and_exhaust_sound_(YouTube_IzZtX5KCbvs).opus)"
@@ -24,32 +24,23 @@
   "i4_s2k": {
    "credit": "Honda S2000: \"Honda S2000 - engine and exhaust sound (YouTube aTd8viYxxnU)\" by Y Racing, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Honda_S2000_-_engine_and_exhaust_sound_(YouTube_aTd8viYxxnU).opus)"
   },
+  "i6_pool": {
+   "credit": "Nissan Skyline R34: \"Nissan Skyline R34 - engine and exhaust sound (YouTube 2L4tuUZNQ Q)\" by ApelSINKA, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Nissan_Skyline_R34_-_engine_and_exhaust_sound_(YouTube_2L4tuUZNQ_Q).opus); Toyota Supra (A80): \"Toyota Supra (A80) - engine and exhaust sound (YouTube YlRjnMnHRO4)\" by Fabio Rojas Pichardo, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Toyota_Supra_(A80)_-_engine_and_exhaust_sound_(YouTube_YlRjnMnHRO4).opus); BMW E46: \"BMW E46 - engine and exhaust sound (YouTube lIaGAT4slbs)\" by BMW 324TD, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:BMW_E46_-_engine_and_exhaust_sound_(YouTube_lIaGAT4slbs).opus)"
+  },
   "i6_r34": {
    "credit": "Nissan Skyline R34: \"Nissan Skyline R34 - engine and exhaust sound (YouTube 2L4tuUZNQ Q)\" by ApelSINKA, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Nissan_Skyline_R34_-_engine_and_exhaust_sound_(YouTube_2L4tuUZNQ_Q).opus)"
   },
   "rotary_rx7": {
    "credit": "Mazda RX-7: \"Mazda RX-7 - engine and exhaust sound (YouTube 4z0y1H2REvE)\" by Taz Ringer, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Mazda_RX-7_-_engine_and_exhaust_sound_(YouTube_4z0y1H2REvE).opus)"
   },
-  "v10_viper": {
-   "credit": "Dodge Viper GTS: \"Dodge Viper GTS - engine and exhaust sound (YouTube tfZiZqQQBOE)\" by Erwin Lindsen, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Dodge_Viper_GTS_-_engine_and_exhaust_sound_(YouTube_tfZiZqQQBOE).opus)"
-  },
-  "v12_f12": {
-   "credit": "Ferrari F12: \"Ferrari F12 - engine and exhaust sound (YouTube JNvonF5LGYQ)\" by Supercars1989, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ferrari_F12_-_engine_and_exhaust_sound_(YouTube_JNvonF5LGYQ).opus)"
-  },
-  "v6_nsx": {
-   "credit": "Honda NSX (2016): \"Honda NSX (2016) - engine and exhaust sound (YouTube- xqpIXpkUGk)\" by Motor1, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Honda_NSX_(2016)_-_engine_and_exhaust_sound_(YouTube-_xqpIXpkUGk).opus)"
-  },
-  "v6_omega": {
-   "credit": "Opel Omega B 3.0 V6: \"Opel Omega B 3.0 V6 - engine and exhaust sound (YouTube pK-1MhnSEuk)\" by SzPHamer, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Opel_Omega_B_3.0_V6_-_engine_and_exhaust_sound_(YouTube_pK-1MhnSEuk).opus)"
+  "v6_pool": {
+   "credit": "Honda NSX (2016): \"Honda NSX (2016) - engine and exhaust sound (YouTube- xqpIXpkUGk)\" by Motor1, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Honda_NSX_(2016)_-_engine_and_exhaust_sound_(YouTube-_xqpIXpkUGk).opus); Opel Omega B 3.0 V6: \"Opel Omega B 3.0 V6 - engine and exhaust sound (YouTube pK-1MhnSEuk)\" by SzPHamer, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Opel_Omega_B_3.0_V6_-_engine_and_exhaust_sound_(YouTube_pK-1MhnSEuk).opus); Renault Laguna II V6: \"Renault Laguna II V6 - engine and exhaust sound (YouTube F9eJ7lo4Zno)\" by Abakab, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Renault_Laguna_II_V6_-_engine_and_exhaust_sound_(YouTube_F9eJ7lo4Zno).opus)"
   },
   "v8_classic": {
    "credit": "Pontiac Trans Am: \"Pontiac Trans Am - engine and exhaust sound (YouTube 2tXFxsuuEW4)\" by Clifton Slay, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Pontiac_Trans_Am_-_engine_and_exhaust_sound_(YouTube_2tXFxsuuEW4).opus); Chevrolet Bel Air: \"Chevrolet Bel Air - engine and exhaust sound (YouTube h2EslS4y9Ds)\" by DREAMGOATINC, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Bel_Air_-_engine_and_exhaust_sound_(YouTube_h2EslS4y9Ds).opus); Chevrolet Nova: \"Chevrolet Nova - engine and exhaust sound (YouTube rWx6H2hl0mI)\" by Luciano's Classics, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Nova_-_engine_and_exhaust_sound_(YouTube_rWx6H2hl0mI).opus); Oldsmobile 442: \"Oldsmobile 442 - engine and exhaust sound (YouTube xqK8IFpMdE4)\" by Luciano's Classics, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Oldsmobile_442_-_engine_and_exhaust_sound_(YouTube_xqK8IFpMdE4).opus); Dodge Super Bee: \"Dodge Super Bee - engine and exhaust sound (YouTube a-ZakNJM4SQ)\" by DREAMGOATINC, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Dodge_Super_Bee_-_engine_and_exhaust_sound_(YouTube_a-ZakNJM4SQ).opus); Ford Bronco (1979): \"Ford Bronco (1979) - engine and exhaust sound (YouTube h49p3ivoHYI)\" by LUNI Classic Cars, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ford_Bronco_(1979)_-_engine_and_exhaust_sound_(YouTube_h49p3ivoHYI).opus); Ford Thunderbird (1955): \"Ford Thunderbird (1955) - engine and exhaust sound (YouTube KRMCr2o90FY)\" by LUNI Classic Cars, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ford_Thunderbird_(1955)_-_engine_and_exhaust_sound_(YouTube_KRMCr2o90FY).opus); Shelby Cobra: \"Shelby Cobra - engine and exhaust sound (YouTube 7StXF8s ElU)\" by SKPOWERTV, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Shelby_Cobra_-_engine_and_exhaust_sound_(YouTube_7StXF8s_ElU).opus); Cadillac DeVille: \"Cadillac DeVille - engine and exhaust sound (YouTube 3F5ktbb-zhs)\" by Zachary Petty, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Cadillac_DeVille_-_engine_and_exhaust_sound_(YouTube_3F5ktbb-zhs).opus); Chevrolet Monte Carlo: \"Chevrolet Monte Carlo - engine and exhaust sound (YouTube fc2HYy5fQQ4)\" by AfricaAuddyTech, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Monte_Carlo_-_engine_and_exhaust_sound_(YouTube_fc2HYy5fQQ4).opus); Plymouth Fury: \"Plymouth Fury - engine and exhaust sound (YouTube- lfnlRrI8T4)\" by Luciano's Classics, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Plymouth_Fury_-_engine_and_exhaust_sound_(YouTube-_lfnlRrI8T4).opus)"
   },
-  "v8_s550": {
-   "credit": "Ford Mustang GT (S550): \"Ford Mustang GT (S550) - engine and exhaust sound (YouTube 2ceiDjGgpI8)\" by Cestni dirka\u010d, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ford_Mustang_GT_(S550)_-_engine_and_exhaust_sound_(YouTube_2ceiDjGgpI8).opus)"
-  },
-  "v8_z06": {
-   "credit": "Chevrolet Corvette Z06: \"Chevrolet Corvette Z06 - engine and exhaust sound (YouTube 8kg9FOz-zR8)\" by Odonnell Chevy Buick, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Corvette_Z06_-_engine_and_exhaust_sound_(YouTube_8kg9FOz-zR8).opus)"
+  "v8_modern": {
+   "credit": "Chevrolet Corvette Z06: \"Chevrolet Corvette Z06 - engine and exhaust sound (YouTube 8kg9FOz-zR8)\" by Odonnell Chevy Buick, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Corvette_Z06_-_engine_and_exhaust_sound_(YouTube_8kg9FOz-zR8).opus); BMW M3 E92: \"2008 BMW M3 E92 s65 V8 Exhaust Sound Recordings (Raw WAV Files)\" by Nate Lee, CC BY 4.0, via Internet Archive (https://archive.org/details/2008-bmw-m3-e92-s65-exhaust-sound-recordings); Chevrolet Corvette Stingray: \"Chevrolet Corvette Stingray - engine and exhaust sound (YouTube TiObDdbrbOs)\" by Gripforce Clutches, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chevrolet_Corvette_Stingray_-_engine_and_exhaust_sound_(YouTube_TiObDdbrbOs).opus); Cadillac CTS-V: \"Cadillac CTS-V - engine and exhaust sound (YouTube Hy 3QD QdCg)\" by Whiep, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Cadillac_CTS-V_-_engine_and_exhaust_sound_(YouTube_Hy_3QD_QdCg).opus); Ford Mustang GT (S550): \"Ford Mustang GT (S550) - engine and exhaust sound (YouTube 2ceiDjGgpI8)\" by Cestni dirka\u010d, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ford_Mustang_GT_(S550)_-_engine_and_exhaust_sound_(YouTube_2ceiDjGgpI8).opus); Ford Mustang Mach 1 (2021): \"Ford Mustang Mach 1 (2021) - engine and exhaust sound (YouTube HydyGJGAOrw)\" by LSX632 Performance, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ford_Mustang_Mach_1_(2021)_-_engine_and_exhaust_sound_(YouTube_HydyGJGAOrw).opus); Shelby GT500 (2012): \"Shelby GT500 (2012) - engine and exhaust sound (YouTube Zc3gxBIXnXU)\" by LUNI Classic Cars, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Shelby_GT500_(2012)_-_engine_and_exhaust_sound_(YouTube_Zc3gxBIXnXU).opus)"
   }
  },
  "by_layout": {},
@@ -65,32 +56,37 @@
   "i4_20tev": "i4_evo",
   "f4_25t": "boxer_sti",
   "rot_13t": "rotary_rx7",
-  "i6_30": "i6_r34",
-  "i6_32": "i6_r34",
+  "i6_30": "i6_pool",
+  "i6_32": "i6_pool",
   "i6_26tt": "i6_r34",
-  "i6_30tt": "i6_r34",
-  "v6_35": "v6_omega",
-  "v6_38t": "v6_omega",
-  "v6_38gnx": "v6_omega",
-  "v6_38tt": "v6_nsx",
-  "f6_38tt": "flat6_996",
-  "v8_46sc": "v8_s550",
+  "i6_30tt": "i6_pool",
+  "v6_35": "v6_pool",
+  "v6_38t": "v6_pool",
+  "v6_38gnx": "v6_pool",
+  "v6_38tt": "v6_pool",
+  "f6_38tt": "flat6_pool",
+  "v8_46sc": "v8_modern",
+  "v8_50d": "v8_modern",
+  "v8_57": "v8_modern",
+  "v8_62": "v8_modern",
+  "v8_70": "v8_modern",
+  "v8_62sc": "v8_modern",
   "v8_305": "v8_classic",
   "v8_50": "v8_classic",
-  "v8_50d": "v8_s550",
   "v8_283": "v8_classic",
   "sbc350": "v8_classic",
   "v8_57tbi": "v8_classic",
-  "v8_57": "v8_z06",
-  "v8_62": "v8_z06",
-  "v8_70": "v8_z06",
-  "v8_62sc": "v8_z06",
   "hemi_70": "v8_classic",
   "bb_74": "v8_classic",
   "bb_94": "v8_classic",
   "v8_86b": "v8_classic",
-  "v10_84": "v10_viper",
-  "d_67": "d_defender",
-  "v12_65": "v12_f12"
+  "v10_84": "v8_modern",
+  "d_67": "d_pool",
+  "v12_65": "i6_pool"
+ },
+ "opts": {
+  "v12_65": {
+   "dbl": 1
+  }
  }
 }

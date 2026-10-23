@@ -1,16 +1,19 @@
 // ===========================================================================
-// ENGINE RECORDINGS — engines play real recordings of the car, granular
-// style, the way Need for Speed Underground 2 ("Ginsu"), Codemasters and the
-// REV engine do it. Each bank (engbanks.js) holds stretches of a recording
-// cut into whole engine cycles (720 degrees of crank), each tagged with the
-// rpm it was recorded at and whether the engine was pulling (revving up) or
-// coasting (revving down). At run time a worklet strings cycles recorded at
-// the current rpm end to end — following the recording where it can, jumping
-// to another stretch when the rpm moves on — with a 2 ms crossfade at each
-// joint and a resample of a few percent to land on the exact rpm. Throttle
-// blends the pulling and coasting layers. The modelled engine (enginesim.js)
-// stays silent except for what a recording can't give: rev-limiter cuts,
-// pops and bangs, and the blower; the turbo comes from audio.js.
+// ENGINE RECORDINGS — engines play real recordings of the car the way Need
+// for Speed Underground 2 and most racing games do it: a ladder of seamless
+// loops, one every ~10% of rpm, each holding the engine at one steady rpm,
+// for pulling (throttle open) and coasting. The loops are cut from real
+// recordings offline (tools/engine_samples/loops.py): every stretch of the
+// recording that passes through a loop's rpm is time-warped to that exact
+// rpm, the best stretches are joined with phase-aligned crossfades, and the
+// end is blended into the start. At run time the two loops either side of
+// the engine's rpm play together, sped up or slowed a few percent to land
+// on it and crossfaded by how close each is; throttle blends pulling and
+// coasting. Every loop is locked to one engine-cycle phase, so loops fading
+// in and out fire in step (no doubled pulses, no chorus), and nothing is
+// ever spliced while playing. The modelled engine (enginesim.js) stays
+// silent except for limiter cuts, pops and bangs, and the blower; the turbo
+// comes from audio.js.
 // ===========================================================================
 (function () {
   var DR = globalThis.DR, A = DR.Audio;
@@ -23,8 +26,8 @@
   };
 
   // ---------------------------------------------------------------- worklet
-  function grainMain() {
-    class GrainProc extends AudioWorkletProcessor {
+  function loopMain() {
+    class LoopProc extends AudioWorkletProcessor {
       static get parameterDescriptors() {
         return [
           { name: 'rpm', defaultValue: 900, minValue: 0, maxValue: 20000, automationRate: 'k-rate' },
@@ -35,132 +38,103 @@
       constructor() {
         super();
         this.alive = true; this.ready = false;
-        this.st = { cont: 0, jump: 0, mis: 0 };
-        this.port.onmessage = (e) => { if (e.data === 'stop') this.alive = false; else if (e.data === 'stats') this.port.postMessage(this.st); else this.setup(e.data); };
+        this.port.onmessage = (e) => { if (e.data === 'stop') this.alive = false; else this.setup(e.data); };
       }
       setup(d) {
-        this.pcm = d.pcm; this.s = d.s; this.n = d.n; this.rpm = d.rpm; this.on = d.on; this.end = d.end; this.X = d.xf; this.D = d.d; this.off = 0;
-        this.cyc = d.cyc;                     // firings per engine cycle
-        this.hist = [-1, -1, -1, -1, -1, -1, -1, -1]; this.hp = 0;
-        this.gk = 1 - Math.exp(-1 / (sampleRate * 0.004));   // ~4 ms level glide
-
-        var sets = [[], []], i;
-        for (i = 0; i < this.s.length; i++) sets[this.on[i]].push(i);
-        var self = this;
-        sets.forEach(function (st) { st.sort(function (a, b) { return self.rpm[a] - self.rpm[b]; }); });
-        if (!sets[0].length) sets[0] = sets[1];
-        if (!sets[1].length) sets[1] = sets[0];
-        this.sets = sets;
-        this.lay = [0, 1].map(function () { return { i: -1, p: 0, r: 1, fi: -1, fp: 0, fr: 1, fade: 0, jg: 1, jc: 1 }; });
-        this.ready = this.s.length > 0;
+        var n = d.s.length, i, self = this;
+        this.pcm = d.pcm; this.s = d.s; this.n = d.n; this.rpm = d.rpm; this.m = d.m; this.rho = d.rho;
+        this.ni = new Int32Array(n);
+        for (i = 0; i < n; i++) this.ni[i] = Math.round(this.n[i]);
+        var lay = [[], []];
+        for (i = 0; i < n; i++) lay[d.lay[i]].push(i);
+        lay.forEach(function (l) { l.sort(function (a, b) { return self.rpm[a] - self.rpm[b]; }); });
+        if (!lay[0].length) lay[0] = lay[1];
+        if (!lay[1].length) lay[1] = lay[0];
+        this.lay = lay;
+        this.g = new Float32Array(n);       // each loop's gain, gliding to tg
+        this.tg = new Float32Array(n);
+        this.q = new Float64Array(n);       // where each loop is, in engine cycles
+        this.on = new Uint8Array(n); this.act = [];
+        this.ph = 0;                        // the engine's cycle phase (0-1)
+        this.gk = 1 - Math.exp(-1 / (sampleRate * 0.01));   // ~10 ms crossfade glide
+        // doubling (a V12 from an inline six): a second read half a firing
+        // later and half the loop away, so the two banks fire in between
+        this.dbl = d.dbl ? 1 / (4 * d.k) : 0;
+        this.ready = n > 0;
       }
-      // the next cycle to play: carry on through the recording while it stays
-      // near the target rpm; otherwise splice to the cycle (and start offset)
-      // whose opening best matches what would have followed, among those
-      // recorded close to the target rpm (concatenative synthesis)
-      pick(set, target, cur, pos) {
-        if (cur >= 0 && !this.end[cur] && cur + 1 < this.s.length && Math.abs(this.rpm[cur + 1] / target - 1) < 0.15) { this.off = 0; return cur + 1; }
-        var lo = 0, hi = set.length - 1;
-        while (lo < hi) { var m = (lo + hi) >> 1; if (this.rpm[set[m]] < target) lo = m + 1; else hi = m; }
-        var cands = [], k, o, q, j;
-        for (k = Math.max(0, lo - 10); k <= Math.min(set.length - 1, lo + 9); k++) cands.push(set[k]);
-        // when the recording runs ahead of or behind the game's rpm, skip or
-        // repeat a cycle in the same stretch rather than leave it
-        if (cur >= 0) {
-          var rs = cur, re = cur;
-          while (rs > 0 && !this.end[rs - 1] && cur - rs < 3) rs--;
-          while (!this.end[re] && re + 1 < this.s.length && re - cur < 3) re++;
-          for (j = rs; j <= re; j++) if (cands.indexOf(j) < 0) cands.push(j);
-        }
-        var best = set[lo], bs = 1e9, bo = 0, D = this.D;
-        for (k = 0; k < cands.length; k++) {
-          var c = cands[k], dr = Math.abs(Math.log(this.rpm[c] / target));
-          if (dr > 0.09 && c !== set[lo]) continue;
-          var same = cur >= 0 && Math.abs(c - cur) <= 3 && this.on[c] === this.on[cur];
-          var pen = dr * 5 + (this.hist.indexOf(c) >= 0 ? 0.3 : 0) - (same ? 0.04 : 0);
-          if (cur < 0) { if (pen < bs) { bs = pen; best = c; bo = 0; } continue; }
-          // try starting the new cycle at each firing, so an uneven firing
-          // pattern (a V8's lope, an odd-fire V10) stays in step, then
-          // fine-tune the start by up to D samples
-          var fp = this.n[c] / this.cyc, W = Math.min(fp * 0.9, this.D * 6), st = Math.max(1, W / 24);
-          for (var f = 0; f < this.cyc; f++) {
-            for (o = -D; o <= D; o += 4) {
-              var oo = f * fp + o; if (f > 0 && oo > this.n[c] * 0.9) continue;
-              var e1 = 0, e2 = 0;
-              for (q = 0; q < W; q += st) { var u1 = this.pcm[(pos + q) | 0] || 0, u2 = this.pcm[(this.s[c] + oo + q) | 0] || 0; e1 += (u1 - u2) * (u1 - u2); e2 += u1 * u1 + u2 * u2; }
-              var sc = e1 / (e2 + 1e-9) + pen;
-              if (sc < bs) { bs = sc; best = c; bo = oo; }
-            }
-          }
-        }
-        // remember the last cycles so the same few don't loop (a buzz)
-        this.hist[this.hp] = best; this.hp = (this.hp + 1) % this.hist.length; this.off = bo;
-        return best;
-      }
-      // 4-point cubic (Catmull-Rom) interpolation: cleaner than linear when
-      // a cycle is resampled to the exact rpm
-      at(pos) {
-        var i1 = pos | 0, f = pos - i1, P = this.pcm;
-        var y0 = P[i1 - 1] || 0, y1 = P[i1] || 0, y2 = P[i1 + 1] || 0, y3 = P[i1 + 2] || 0;
+      // 4-point cubic read at pos within a loop of L samples, wrapping round
+      read(st, pos, L) {
+        var P_ = this.pcm, i1 = pos | 0, f = pos - i1;
+        var i0 = i1 - 1 < 0 ? i1 - 1 + L : i1 - 1, i2 = i1 + 1 >= L ? i1 + 1 - L : i1 + 1, i3 = i1 + 2 >= L ? i1 + 2 - L : i1 + 2;
+        if (i1 >= L) i1 -= L;
+        var y0 = P_[st + i0], y1 = P_[st + i1], y2 = P_[st + i2], y3 = P_[st + i3];
         return y1 + 0.5 * f * (y2 - y0 + f * (2 * y0 - 5 * y1 + 4 * y2 - y3 + f * (3 * (y1 - y2) + y3 - y0)));
       }
+      // the two loops either side of the rpm, equal-power by distance in pitch
+      weigh(list, target, w) {
+        var tg = this.tg, rpm = this.rpm, last = list.length - 1;
+        if (target <= rpm[list[0]]) { tg[list[0]] += w; return; }
+        if (target >= rpm[list[last]]) { tg[list[last]] += w; return; }
+        var lo = 0, hi = last;
+        while (hi - lo > 1) { var md = (lo + hi) >> 1; if (rpm[list[md]] <= target) lo = md; else hi = md; }
+        var a = list[lo], b = list[hi], x = Math.log(target / rpm[a]) / Math.log(rpm[b] / rpm[a]);
+        // equal power, corrected for how alike the two loops are (in step,
+        // alike loops add up louder than unrelated ones would)
+        var ca = Math.cos(x * Math.PI / 2), cb = Math.sin(x * Math.PI / 2), nrm = w / Math.sqrt(1 + 2 * this.rho[a] * ca * cb);
+        tg[a] += ca * nrm; tg[b] += cb * nrm;
+      }
       process(inputs, outputs, P) {
-        var out = outputs[0][0];
+        var out = outputs[0][0], k, j, i;
         if (!this.alive) return false;
-        if (!this.ready) { out.fill(0); return true; }
-        var target = Math.max(300, P.rpm[0]), load = P.load[0], dop = P.dop[0];
-        var w = [Math.cos(load * Math.PI / 2), Math.sin(load * Math.PI / 2)];
         out.fill(0);
-        for (var j = 0; j < 2; j++) {
-          var L = this.lay[j], set = this.sets[j], wj = w[j];
-          for (var s = 0; s < out.length; s++) {
-            if (L.i < 0 || L.p >= this.n[L.i]) {
-              // the old cycle runs on into what followed it and fades out
-              L.fi = L.i; L.fp = L.p; L.fr = L.r;
-              var ni = this.pick(set, target, L.i, L.i < 0 ? 0 : this.s[L.i] + L.p);
-              // a straight continuation needs no blend; a splice gets one about
-              // a third of a cycle long (2-8 ms)
-              L.fade = L.fi < 0 || ni === L.fi + 1 ? 0 : Math.max(this.X, Math.min(this.X * 4, Math.round(this.n[ni] * 0.3)));
-              L.fl = L.fade;
-              if (L.i >= 0 && wj > 0.3) {
-                if (ni === L.i + 1) this.st.cont++; else {
-                  // how far the new cycle's start is from what would have followed
-                  this.st.jump++; var e1 = 0, e2 = 0;
-                  for (var q = 0; q < 32; q++) { var u1 = this.at(this.s[L.i] + this.n[L.i] + q), u2 = this.at(this.s[ni] + this.off + q); e1 += (u1 - u2) * (u1 - u2); e2 += u1 * u1 + u2 * u2; }
-                  this.st.mis += e1 / (e2 + 1e-9);
-                }
-              }
-              L.i = ni; L.p = this.off;
-              // no two combustion cycles are identical: a touch of random
-              // timing and level per cycle keeps it from sounding machine-made
-              L.r = Math.min(2.2, Math.max(0.45, target / this.rpm[L.i] * dop * (1 + (Math.random() - 0.5) * 0.008)));
-              L.jg = 1 + (Math.random() - 0.5) * 0.12;
-            }
-            var v = this.at(this.s[L.i] + L.p);
-            if (L.fade > 0) {
-              var u = 1 - L.fade / L.fl;
-              v = v * Math.sin(u * Math.PI / 2) + this.at(this.s[L.fi] + L.fp) * Math.cos(u * Math.PI / 2);
-              L.fp += L.fr; L.fade--;
-            }
-            L.p += L.r;
-            // glide to each cycle's level rather than stepping (a step clicks)
-            L.jc += (L.jg - L.jc) * this.gk;
-            out[s] += v * wj * L.jc;
+        if (!this.ready) return true;
+        var target = Math.max(200, P.rpm[0]), load = P.load[0], dop = P.dop[0];
+        this.tg.fill(0);
+        this.weigh(this.lay[0], target, Math.cos(load * Math.PI / 2));
+        this.weigh(this.lay[1], target, Math.sin(load * Math.PI / 2));
+        // a loop coming in starts on the engine's current cycle phase, at a
+        // random whole cycle (so two loops never line up the same stretch)
+        for (i = 0; i < this.tg.length; i++) {
+          if (this.tg[i] > 0 && !this.on[i]) {
+            this.on[i] = 1; this.act.push(i);
+            this.q[i] = this.ph + Math.floor(Math.random() * this.m[i]);
           }
+        }
+        // engine cycles (two crank turns) per sample
+        var dq = target / 120 / sampleRate * dop, gk = this.gk, act = this.act;
+        for (j = 0; j < act.length; j++) {
+          i = act[j];
+          var g = this.g[i], tgi = this.tg[i], q = this.q[i], m = this.m[i], st = this.s[i], N = this.n[i] / m, L = this.ni[i];
+          var q2 = this.dbl ? this.dbl + Math.floor(m / 2) : 0;
+          for (k = 0; k < out.length; k++) {
+            g += (tgi - g) * gk;
+            q += dq; if (q >= m) q -= m;
+            var v = this.read(st, q * N, L);
+            if (q2) { var qq = q + q2; if (qq >= m) qq -= m; v = 0.72 * (v + this.read(st, qq * N, L)); }
+            out[k] += g * v;
+          }
+          this.g[i] = g; this.q[i] = q;
+        }
+        // the engine phase moves on; loops that faded out leave
+        this.ph = (this.ph + dq * out.length) % 1;
+        for (j = act.length - 1; j >= 0; j--) {
+          i = act[j];
+          if (this.tg[i] === 0 && this.g[i] < 1e-4) { this.g[i] = 0; this.on[i] = 0; act.splice(j, 1); }
         }
         return true;
       }
     }
-    registerProcessor('pd-grains', GrainProc);
+    registerProcessor('pd-loops', LoopProc);
   }
+  A.loopWorklet = loopMain;
 
-  // load the grain worklet alongside the engine model's
+  // load the loop worklet alongside the engine model's
   var baseLoad = A.loadWorklet;
   A.loadWorklet = function (ctx) {
     return baseLoad(ctx).then(function (ok) {
       if (!ok) return ok;
-      var url = URL.createObjectURL(new Blob(['(' + grainMain.toString() + ')();'], { type: 'application/javascript' }));
-      return ctx.audioWorklet.addModule(url).then(function () { A.grainsWk = true; return ok; }, function () { return ok; });
+      var url = URL.createObjectURL(new Blob(['(' + loopMain.toString() + ')();'], { type: 'application/javascript' }));
+      return ctx.audioWorklet.addModule(url).then(function () { A.loopsWk = true; return ok; }, function () { return ok; });
     });
   };
 
@@ -191,15 +165,23 @@
   // quieter, straight pipes open it up. Turbos muffle the exhaust a bit.
   var TONE = { cut: [3200, 5200, 8500, 13000], lvl: [0.82, 0.95, 1.1, 1.22] };
 
+  // the worklet's view of a bank: loop start, length (in the decoded
+  // buffer's samples), rpm, layer (0 coasting, 1 pulling), engine cycles,
+  // and how alike each loop is to the next one up
+  A.bankMsg = function (bank, pcm, sr, opts) {
+    var L = bank.loops, k = sr / bank.sr, n = L.length;
+    var d = { dbl: !!(opts && opts.dbl), k: bank.k, pcm: pcm.slice(), s: new Int32Array(n), n: new Float64Array(n), rpm: new Float32Array(n), lay: new Uint8Array(n), m: new Int32Array(n), rho: new Float32Array(n) };
+    for (var i = 0; i < n; i++) { d.s[i] = Math.round(L[i][0] * k); d.n[i] = L[i][1] * k; d.rpm[i] = L[i][2]; d.lay[i] = L[i][3]; d.m[i] = L[i][5]; d.rho[i] = L[i][6] || 0; }
+    return d;
+  };
+
   function attach(v, eng, build) {
     var id = DR.engineBank(eng), bank = id && DR.ENG_BANKS[id], buf = id && decoded[id];
-    if (!buf || !A.grainsWk) { if (id) A.loadBank(id); return false; }
-    var c = A.ctx, ex = build.exhaust || 0, g = bank.grains, k = buf.sampleRate / bank.sr, n = g.length;
-    var arr = { s: new Float64Array(n), n: new Float64Array(n), rpm: new Float32Array(n), on: new Uint8Array(n), end: new Uint8Array(n) };
-    for (var i = 0; i < n; i++) { arr.s[i] = g[i][0] * k; arr.n[i] = g[i][1] * k; arr.rpm[i] = g[i][2]; arr.on[i] = g[i][3]; arr.end[i] = g[i][4] ? 1 : 0; }
+    if (!buf || !A.loopsWk) { if (id) A.loadBank(id); return false; }
+    var c = A.ctx, ex = build.exhaust || 0;
     var sm = v.smp = { bank: bank };
-    sm.node = new AudioWorkletNode(c, 'pd-grains', { numberOfInputs: 0, outputChannelCount: [1] });
-    sm.node.port.postMessage({ pcm: buf.getChannelData(0).slice(), s: arr.s, n: arr.n, rpm: arr.rpm, on: arr.on, end: arr.end, xf: Math.round(buf.sampleRate * 0.002), d: Math.round(buf.sampleRate * 0.0006), cyc: Math.round(2 * bank.k) });
+    sm.node = new AudioWorkletNode(c, 'pd-loops', { numberOfInputs: 0, outputChannelCount: [1] });
+    sm.node.port.postMessage(A.bankMsg(bank, buf.getChannelData(0), buf.sampleRate, (DR.ENG_BANK_OPTS || {})[eng.id]));
     sm.np = sm.node.parameters;
     sm.cut = TONE.cut[ex] * (build.turbo ? 0.78 : 1);
     sm.tone = c.createBiquadFilter(); sm.tone.type = 'lowpass'; sm.tone.Q.value = 0.6; sm.tone.frequency.value = sm.cut;
@@ -222,7 +204,7 @@
   var baseCfg = A.engineConfig;
   A.engineConfig = function (eng, build) {
     var c = baseCfg(eng, build), id = DR.engineBank(eng);
-    if (id && decoded[id] && A.grainsWk && !A.forceSynth && !A.noSamples) { c.bangChance *= 0.3; c.bangLvl *= 0.7; c.crackle *= 0.5; }
+    if (id && decoded[id] && A.loopsWk && !A.forceSynth && !A.noSamples) { c.bangChance *= 0.3; c.bangLvl *= 0.7; c.crackle *= 0.5; }
     return c;
   };
 

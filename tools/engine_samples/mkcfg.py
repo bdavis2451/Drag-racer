@@ -1,28 +1,34 @@
-# banks.json: credits from Commons metadata, engine -> bank (first bank that passed the gate)
+# banks.json for the loop banks: credits, engine -> bank (first that passes
+# the gate), per-engine playback options
 import json, os
-sel = json.load(open('sel.json')); src = json.load(open('sources.json'))
+sel = json.load(open('sel.json')); src = json.load(open('sources.json')); src.update(json.load(open('sources_extra.json')))
+LB = os.environ.get('LBDIR', 'lbanks')
+I6, V6, V8M, V8C, I4 = ['i6_pool', 'i6_r34'], ['v6_pool', 'v6_nsx'], ['v8_modern', 'v8_z06'], ['v8_classic', 'v8_modern'], ['i4_mx5', 'i4_ctr']
 PREF = {
- 'i3_10': ['i3_pool', 'i3_up'], 'f4_16': ['vw_beetle'], 'i4_15': ['i4_neon', 'i4_ctr', 'i4_mx5'], 'i4_16': ['i4_mx5', 'i4_s2k'], 'i4_18': ['i4_ctr', 'i4_s2k'],
- 'i4_20': ['i4_neon', 'i4_mx5'], 'i4_20hi': ['i4_s2k', 'i4_ctr'], 'i4_20t': ['i4_240', 'i4_evo'], 'i4_20tev': ['i4_evo', 'i4_240'],
+ 'i3_10': ['i3_pool', 'i3_up'], 'f4_16': ['vw_beetle', 'boxer_sti'], 'i4_15': ['i4_ctr', 'i4_mx5'], 'i4_16': ['i4_mx5', 'i4_s2k'], 'i4_18': ['i4_ctr', 'i4_s2k'],
+ 'i4_20': ['i4_mx5', 'i4_ctr'], 'i4_20hi': ['i4_s2k', 'i4_ctr'], 'i4_20t': ['i4_evo', 'i4_240'], 'i4_20tev': ['i4_evo', 'i4_240'],
  'f4_25t': ['boxer_sti'], 'rot_13t': ['rotary_rx7'],
- 'i6_30': ['i6_supra', 'i6_r34'], 'i6_32': ['i6_e46', 'i6_r34'], 'i6_26tt': ['i6_r34', 'i6_supra'], 'i6_30tt': ['i6_supra', 'i6_r34'],
- 'v6_35': ['v6_laguna', 'v6_omega', 'v6_nsx'], 'v6_38t': ['v6_omega', 'v6_laguna', 'v6_nsx'], 'v6_38gnx': ['v6_omega', 'v6_laguna', 'v6_nsx'], 'v6_38tt': ['v6_nsx', 'v6_omega'],
- 'f6_38tt': ['flat6_gt2', 'flat6_996'],
- 'v8_46sc': ['v8_gt500', 'v8_s550', 'v8_z06'], 'v8_305': ['v8_classic', 'v8_monte', 'v8_nova', 'v8_transam', 'v8_z06'], 'v8_50': ['v8_classic', 'v8_transam', 'v8_z28', 'v8_nova', 'v8_z06'], 'v8_50d': ['v8_s550', 'v8_gt500', 'v8_z06'],
- 'v8_283': ['v8_classic', 'v8_belair', 'v8_nova', 'v8_z06'], 'sbc350': ['v8_classic', 'v8_nova', 'v8_z28', 'v8_transam', 'v8_z06'], 'v8_57tbi': ['v8_classic', 'v8_suburban', 'v8_monte', 'v8_transam', 'v8_z06'],
- 'v8_57': ['v8_z06', 'v8_s550'], 'v8_62': ['v8_z06', 'v8_s550'], 'v8_70': ['v8_z06', 'v8_s550'], 'v8_62sc': ['v8_gt500', 'v8_z06'],
- 'hemi_70': ['v8_classic', 'v8_coronet', 'v8_bee', 'v8_transam', 'v8_z06'], 'bb_74': ['v8_classic', 'v8_442', 'v8_gto', 'v8_bee', 'v8_coronet', 'v8_transam', 'v8_z06'], 'bb_94': ['v8_classic', 'v8_gto', 'v8_bee', 'v8_coronet', 'v8_transam', 'v8_z06'], 'v8_86b': ['v8_classic', 'v8_bee', 'v8_gto', 'v8_z06'],
- 'v10_84': ['v10_viper', 'v8_z06'], 'd_67': ['d_defender', 'd_passat'], 'f4_16': ['vw_beetle', 'boxer_sti'], 'v12_65': ['v12_f12', 'v12_countach'],
+ 'i6_30': I6, 'i6_32': I6, 'i6_26tt': ['i6_r34'] + I6, 'i6_30tt': I6,
+ 'v6_35': V6, 'v6_38t': V6, 'v6_38gnx': V6, 'v6_38tt': V6, 'f6_38tt': ['flat6_pool', 'flat6_996'],
+ 'v8_46sc': V8M, 'v8_50d': V8M, 'v8_57': V8M, 'v8_62': V8M, 'v8_70': V8M, 'v8_62sc': V8M,
+ 'v8_305': V8C, 'v8_50': V8C, 'v8_283': V8C, 'sbc350': V8C, 'v8_57tbi': V8C, 'hemi_70': V8C, 'bb_74': V8C, 'bb_94': V8C, 'v8_86b': V8C,
+ 'v10_84': ['v10_viper', 'v8_modern'], 'd_67': ['d_pool', 'd_defender'],
+ # a V12 is two inline sixes firing in between each other: the six's
+ # recordings, doubled half a firing apart
+ 'v12_65': I6,
 }
-# failed a listen-by-eye check of the loop spectrograms
-REJECT = set(os.environ.get('REJECT', 'v8_gto,i4_neon,v8_coronet').split(','))
+OPTS = {'v12_65': {'dbl': 1}}
+EXTRA_CREDIT = {
+ 'BMW M3 E92': '"2008 BMW M3 E92 s65 V8 Exhaust Sound Recordings (Raw WAV Files)" by Nate Lee, CC BY 4.0, via Internet Archive (https://archive.org/details/2008-bmw-m3-e92-s65-exhaust-sound-recordings)',
+}
 ok = {}
 for bid in src:
-    fn = 'gbanks/%s.json' % bid
+    fn = f'{LB}/{bid}.json'
     if not os.path.exists(fn): continue
-    m = json.load(open(fn)); ro = m.get('real_on')
-    # gate: enough genuinely recorded cycles, from near idle to 3000+ rpm
-    if ro and ro[0] <= 1700 and ro[1] >= 2800 and ro[2] >= 8 and bid not in REJECT: ok[bid] = m
+    ro = json.load(open(fn)).get('real_on') or []
+    # gate: real recorded loops from near idle to 3200+ rpm
+    # (the Viper's recording is sparse, but it is the only V10)
+    if ro and ro[0] <= 1800 and ro[-1] >= 3200 and len(ro) >= (6 if bid == 'v10_viper' else 8): ok[bid] = ro
 banks, by_engine = {}, {}
 for eng, prefs in PREF.items():
     for b in prefs:
@@ -31,10 +37,11 @@ for b in sorted(set(by_engine.values())):
     cars = src[b][0] if isinstance(src[b][0], list) else [src[b][0]]
     parts = []
     for car in cars:
+        if car in EXTRA_CREDIT: parts.append('%s: %s' % (car, EXTRA_CREDIT[car])); continue
         info = sel[car]; title = info['title'].replace('File:', '').rsplit('.', 1)[0]
         parts.append('%s: "%s" by %s, CC BY 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/%s)' % (car, title, info['artist'].replace(' (YouTube)', '').replace('<', '').replace('>', ''), info['title'].replace(' ', '_')))
     banks[b] = {'credit': '; '.join(parts)}
-json.dump({'banks': banks, 'by_layout': {}, 'by_engine': by_engine}, open('banks.json', 'w'), indent=1)
-print('banks', len(banks), 'engines voiced', len(by_engine), 'of', len(PREF))
+json.dump({'banks': banks, 'by_layout': {}, 'by_engine': by_engine, 'opts': {e: o for e, o in OPTS.items() if e in by_engine}}, open('banks.json', 'w'), indent=1)
+print('banks', len(banks), sorted(banks), 'engines voiced', len(by_engine), 'of', len(PREF))
 print('unvoiced:', sorted(set(PREF) - set(by_engine)))
-print('dropped:', sorted(set(src) - set(ok)))
+for e in sorted(by_engine): print(' ', e, by_engine[e], ok[by_engine[e]][0], ok[by_engine[e]][-1], len(ok[by_engine[e]]))

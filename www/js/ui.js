@@ -276,7 +276,7 @@
         p('Use the Dyno to see your power curve. There are no predicted times: make a Test & Tune pass (free) to see whether a change helped.'),
         p('Suspension: with coilovers and adjustable shocks you can set ride height, spring rates, bump and rebound at each end, a front travel limiter, anti-squat and wheelie bar height. A soft, loose front lets the nose rise and pushes weight onto the rear tires; too loose and it wheelies and bounces. Too low and the rear bottoms out on the bump stops.'),
         h('h2', {}, 'Engine sounds'),
-        p('Every engine is voiced by a recording of a real car, played the way Need for Speed Underground 2 did it: the recording is cut into single engine cycles, and the cycles recorded at your rpm are strung together as you rev, with separate pulling and coasting sounds. Your exhaust parts change its tone; turbos, blowers, the rev limiter and backfires are added on top. Recordings from Wikimedia Commons, licensed CC BY 3.0:'),
+        p('Every engine is voiced by recordings of real cars, played the way Need for Speed Underground 2 and most racing games do it: a ladder of seamless loops, one every 10% of rpm, each holding the engine steady at one rpm, with separate pulling and coasting sounds. The two loops either side of your rpm play together, tuned to the exact rpm. Your exhaust parts change its tone; turbos, blowers, the rev limiter and backfires are added on top. Recordings from Wikimedia Commons (CC BY 3.0) and the Internet Archive (CC BY 4.0):'),
         h('div', { class: 'gsmall dim credits' }, Object.keys(DR.ENG_BANKS || {}).reduce(function (a, k) { return a.concat(DR.ENG_BANKS[k].credit.split('; ')); }, []).map(function (c) { return h('div', {}, c); })))));
   };
 })();

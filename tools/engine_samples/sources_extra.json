@@ -1,0 +1,8 @@
+{
+ "v8_modern": [["Chevrolet Corvette Z06", "BMW M3 E92", "Chevrolet Corvette Stingray", "Cadillac CTS-V", "Ford Mustang GT (S550)", "Ford Mustang Mach 1 (2021)", "Shelby GT500 (2012)"], 4, 7500],
+ "v12_pool": [["Ferrari F12", "Lamborghini Countach"], 6, 8900],
+ "flat6_pool": [["Porsche 996", "Porsche 911 GT2"], 3, 7500],
+ "v6_pool": [["Honda NSX (2016)", "Opel Omega B 3.0 V6", "Renault Laguna II V6"], 3, 7500],
+ "i6_pool": [["Nissan Skyline R34", "Toyota Supra (A80)", "BMW E46"], 3, 8000],
+ "m3_v8": ["BMW M3 E92", 4, 8400]
+}
