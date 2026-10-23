@@ -213,6 +213,35 @@
         if (cat === 'v_vinyl') { r(3, 13, 18, 1, ac); r(5, 14, 6, 1, ac); }
         if (cat === 'v_tips') r(0, 16, 3, 2, ac);
         break;
+      // garage menu glyphs
+      case 'g_race':
+        r(5, 3, 2, 19, M2); r(5, 3, 2, 1, M1);
+        for (var gy = 0; gy < 4; gy++) for (var gx = 0; gx < 5; gx++) r(7 + gx * 3, 4 + gy * 3, 3, 3, (gx + gy) % 2 ? BK : '#f2f2f2');
+        r(7, 16, 15, 1, 'rgba(0,0,0,.35)'); break;
+      case 'g_shop':
+        r(3, 7, 18, 13, '#c95a12'); r(3, 7, 18, 2, '#ff9a4a'); r(8, 3, 8, 2, M2); r(7, 4, 2, 4, M2); r(15, 4, 2, 4, M2);
+        r(9, 11, 6, 5, '#ffd27a'); r(11, 12, 2, 3, '#8a3a08'); break;
+      case 'g_install':
+        r(4, 15, 3, 3, M2); r(6, 13, 3, 3, M2); r(8, 11, 3, 3, M2); r(10, 9, 3, 3, M2); r(12, 7, 3, 3, M2);
+        r(14, 3, 3, 6, M1); r(18, 3, 3, 6, M1); r(14, 7, 7, 3, M1); r(16, 3, 1, 3, BK); r(3, 17, 3, 3, '#4da3ff'); break;
+      case 'g_tune':
+        r(5, 3, 2, 18, M3); r(11, 3, 2, 18, M3); r(17, 3, 2, 18, M3);
+        r(3, 13, 6, 3, '#ffcc00'); r(9, 6, 6, 3, '#ffcc00'); r(15, 10, 6, 3, '#ffcc00'); r(3, 13, 6, 1, '#fff3a0'); r(9, 6, 6, 1, '#fff3a0'); r(15, 10, 6, 1, '#fff3a0'); break;
+      case 'g_dyno':
+        ring(12, 13, 9, 7, M2); disc(12, 13, 7, '#101116'); r(5, 18, 15, 3, '#101116');
+        r(12, 12, 1, 2, '#ff4a3a'); r(13, 11, 2, 1, '#ff4a3a'); r(15, 9, 2, 2, '#ff4a3a'); r(17, 8, 1, 1, '#ff4a3a');
+        r(6, 13, 2, 1, M1); r(8, 8, 1, 2, M1); r(12, 6, 1, 2, M1); disc(12, 13, 1, M1); break;
+      case 'g_body':
+        r(3, 12, 18, 5, '#b06bff'); r(7, 8, 9, 4, '#b06bff'); r(8, 9, 3, 3, '#cfe4ff'); r(12, 9, 3, 3, '#cfe4ff'); r(3, 12, 18, 1, '#d8b0ff');
+        disc(7, 17, 2, BK); disc(17, 17, 2, BK); r(20, 13, 1, 2, '#ffe680'); break;
+      case 'g_paint':
+        r(8, 7, 8, 14, '#e33b6d'); r(8, 7, 2, 14, '#ff8fb0'); r(10, 4, 4, 3, M2); r(11, 2, 2, 2, M1);
+        x.fillStyle = 'rgba(255,90,140,.7)'; x.fillRect(16, 3, 1, 1); x.fillRect(18, 2, 1, 1); x.fillRect(19, 4, 1, 1); x.fillRect(17, 5, 1, 1); x.fillRect(20, 6, 1, 1); break;
+      case 'g_shows':
+        r(7, 3, 10, 2, '#ffcc00'); r(8, 5, 8, 6, '#ffcc00'); r(9, 11, 6, 2, '#e0a800'); r(11, 13, 2, 4, '#c08a00'); r(8, 17, 8, 3, M3);
+        r(5, 5, 2, 4, '#ffcc00'); r(17, 5, 2, 4, '#ffcc00'); r(9, 6, 2, 3, '#fff3a0'); break;
+      case 'g_dealer':
+        disc(8, 12, 5, '#ffcc00'); disc(8, 12, 2, '#3a2a00'); r(12, 11, 9, 3, '#ffcc00'); r(17, 14, 2, 3, '#ffcc00'); r(20, 14, 1, 2, '#ffcc00'); r(12, 11, 9, 1, '#fff3a0'); break;
       default:
         disc(12, 12, 8, M3); disc(12, 12, 4, ac);
     }
@@ -290,19 +319,19 @@
         btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'));
     }
     var spare = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length;
-    function mbtn(label, fn, cls, badge) {
-      return btn([label, badge ? h('span', { class: 'badge' }, String(badge)) : null], fn, 'gbtn ' + (cls || ''));
+    function mbtn(label, fn, cls, badge, icon) {
+      return btn([icon ? iconEl(icon, 1, '', 24, 'gico') : null, h('span', {}, label), badge ? h('span', { class: 'badge' }, String(badge)) : null], fn, 'gbtn ' + (cls || ''));
     }
     var menu = h('div', { class: 'gmenu' },
-      mbtn('⚑ Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'),
-      mbtn('Parts Shop', function () { UI.show(UI.Shop); }, 'shop'),
-      mbtn('Install Parts', function () { UI.show(UI.Parts); }, 'blue', spare),
-      mbtn('Tune', function () { UI.show(UI.Tune); }),
-      mbtn('Dyno', function () { UI.show(UI.Dyno); }),
-      mbtn('Body Shop', function () { UI.show(UI.Body); }, 'purple'),
-      mbtn('Paint', function () { UI.show(UI.Paint); }),
-      mbtn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }),
-      mbtn('Dealer', function () { UI.show(UI.Dealer); }, '', G.newCarCount() ? 'NEW' : 0));
+      mbtn('Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race', 0, 'g_race'),
+      mbtn('Parts Shop', function () { UI.show(UI.Shop); }, 'shop', 0, 'g_shop'),
+      mbtn('Install Parts', function () { UI.show(UI.Parts); }, 'blue', spare, 'g_install'),
+      mbtn('Tune', function () { UI.show(UI.Tune); }, '', 0, 'g_tune'),
+      mbtn('Dyno', function () { UI.show(UI.Dyno); }, '', 0, 'g_dyno'),
+      mbtn('Body Shop', function () { UI.show(UI.Body); }, 'purple', 0, 'g_body'),
+      mbtn('Paint', function () { UI.show(UI.Paint); }, '', 0, 'g_paint'),
+      mbtn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }, '', 0, 'g_shows'),
+      mbtn('Dealer', function () { UI.show(UI.Dealer); }, '', G.newCarCount() ? 'NEW' : 0, 'g_dealer'));
     var stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };
     var side = h('div', { class: 'gside' },

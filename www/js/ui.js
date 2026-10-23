@@ -70,7 +70,14 @@
     UI.app.innerHTML = '';
     UI.app.appendChild(fn(arg));
     UI.cur = { fn: fn, arg: arg };
+    UI.app.querySelectorAll('input[type=range]').forEach(rangeFill);
   };
+  // sliders fill their track up to the value (CSS --p)
+  function rangeFill(el) {
+    var lo = +el.min || 0, hi = el.max === '' ? 100 : +el.max;
+    el.style.setProperty('--p', (hi > lo ? (el.value - lo) / (hi - lo) * 100 : 0) + '%');
+  }
+  document.addEventListener('input', function (e) { if (e.target && e.target.type === 'range') rangeFill(e.target); }, true);
   // UI.refreshing: the screen is being redrawn in place, not opened
   UI.refresh = function () { if (UI.cur) { UI.refreshing = true; try { UI.show(UI.cur.fn, UI.cur.arg); } finally { UI.refreshing = false; } } };
   // Back (Android back button, browser back, Escape): close the top dialog,

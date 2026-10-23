@@ -539,7 +539,12 @@
 
       var back = cfg.back === 'tune' ? UI.Tune : null;
       var slip = h('div', { class: 'slip' }, h('div', { class: 'panel row' },
-        h('div', { class: 'grow' }, tbl),
+        h('div', { class: 'grow paper' },
+          h('div', { class: 'phead' }, h('div', { class: 'ptrack' }, cfg.theme === 'street' ? 'BACKSTREET 1/8' : 'PIXEL DRAGWAY'),
+            h('div', {}, (cfg.dist > DR.EIGHTH + 1 ? '1/4 MILE' : '1/8 MILE') + ' • ' + (them ? 'ELIMINATOR' : 'TEST & TUNE') + ' • RUN #' + (G.state.stats.races || 1))),
+          tbl,
+          h('div', { class: 'pfoot2' }, '* THANKS FOR RACING *'),
+          win != null ? h('div', { class: 'stamp ' + (win ? 'w' : 'l') }, win ? 'WIN' : 'LOSS') : null),
         h('div', { class: 'col', style: { width: '38%', minWidth: '210px' } },
         h('div', { class: 'pix big ' + (win === false ? 'bad' : 'good'), style: { textAlign: 'center' } }, head),
         margin ? h('div', { class: 'margin' }, margin) : null,
