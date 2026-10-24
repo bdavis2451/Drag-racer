@@ -134,6 +134,7 @@
       scoop: !!(fiu.price && fiu.type === 'turbo' && fiu.flow > 1000),
       wing: aero === 'a2' ? 2 : aero === 'a1' ? 1 : 0,
       bar: DR.partId('wheeliebar', inst) !== 'stock',
+      cage: ['cg2', 'cg3'].indexOf(DR.partId('chassis', inst)) >= 0,
       ride: rideOf(inst)
     };
   };
@@ -222,8 +223,8 @@
   // A car drawn from a hand-made sprite sheet (DR.SHEETS) instead of the
   // polygon art: its paint is recoloured onto the player's paint ramp, its
   // wheels are cut out (the game draws and spins its own, using the sheet's
-  // wheel art), and the sheet's side-view parts are bolted on for the body
-  // kit. Coordinates are sheet pixels; the sheet is drawn at 1 px per sprite
+  // wheel art), and the body kit is the parts the sheet's built cars wear.
+  // Coordinates are sheet pixels; the sheet is drawn at 1 px per sprite
   // pixel at res 1.
   var B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   var sheetPix = {};
@@ -246,16 +247,14 @@
       wheelR: [65, 60, 14.5], wheelF: [187, 60, 14.5],
       // paint: the sheet's reds, by brightness, onto the 7-step paint ramp;
       // lamps keep their own colours
-      paintV: 0.62, keep: [[36, 30, 48, 43]],
+      paintV: 0.62, keep: [[38, 35, 44, 41]],   // the tail lamp lens
       tail: [41, 37], head: [214, 46], exhaust: [37, 63],
-      belt: 31, rocker: 63, hood: [160, 214], spoilerAt: [50, 12], skirt: [81, 172, 63],
-      fbumper: [200, 224], rbumper: [33, 56],
+      belt: 31, rocker: 63, hood: [160, 214],
+      kit: { spoiler: ['spoiler_w', 'wing_b'], fbumper: ['lip_w', 'splitter_b'], rbumper: ['rear_w', 'rear_b'], skirt: ['skirt_w', 'skirt_b'],
+        hood: 'hood_w', decals: 'decal_b', cage: 'cage_b' },
       // side-view parts on the sheet: [x0, y0, x1, y1]
       wheels: [[7, 85, 34, 113], [37, 85, 65, 112], [68, 85, 95, 112], [98, 85, 126, 112]],
-      rims: { deep: 1, mesh: 2, split: 3, drag: 4 },
-      skirts: [[185, 119, 247, 127], [186, 129, 247, 136], [186, 138, 248, 143]],
-      spoilers: [[142, 155, 171, 161], [177, 153, 210, 161], [215, 151, 249, 165]],
-      tips: [214, 175, 249, 187], carbon: [181, 92, 208, 108] }
+      rims: { deep: 1, mesh: 2, split: 3, drag: 4 } }
   };
 
   // the sheet's wheels as rim styles ('sheet:eg:0' is the car's own stock
@@ -295,8 +294,19 @@
     var RS = look.res || 1, sh = sheetOf(B.sheet), vis = look.vis || {};
     var x0 = B.body[0], y0 = B.body[1], x1 = B.body[2], gy = B.ground;
     var srcLen = x1 - x0 + 1, u = srcLen / 100;
-    var padL = 8 + (look.wing === 2 || vis.spoiler === 3 ? 6 : 0), padT = 30;
-    var Ws = srcLen + padL + 12, Hs = gy - y0 + padT + 1;
+    // which of the built cars' parts this build wears (street build: tier 1,
+    // race build: tiers 2-3; neither car has a roof scoop or visible tips)
+    var K = B.kit, kitParts = [], spT = vis.spoiler || (look.wing ? look.wing : 0);
+    if (spT) kitParts.push(spT === 1 ? K.spoiler[0] : K.spoiler[1]);
+    ['fbumper', 'rbumper', 'skirt'].forEach(function (slot) { if (vis[slot]) kitParts.push(K[slot][vis[slot] === 1 ? 0 : 1]); });
+    if (vis.hood) kitParts.push(K.hood);
+    if (vis.vinyl === 1) kitParts.push(K.decals);
+    if (look.cage) kitParts.push(K.cage);
+    sh.parts = sh.parts || DR.SHEETS[B.sheet].parts;
+    var minX = x0, maxX = x1;
+    kitParts.forEach(function (n) { sh.parts[n].forEach(function (q) { minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); }); });
+    var padL = 8 + (x0 - minX), padT = 30;
+    var Ws = srcLen + padL + 8 + (maxX - x1), Hs = gy - y0 + padT + 1;
     // layers at 1 px per sheet pixel, scaled up by RS at the end
     var body = new Uint8ClampedArray(Ws * Hs * 4), under = new Uint8ClampedArray(Ws * Hs * 4);
     function lx(sx) { return sx - x0 + padL; }
@@ -360,77 +370,15 @@
     // the top edge of the body at a column (for the hood and roof parts)
     function topAt(px) { for (var y = 0; y < Hs; y++) if (at(body, px, y)) return y; return Hs; }
 
-    // ---- body kit from the sheet's side-view parts
-    function paste(L, rect, dx, dy, opts) {
-      opts = opts || {};
-      var w = rect[2] - rect[0] + 1, h = rect[3] - rect[1] + 1, tw = opts.w || w, th = opts.h || h;
-      for (var y = 0; y < th; y++) for (var x = 0; x < tw; x++) {
-        var sx2 = rect[0] + Math.floor((opts.flip ? tw - 1 - x : x) * w / tw), sy2 = rect[1] + Math.floor(y * h / th);
-        var c2 = sget(sh, sx2, sy2);
-        if (!c2) continue;
-        if (opts.recolor && isPaint(B, c2)) c2 = paintCol(paintStep(B, c2), dx + x, dy + y);
-        put(L, dx + x, dy + y, c2);
-      }
-    }
-    if (vis.skirt) {
-      // stretched to the rocker between the arches
-      var sk = B.skirts[vis.skirt - 1];
-      paste(body, sk, lx(B.skirt[0]), ly(B.skirt[2]), { w: B.skirt[1] - B.skirt[0], recolor: true });
-    }
-    var spT = vis.spoiler || (look.wing ? look.wing + 1 : 0);
-    if (spT) {
-      var sp = B.spoilers[spT - 1], sw = sp[2] - sp[0] + 1, shh = sp[3] - sp[1] + 1;
-      // a hatch spoiler sits on the roof's back edge; the wings stand higher
-      paste(body, sp, lx(B.spoilerAt[0]) - Math.round(sw * 0.55), ly(B.spoilerAt[1]) - shh + (spT === 1 ? 4 : 3), { recolor: true, flip: true });
-    }
-    if (vis.hood) {
-      // side view of the hood: its top skin from the windshield to the nose
-      for (var hx = lx(B.hood[0]); hx <= lx(B.hood[1]); hx++) {
-        var ty = topAt(hx), depth = vis.hood === 3 ? 3 : 2;
-        for (var k2 = 0; k2 < depth; k2++) {
-          var hc = at(body, hx, ty + k2); if (!hc) continue;
-          if (vis.hood === 3) {
-            var cr = B.carbon, cc = sget(sh, cr[0] + (hx % (cr[2] - cr[0])), cr[1] + ((ty + k2) % (cr[3] - cr[1])));
-            put(body, hx, ty + k2, k2 === 0 ? mix(cc || [40, 40, 44], [255, 255, 255], 0.2) : cc || [34, 34, 38]);
-          }
-        }
-        // vents (1) / a cowl bulge at the back of the hood (2)
-        var f = (hx - lx(B.hood[0])) / (lx(B.hood[1]) - lx(B.hood[0]));
-        if (vis.hood === 1 && (Math.abs(f - 0.45) < 0.03 || Math.abs(f - 0.55) < 0.03)) put(body, hx, ty + 1, [16, 16, 20]);
-        if (vis.hood === 2 && f > 0.05 && f < 0.45) { put(body, hx, ty - 1, paintCol(1, hx, ty - 1)); put(body, hx, ty - 2, [10, 10, 13]); }
-      }
-    }
-    // bumpers: the sheet draws them face-on, so the side view gets a lip /
-    // splitter (front) and a valance / diffuser (rear) under the stock ones
-    function lowAt(px) { for (var y = Hs - 1; y >= 0; y--) if (at(body, px, y)) return y; return -1; }
-    if (vis.fbumper) {
-      var fT = vis.fbumper, fx0 = lx(B.fbumper[0]), fx1 = lx(B.fbumper[1]) + fT;
-      for (var fx = fx0; fx <= fx1; fx++) {
-        var by = lowAt(Math.min(fx, lx(B.fbumper[1]))) + 1;
-        for (var q = 0; q < (fT === 1 ? 1 : 2); q++) put(body, fx, by + q, fT === 3 ? carbon(fx, by + q, q ? -0.5 : 0.7) : q ? [12, 12, 15] : paintCol(4, fx, by));
-      }
-      if (fT >= 2) for (var cy2 = 0; cy2 < 2; cy2++) put(body, lx(B.fbumper[1]) - 3 + cy2, ly(B.head[1]) + 5 + cy2, [14, 14, 18]);   // canard
-    }
-    if (vis.rbumper) {
-      var rT = vis.rbumper;
-      for (var rx = lx(B.rbumper[0]) - (rT === 3 ? 1 : 0); rx <= lx(B.rbumper[1]); rx++) {
-        var ry = lowAt(Math.max(rx, lx(B.rbumper[0]))) + 1;
-        put(body, rx, ry, rT === 3 ? carbon(rx, ry, 0.2) : rT === 2 ? [20, 20, 24] : paintCol(4, rx, ry));
-        if (rT >= 2 && rx % 3 === 0) put(body, rx, ry + 1, rT === 3 ? carbon(rx, ry + 1, -0.4) : [12, 12, 15]);   // diffuser fins
-      }
-    }
-    if (vis.tips) {
-      // the sheet's dual-tip exhaust, turned to point back, peeking out
-      // from under the rear bumper (on the under layer: the body covers it)
-      var tp = B.tips;
-      paste(under, tp, lx(B.exhaust[0]) - 4, ly(B.exhaust[1]) - (tp[3] - tp[1]) + 2, { flip: true });
-    }
-    if (vis.roof) {
-      // a roof scoop: a small painted bump with a dark mouth
-      var rx0 = lx(x0 + srcLen * 0.52), rtop = topAt(rx0 + 4);
-      for (var rq = 0; rq < 9; rq++) { put(body, rx0 + rq, rtop - 1, paintCol(rq < 2 ? 2 : 1, rx0 + rq, rtop - 1)); if (rq > 1) put(body, rx0 + rq, rtop - 2, paintCol(1, rx0 + rq, rtop - 2)); }
-      put(body, rx0 + 8, rtop - 2, [12, 12, 15]); put(body, rx0 + 8, rtop - 1, [12, 12, 15]);
-    }
+    // ---- body kit: the parts the sheet's two built cars wear (a street
+    // build and a race build), mapped onto this car (egsheet.js); paint
+    // pixels take this car's paint
+    kitParts.forEach(function (name) {
+      sh.parts[name].forEach(function (q) {
+        var c = q[2][0] === 'p' ? paintCol(+q[2].slice(1), lx(q[0]), ly(q[1])) : hexToRgb('#' + q[2]);
+        put(body, lx(q[0]), ly(q[1]), c);
+      });
+    });
     if (look.blower || look.scoop) {
       // a blower case through the hood (or a hood scoop for a big turbo)
       var hxm = lx(Math.round(B.hood[0] + (B.hood[1] - B.hood[0]) * 0.35)), hty = topAt(hxm);
