@@ -552,7 +552,7 @@
       var spin = r.burn && !sim.burnMode ? 60 : sim.ww;
       r.wheelAng += spin * dt;
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
-      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode,
+      DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode, fwd: r.S.drive === 'FWD',
         susp: { z: (sim.z || 0) * SUSP_VIS, phi: (sim.phi || 0) * SUSP_VIS } });
       var lamp = DR.carLamps(spr, gx, gy, pitch);
       lamp.brake = sim.brake > 0.05; lamp.ground = gy; lamp.car = { spr: spr, gx: gx, gy: gy, pitch: pitch };
@@ -564,7 +564,8 @@
       if (heavy > 0.05) {
         r.smokeAcc = (r.smokeAcc || 0) + dt * 52 * heavy;
         var n = Math.floor(r.smokeAcc); r.smokeAcc -= n;
-        if (n) parts.smoke(rearX, 0.12, sim.v, Math.min(6, n), { lane: r.lane, slip: slipV, dense: 0.55 + 0.35 * heavy });
+        // (from the front tires on a front-driver)
+      if (n) parts.smoke(r.S.drive === 'FWD' ? rearX + (spr.wheelF.x - spr.wheelR.x) / DR.PPM : rearX, 0.12, sim.v, Math.min(6, n), { lane: r.lane, slip: slipV, dense: 0.55 + 0.35 * heavy });
       }
       if (sim.nosOn || (sim.cut && !sim.launched && r.S.twostep && Math.random() < 0.15)) {
         var ex = rearX - (spr.wheelR.x - spr.padL) / DR.PPM;

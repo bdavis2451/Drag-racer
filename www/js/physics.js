@@ -779,7 +779,13 @@
     if (this.burnMode) {
       this.v = 0;
       if (thrIn < 0.1) this.ww *= Math.exp(-dt * 4);           // on the brake between hits
-      if (thrIn < 0.25 && S.trType !== 'auto') this.clT = 0;   // clutch in until the revs come up
+      // clutch in until the revs come up (a driver revs it, then drops it)
+      if (S.trType !== 'auto') {
+        if (thrIn < 0.25) { this.clT = 0; this.burnDrop = false; }
+        else if (!this.burnDrop) { if (this.we >= Math.min(S.red * 0.7, Math.max(S.tqRpm, S.idle + 2500)) * RPM2W) this.burnDrop = true; else this.clT = 0; }
+        // the tires hooked and it's bogging: clutch in, rev it, drop it again
+        else if (this.we < (S.idle + 700) * RPM2W) { this.burnDrop = false; this.clT = 0; }
+      }
     }
 
     if (held && !this.launched) {
