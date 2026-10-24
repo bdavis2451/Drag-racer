@@ -298,13 +298,20 @@
   };
 
   // ---------------------------------------------------------------- damage
+  // no other car that runs: the shop takes whatever you have, so a blown
+  // engine can never leave you stuck with nothing to race
+  G.mercyRepair = function (inst) { return !G.state.cars.some(function (c) { return c !== inst && !c.damage; }); };
   G.repairCost = function (inst) {
+    var full = fullRepairCost(inst);
+    return G.mercyRepair(inst) ? Math.min(full, Math.max(0, G.state.money)) : full;
+  };
+  function fullRepairCost(inst) {
     if (!inst.damage) return 0;
     if (inst.damage.engine) return Math.round((DR.ENGINES[inst.engine].price * 0.35 + 800) / 50) * 50;
     if (inst.damage.axle) return 600;
     if (inst.damage.trans) return Math.round((DR.TRANS[DR.partId('trans', inst)].price * 0.4 + 500) / 50) * 50;
     return 0;
-  };
+  }
   G.repair = function (inst) {
     var c = G.repairCost(inst);
     if (!G.canAfford(c)) return false;
