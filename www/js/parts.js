@@ -705,6 +705,7 @@
         if (cat === 'injectors' || cat === 'fuelpump') return S.fuelW < S.peakHp * DR.HP * 1.001;
         if (cat === 'clutch') return S.clCap && S.peakTq / 0.7376 > S.clCap;
         if (cat === 'rearend') return S.risk.axle > 0;
+        if (cat === 'trans') return S.risk.trans > 0;
         return true;
       };
       [['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)], ['trans', transFor], ['clutch', clutchFor(1)], ['rearend', axleFor(1)]].forEach(function (e) {
