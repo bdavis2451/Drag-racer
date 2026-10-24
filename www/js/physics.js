@@ -262,7 +262,9 @@
     S.cda = car.cda + aero.dcda;
     S.cla = aero.cla;
     S.Ip = S.m * S.L * S.L * 0.19;
-    S.brakeHold = 1.15 * S.m * G * S.r;  // wheel torque the foot brake can hold on the line
+    // wheel torque the foot brake can hold on the line: the locked fronts'
+    // grip plus the rear brakes, which oppose the drive torque at the hub
+    S.brakeHold = 1.6 * S.m * G * S.r;
 
     // ---- tune
     var T = DR.fullTune(inst, S, tuneOverride);
@@ -271,7 +273,6 @@
     setSpool(S, true);
     S.ratios = tr.adj ? T.gears.slice() : DR.boxRatios(trId, car);
     S.fd = T.fd;
-    S.launchRef = DR.tuneDefaults(inst, S).launchRpm;    // where this car likes to leave
 
     // tire pressure
     var d = (T.psi - tire.optP) / tire.optP;
@@ -313,6 +314,15 @@
     var dyno = DR.dyno(S);
     S.peakHp = dyno.peakHp; S.peakTq = dyno.peakTq; S.peakHpRpm = dyno.peakHpRpm;
     S.totalHp = S.peakHp + S.nosHp;
+    // Launch clutch slip: a car that can't overpower its tires in 1st has its
+    // clutch slipped off the line (or it just bogs); one with torque to spare
+    // gets the clutch dumped raw. 1 = fully slipped .. 0 = raw.
+    var axleN = S.m * G * (S.drive === 'FWD' ? S.f : S.drive === 'AWD' ? 1 : 1 - S.f);
+    // (a turbo has no boost on the line unless a 2-step builds it)
+    var lb = S.fiType === 'turbo' ? S.boostSet * (S.twostep === 2 ? 0.92 : S.twostep ? 0.5 : 0) : S.fiType !== 'none' ? null : 0, tq0 = 0;
+    for (var lr = S.idle + 500; lr <= S.red; lr += 250) tq0 = Math.max(tq0, boostedTorque(S, lr, lb === null ? steadyBoost(S, lr) : lb));
+    var hit = tq0 * S.ratios[0] * S.fd * S.eff / S.r / (S.tire.mu * S.pf * S.dgrip * axleN);
+    S.slipAssist = S.trType === 'auto' ? 0 : clamp((1.5 - hit) / 0.5, 0, 1);
     S.risk = DR.riskOf(S);
     return S;
   };
@@ -552,7 +562,7 @@
     this.failAt = opts.failAt || 0; this.failType = opts.failType || '';
     this.splits = {}; this.etStart = null; this.finished = false;
     this.tcCut = 0; this.brake = 0;
-    this.holdThr = 1; this.brakeLimited = false; this.lped = 1;
+    this.brakeLimited = false; this.creep = 0; this.creepV = 0;
     this.events = [];          // for visuals: 'shift', 'backfire', 'bar', 'land'
     var N0 = S.drive === 'FWD' ? S.m * G * S.f : S.drive === 'AWD' ? S.m * G : S.m * G * (1 - S.f);
     this.N0 = N0;
@@ -591,18 +601,11 @@
 
   Sim.prototype.launch = function () {
     if (this.launched) return;
-    var S = this.S;
-    this.launched = true; this.t = 0; this.clT = 0; this.clRamp = S.engage || 0.3; this.locked = false;
-    this.launchW = Math.max(this.we, S.idle * RPM2W * 1.3); this.firstLock = false;
-    // How hard the clutch comes in: a driver feeds it in to what the tires
-    // will take, a little over. Leaving at far more rpm than the car wants is
-    // a harder hit than anyone can feather, so the tires go up.
-    var over = S.launchRef ? Math.max(0, this.launchW * W2RPM / S.launchRef - 1.1) : 0;
-    this.launchAgg = 1.04 + 0.9 * over;
-  };
-  // a clutch launch still slipping towards its first lock-up
-  Sim.prototype.slipLaunch = function () {
-    return this.launched && !this.firstLock && this.gear === 0 && !this.shifting && this.S.trType !== 'auto' && !this.burnMode;
+    // the clutch comes out at its own engagement rate; how much it is slipped
+    // to save the launch depends on the car (S.slipAssist). The throttle is
+    // always the driver's.
+    this.launched = true; this.t = 0; this.clT = 0; this.clRamp = this.S.engage || 0.3; this.locked = false;
+    this.launchW = Math.max(this.we, this.S.idle * RPM2W * 1.3); this.firstLock = false;
   };
 
   // Standing burnout in the box: the line lock holds the non-driven wheels
@@ -612,8 +615,7 @@
     if (!!on === !!this.burnMode) return !!on;
     this.burnMode = !!on;
     this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = 0.15; this.locked = false;
-    this.firstLock = !!on;            // no launch clutch feathering while doing a burnout
-    if (!on) { this.ww = 0; this.slip = 0; this.firstLock = false; }
+    if (!on) { this.ww = 0; this.slip = 0; }
     return !!on;
   };
 
@@ -651,29 +653,10 @@
       else this.tcCut = Math.max(0, this.tcCut - dt * 5);
       thrIn *= 1 - 0.75 * this.tcCut;
     }
-    // Foot-brake launch (automatic without a transbrake): the driver can only
-    // feed in as much throttle as the brakes can hold against the converter.
     var pre = !this.launched && !this.burnMode;     // sitting on the brakes / transbrake
     // An H-pattern shift: the driver is off the gas with the clutch in (an
     // engine left flat out on the limiter would dump the clutch in the next gear)
     if (this.shifting && S.trType === 'manual') thrIn = 0;
-    // Slipping the clutch off the line the driver holds the revs near where
-    // they launched instead of letting the engine run away to the limiter.
-    // In the launch gear the driver pedals it: off a little when the tires
-    // go past their grip, back in as they catch (late and imperfect: it
-    // still loses time to traction control or a car that simply hooks).
-    if (this.launched && this.gear === 0 && !this.burnMode) {
-      var ovL = this.slip / S.tslip;
-      if (ovL > 1.7) this.lped = Math.max(0.3, this.lped - dt * 3.5);
-      else if (ovL < 1.2) this.lped = Math.min(1, this.lped + dt * 2.5);
-      thrIn = Math.min(thrIn, this.lped);
-    }
-    if (this.slipLaunch()) thrIn = Math.min(thrIn, clamp(1 - (this.we - this.launchW * 1.08) / (this.launchW * 0.15), 0.1, 1));
-    if (pre && S.trType === 'auto' && !S.tbrake) thrIn = Math.min(thrIn, this.holdThr);
-    // No 2-step on a clutch car: the driver holds the revs on the line with
-    // their foot, near where this car likes to leave (a 2-step holds an exact,
-    // tunable rpm on the ignition and can build boost against it)
-    if (pre && !S.twostep && S.trType !== 'auto') thrIn = Math.min(thrIn, clamp((S.tune.launchRpm + 250 - this.we * W2RPM) / 500, 0, 1));
     this.thr += (thrIn - this.thr) * Math.min(1, dt / 0.04);
     var rpm = this.we * W2RPM;
 
@@ -802,10 +785,13 @@
         var Timp = Math.pow(this.we / K, 2);
         this.we += dt * (Te - Timp) / S.Ie;
         if (!S.tbrake) {
-          var Thold = Timp * S.TR * Gr * eta;
-          this.brakeLimited = Thold > S.brakeHold * 0.97 && thrIn > 0.1;
-          if (Thold > S.brakeHold) this.holdThr = Math.max(0.1, this.holdThr - dt * 3);
-          else if (Thold < S.brakeHold * 0.9) this.holdThr = Math.min(1, this.holdThr + dt * 1.5);
+          // Foot brake (no transbrake): more converter torque than the brakes
+          // hold and the car creeps forward through them (out of the beams)
+          var Thold = Timp * S.TR * Gr * eta, over = Thold - S.brakeHold;
+          this.brakeLimited = over > -0.03 * S.brakeHold && thrIn > 0.1;
+          if (over > 0) this.creepV += dt * over / (r * m);
+          else this.creepV = Math.max(0, this.creepV - dt * 2);
+          this.creep += this.creepV * dt;
         }
       } else {
         this.we += dt * Te / S.Ie;
@@ -862,17 +848,16 @@
         if (S.slider && this.t < 1.2) this.cl = Math.min(this.cl, 0.55 + 0.45 * this.t / 1.2);
       }
       var cap = S.clCap * this.cl;
-      // Launch: the driver feathers the clutch to hold RPM near where it was
-      // dumped, until the car catches up and the clutch locks for the first time.
-      // It never feeds in more than the tires can use (times how hard the
-      // launch is), and lets it in slower if the engine starts to bog.
-      if (this.gear === 0 && !this.firstLock && !this.shifting) {
+      // Launch slip (low-power cars): until the clutch first locks it is let
+      // in so the engine doesn't bog below the revs it was launched at, and
+      // only as hard as the tires can take, eased back if they start to go.
+      // Blended towards a raw dump as the car's torque outgrows its tires.
+      if (S.slipAssist > 0 && this.gear === 0 && !this.firstLock && !this.shifting && !this.burnMode) {
         var hold = this.launchW * 0.82;
-        cap = Math.min(cap, Math.max(0, Math.max(Te, 0) * 1.05 + (this.we - hold) * S.Ie * 60));
-        // feeling the tires go, the driver eases the clutch back (slower to
-        // catch it on a hard, high-rpm launch)
-        var over2 = Math.max(0, this.slip / S.tslip - 1.15);
-        if (!this.burnMode) cap = Math.min(cap, mu * N * r / (Gr * eta) * Math.max(0.5, this.launchAgg - over2 * 0.5 / this.launchAgg));
+        var held = Math.max(0, Math.max(Te, 0) * 1.05 + (this.we - hold) * S.Ie * 60);
+        var spinOver = Math.max(0, this.slip / S.tslip - 1.15);
+        held = Math.min(held, mu * N * r / (Gr * eta) * Math.max(0.5, 1.05 - spinOver * 0.5));
+        cap = S.slipAssist * Math.min(cap, held) + (1 - S.slipAssist) * cap;
       }
       if (dead) cap = this.broke ? 0 : cap;
       var done = false;
@@ -977,22 +962,48 @@
     this.skill = skill;
     this.react = 0.02 + (1 - skill) * 0.28 + rnd() * 0.06;
     this.shiftErr = (rnd() - 0.5) * 600 * (1 - skill);
+    this.launchErr = (rnd() - 0.5) * 1600 * (1 - skill);
     this.pedal = 1;
+  };
+
+  // The revs a driver brings a clutch car up to before dropping the clutch
+  // (no 2-step): the best of a sweep of short runs, found once per spec.
+  DR.aiLaunchRpm = function (S) {
+    if (S._aiLaunch) return S._aiLaunch;
+    var best = S.tune.launchRpm, bestT = 1e9;
+    for (var rpm = S.idle + 900; rpm <= S.limit - 100; rpm += 400) {
+      var sim = new Sim(S, { grip: 1, dist: DR.QUARTER, tireT: S.tire.topt });
+      var ai = new DR.AIDriver(1, function () { return 0.5; });
+      ai.react = 0; ai.launchAt = rpm;
+      var dt = 1 / 300, tG = -1.2;
+      while (tG < 4 && !sim.crashed) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
+      var t = sim.crashed ? 0 : -sim.x;            // furthest down the track 4 s after the green
+      if (t < bestT) { bestT = t; best = rpm; }
+    }
+    S._aiLaunch = best;
+    return best;
   };
   // tGreen = seconds since green light (negative before)
   DR.AIDriver.prototype.input = function (sim, tGreen, dt) {
     var S = sim.S, rpm = sim.rpm();
     var inp = { throttle: 1, nos: false };
     if (!sim.launched) {
-      var target = S.trType === 'auto' ? S.red : (S.twostep ? S.red : S.tune.launchRpm);
+      var target = S.trType === 'auto' || S.twostep ? S.red : this.launchAt || Math.max(S.idle + 600, DR.aiLaunchRpm(S) + this.launchErr);
       inp.throttle = rpm < target ? 1 : 0;
+      // on the foot brake: only as much throttle as the brakes will hold
+      if (S.trType === 'auto' && !S.tbrake) {
+        this.brk = this.brk == null ? 1 : sim.brakeLimited ? Math.max(0.1, this.brk - dt * 3) : Math.min(1, this.brk + dt * 1.5);
+        inp.throttle = Math.min(inp.throttle, this.brk);
+      }
       if (tGreen >= this.react) sim.launch();
       return inp;
     }
     // Pedal control: a skilled driver feathers to hold slip near the tire's peak.
     var over = sim.slip / S.tslip;
-    if (over > 1.6 + (1 - this.skill) * 3) this.pedal = Math.max(Math.min(this.pedal, 0.25), this.pedal - dt * (2 + 8 * this.skill));
-    else if (over < 1.25) this.pedal = Math.min(1, this.pedal + dt * (1.5 + 3 * this.skill));
+    // (a tire still has most of its grip a little past its peak, so it only
+    // backs off for real wheelspin, and never to a bog)
+    if (over > 3 + (1 - this.skill) * 3) this.pedal = Math.max(Math.min(this.pedal, 0.45), this.pedal - dt * (1.5 + 3 * this.skill));
+    else if (over < 2) this.pedal = Math.min(1, this.pedal + dt * (2 + 3 * this.skill));
     if (sim.wheelie && sim.th > 0.2 + 0.15 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.3);
     // nose way up: right off the gas until it comes down
     if (sim.wheelie && sim.th > 0.4 + 0.1 * (1 - this.skill)) this.pedal = 0;

@@ -363,7 +363,7 @@
         stepRoll(you, dt);
         oppBox(dt);
         if (phase === 'stage' && you.box === 'staged') {
-          if (!opp || opp.box === 'staged') { phase = 'tree'; phaseT = 0; tree.stage = true; treeStart = 0.8 + Math.random() * 1.0; setMsg('', ''); }
+          if (!opp || opp.box === 'staged') { phase = 'tree'; phaseT = 0; tree.stage = true; you.sim.creep = 0; you.sim.creepV = 0; treeStart = 0.8 + Math.random() * 1.0; setMsg('', ''); }
           else setMsg('', 'Staged. Waiting on ' + opp.label + '...');
         }
       } else if (phase === 'tree' || phase === 'race') {
@@ -412,7 +412,9 @@
           if (tree.amber && t < 0.05 && t >= 0) { /* amber beep */ }
         }
         var tG = greenAt === null || !opp ? -1 : opp.sim.time - opp.greenT;
-        // player
+        // player: too much throttle against the foot brake rolls the car out
+        // of the beams, which starts the run (a red light before the green)
+        if (!you.sim.launched && you.sim.creep > 0.18) { act = true; if (greenAt === null) setMsg('', 'Rolled through the brakes!'); }
         if (act && !you.sim.launched) {
           if (greenAt === null) { redLight = true; tree.red[0] = true; A.beep(220, 0.4); }
           you.sim.launch(); act = false;
@@ -579,7 +581,8 @@
       if (html !== infoEl._h) { infoEl.innerHTML = html; infoEl._h = html; }
       gasBtn.classList.toggle('on', input.gasHeld);
       drawPads();
-      if (phase === 'tree' && greenAt === null && !redLight) setMsg('', tree.amber ? '' : 'Hold GAS to rev. Tap LAUNCH on green.');
+      if (phase === 'tree' && greenAt === null && !redLight) setMsg('', you.sim.brakeLimited ? 'Brakes slipping! Ease off the gas.' : tree.amber ? '' :
+        S.trType === 'auto' && !S.tbrake ? 'Ease into the GAS: the foot brake only holds so much. Tap LAUNCH on green.' : 'Hold GAS to rev. Tap LAUNCH on green.');
       ribbon.classList.toggle('on', !!(msgEl.textContent || subEl.textContent));
     }
 
