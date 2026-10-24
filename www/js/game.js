@@ -249,7 +249,8 @@
   };
   // A quick upgrade package (DR.packagePlan): pay the package price, then
   // each part goes on the car (at its share of the discount) and anything
-  // it replaces goes to the shelf. Leaves the boost where the package set it.
+  // it replaces goes to the shelf. Leaves the boost and launch setup where
+  // the package set them.
   G.buyPackage = function (inst, plan) {
     if (!plan.steps.length || !G.canAfford(plan.price)) return false;
     G.pay(plan.price);
@@ -260,6 +261,9 @@
       G.installPart(inst, item.uid);
     });
     if (plan.after.tune && plan.after.tune.boost != null) inst.tune.boost = plan.after.tune.boost;
+    // and comes with a launch setup that works with the new parts
+    var lt = DR.launchTune(inst);
+    for (var key in lt) inst.tune[key] = lt[key];
     G.save();
     return true;
   };

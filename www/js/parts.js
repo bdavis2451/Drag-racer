@@ -663,7 +663,11 @@
       var S = DR.buildSpec(copy);
       if (S.fiType === 'none') return;
       var want = Math.min(DR.PKG_BOOST[tier], S.knock - 1, S.sparkPsi, S.maxBoost);
-      copy.tune.boost = Math.max(S.boostSet, Math.round(want * 2) / 2);
+      var was = S.boostSet;
+      copy.tune.boost = Math.max(was, Math.round(want * 2) / 2);
+      // and no more than the engine's internals take (that's the bottom-end
+      // package's job)
+      while (copy.tune.boost > was && DR.buildSpec(copy).risk.engine > 0) copy.tune.boost -= 0.5;
     }
     var boostPkg = groups.indexOf('power') >= 0;
     groups.forEach(function (gid) {
@@ -682,8 +686,107 @@
       });
     });
     if (boostPkg && steps.length) setBoost();
+    // a package that adds power brings what that power needs: fuel to make
+    // it, and a gearbox, clutch and axles to hold it (never a car one launch
+    // away from breaking, or a turbo the injectors can't feed)
+    if (steps.length) {
+      // the ignition first: the coils set how much of the package's boost
+      // can actually be used
+      if (boostPkg) {
+        var Sb = DR.buildSpec(copy);
+        if (Sb.fiType !== 'none' && Sb.sparkPsi < Math.min(DR.PKG_BOOST[tier], Sb.knock - 1, Sb.maxBoost)) {
+          var ig = C.ignition.options.filter(function (o) { return o.id !== 'stock' && rank('ignition', copy, o.id) > rank('ignition', copy, DR.partId('ignition', copy)); })
+            .filter(function (o) { return Sb.sparkPsi - (DR.getOption('ignition', copy).spark || 0) + (o.spark || 0) >= Math.min(DR.PKG_BOOST[tier], Sb.knock - 1, Sb.maxBoost); })[0];
+          if (ig) { copy.parts.ignition = ig.id; steps.push({ cat: 'ignition', id: ig.id, opt: ig }); setBoost(); }
+        }
+      }
+      var need = function (cat) {
+        var S = DR.buildSpec(copy);
+        if (cat === 'injectors' || cat === 'fuelpump') return S.fuelW < S.peakHp * DR.HP * 1.001;
+        if (cat === 'clutch') return S.clCap && S.peakTq / 0.7376 > S.clCap;
+        if (cat === 'rearend') return S.risk.axle > 0;
+        return true;
+      };
+      [['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)], ['trans', transFor], ['clutch', clutchFor(1)], ['rearend', axleFor(1)]].forEach(function (e) {
+        if (!need(e[0])) return;
+        var id = e[1](copy);
+        if (!id || !DR.partApplies(e[0], copy) || id === DR.partId(e[0], copy)) return;
+        if (rank(e[0], copy, id) <= rank(e[0], copy, DR.partId(e[0], copy))) return;
+        var opt = DR.getOption(e[0], copy, id);
+        if (!opt || opt.id !== id) return;
+        if (id === DR.stockPart(e[0], copy)) delete copy.parts[e[0]]; else copy.parts[e[0]] = id;
+        steps.push({ cat: e[0], id: id, opt: opt });
+      });
+      // the fuel may have uncapped the power: boost back within the internals
+      if (boostPkg && copy.tune.boost != null) {
+        var floor = DR.buildSpec(inst).boostSet;
+        while (copy.tune.boost > floor && DR.buildSpec(copy).risk.engine > 0) copy.tune.boost -= 0.5;
+      }
+    }
     var price = steps.reduce(function (a, s) { return a + (s.opt.price || 0); }, 0);
     return { steps: steps, after: copy, full: price, price: Math.round(price * (1 - DR.PKG_DISCOUNT) / 50) * 50 };
+  };
+
+  // A usable (not refined) setup for a build: the rear gear, then a coarse
+  // sweep of the 2-step rpm, plus launch throttle / ramp and traction
+  // control where the ECU has them, each tried as a player would drive it (gas held on the
+  // line, flat out after the hit). Only settings the parts allow.
+  var launchMemo = {};
+  DR.launchTune = function (inst) {
+    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune && inst.tune.boost]);
+    if (launchMemo[key]) return launchMemo[key];
+    var S0 = DR.buildSpec(inst), out = {};
+    // the rear gear first: keep the launch gear about where the factory had
+    // it (a swapped gearbox brings its own ratios), whichever runs the
+    // quicker quarter
+    var car = DR.CARS[inst.carId], first0 = DR.boxRatios(car.trans, car)[0] * car.fd;
+    var fds = [S0.fd, first0 / S0.ratios[0], first0 / S0.ratios[0] * 1.1, first0 / S0.ratios[0] * 0.9].map(function (f) { return Math.round(clampN(f, 2.2, 6.5) * 100) / 100; });
+    var bestFd = S0.fd, bestEt = 1e9;
+    fds.forEach(function (f) {
+      var t = {}; for (var k in inst.tune) t[k] = inst.tune[k]; t.fd = f;
+      var et = DR.playerPass(DR.buildSpec(inst, t), 60, true);
+      if (et < bestEt - 0.02) { bestEt = et; bestFd = f; }
+    });
+    if (bestFd !== S0.fd) { out.fd = bestFd; inst = JSON.parse(JSON.stringify(inst)); inst.tune.fd = bestFd; S0 = DR.buildSpec(inst); }
+    var rpms = [null], thr = [null], tcs = [null];
+    if (S0.twostep) { rpms = []; var lo = S0.idle + 1200, hi = S0.red - 400; for (var i = 0; i < 6; i++) rpms.push(Math.round((lo + (hi - lo) * i / 5) / 100) * 100); }
+    if (S0.ecu >= 2) thr = [[100, 0], [70, 0.5], [45, 0.9], [35, 1.6], [30, 2]];
+    if (S0.ecu >= 3) tcs = [0, 20];
+    if (rpms.length * thr.length * tcs.length <= 1) return (launchMemo[key] = out);
+    var best = -1, fdOut = out.fd;
+    rpms.forEach(function (rpm) { thr.forEach(function (th) { tcs.forEach(function (tc) {
+      var t = {}; for (var k in inst.tune) t[k] = inst.tune[k];
+      if (rpm != null) t.launchRpm = rpm;
+      if (th) { t.launchThr = th[0]; t.thrRamp = th[1]; }
+      if (tc != null) t.tcSlip = tc;
+      // scored on a prepped strip and on the street, so it isn't a setup that
+      // only works with perfect grip
+      var St = DR.buildSpec(inst, t), x = DR.playerPass(St, 3) + DR.playerPass(St, 3, false, 0.85);
+      if (x > best) { best = x; out = {}; if (fdOut != null) out.fd = fdOut; if (rpm != null) out.launchRpm = rpm; if (th) { out.launchThr = th[0]; out.thrRamp = th[1]; } if (tc != null) out.tcSlip = tc; }
+    }); }); });
+    return (launchMemo[key] = out);
+  };
+  // metres covered `secs` after the hit, driven like a player: gas held on
+  // the line (eased against a foot brake), flat out, shifting at the tune's
+  // shift point
+  function clampN(x, a, b) { return Math.max(a, Math.min(b, x)); }
+  DR.playerPass = function (S, secs, quarterEt, grip) {
+    var sim = new DR.Sim(S, { grip: grip || 1, dist: DR.QUARTER, tireT: S.tire.topt }), dt = 1 / 200, brk = 1;
+    for (var i = 0; i < 300; i++) {
+      if (S.trType === 'auto' && !S.tbrake) brk = sim.brakeLimited ? Math.max(0.1, brk - dt * 3) : Math.min(1, brk + dt * 1.5);
+      sim.step(dt, { throttle: brk });
+    }
+    sim.launch();
+    while (sim.t < secs && !sim.crashed && !sim.finished) {
+      if (!sim.shifting && sim.sinceShift > 0.25 && sim.t > 0.6) {
+        var line = sim.ww * S.ratios[sim.gear] * S.fd * 30 / Math.PI;
+        var trig = S.trType === 'auto' ? Math.max(line / 0.95, sim.rpm() >= S.limit - 60 ? sim.rpm() : 0) : sim.locked ? sim.rpm() : line;
+        if (trig >= S.tune.shiftRpm) sim.shiftUp();
+      }
+      sim.step(dt, { throttle: 1 });
+    }
+    if (quarterEt) return sim.finished ? sim.et : 99;
+    return sim.crashed ? 0 : sim.x;
   };
 
   // Older builds used combined parts (engine internals, fuel system, cams

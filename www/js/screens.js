@@ -52,7 +52,13 @@
   };
 
   // ---------------------------------------------------------------- RACE MENU
-  var streetOpps = null, selStage = null, betSel = 1000;
+  var streetOpps = null, selStage = null, seenStage = null, betSel = 1000;
+  // the stage to show: the newest one as soon as it opens up (or after a
+  // new game), otherwise whichever the player picked
+  function pickStage(c) {
+    if (selStage == null || selStage > c.stage || seenStage !== c.stage) selStage = c.stage;
+    seenStage = c.stage;
+  }
   UI.RaceMenu = function (tab) {
     tab = tab || 'map';
     UI.raceTab = tab;
@@ -83,7 +89,7 @@
   var selPlace = null, cityView = null;
   function mapView(inst) {
     var c = G.careerState();
-    if (selStage == null || selStage > c.stage) selStage = c.stage;
+    pickStage(c);
     G.checkContracts().forEach(function (m) { UI.toast(m); });
     var st = DR.STAGES[selStage], next = nextEvent(st), pins = {};
     st.all.forEach(function (ev) {
@@ -136,7 +142,7 @@
 
   function careerView() {
     var c = G.careerState();
-    if (selStage == null || selStage > c.stage) selStage = c.stage;
+    pickStage(c);
     G.checkContracts().forEach(function (m) { UI.toast(m); });
     var chips = stageChips();
     var st = DR.STAGES[selStage], wins = G.stageWins(selStage);
@@ -417,7 +423,7 @@
         sweep.p = Math.min(1, t);
         var rpm = 1000 + (S.red + 200 - 1000) * sweep.p;
         A.update(voice, rpm, 1, DR.steadyBoost(S, rpm), 0, S.fiType);
-        ang += (now - last) / 1000 * rpm / 300; last = now;
+        ang += Math.max(0, now - last) / 1000 * rpm / 300; last = now;
         rpmEl.textContent = Math.round(rpm) + ' RPM';
         draw(); drawRoom(ang, true);
         if (t < 1) raf = requestAnimationFrame(tick);

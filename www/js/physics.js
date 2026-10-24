@@ -630,6 +630,7 @@
 
   // One physics step. inp = {throttle:0..1, nos:bool}
   Sim.prototype.step = function (dt, inp) {
+    if (!(dt > 0)) return;
     var S = this.S, m = S.m;
     this.time += dt;
     if (this.launched) this.t += dt;
@@ -853,7 +854,9 @@
       // only as hard as the tires can take, eased back if they start to go.
       // Blended towards a raw dump as the car's torque outgrows its tires.
       if (S.slipAssist > 0 && this.gear === 0 && !this.firstLock && !this.shifting && !this.burnMode) {
-        var hold = this.launchW * 0.82;
+        // (no lower than it was launched at, nor higher than its torque and power peaks:
+        // slipping a clutch near the limiter just wastes the launch)
+        var hold = Math.max(S.idle * RPM2W * 1.3, Math.min(this.launchW * 0.82, (S.tqRpm + S.peakHpRpm) / 2 * RPM2W));
         var held = Math.max(0, Math.max(Te, 0) * 1.05 + (this.we - hold) * S.Ie * 60);
         var spinOver = Math.max(0, this.slip / S.tslip - 1.15);
         held = Math.min(held, mu * N * r / (Gr * eta) * Math.max(0.5, 1.05 - spinOver * 0.5));

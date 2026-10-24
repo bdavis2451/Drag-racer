@@ -165,7 +165,7 @@
 
     var last = performance.now(), raf = 0;
     function frame(now) {
-      var dt = Math.min(0.05, (now - last) / 1000); last = now;
+      var dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the screen opened)
       update(dt); draw();
       raf = requestAnimationFrame(frame);
     }

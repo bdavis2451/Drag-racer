@@ -269,6 +269,8 @@
     var phase = 'pre', phaseT = 0, clock = 0;
     var tree = { stage: false, pre: [false, false], staged: [false, false], amber: 0, green: false, red: [false, false] };
     var treeStart = 0, greenAt = null, redLight = false, oppRed = false;
+    // read-only view of the race for automated play-testing
+    DR.Race._dbg = function () { return { you: you, opp: opp, phase: phase, green: greenAt !== null, red: redLight, tree: tree }; };
     var resultShown = false, slipEl = null;
     var voices = [];
     var flash = { text: '', t: 0 };
@@ -330,7 +332,7 @@
     // ---------------------------------------------------------------- loop
     var last = performance.now(), raf = 0, acc = 0;
     function frame(now) {
-      var dt = Math.min(0.05, (now - last) / 1000); last = now;
+      var dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the screen opened)
       ensureVoices();
       update(dt);
       draw(dt);
@@ -357,7 +359,9 @@
           // tires in the window and off the gas: roll up to the line on its own
           var tt = S.tire.topt;
           you.offGas = thr > 0.05 ? 0 : (you.offGas || 0) + dt;
-          if (settings.autoStage !== false && you.sim.tireT >= tt - 8 && you.sim.tireT <= tt + 30 && you.offGas > 0.5 && phaseT > 1) startStaging(true);
+          // (once they've reached the window: they cool a little while you wait)
+          if (you.sim.tireT >= tt - 8) you.hitWindow = true;
+          if (settings.autoStage !== false && you.hitWindow && you.sim.tireT >= tt - 14 && you.sim.tireT <= tt + 30 && you.offGas > 0.5 && phaseT > 1) startStaging(true);
           else if (you.sim.tireT >= tt - 8 && thr > 0.05) setMsg('', you.sim.tireT > tt + 25 ? 'Too hot! Let off the gas.' : settings.autoStage !== false ? 'Tires are in the window. Let off the gas to pull up.' : 'Tires are in the window. Hit STAGE.');
         }
         stepRoll(you, dt);
@@ -424,8 +428,9 @@
           you.sim.shiftUp();
           act = false;
         }
-        // auto-shift (setting); never in the first moments of the launch
-        if (settings.autoShift && you.sim.launched && you.sim.t > 0.6 && !you.sim.shifting && you.sim.sinceShift > 0.25) {
+        // auto-shift (setting; an automatic always shifts itself); never in
+        // the first moments of the launch
+        if ((settings.autoShift || you.S.trType === 'auto') && you.sim.launched && you.sim.t > 0.6 && !you.sim.shifting && you.sim.sinceShift > 0.25) {
           var Sy = you.S, line = you.sim.ww * Sy.ratios[you.sim.gear] * Sy.fd * 30 / Math.PI;
           var trig = Sy.trType === 'auto' ? Math.max(line / 0.95, you.sim.rpm() >= Sy.limit - 60 ? you.sim.rpm() : 0) : you.sim.locked ? you.sim.rpm() : line;
           if (trig >= Sy.tune.shiftRpm) you.sim.shiftUp();
@@ -582,7 +587,9 @@
       gasBtn.classList.toggle('on', input.gasHeld);
       drawPads();
       if (phase === 'tree' && greenAt === null && !redLight) setMsg('', you.sim.brakeLimited ? 'Brakes slipping! Ease off the gas.' : tree.amber ? '' :
-        S.trType === 'auto' && !S.tbrake ? 'Ease into the GAS: the foot brake only holds so much. Tap LAUNCH on green.' : 'Hold GAS to rev. Tap LAUNCH on green.');
+        S.trType === 'auto' && !S.tbrake ? 'Ease into the GAS: the foot brake only holds so much. Tap LAUNCH on green.' :
+        S.trType !== 'auto' && !S.twostep && settings.pedal !== 'slide' ? 'Rev it, LAUNCH on green. A 2-step or the Slide pedal sets launch revs.' :
+        'Hold GAS to rev. Tap LAUNCH on green.');
       ribbon.classList.toggle('on', !!(msgEl.textContent || subEl.textContent));
     }
 
