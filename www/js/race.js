@@ -334,7 +334,7 @@
     function frame(now) {
       var dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the screen opened)
       ensureVoices();
-      update(dt);
+      if (!tipOpen) update(dt);
       draw(dt);
       raf = requestAnimationFrame(frame);
     }
@@ -345,6 +345,28 @@
     };
 
     function playerThrottle() { return input.gasHeld ? input.gas : 0; }
+
+    // First race ever: how to leave the line, once, as the tree comes down
+    // (the race waits while it's up)
+    var tipOpen = false;
+    function launchTip() {
+      var seen = G.state.tips || (G.state.tips = {});
+      if (seen.launch || testDrive || (G.state.stats && G.state.stats.races > 0)) return;
+      seen.launch = true; G.save();
+      tipOpen = true; input.gasHeld = false; input.gas = 0;
+      var body = S.trType === 'auto' && !S.tbrake ?
+        ['Ease into the GAS on the line: the foot brake only holds so much, and too much throttle rolls you through the beams (a red light).',
+         'Tap LAUNCH when the light turns green. Your automatic shifts itself.',
+         'A transbrake lets you hold full throttle on the line.'] :
+        ['Rev it and tap LAUNCH on green, then tap SHIFT as the lights hit the top of the tach (or turn on auto-shift in Settings).',
+         'Holding full gas sits on the rev limiter, and dumping the clutch from there spins the tires.',
+         'A 2-step (Shop, Power Adders) holds the revs you pick, or switch the gas pedal to Slide in Settings and feather it yourself.'];
+      var close = UI.modal([h('h2', {}, 'LAUNCHING'), body.map(function (t) { return h('p', {}, t); }),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Got it', function () { done(); }, 'primary'))]);
+      function done() { close(); tipOpen = false; input.act = false; last = performance.now(); }
+      // a tap outside the panel closes it too
+      setTimeout(function () { var m = document.querySelector('.modal'); if (m) m.addEventListener('click', function (e) { if (e.target === m) done(); }); }, 0);
+    }
 
     function update(dt) {
       phaseT += dt;
@@ -367,7 +389,7 @@
         stepRoll(you, dt);
         oppBox(dt);
         if (phase === 'stage' && you.box === 'staged') {
-          if (!opp || opp.box === 'staged') { phase = 'tree'; phaseT = 0; tree.stage = true; you.sim.creep = 0; you.sim.creepV = 0; treeStart = 0.8 + Math.random() * 1.0; setMsg('', ''); }
+          if (!opp || opp.box === 'staged') { phase = 'tree'; phaseT = 0; tree.stage = true; you.sim.creep = 0; you.sim.creepV = 0; treeStart = 0.8 + Math.random() * 1.0; setMsg('', ''); launchTip(); }
           else setMsg('', 'Staged. Waiting on ' + opp.label + '...');
         }
       } else if (phase === 'tree' || phase === 'race') {
@@ -586,10 +608,7 @@
       if (html !== infoEl._h) { infoEl.innerHTML = html; infoEl._h = html; }
       gasBtn.classList.toggle('on', input.gasHeld);
       drawPads();
-      if (phase === 'tree' && greenAt === null && !redLight) setMsg('', you.sim.brakeLimited ? 'Brakes slipping! Ease off the gas.' : tree.amber ? '' :
-        S.trType === 'auto' && !S.tbrake ? 'Ease into the GAS: the foot brake only holds so much. Tap LAUNCH on green.' :
-        S.trType !== 'auto' && !S.twostep && settings.pedal !== 'slide' ? 'Rev it, LAUNCH on green. A 2-step or the Slide pedal sets launch revs.' :
-        'Hold GAS to rev. Tap LAUNCH on green.');
+      if (phase === 'tree' && greenAt === null && !redLight) setMsg('', you.sim.brakeLimited ? 'Brakes slipping! Ease off the gas.' : '');
       ribbon.classList.toggle('on', !!(msgEl.textContent || subEl.textContent));
     }
 

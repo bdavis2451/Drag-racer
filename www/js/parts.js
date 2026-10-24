@@ -392,7 +392,7 @@
       var ids = Object.keys(DR.ENGINES).sort(function (a, b) { return DR.ENGINES[a].hp - DR.ENGINES[b].hp; });
       for (i = 0; i < ids.length; i++) {
         var e = DR.ENGINES[ids[i]];
-        list.push({ id: ids[i], name: e.name, price: ids[i] === car.engine ? 0 : e.price,
+        list.push({ id: ids[i], name: e.name, price: ids[i] === car.engine ? 0 : e.price, lvl: ids[i] === car.engine ? 0 : e.lvl,
           desc: e.hp + ' hp at ' + e.pk + ' rpm. ' + DR.engineLayout(e) + '. Weighs ' + e.w + ' kg (' + Math.round(e.w * 2.2046) + ' lb) dressed.' });
       }
       return list;
@@ -619,7 +619,9 @@
     drive: [
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
       [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tch')], ['transbrake', 'tb1'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)]]],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tch')], ['transbrake', 'tb1'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)],
+        // a front-driver making real power is converted to drive the rear
+        ['layout', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? 'rwd' : null; }]]],
     susp: [
       [['springs', 'sp1'], ['shocks', 'sh1'], ['rearsusp', 'rs1'], ['chassis', 'cg1']],
       [['springs', 'sp2'], ['shocks', 'sh2'], ['rearsusp', 'rs2'], ['chassis', 'cg2'], ['frontsusp', 'fs1']],
@@ -653,9 +655,41 @@
   // The parts a package would fit to this car: [{cat, id, opt}], plus the
   // car as it would be afterwards. Skips parts that do not fit and anything
   // already as good or better.
-  DR.packagePlan = function (inst, groups, tier) {
+  DR.packagePlan = function (inst, groups, tier, anyLevel) {
     var copy = JSON.parse(JSON.stringify(inst)), steps = [];
     copy.parts = copy.parts || {}; copy.tune = copy.tune || {};
+    // A package fits the best parts you have unlocked up to its tier's pick
+    // (so it can always be bought, and gets better as the career opens up)
+    function unl(cat, opt) { return anyLevel || !DR.Game || !DR.Game.partUnlocked || DR.Game.partUnlocked(cat, opt.lvl); }
+    function pick(cat, id) {
+      var want = DR.getOption(cat, copy, id);
+      if (!want || want.id !== id) return null;
+      if (unl(cat, want)) return id;
+      var wr = rank(cat, copy, id), cr = rank(cat, copy, DR.partId(cat, copy)), best = null, br = -1;
+      DR.partOptions(cat, copy).forEach(function (o) {
+        var r = rank(cat, copy, o.id);
+        if (o.price && unl(cat, o) && r <= wr && r > cr && r > br) { best = o.id; br = r; }
+      });
+      return best;
+    }
+    // capacity parts only go on if they hold more than what's fitted now
+    // (a race car's factory fuel system, clutch or axles can out-rate the
+    // early aftermarket ones)
+    function weaker(cat, opt) {
+      var cap = { injectors: 'fuel', fuelpump: 'fuel', clutch: 'cap', rearend: 'axle' }[cat];
+      if (!cap || opt[cap] == null) return false;
+      var S = DR.buildSpec(copy), now = cat === 'injectors' ? S.fuelInj : cat === 'fuelpump' ? S.fuelPump : cat === 'clutch' ? S.clCap : S.axleTq;
+      return now != null && opt[cap] <= now;
+    }
+    function fit(cat, id) {
+      var opt = DR.getOption(cat, copy, id);
+      if (!opt || opt.id !== id || weaker(cat, opt)) return false;
+      if (cat === 'fi') delete copy.tune.boost;
+      if (id === DR.stockPart(cat, copy)) delete copy.parts[cat]; else copy.parts[cat] = id;
+      steps.push({ cat: cat, id: id, opt: opt });
+      return true;
+    }
+    function risky() { var r = DR.buildSpec(copy).risk; return r.engine > 0 || r.trans > 0 || r.axle > 0; }
     // power packages turn the boost up to suit, within the fuel's knock
     // limit, the ignition and the turbo (never below what it was); done
     // straight after the power parts so the rest is sized for it
@@ -677,13 +711,22 @@
         if (!id || !DR.partApplies(cat, copy)) return;
         var cur = DR.partId(cat, copy);
         if (rank(cat, copy, id) <= rank(cat, copy, cur)) return;
-        var opt = DR.getOption(cat, copy, id);
-        if (!opt || opt.id !== id) return;
-        if (cat === 'fi') delete copy.tune.boost;
-        if (id === DR.stockPart(cat, copy)) delete copy.parts[cat]; else copy.parts[cat] = id;
-        steps.push({ cat: cat, id: id, opt: opt });
+        id = pick(cat, id);
+        if (!id || !fit(cat, id)) return;
         if (boostPkg && (cat === 'ignition' || cat === 'fueltype' || cat === 'wastegate')) setBoost();
       });
+      // no turbo or blower unlocked yet: the power package is a nitrous kit
+      if (gid === 'power' && DR.partId('fi', copy) === 'none' && DR.partApplies('nitrous', copy)) {
+        var shots = DR.partOptions('nitrous', copy).filter(function (o) { return o.price && unl('nitrous', o); });
+        var want = ['n75', 'n150', 'n250'][tier];
+        shots = shots.filter(function (o) { return rank('nitrous', copy, o.id) <= rank('nitrous', copy, want) && rank('nitrous', copy, o.id) > rank('nitrous', copy, DR.partId('nitrous', copy)); });
+        for (var k = shots.length - 1; k >= 0; k--) {
+          var keep = JSON.stringify(copy.parts);
+          copy.parts.nitrous = shots[k].id;
+          if (!risky()) { delete copy.parts.nitrous; copy.parts = JSON.parse(keep); fit('nitrous', shots[k].id); if (DR.partId('nosheat', copy) === 'stock') { var nh = pick('nosheat', 'nh1'); if (nh) fit('nosheat', nh); } break; }
+          copy.parts = JSON.parse(keep);
+        }
+      }
     });
     if (boostPkg && steps.length) setBoost();
     // a package that adds power brings what that power needs: fuel to make
@@ -695,7 +738,7 @@
       if (boostPkg) {
         var Sb = DR.buildSpec(copy);
         if (Sb.fiType !== 'none' && Sb.sparkPsi < Math.min(DR.PKG_BOOST[tier], Sb.knock - 1, Sb.maxBoost)) {
-          var ig = C.ignition.options.filter(function (o) { return o.id !== 'stock' && rank('ignition', copy, o.id) > rank('ignition', copy, DR.partId('ignition', copy)); })
+          var ig = DR.partOptions('ignition', copy).filter(function (o) { return o.id !== 'stock' && unl('ignition', o) && rank('ignition', copy, o.id) > rank('ignition', copy, DR.partId('ignition', copy)); })
             .filter(function (o) { return Sb.sparkPsi - (DR.getOption('ignition', copy).spark || 0) + (o.spark || 0) >= Math.min(DR.PKG_BOOST[tier], Sb.knock - 1, Sb.maxBoost); })[0];
           if (ig) { copy.parts.ignition = ig.id; steps.push({ cat: 'ignition', id: ig.id, opt: ig }); setBoost(); }
         }
@@ -713,15 +756,14 @@
         var id = e[1](copy);
         if (!id || !DR.partApplies(e[0], copy) || id === DR.partId(e[0], copy)) return;
         if (rank(e[0], copy, id) <= rank(e[0], copy, DR.partId(e[0], copy))) return;
-        var opt = DR.getOption(e[0], copy, id);
-        if (!opt || opt.id !== id) return;
-        if (id === DR.stockPart(e[0], copy)) delete copy.parts[e[0]]; else copy.parts[e[0]] = id;
-        steps.push({ cat: e[0], id: id, opt: opt });
+        id = pick(e[0], id);
+        if (id) fit(e[0], id);
       });
-      // the fuel may have uncapped the power: boost back within the internals
+      // the fuel may have uncapped the power, or a strong enough gearbox
+      // isn't unlocked yet: boost back within what the car can hold
       if (boostPkg && copy.tune.boost != null) {
         var floor = DR.buildSpec(inst).boostSet;
-        while (copy.tune.boost > floor && DR.buildSpec(copy).risk.engine > 0) copy.tune.boost -= 0.5;
+        while (copy.tune.boost > floor && risky()) copy.tune.boost -= 0.5;
       }
     }
     var price = steps.reduce(function (a, s) { return a + (s.opt.price || 0); }, 0);

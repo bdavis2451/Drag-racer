@@ -406,7 +406,7 @@
         h('div', { class: 'pname' }, o.name),
         // what it does for this car, at a glance
         !locked && !installed && DR.partApplies(shopCat, inst) ? gainLine(inst, shopCat, o.id) : null,
-        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 Stage ' + (lvl - 1) + ' boss') : h('span', { class: 'price' + (G.canAfford(o.price) ? '' : ' bad') }, DR.money(o.price)),
+        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(shopCat, lvl)) : h('span', { class: 'price' + (G.canAfford(o.price) ? '' : ' bad') }, DR.money(o.price)),
           installed ? h('span', { class: 'tag g' }, 'ON CAR') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
@@ -429,7 +429,7 @@
       h('div', { class: 'pname' }, tier.name + ' ' + (pg.id === 'all' ? 'Build' : 'Package')),
       done ? h('span', { class: 'gain dim' }, 'all fitted') : h('div', { class: 'dim', style: { fontSize: '15px' } }, plan.steps.length + ' parts'),
       done ? null : pkgGain(inst, plan),
-      h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 Stage ' + (Math.max.apply(null, locked.map(function (s) { return s.opt.lvl; })) - 1) + ' boss') : done ? h('span', { class: 'tag g' }, 'ON CAR') :
+      h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + locked.map(function (s) { return G.unlockWhere(s.cat, s.opt.lvl); }).sort().pop()) : done ? h('span', { class: 'tag g' }, 'ON CAR') :
         h('span', { class: 'price' + (G.canAfford(plan.price) ? '' : ' bad') }, DR.money(plan.price)),
         !locked && !done ? h('span', { class: 'tag b' }, '-' + Math.round(DR.PKG_DISCOUNT * 100) + '%') : null));
   }

@@ -21,7 +21,7 @@
 
   // which bank voices an engine
   DR.engineBank = function (eng) {
-    var B = DR.ENG_BANKS || {}, own = (DR.ENG_BANK_BY_ENGINE || {})[eng.id];
+    var B = DR.ENG_BANKS || {}, by = DR.ENG_BANK_BY_ENGINE || {}, own = by[eng.id] || by[eng.soundAs];
     return own && B[own] ? own : null;
   };
 
@@ -322,7 +322,7 @@
     var c = A.ctx, ex = build.exhaust || 0;
     var sm = v.smp = { bank: bank };
     sm.node = new AudioWorkletNode(c, 'pd-loops', { numberOfInputs: 0, outputChannelCount: [1] });
-    sm.node.port.postMessage(A.bankMsg(bank, buf.getChannelData(0), buf.sampleRate, (DR.ENG_BANK_OPTS || {})[eng.id]));
+    sm.node.port.postMessage(A.bankMsg(bank, buf.getChannelData(0), buf.sampleRate, (DR.ENG_BANK_OPTS || {})[eng.id] || (DR.ENG_BANK_OPTS || {})[eng.soundAs]));
     sm.np = sm.node.parameters;
     sm.cut = TONE.cut[ex] * (build.turbo ? 0.78 : 1);
     sm.tone = c.createBiquadFilter(); sm.tone.type = 'lowpass'; sm.tone.Q.value = 0.6; sm.tone.frequency.value = sm.cut;

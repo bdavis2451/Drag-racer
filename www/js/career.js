@@ -57,6 +57,9 @@
     return 'engine';
   };
   DR.LEVEL_NAMES = ['Stock', 'Street', 'Sport', 'Pro', 'Race', 'Pro Mod'];
+  // every shop group starts at this level: street bolt-ons, cams, small
+  // nitrous and drag radials are there from the first day
+  DR.BASE_PERF = 2;
 
   // ---------------------------------------------------------------- sponsors
   // contract: {spon: sponsor races to win, stars: rating to reach, street: street wins}
@@ -88,60 +91,60 @@
   DR.STAGES = [
     { name: 'Rookie Nights', blurb: 'Parking-lot heroes and Friday night grudge matches.', sponsors: ['nitro', 'torque', 'slick'], base: 600,
       events: [
-        e('quarter', [rv(0, 0)], 450, ['perf:engine:2', 'vis:rims:1'], 0),
+        e('quarter', [rv(0, 0)], 450, ['perf:susp:3', 'vis:rims:1'], 0),
         e('eighth', [rv(0, 1)], 450, ['vis:fbumper:1', 'vis:tint:1'], 0),
-        e('street', [rv(0, 2, { name: 'Jess' })], 550, ['perf:tires:2', 'vis:vinyl:1'], 1),
-        e('quarter', [rv(0, 1, { name: 'Tony B', color: '#2fb3a8', skill: 0.5 })], 550, ['perf:susp:2', 'vis:rbumper:1'], 1),
-        e('sponsor', [rv(0, 3)], 800, ['perf:drive:2', 'vis:finish:1'], 2),
-        e('knockout', [rv(0, 0, { name: 'Edna' }), rv(0, 2, { name: 'Kat', color: '#ff2bd6' }), rv(0, 3)], 1100, ['perf:power:2', 'vis:skirt:1'], 3),
+        e('street', [rv(0, 2, { name: 'Jess' })], 550, ['perf:tires:3', 'vis:vinyl:1'], 1),
+        e('quarter', [rv(0, 1, { name: 'Tony B', color: '#2fb3a8', skill: 0.5 })], 550, ['perf:engine:3', 'vis:rbumper:1'], 1),
+        e('sponsor', [rv(0, 3)], 800, ['perf:drive:3', 'vis:finish:1'], 2),
+        e('knockout', [rv(0, 0, { name: 'Edna' }), rv(0, 2, { name: 'Kat', color: '#ff2bd6' }), rv(0, 3)], 1100, ['perf:power:3', 'vis:skirt:1'], 3),
         e('eighth', [rv(0, 4)], 650, ['vis:spoiler:1', 'vis:tips:1'], 3),
         e('showcase', [rv(0, 3, { name: 'Neon Nina', color: '#ff2bd6', vis: { neon: '#ff2bd6', fbumper: 1, rims: 'mesh', tint: 1, vinyl: 1 } })], 900, ['vis:hood:1'], 4),
-        e('sponsor', [rv(0, 4, { name: 'Mike' })], 900, ['perf:body:2'], 5),
+        e('sponsor', [rv(0, 4, { name: 'Mike' })], 900, ['perf:body:3'], 5),
         e('street', [rv(1, 0, { name: 'Dale' })], 750, [], 5)
       ],
-      boss: e('boss', [rv(1, 0, { name: 'Dale "The Mullet" Rhodes', skill: 0.7, vis: { spoiler: 1, rims: 'pony', vinyl: 2, tips: 1 }, stripe: '#ffffff' })], 3500, ['cars:1', 'perf:all:2'], 6) },
+      boss: e('boss', [rv(1, 0, { name: 'Dale "The Mullet" Rhodes', skill: 0.7, vis: { spoiler: 1, rims: 'pony', vinyl: 2, tips: 1 }, stripe: '#ffffff' })], 3500, ['cars:1', 'perf:all:3'], 6) },
 
     { name: 'Bracket Bandits', blurb: 'Bolt-ons are not enough anymore. Real builds, real money.', sponsors: ['boost', 'redline', 'apex'], base: 1800,
       events: [
-        e('quarter', [rv(1, 1)], 1400, ['perf:engine:3', 'vis:fbumper:2'], 0),
+        e('quarter', [rv(1, 1)], 1400, ['perf:engine:4', 'vis:fbumper:2'], 0),
         e('street', [rv(1, 2)], 1500, ['vis:neon:2', 'vis:tint:2'], 0),
-        e('eighth', [rv(1, 1, { name: 'Kenji' })], 1500, ['perf:tires:3', 'vis:rims:2'], 1),
-        e('quarter', [rv(1, 3)], 1800, ['perf:power:3', 'vis:rbumper:2'], 1),
-        e('sponsor', [rv(1, 2, { name: 'Rosa' })], 2400, ['perf:drive:3', 'vis:finish:2'], 2),
-        e('knockout', [rv(1, 1, { name: 'Kenji' }), rv(1, 3, { name: 'Hiro' }), rv(1, 4)], 3200, ['perf:susp:3', 'vis:skirt:2'], 3),
+        e('eighth', [rv(1, 1, { name: 'Kenji' })], 1500, ['perf:tires:4', 'vis:rims:2'], 1),
+        e('quarter', [rv(1, 3)], 1800, ['perf:power:4', 'vis:rbumper:2'], 1),
+        e('sponsor', [rv(1, 2, { name: 'Rosa' })], 2400, ['perf:drive:4', 'vis:finish:2'], 2),
+        e('knockout', [rv(1, 1, { name: 'Kenji' }), rv(1, 3, { name: 'Hiro' }), rv(1, 4)], 3200, ['perf:susp:4', 'vis:skirt:2'], 3),
         e('street', [rv(1, 4, { name: 'Earl' })], 2000, ['vis:spoiler:2', 'vis:roof:2'], 3),
         e('showcase', [rv(1, 3, { name: 'Chrome Carla', color: '#d0d0d0', vis: { fbumper: 2, rbumper: 2, skirt: 2, spoiler: 2, finish: 2, rims: 'split', neon: '#00e5ff', tint: 2 } })], 2800, ['vis:hood:2', 'vis:vinyl:2'], 4),
-        e('sponsor', [rv(2, 0)], 2800, ['perf:body:3'], 5),
+        e('sponsor', [rv(2, 0)], 2800, ['perf:body:4'], 5),
         e('eighth', [rv(2, 1)], 2200, [], 5)
       ],
-      boss: e('boss', [rv(2, 2, { name: 'Lexi "Boost" Park', skill: 0.8, vis: { fbumper: 2, skirt: 2, spoiler: 2, vinyl: 2, rims: 'turbine', tint: 2, finish: 1 }, stripe: '#ff2bd6' })], 10000, ['cars:2', 'perf:all:3'], 6) },
+      boss: e('boss', [rv(2, 2, { name: 'Lexi "Boost" Park', skill: 0.8, vis: { fbumper: 2, skirt: 2, spoiler: 2, vinyl: 2, rims: 'turbine', tint: 2, finish: 1 }, stripe: '#ff2bd6' })], 10000, ['cars:2', 'perf:all:4'], 6) },
 
     { name: 'Street Outlaws', blurb: 'Big turbos, nitrous and no excuses. The cops are watching.', sponsors: ['volt', 'night', 'octane'], base: 5000,
       events: [
-        e('street', [rv(2, 0)], 3800, ['perf:engine:4', 'vis:fbumper:3'], 0),
-        e('quarter', [rv(2, 1)], 4000, ['perf:power:4', 'vis:rims:3'], 0),
-        e('eighth', [rv(2, 3)], 4000, ['perf:tires:4', 'vis:rbumper:3'], 1),
-        e('street', [rv(2, 4)], 4500, ['perf:drive:4', 'vis:finish:3'], 1),
+        e('street', [rv(2, 0)], 3800, ['perf:engine:5', 'vis:fbumper:3'], 0),
+        e('quarter', [rv(2, 1)], 4000, ['perf:power:5', 'vis:rims:3'], 0),
+        e('eighth', [rv(2, 3)], 4000, ['perf:tires:5', 'vis:rbumper:3'], 1),
+        e('street', [rv(2, 4)], 4500, ['perf:drive:5', 'vis:finish:3'], 1),
         e('sponsor', [rv(3, 0)], 6000, ['vis:skirt:3'], 2),
-        e('knockout', [rv(2, 3, { name: 'Marcus' }), rv(2, 4, { name: 'Tank' }), rv(3, 1)], 8000, ['perf:susp:4', 'vis:spoiler:3'], 3),
+        e('knockout', [rv(2, 3, { name: 'Marcus' }), rv(2, 4, { name: 'Tank' }), rv(3, 1)], 8000, ['perf:susp:5', 'vis:spoiler:3'], 3),
         e('quarter', [rv(3, 1, { name: 'Ricky' })], 5000, ['vis:hood:3'], 3),
         e('showcase', [rv(3, 0, { name: 'Akira', vis: { fbumper: 3, rbumper: 3, skirt: 3, spoiler: 3, hood: 3, rims: 'deep', tint: 2, finish: 3, vinyl: 3, neon: '#39ff14' } })], 7000, ['vis:vinyl:3'], 4),
-        e('sponsor', [rv(3, 2)], 7000, ['perf:body:4'], 5),
+        e('sponsor', [rv(3, 2)], 7000, ['perf:body:5'], 5),
         e('eighth', [rv(3, 1, { name: 'Ricky Radial' })], 5500, [], 5)
       ],
-      boss: e('boss', [rv(3, 2, { name: 'Nitro Nate', skill: 0.85, vis: { hood: 2, vinyl: 3, rims: 'drag', skirt: 2, tips: 1 } })], 25000, ['cars:3', 'perf:all:4'], 6) },
+      boss: e('boss', [rv(3, 2, { name: 'Nitro Nate', skill: 0.85, vis: { hood: 2, vinyl: 3, rims: 'drag', skirt: 2, tips: 1 } })], 25000, ['cars:3', 'perf:all:5'], 6) },
 
     { name: 'Radial Wars', blurb: 'Drag radials, transbrakes and four-digit horsepower.', sponsors: ['grip', 'pixel', 'hotrod'], base: 12000,
       events: [
-        e('quarter', [rv(3, 3)], 9000, ['perf:engine:5'], 0),
-        e('street', [rv(3, 4)], 9500, ['perf:power:5'], 0),
-        e('eighth', [rv(4, 0)], 10000, ['perf:tires:5'], 1),
-        e('quarter', [rv(4, 1)], 11000, ['perf:drive:5'], 1),
+        e('quarter', [rv(3, 3)], 9000, [], 0),
+        e('street', [rv(3, 4)], 9500, [], 0),
+        e('eighth', [rv(4, 0)], 10000, [], 1),
+        e('quarter', [rv(4, 1)], 11000, [], 1),
         e('sponsor', [rv(4, 2)], 15000, [], 2),
-        e('knockout', [rv(3, 4, { name: 'Murder Fox' }), rv(4, 0, { name: 'Gus' }), rv(4, 1, { name: 'Ken' })], 20000, ['perf:susp:5'], 3),
+        e('knockout', [rv(3, 4, { name: 'Murder Fox' }), rv(4, 0, { name: 'Gus' }), rv(4, 1, { name: 'Ken' })], 20000, [], 3),
         e('street', [rv(4, 3)], 12000, [], 3),
         e('showcase', [rv(4, 2, { name: 'Lisa', vis: { fbumper: 3, rbumper: 3, skirt: 3, spoiler: 3, hood: 3, rims: 'deep', tint: 2, finish: 2, vinyl: 2, neon: '#8a5cff', roof: 2 }, stripe: '#151515' })], 16000, [], 4),
-        e('sponsor', [rv(4, 3, { name: 'Hank' })], 16000, ['perf:body:5'], 5),
+        e('sponsor', [rv(4, 3, { name: 'Hank' })], 16000, [], 5),
         e('eighth', [rv(4, 1, { name: 'Godzilla' })], 13000, [], 5)
       ],
       boss: e('boss', [rv(4, 4, { name: 'Twin Turbo Tina', skill: 0.9, vis: { fbumper: 3, skirt: 3, hood: 3, rims: 'drag', tint: 2, vinyl: 3, finish: 3 } })], 60000, ['cars:4', 'perf:all:5'], 6) },
@@ -166,6 +169,15 @@
     st.boss.id = si + '.boss'; st.boss.stage = si; st.boss.idx = 'boss';
     st.all = st.events.concat([st.boss]);
   });
+  // Rival builds come from rivals.js (generated by building each rival's own
+  // car up to the ET the ladder asks of that race); names, looks and cars
+  // stay as written above.
+  if (DR.RIVAL_SET) DR.STAGES.forEach(function (st) {
+    st.all.forEach(function (ev) {
+      var set = DR.RIVAL_SET[ev.id];
+      if (set) ev.opps = ev.opps.map(function (o, i) { var g = set[i]; return g ? Object.assign({}, o, { carId: g.carId, engine: g.engine, parts: g.parts, tune: g.tune, skill: g.skill }) : o; });
+    });
+  });
   // The stage a car reaches the dealer at: price tiers, so each stage opens
   // a batch across every category (beat the boss to open the next batch).
   DR.CAR_STAGE = {};
@@ -180,7 +192,7 @@
 
   // ---------------------------------------------------------------- state
   G.careerDefaults = function () {
-    return { stage: 0, won: {}, sponsor: {}, perf: { engine: 1, power: 1, drive: 1, susp: 1, tires: 1, body: 1 }, vis: {}, cars: { fox: 1, hachi: 1 }, bestStars: 0 };
+    return { stage: 0, won: {}, sponsor: {}, perf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF }, vis: {}, cars: { fox: 1, hachi: 1 }, bestStars: 0 };
   };
   function C() { if (!G.state.career || G.state.career.perf == null) G.state.career = G.careerDefaults(); return G.state.career; }
   G.careerState = C;
@@ -306,10 +318,34 @@
       else c.perf[p[1]] = Math.max(c.perf[p[1]] || 1, +p[2]);
     } else if (p[0] === 'vis') c.vis[p[1]] = Math.max(c.vis[p[1]] || 0, +p[2]);
   }
+  // Saves made under an older unlock schedule: give back every unlock the
+  // races already won earn now (never takes anything away).
+  G.syncUnlocks = function () {
+    var c = C();
+    Object.keys(c.perf).forEach(function (k) { c.perf[k] = Math.max(c.perf[k] || 1, DR.BASE_PERF); });
+    DR.STAGES.forEach(function (st) { st.all.forEach(function (ev) { if (c.won[ev.id]) ev.unlocks.forEach(apply); }); });
+  };
+  // Where a part level opens: the first career race whose win unlocks it
+  // ('Beat Tony B', 'S2 boss'), for the shop's lock tags.
+  G.unlockWhere = function (cat, lvl) {
+    var grp = DR.groupOf(cat);
+    for (var si = 0; si < DR.STAGES.length; si++) {
+      var evs = DR.STAGES[si].events.slice().sort(function (a, b) { return a.needWins - b.needWins || a.idx - b.idx; }).concat([DR.STAGES[si].boss]);
+      for (var i = 0; i < evs.length; i++) {
+        var hit = evs[i].unlocks.some(function (u) { var p = u.split(':'); return p[0] === 'perf' && (p[1] === grp || p[1] === 'all') && +p[2] >= lvl; });
+        if (hit) {
+          if (evs[i].type === 'boss') return 'S' + (si + 1) + ' boss';
+          var nm = evs[i].opps[evs[i].opps.length - 1].name.replace(/ ".*"/, '').split(' ');
+          return 'Beat ' + (nm.length > 1 && nm[1].length <= 2 ? nm[0] + ' ' + nm[1] : nm[0]);
+        }
+      }
+    }
+    return 'Locked';
+  };
   // Called when an event is won (for a knockout: the final round).
   // Returns {cash, lines}.
   G.winEvent = function (ev) {
-    var c = C(), st = DR.STAGES[ev.stage], first = !c.won[ev.id], lines = [], cash = first ? ev.cash : Math.round(ev.cash * 0.25);
+    var c = C(), st = DR.STAGES[ev.stage], first = !c.won[ev.id], lines = [], cash = first ? ev.cash : Math.round(ev.cash * 0.35);
     var sp = c.sponsor[ev.stage];
     var newlyVisible = [];
     if (first) {
@@ -346,5 +382,5 @@
     if (msgs.length) G.save();
     return msgs;
   };
-  G.eventReward = function (ev) { return G.eventWon(ev) ? Math.round(ev.cash * 0.25) : ev.cash; };
+  G.eventReward = function (ev) { return G.eventWon(ev) ? Math.round(ev.cash * 0.35) : ev.cash; };
 })();

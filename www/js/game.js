@@ -28,6 +28,7 @@
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
     G.state = s;
+    if (G.syncUnlocks) try { G.syncUnlocks(); } catch (e) { /* keep what loaded */ }
   };
   // A save is checked against today's catalog: cars, engines and parts the
   // game no longer has are dropped (one bad entry must not stop the garage
@@ -363,8 +364,11 @@
 
   // Street race: opponents near the player's estimated 1/8-mile time.
   G.streetOpponents = function (playerET) {
+    // every career rival is a possible street opponent (they cover the
+    // whole ladder, a step apart)
     var pool = [];
-    DR.RIVALS.forEach(function (band) { band.forEach(function (o) { pool.push(o); }); });
+    (DR.STAGES || []).forEach(function (st) { st.all.forEach(function (ev) { ev.opps.forEach(function (o) { pool.push(o); }); }); });
+    if (!pool.length) DR.RIVALS.forEach(function (band) { band.forEach(function (o) { pool.push(o); }); });
     var names = ['Spike', 'Rico', 'Jade', 'Duke', 'Sasha', 'Moose', 'Ziggy', 'Nova', 'Blaze', 'Cruz', 'Vega', 'Slim'];
     var scored = pool.map(function (o) {
       var est = G.estimate(G.oppInst(o), DR.EIGHTH, 0.85);
