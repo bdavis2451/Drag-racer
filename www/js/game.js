@@ -37,8 +37,9 @@
     function carOf(id) { return DR.CARS[id] || (DR.CARS_RESERVE && DR.CARS_RESERVE[id]); }
     function fits(cat, inst, id) {
       if (cat === 'engine') return !!DR.ENGINES[id];
-      if (!DR.PART_CATS[cat]) return false;
-      try { return DR.partOptions(cat, inst).some(function (o) { return o.id === id; }); } catch (e) { return false; }
+      // (tires, gearbox and turbo/blower have their own catalogs outside
+      // PART_CATS: partOptions knows every category)
+      try { return (DR.partOptions(cat, inst) || []).some(function (o) { return o.id === id; }); } catch (e) { return false; }
     }
     s.cars = (s.cars || []).filter(function (c) { return c && carOf(c.carId); });
     s.cars.forEach(function (c) {
