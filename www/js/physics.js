@@ -219,7 +219,7 @@
     S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly * (crank.ie || 1);
 
     // ---- drivetrain
-    S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift; S.trMaxTq = tr.maxTq;
+    S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift * (DR.partApplies('shifter', inst) ? DR.getOption('shifter', inst).shiftK || 1 : 1); S.trMaxTq = tr.maxTq;
     S.tbrake = tr.type === 'auto' && !!DR.getOption('transbrake', inst).tbrake;
     S.drive = layout.layout || car.drive;
     S.eff = tr.eff * (S.drive === 'AWD' ? 0.95 : S.drive === 'FWD' ? 1.03 : 1);   // FWD: no right-angle drive in the diff
@@ -229,7 +229,7 @@
       var stockTqNm = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.3;
       S.clCap = clutch.cap || Math.max(420, stockTqNm * 1.4);
       S.engage = clutch.engage;
-      S.slider = clutch.id === 'cl5';
+      S.slider = clutch.slide || null;   // [clamp share at the hit, seconds to full lock]
     }
     S.dgrip = diff.dgrip;
     // axles: the factory ones hold a margin over the factory engine
@@ -318,8 +318,9 @@
     // clutch slipped off the line (or it just bogs); one with torque to spare
     // gets the clutch dumped raw. 1 = fully slipped .. 0 = raw.
     var axleN = S.m * G * (S.drive === 'FWD' ? S.f : S.drive === 'AWD' ? 1 : 1 - S.f);
-    // (a turbo has no boost on the line unless a 2-step builds it)
-    var lb = S.fiType === 'turbo' ? S.boostSet * (S.twostep === 2 ? 0.92 : S.twostep ? 0.5 : 0) : S.fiType !== 'none' ? null : 0, tq0 = 0;
+    // (judged on the power the car makes once the turbo is lit, 2-step or
+    // not: a big turbo car is a high-power car even if it leaves off boost)
+    var lb = S.fiType === 'turbo' ? S.boostSet : S.fiType !== 'none' ? null : 0, tq0 = 0;
     for (var lr = S.idle + 500; lr <= S.red; lr += 250) tq0 = Math.max(tq0, boostedTorque(S, lr, lb === null ? steadyBoost(S, lr) : lb));
     var hit = tq0 * S.ratios[0] * S.fd * S.eff / S.r / (S.tire.mu * S.pf * S.dgrip * axleN);
     S.slipAssist = S.trType === 'auto' ? 0 : clamp((1.5 - hit) / 0.5, 0, 1);
@@ -676,6 +677,9 @@
     if (S.fiType === 'turbo') {
       var sf = clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1);
       var target = S.boostSet * sf * thrB;
+      // revving with no load on it (clutch in, in neutral) a turbo makes next
+      // to no boost: only a 2-step builds it on the line
+      if (pre) target *= 0.1;
       if (pre && S.twostep && thrB > 0.5) {
         var build = clamp((S.tune.launchRpm - S.spoolLo * 0.5) / (S.spoolHi * 0.85 - S.spoolLo * 0.5), 0.15, 1);
         target = Math.max(target, S.boostSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
@@ -846,9 +850,12 @@
         this.clT += dt;
         var ramp = this.clRamp;
         this.cl = clamp(this.clT / ramp, 0, 1);
-        if (S.slider && this.t < 1.2) this.cl = Math.min(this.cl, 0.55 + 0.45 * this.t / 1.2);
       }
       var cap = S.clCap * this.cl;
+      // a slipper clutch's base pressure is set under the engine's torque:
+      // it slips at the hit so the engine stays up on the boost, and the
+      // clamp builds with time until it locks
+      if (S.slider && this.launched && this.t < S.slider[1] && !this.shifting) cap = Math.min(cap, S.peakTq / 0.7376 * (S.slider[0] + (1.3 - S.slider[0]) * this.t / S.slider[1]));
       // Launch slip (low-power cars): until the clutch first locks it is let
       // in so the engine doesn't bog below the revs it was launched at, and
       // only as hard as the tires can take, eased back if they start to go.

@@ -17,12 +17,20 @@
     fi_oem_tt:   { name: 'Factory Twin Turbos',       type: 'turbo', maxBoost: 22, flow: 620,  spool: 3700, lag: 0.30, w: 25 },
     fi_oem_sc:   { name: 'Factory Supercharger',      type: 'screw', maxBoost: 16, flow: 850,  paras: 0.10, w: 30 },
     fi_oem_vgt:  { name: 'Factory VGT Turbo',         type: 'turbo', maxBoost: 40, flow: 800,  spool: 2900, lag: 0.45, w: 20 },
+    t_budget:    { name: 'Budget T3/T4 Turbo Kit',    type: 'turbo', maxBoost: 18, flow: 340,  spool: 3500, lag: 0.45, w: 20, price: 1200,  desc: 'A cheap journal-bearing turbo on a log manifold. Lazy, but it is boost.' },
+    t_gt28:      { name: 'Ball-Bearing Turbo 50mm',   type: 'turbo', maxBoost: 22, flow: 380,  spool: 2900, lag: 0.24, w: 16, price: 2400,  desc: 'Small ball-bearing turbo: spools early, made for little engines.' },
     t_small:     { name: 'Small Turbo 54mm',          type: 'turbo', maxBoost: 24, flow: 480,  spool: 3300, lag: 0.30, w: 18, price: 3500,  desc: 'Quick spool, runs out of air up top.' },
+    t_61:        { name: 'Turbo 61mm',                type: 'turbo', maxBoost: 28, flow: 640,  spool: 3600, lag: 0.36, w: 20, price: 4500,  desc: 'A step up from the 54mm without much more lag.' },
+    t_twin_sm:   { name: 'Twin 50mm Turbos',          type: 'turbo', maxBoost: 26, flow: 700,  spool: 3300, lag: 0.27, w: 32, price: 5500,  desc: 'Two small turbos, one per bank: quick spool on a V6 or V8.' },
     t_med:       { name: 'Medium Turbo 64mm',         type: 'turbo', maxBoost: 32, flow: 780,  spool: 3900, lag: 0.42, w: 22, price: 6000,  desc: 'The street/strip sweet spot.' },
+    t_67:        { name: 'Turbo 67mm',                type: 'turbo', maxBoost: 35, flow: 950,  spool: 4300, lag: 0.48, w: 24, price: 7500,  desc: 'Radial-tire power with street manners.' },
     t_large:     { name: 'Large Turbo 76mm',          type: 'turbo', maxBoost: 40, flow: 1150, spool: 4900, lag: 0.55, w: 26, price: 9500,  desc: 'Big power, big lag. Pairs well with a 2-step.' },
+    t_80:        { name: 'Turbo 80mm',                type: 'turbo', maxBoost: 45, flow: 1400, spool: 5000, lag: 0.6,  w: 28, price: 13000, desc: 'Big single for big power. Needs a 2-step to launch.' },
     t_twin:      { name: 'Twin 67mm Turbos',          type: 'turbo', maxBoost: 42, flow: 1500, spool: 4300, lag: 0.45, w: 40, price: 16000, desc: 'Two medium turbos: spools faster than one big one.' },
     t_huge:      { name: 'Huge Turbo 88mm',           type: 'turbo', maxBoost: 50, flow: 2000, spool: 5300, lag: 0.70, w: 32, price: 19000, desc: 'Radial-tire monster. Needs revs and an anti-lag.' },
     t_promod:    { name: 'Twin 98mm Pro Mod Turbos',  type: 'turbo', maxBoost: 60, flow: 3600, spool: 7600, lag: 0.80, w: 55, price: 45000, desc: 'Big-tire Pro Mod power.' },
+    sc_m90:      { name: 'Small Roots Blower (M90)',  type: 'roots', maxBoost: 10, flow: 430,  paras: 0.12, w: 22, price: 2600,  desc: 'Factory-style blower: torque off idle, modest top end.' },
+    sc_street:   { name: 'Centrifugal Street Kit',    type: 'cent',  maxBoost: 14, flow: 620,  paras: 0.06, w: 18, price: 3800,  desc: 'A bolt-on street blower. Boost builds with rpm.' },
     sc_roots:    { name: 'Roots Blower 6-71',         type: 'roots', maxBoost: 16, flow: 900,  paras: 0.14, w: 40, price: 7000,  desc: 'Instant boost from idle. Sticks out of the hood.' },
     sc_screw:    { name: 'Twin-Screw 2.9L',           type: 'screw', maxBoost: 22, flow: 1250, paras: 0.10, w: 35, price: 9000,  desc: 'Efficient positive-displacement blower.' },
     sc_cent:     { name: 'Centrifugal Supercharger',  type: 'cent',  maxBoost: 30, flow: 1350, paras: 0.07, w: 25, price: 8000,  desc: 'Boost climbs with RPM. Gentle on tires off the line.' },
@@ -30,7 +38,8 @@
     sc_cent2:    { name: 'Race Centrifugal F-Series', type: 'cent',  maxBoost: 40, flow: 2100, paras: 0.08, w: 30, price: 15000, desc: 'Gear-driven race blower. Builds boost hard up top.' },
     sc_1471:     { name: '14-71 Screw Blower',        type: 'roots', maxBoost: 40, flow: 3200, paras: 0.17, w: 60, price: 38000, desc: 'Pro Mod blower. Brutal, instant torque.' }
   };
-  DR.FI_SHOP = ['t_small', 't_med', 't_large', 't_twin', 't_huge', 't_promod', 'sc_roots', 'sc_screw', 'sc_cent', 'sc_screw2', 'sc_cent2', 'sc_1471'];
+  DR.FI_SHOP = ['t_budget', 't_gt28', 't_small', 't_61', 't_twin_sm', 't_med', 't_67', 't_large', 't_80', 't_twin', 't_huge', 't_promod',
+    'sc_m90', 'sc_street', 'sc_roots', 'sc_screw', 'sc_cent', 'sc_screw2', 'sc_cent2', 'sc_1471'];
 
   function opt(id, name, price, fx, desc) { var o = { id: id, name: name, price: price, desc: desc || '' }; for (var k in fx) o[k] = fx[k]; return o; }
 
@@ -112,6 +121,7 @@
   ]};
   C.rods = { name: 'Connecting Rods', engineScaled: true, options: [
     opt('stock', 'Stock Rods', 0, { hold: 1.3, be: 800 }, 'Good for 1.3x stock power.'),
+    opt('rb0', 'Stock Rods + ARP Rod Bolts', 350, { hold: 1.6, be: 1000 }, 'The rod bolts are what stretch first. Holds 1.6x stock power.'),
     opt('r1', 'Forged I-Beam Rods', 900, { hold: 2.0, be: 1200 }, 'Holds 2x stock power.'),
     opt('r2', 'Forged H-Beam Rods', 1800, { hold: 2.8, be: 1600 }, 'Holds 2.8x stock power.'),
     opt('r3', 'Billet Aluminum Rods', 5000, { hold: 4.5, be: 2600 }, 'Light and shock-absorbing. Holds 4.5x stock power.'),
@@ -140,6 +150,7 @@
   // system feeds (hp on gasoline; alcohol needs more flow).
   C.injectors = { name: 'Fuel Injectors', options: [
     opt('stock', 'Stock Injectors', 0, { fuel: 0 }),
+    opt('inj0', '440cc Injectors', 250, { fuel: 420 }, 'Feeds 420 hp on gasoline.'),
     opt('inj1', '550cc Injectors', 400, { fuel: 600 }, 'Feeds 600 hp on gasoline.'),
     opt('inj2', '1000cc Injectors', 800, { fuel: 1000 }, 'Feeds 1000 hp.'),
     opt('inj3', '1700cc Injectors', 1500, { fuel: 1800 }, 'Feeds 1800 hp.'),
@@ -148,6 +159,7 @@
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
+    opt('fp0', '190 lph Pump + Rising-Rate Regulator', 180, { fuel: 430 }, 'Feeds 430 hp on gasoline.'),
     opt('fp1', '255 lph In-Tank Pump', 300, { fuel: 650 }, 'Feeds 650 hp on gasoline.'),
     opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100 }, 'Feeds 1100 hp.'),
     opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800 }, 'Feeds 1800 hp.'),
@@ -169,12 +181,14 @@
   ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
     opt('stock', 'Stock ECU', 0, { bw: 0, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
+    opt('ecu0', 'Performance Chip', 350, { bw: 0.015, ecu: 0 }, 'A plug-in chip: a little more timing and fuel. Keeps the factory limiter.'),
     opt('ecu1', 'Street Tune Flash', 600, { bw: 0.03, ecu: 1 }, 'Better fuel and timing. Raises the rev limiter as far as your engine parts safely allow (up to +800 rpm).'),
     opt('ecu2', 'Standalone ECU', 2000, { bw: 0.05, ecu: 2 }, 'Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
     opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3 }, 'Adjustable rev limiter and traction control.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
     opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler; aftermarket kits have none.'),
+    opt('ic0', 'Budget Front-Mount', 500, { ic: 0.88 }, 'A thin core and long pipes. Better than nothing.'),
     opt('ic1', 'Front-Mount Intercooler', 1200, { ic: 0.93 }, 'Cooler charge = more power per psi.'),
     opt('ic2', 'Large Race Intercooler', 2200, { ic: 0.97 }),
     opt('ic3', 'Air-to-Water + Ice Tank', 4000, { lvl: 4, ic: 1.0 }, 'Maximum charge cooling.')
@@ -183,6 +197,9 @@
   // (an aftermarket turbo's little internal gate creeps and can't hold much)
   C.wastegate = { name: 'Wastegate & Boost Control', needsTurbo: true, options: [
     opt('stock', 'Internal Wastegate', 0, { gate: 0.7, spoolK: 1 }, 'On a bolt-on turbo kit boost tops out at 70% of what the turbo can make. Factory turbos are fine.'),
+    opt('ws1', 'Stiffer Actuator Spring', 150, { gate: 0.76, spoolK: 1 }, 'A heavier spring holds the internal gate shut longer: boost up to 76% of the turbo\'s max.'),
+    opt('ws2', 'Manual Boost Controller', 300, { lvl: 2, gate: 0.82, spoolK: 0.99 }, 'A bleed valve on the actuator line: boost up to 82% of the turbo\'s max.'),
+    opt('ws3', 'Ported Gate + Race Spring', 650, { lvl: 2, gate: 0.86, spoolK: 0.98 }, 'Ported flapper and a race spring stop the creep: up to 86%.'),
     opt('wg1', 'External Wastegate', 900, { gate: 0.9, spoolK: 0.95 }, 'Holds up to 90% of a bolt-on turbo\'s max boost, and no boost creep: a little quicker spool.'),
     opt('wg2', 'Dual Gates + Electronic Boost Controller', 2200, { gate: 1, spoolK: 0.88 }, 'Full boost range, and the gates stay shut until target: quicker spool.')
   ]};
@@ -199,6 +216,7 @@
   ]};
   C.nitrous = { name: 'Nitrous Oxide', options: [
     opt('stock', 'None', 0, { nos: 0 }),
+    opt('n50', '50 Shot Dry Kit', 500, { nos: 50 }, 'Adds 50 hp when sprayed. The cheapest horsepower there is.'),
     opt('n75', '75 Shot Wet Kit', 800, { nos: 75 }, 'Adds 75 hp when sprayed.'),
     opt('n150', '150 Shot Wet Kit', 1500, { nos: 150 }),
     opt('n250', '250 Shot Plate System', 2500, { nos: 250 }),
@@ -219,8 +237,9 @@
     opt('cl1', 'Stage 1 Clutch', 600, { cap: 650, engage: 0.28 }, 'Holds 650 Nm.'),
     opt('cl2', 'Stage 2 Clutch', 1100, { cap: 950, engage: 0.24 }, 'Holds 950 Nm.'),
     opt('cl3', 'Twin-Disc Clutch', 2400, { cap: 1500, engage: 0.20 }, 'Holds 1500 Nm.'),
+    opt('cls', 'Adjustable Slipper Clutch', 3600, { cap: 1700, engage: 0.22, slide: [0.6, 0.9] }, 'Holds 1700 Nm, and slips on purpose for the first second: a big turbo stays on boost instead of bogging.'),
     opt('cl4', 'Triple-Disc Clutch', 4200, { cap: 2400, engage: 0.17 }, 'Holds 2400 Nm.'),
-    opt('cl5', 'Pro Multi-Disc Slider Clutch', 9000, { lvl: 5, cap: 4500, engage: 0.22 }, 'Holds anything; slips on purpose for smooth launches.')
+    opt('cl5', 'Pro Multi-Disc Slider Clutch', 9000, { lvl: 5, cap: 4500, engage: 0.22, slide: [0.55, 1.2] }, 'Holds anything; slips on purpose for smooth launches.')
   ]};
   C.converter = { name: 'Torque Converter', needsConverter: true, options: [
     opt('stock', 'Stock Converter (2200 stall)', 0, { stall: 2200, tr: 1.9 }, 'Tight street converter. Soft launches, little wheelspin.'),
@@ -231,6 +250,11 @@
   C.transbrake = { name: 'Transbrake', needsConverter: true, options: [
     opt('stock', 'None (Foot Brake)', 0, { tbrake: false }, 'The foot brake can only hold so much torque, so you have to ease into the throttle on the line, and the launch is softer.'),
     opt('tb1', 'Transbrake', 1200, { tbrake: true }, 'Locks the transmission so you can hold full throttle (and boost) on the line. Releases instantly at the launch.')
+  ]};
+  C.shifter = { name: 'Shifter / Shift Kit', needsShifter: true, options: [
+    opt('stock', 'Factory Shifter', 0, { shiftK: 1 }),
+    opt('ss1', 'Short-Throw Shifter / Shift Kit', 300, { shiftK: 0.85 }, 'Shorter throws on a manual, firmer shifts from an automatic\'s valve body: 15% quicker shifts.'),
+    opt('ss2', 'Race Shifter / Manual Valve Body', 1000, { shiftK: 0.72 }, 'A lockout race shifter, or a full manual valve body: 28% quicker shifts.')
   ]};
   C.flywheel = { name: 'Flywheel / Flexplate', options: [
     opt('stock', 'Stock Flywheel', 0, { fly: 1 }),
@@ -278,6 +302,7 @@
   ]};
   C.rearsusp = { name: 'Rear Suspension', options: [
     opt('stock', 'Stock Rear Suspension', 0, { as: 0.35, adjA: false }),
+    opt('rs0', 'Poly Bushings + Lower Arms', 300, { as: 0.45, adjA: false }, 'Less axle wrap: the rear plants a little harder.'),
     opt('rs1', 'Traction Bars', 600, { as: 0.6, adjA: false }, 'Plants the rear tires harder.'),
     opt('rs2', 'Adjustable Ladder Bars', 2500, { as: 0.75, adjA: true, asMin: 0.3, asMax: 1.3 }, 'Adjustable instant centre (anti-squat).'),
     opt('rs3', 'Adjustable 4-Link', 5500, { as: 0.85, adjA: true, asMin: 0.2, asMax: 1.6, pro: true }, 'The ultimate drag suspension.')
@@ -321,6 +346,7 @@
   ]};
   C.weight = { name: 'Weight Reduction', options: [
     opt('stock', 'Stock', 0, { wr: 0 }),
+    opt('w0', 'Spare, Jack & A/C Delete', 250, { wr: 0.02 }, '-2% chassis weight.'),
     opt('w1', 'Stage 1: Interior Strip', 1000, { wr: 0.05 }, '-5% chassis weight.'),
     opt('w2', 'Stage 2: Lightweight Panels', 4000, { wr: 0.10 }, '-10% chassis weight.'),
     opt('w3', 'Stage 3: Carbon Body & Lexan', 12000, { wr: 0.16 }, '-16% chassis weight.'),
@@ -341,7 +367,7 @@
     { id: 'bottom', name: 'Bottom End',    icon: 'pistons', unlock: 'engine', cats: ['pistons', 'rods', 'crank', 'block', 'oiling'] },
     { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu'] },
     { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'ic', 'wastegate', 'bov', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
-    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'flywheel', 'driveshaft', 'diff', 'rearend', 'layout'] },
+    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'rearend', 'layout'] },
     { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['rtires', 'wheels', 'ftires', 'brakes'] },
     { id: 'body',   name: 'Weight',        icon: 'weight',  cats: ['weight', 'battery'] }
@@ -475,6 +501,7 @@
     if (c.needsConverter) return tr.type === 'auto';
     if (c.needsFI) return DR.partId('fi', inst) !== 'none';
     if (c.needsTurbo) return DR.FI[DR.partId('fi', inst)].type === 'turbo';
+    if (c.needsShifter) return tr.type === 'manual' || tr.type === 'auto';
     if (c.needsNos) return DR.partId('nitrous', inst) !== 'stock';
     return true;
   };
@@ -511,7 +538,7 @@
   // / Extreme kits): a matched set of parts per shop group, bought and fitted
   // in one go at a discount. An entry is [cat, id] or [cat, fn(inst) -> id]
   // so a package can suit the car (automatic vs manual, boosted vs NA).
-  DR.PKG_TIERS = [{ id: 'street', name: 'Street', lvl: 2 }, { id: 'pro', name: 'Pro', lvl: 3 }, { id: 'extreme', name: 'Extreme', lvl: 4 }];
+  DR.PKG_TIERS = [{ id: 'budget', name: 'Budget', lvl: 1 }, { id: 'street', name: 'Street', lvl: 2 }, { id: 'pro', name: 'Pro', lvl: 3 }, { id: 'extreme', name: 'Extreme', lvl: 4 }];
   DR.PKG_DISCOUNT = 0.1;
   function auto(inst) { return DR.TRANS[DR.partId('trans', inst)].type === 'auto'; }
   function boosted(inst) { return DR.partId('fi', inst) !== 'none'; }
@@ -537,7 +564,7 @@
       t.forEach(function (id) {
         if (DR.FI[id].flow <= cur.flow) return;
         var c = withParts(inst, { fi: id }); c.tune = Object.assign({}, c.tune); delete c.tune.boost;
-        var S0 = DR.buildSpec(c); c.tune.boost = Math.max(S0.boostSet, Math.min(DR.PKG_BOOST[2], S0.knock - 1, S0.sparkPsi, S0.maxBoost));
+        var S0 = DR.buildSpec(c); c.tune.boost = Math.max(S0.boostSet, Math.min(DR.PKG_BOOST[DR.PKG_BOOST.length - 1], S0.knock - 1, S0.sparkPsi, S0.maxBoost));
         var pw = bandPower(c);
         if (pw > bestP) { bestP = pw; best = id; }
       });
@@ -567,6 +594,9 @@
     // power the engine would make with unlimited fuel, plus a margin
     var S = DR.buildSpec(withParts(inst, { injectors: 'inj5', fuelpump: 'fp4' }));
     var need = S.peakHp * 1.12 / (S.diesel ? 1 : DR.getOption('fueltype', inst).ff);
+    // nothing to do if what's fitted already feeds it
+    var now = DR.buildSpec(inst);
+    if ((cat === 'injectors' ? now.fuelInj : now.fuelPump) >= need) return null;
     var opts = C[cat].options;
     for (var i = Math.max(1, min); i < opts.length; i++) if (opts[i].fuel >= need) return opts[i].id;
     return opts[opts.length - 1].id;
@@ -597,46 +627,55 @@
   }; }
   DR.PACKAGES = {
     engine: [
+      [['airfilter', 'af2'], ['intake', 'i1'], ['throttle', 'tb1'], ['headers', 'h1']],
       [['airfilter', 'af2'], ['intake', 'i1'], ['throttle', 'tb1'], ['headers', 'h1'], ['exhaust', 'e1']],
       [['airfilter', 'af2'], ['intake', 'i2'], ['throttle', 'tb2'], ['headers', 'h2'], ['exhaust', 'e2']],
       [['airfilter', 'af3'], ['intake', 'i3'], ['throttle', 'tb3'], ['headers', 'h3'], ['exhaust', 'e3']]],
     top: [
+      [['cams', 'c1'], ['valvetrain', 'vt1']],
       [['heads', 'hd1'], ['cams', 'c1'], ['valvetrain', 'vt1']],
       [['heads', 'hd2'], ['cams', 'c2'], ['valvetrain', 'vt2']],
       [['heads', 'hd3'], ['cams', 'c3'], ['valvetrain', 'vt3']]],
     bottom: [
+      [['rods', 'rb0'], ['oiling', 'o1']],
       [['pistons', function (i) { return boosted(i) ? 'p1' : 'p2'; }], ['rods', 'r1'], ['oiling', 'o1']],
       [['pistons', function (i) { return boosted(i) ? 'p1' : 'p2'; }], ['rods', 'r2'], ['crank', 'k1'], ['block', 'b1'], ['oiling', 'o1']],
       [['pistons', 'p3'], ['rods', 'r3'], ['crank', 'k2'], ['block', 'b2'], ['oiling', 'o2']]],
     fuel: [
-      [['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)]],
-      [['fueltype', 'e85'], ['ignition', 'ig2'], ['ecu', 'ecu2'], ['injectors', fuelFor('injectors', 2)], ['fuelpump', fuelFor('fuelpump', 2)]],
-      [['fueltype', 'e85'], ['ignition', 'ig3'], ['ecu', 'ecu3'], ['injectors', fuelFor('injectors', 3)], ['fuelpump', fuelFor('fuelpump', 3)]]],
+      [['ignition', 'ig1'], ['ecu', 'ecu0'], ['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)]],
+      [['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 2)], ['fuelpump', fuelFor('fuelpump', 2)]],
+      [['fueltype', 'e85'], ['ignition', 'ig2'], ['ecu', 'ecu2'], ['injectors', fuelFor('injectors', 3)], ['fuelpump', fuelFor('fuelpump', 3)]],
+      [['fueltype', 'e85'], ['ignition', 'ig3'], ['ecu', 'ecu3'], ['injectors', fuelFor('injectors', 4)], ['fuelpump', fuelFor('fuelpump', 4)]]],
     power: [
+      [['fi', turboFor(1.3)], ['ic', 'ic0'], ['wastegate', 'ws2'], ['bov', 'bov1']],
       [['fi', turboFor(1.5)], ['ic', 'ic1'], ['wastegate', 'wg1'], ['bov', 'bov1'], ['launch', 'l1']],
       [['fi', turboFor(2.5)], ['ic', 'ic2'], ['wastegate', 'wg2'], ['bov', 'bov1'], ['launch', 'l1']],
       [['fi', turboFor(4, true)], ['ic', 'ic3'], ['wastegate', 'wg2'], ['bov', 'bov2'], ['launch', 'l2']]],
     drive: [
-      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tch')], ['transbrake', 'tb1'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)],
+      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tch')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)],
         // a front-driver making real power is converted to drive the rear
         ['layout', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? 'rwd' : null; }]]],
     susp: [
+      [['springs', 'sp1'], ['rearsusp', 'rs0'], ['chassis', 'cg1']],
       [['springs', 'sp1'], ['shocks', 'sh1'], ['rearsusp', 'rs1'], ['chassis', 'cg1']],
       [['springs', 'sp2'], ['shocks', 'sh2'], ['rearsusp', 'rs2'], ['chassis', 'cg2'], ['frontsusp', 'fs1']],
       [['springs', 'sp3'], ['shocks', 'sh3'], ['rearsusp', 'rs3'], ['chassis', 'cg3'], ['frontsusp', 'fs2'], ['wheeliebar', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? null : 'wb1'; }]]],
     tires: [
+      [['rtires', 'dr_245']],
       [['rtires', 'dr_275'], ['wheels', 'wh1']],
       [['rtires', 'dr_315'], ['wheels', 'wh2'], ['brakes', 'br1']],
       [['rtires', 'sl_31'], ['wheels', 'wh3'], ['brakes', 'br2'], ['ftires', 'ft1']]],
     body: [
+      [['weight', 'w0'], ['battery', 'bt1']],
       [['weight', 'w1'], ['battery', 'bt1']],
       [['weight', 'w2'], ['battery', 'bt2']],
       [['weight', 'w3'], ['battery', 'bt2']]]
   };
   // boost a package leaves the car on, if it fits a turbo / blower
-  DR.PKG_BOOST = [10, 15, 20];
+  DR.PKG_BOOST = [8, 10, 15, 20];
   // the full-car package fits the power adders first, so the bottom end
   // and fuel pick parts for a boosted engine
   DR.PKG_ORDER = ['power', 'engine', 'top', 'bottom', 'fuel', 'drive', 'susp', 'tires', 'body'];
@@ -718,7 +757,7 @@
       // no turbo or blower unlocked yet: the power package is a nitrous kit
       if (gid === 'power' && DR.partId('fi', copy) === 'none' && DR.partApplies('nitrous', copy)) {
         var shots = DR.partOptions('nitrous', copy).filter(function (o) { return o.price && unl('nitrous', o); });
-        var want = ['n75', 'n150', 'n250'][tier];
+        var want = ['n50', 'n75', 'n150', 'n250'][tier];
         shots = shots.filter(function (o) { return rank('nitrous', copy, o.id) <= rank('nitrous', copy, want) && rank('nitrous', copy, o.id) > rank('nitrous', copy, DR.partId('nitrous', copy)); });
         for (var k = shots.length - 1; k >= 0; k--) {
           var keep = JSON.stringify(copy.parts);

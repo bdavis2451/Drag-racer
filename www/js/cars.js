@@ -138,7 +138,8 @@
   }
   DR.rideOf = rideOf;
   function artFor(look) {
-    if (ART[look.carId]) return ART[look.carId];
+    var art = ART[look.carId] || ART[(DR.CARS[look.carId] || {}).art];
+    if (art) return art;
     var B = BODIES[look.body] || BODIES.coupe, minW = 99;
     B.win.forEach(function (p) { if (p[1] < minW) minW = p[1]; });
     var maxY = 0; B.pts.forEach(function (p) { if (p[1] > maxY) maxY = p[1]; });

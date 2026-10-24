@@ -9,7 +9,7 @@
 
   G.defaults = function () {
     return {
-      v: 4, money: 6000, cars: [], active: null, uid: 1,
+      v: 5, money: 4000, cars: [], active: null, uid: 1,
       career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [], inv: [],
       settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, volume: 1 },
       started: false
@@ -20,10 +20,11 @@
     var s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
     var d = G.defaults();
-    if (!s || (s.v !== 1 && s.v !== 2 && s.v !== 3 && s.v !== 4)) { G.state = d; return; }
+    if (!s || (s.v !== 1 && s.v !== 2 && s.v !== 3 && s.v !== 4 && s.v !== 5)) { G.state = d; return; }
     if (s.v === 1) migrate1(s);
     if (s.v === 2) migrate2(s);
     if (s.v === 3) migrate3(s);
+    if (s.v === 4) migrate4(s);
     for (var k in d) if (s[k] == null) s[k] = d[k];
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
@@ -95,6 +96,20 @@
     s.v = 4;
   }
 
+  // v4 -> v5: a new first league (Backroad Beaters) went in ahead of the
+  // others. Races won and sponsors move up one stage; a save already under
+  // way starts in the stage it was in (the new league is there to race).
+  function migrate4(s) {
+    var c = s.career;
+    if (c && c.won) {
+      var won = {}, sp = {};
+      Object.keys(c.won).forEach(function (id) { var p = id.split('.'); won[(+p[0] + 1) + '.' + p[1]] = c.won[id]; });
+      Object.keys(c.sponsor || {}).forEach(function (si) { sp[+si + 1] = c.sponsor[si]; });
+      c.won = won; c.sponsor = sp; c.stage = (c.stage || 0) + 1;
+    }
+    s.v = 5;
+  }
+
   G.save = function () { try { localStorage.setItem(KEY, JSON.stringify(G.state)); } catch (e) { /* storage unavailable */ } };
   G.reset = function () { G.state = G.defaults(); G.save(); };
 
@@ -125,9 +140,13 @@
   };
 
   // ---------------------------------------------------------------- cars
+  // Garage slots (Underground 2 style): one to start, and every sponsor you
+  // sign opens another. A save that already holds more keeps them all.
+  G.carSlots = function () { var c = G.state.career || {}; return 1 + Object.keys(c.sponsor || {}).length; };
+  G.slotFree = function () { return G.state.cars.length < G.carSlots(); };
   G.buyCar = function (carId) {
     var p = DR.CARS[carId].price;
-    if (!G.canAfford(p)) return false;
+    if (!G.canAfford(p) || !G.slotFree()) return false;
     G.pay(p);
     var inst = G.newInst(carId);
     G.state.cars.push(inst); G.state.active = inst.uid; G.save();

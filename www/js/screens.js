@@ -46,7 +46,7 @@
             h('div', { class: 'gsmall dim' }, car.real), statBars(S),
           gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('WEIGHT', UI.kgLb(S.m)), gst('DRIVE', S.drive)),
         h('div', { class: 'gsel' }, btn('◀', function () { cyc(-1); }, 'arrow'),
-          h('div', { class: 'gname' }, h('div', { class: 'pix acc' }, car.name), h('div', { class: 'dim' }, (starterIdx % ids.length + 1) + ' / ' + ids.length + ' • free, plus $6,000 for parts')),
+          h('div', { class: 'gname' }, h('div', { class: 'pix acc' }, car.name), h('div', { class: 'dim' }, (starterIdx % ids.length + 1) + ' / ' + ids.length + ' • free, plus ' + DR.money(G.defaults().money) + ' for parts')),
           btn('▶', function () { cyc(1); }, 'arrow'),
           btn('Choose', function () { G.newGame(id); UI.toast('Welcome to the strip! You have ' + DR.money(G.state.money) + ' to spend.'); UI.show(UI.Garage); }, 'go'))));
   };
@@ -164,7 +164,7 @@
   }
   function sponsorCard(c) {
     var sp = c.sponsor[selStage];
-    if (!sp) return h('div', { class: 'spcard empty' }, h('div', { class: 'plvl' }, 'SPONSOR'), h('div', { class: 'dim' }, 'Sponsors pay a signing bonus and a bonus per win. The boss only races sponsored drivers.'),
+    if (!sp) return h('div', { class: 'spcard empty' }, h('div', { class: 'plvl' }, 'SPONSOR'), h('div', { class: 'dim' }, 'Sponsors pay a signing bonus and a bonus per win. The boss only races sponsored drivers, and every sponsor opens another garage slot.'),
       btn('Choose Sponsor', function () { sponsorPicker(selStage); }, 'small go'));
     var info = DR.sponsorById(sp.id), pr = G.contractProgress(selStage);
     return h('div', { class: 'spcard', style: { borderLeftColor: info.col } },
@@ -197,7 +197,7 @@
         h('div', { class: 'pix', style: { color: o.col } }, o.name), h('div', { class: 'dim' }, o.pitch),
         h('div', { class: 'gsmall' }, 'Contract: ' + req.join(', ') + '.'),
         h('div', { class: 'good gsmall' }, 'Signing ' + DR.money(o.sign) + ' • ' + DR.money(o.perWin) + ' per win • ' + DR.money(o.bonus) + ' when fulfilled'),
-        btn('Sign', function () { G.signSponsor(si, o); A.cash(); close(); UI.toast('Signed with ' + o.name + '!'); UI.refresh(); }, 'small go'));
+        btn('Sign', function () { G.signSponsor(si, o); A.cash(); close(); UI.toast('Signed with ' + o.name + '! New garage slot, and your sponsor pays for a car: pick it at the dealer.'); UI.refresh(); }, 'small go'));
     });
     close = UI.modal([h('h2', {}, 'Stage ' + (si + 1) + ' sponsors'), h('p', { class: 'dim' }, 'You can only sign one per stage, so choose carefully.'), h('div', { class: 'col' }, rows), btn('Not yet', function () { close(); }, 'small')]);
   }
@@ -490,15 +490,21 @@
             gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
             gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
             gst('TIRES', S.tire.name),
-            owned ? h('div', { class: 'gsmall acc' }, 'You own ' + owned) : null),
+            owned ? h('div', { class: 'gsmall acc' }, 'You own ' + owned) : null,
+            h('div', { class: 'gsmall dim' }, 'Garage slots: ' + G.state.cars.length + ' / ' + G.carSlots()),
+            G.freeCars() ? h('div', { class: 'gsmall acc' }, G.freeCars() + ' free sponsor car' + (G.freeCars() > 1 ? 's' : '') + ' to claim' + (G.sponsorCarOk(id) ? '' : ' (not this one: up to ' + DR.money(DR.SPONSOR_CAR_CAP[Math.min(G.careerState().stage, DR.SPONSOR_CAR_CAP.length - 1)]) + ', no Pro cars)')) : null),
           h('div', { class: 'gsel' }, ids.length > 1 ? btn('◀', function () { cyc(-1); }, 'arrow') : null,
-            h('div', { class: 'gname' }, h('div', { class: 'price big' }, DR.money(car.price)), h('div', { class: 'dim' }, (dealerIdx + 1) + ' / ' + ids.length + ' • ' + dealerCat)),
+            h('div', { class: 'gname' }, h('div', { class: 'price big' }, DR.money(car.price)), h('div', { class: 'dim' }, (dealerIdx + 1) + ' / ' + ids.length + ' • ' + (!locked && G.freeCars() && G.sponsorCarOk(id) ? 'free with your sponsor' : dealerCat))),
             ids.length > 1 ? btn('▶', function () { cyc(1); }, 'arrow') : null,
             btn('Test Drive', function () {
               var td = { uid: -2, carId: id, engine: car.engine, parts: {}, tune: {}, vis: {}, color: car.col, best: {}, inv: [] };
               DR.Race.start({ mode: 'test', inst: td, dist: DR.QUARTER, theme: 'strip', grip: 1 });
             }, 'small'),
-            locked ? h('span', { class: 'tag' }, '🔒 STAGE ' + (DR.CAR_STAGE[id] + 1)) : btn('Buy', function () {
+            locked ? h('span', { class: 'tag' }, '🔒 ' + G.carUnlockWhere(id)) : G.freeCars() && G.slotFree() && G.sponsorCarOk(id) ? btn('Take free', function () {
+              UI.confirm('Take the ' + car.name + ' as your free sponsor car?', function () { G.claimFreeCar(id); UI.toast('Your sponsor bought you the ' + car.name + '!'); UI.show(UI.Garage); }, 'Take it');
+            }, 'go') : !G.slotFree() ? btn('Garage full', function () {
+              UI.toast('All ' + G.carSlots() + ' garage slots are taken. Sign your next sponsor to open another, or sell a car.');
+            }, 'disabled') : btn('Buy', function () {
               if (!G.canAfford(car.price)) return UI.toast('Not enough money');
               UI.confirm('Buy the ' + car.name + ' for ' + DR.money(car.price) + '?', function () { G.buyCar(id); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage); }, 'Buy');
             }, 'go' + (G.canAfford(car.price) ? '' : ' disabled')))),
@@ -522,7 +528,8 @@
             UI.confirm('Sell the ' + DR.CARS[inst.carId].name + ' for ' + DR.money(G.carValue(inst)) + '? Installed parts go with it.', function () { G.sellCar(inst.uid); A.cash(); UI.refresh(); }, 'Sell');
           }, 'small red') : null)));
     });
-    return h('div', { class: 'screen' }, UI.top('MY CARS', function () { UI.show(UI.Garage); }, btn('Dealer ▶', function () { UI.show(UI.Dealer); }, 'small')), h('div', { class: 'content' }, grid));
+    return h('div', { class: 'screen' }, UI.top('MY CARS', function () { UI.show(UI.Garage); }, btn('Dealer ▶', function () { UI.show(UI.Dealer); }, 'small')),
+      h('div', { class: 'content' }, h('div', { class: 'tipline' }, 'Garage slots: ' + G.state.cars.length + ' / ' + G.carSlots() + '. Every sponsor you sign opens another slot and pays for a car.' + (G.freeCars() ? ' You have ' + G.freeCars() + ' free sponsor car' + (G.freeCars() > 1 ? 's' : '') + ' to pick at the dealer.' : '')), grid));
   };
 
   // ---------------------------------------------------------------- PAINT

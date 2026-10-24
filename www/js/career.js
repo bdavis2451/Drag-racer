@@ -1,6 +1,6 @@
 // ===========================================================================
 // CAREER — an Underground 2 style career for the drag strip.
-//  * Five stages of events. Winning events pays out and unlocks parts
+//  * Six stages of events. Winning events pays out and unlocks parts
 //    (performance levels per shop group, body kit tiers), more events and,
 //    with the stage boss, the next stage and the next tier of cars.
 //  * A visual rating (0-10 stars) from cosmetic parts. It lives beside the
@@ -57,13 +57,14 @@
     return 'engine';
   };
   DR.LEVEL_NAMES = ['Stock', 'Street', 'Sport', 'Pro', 'Race', 'Pro Mod'];
-  // every shop group starts at this level: street bolt-ons, cams, small
-  // nitrous and drag radials are there from the first day
-  DR.BASE_PERF = 2;
+  // every shop group starts at this level (cheap bolt-ons, a dry nitrous
+  // kit, budget drag radials); the first league opens Street parts
+  DR.BASE_PERF = 1;
 
   // ---------------------------------------------------------------- sponsors
   // contract: {spon: sponsor races to win, stars: rating to reach, street: street wins}
   var SPONSORS = [
+    { id: 'junk', name: 'Junkyard Joe\'s', col: '#8b5a2b' }, { id: 'parts', name: 'Discount Auto Parts', col: '#d23a3a' }, { id: 'taco', name: 'Taco Shack', col: '#9ad600' },
     { id: 'nitro', name: 'Nitro Cola', col: '#ff3030' }, { id: 'torque', name: 'Torque Tires', col: '#ffcc00' }, { id: 'slick', name: 'Slick Oil', col: '#2fb3a8' },
     { id: 'boost', name: 'BoostHouse', col: '#3a7bd2' }, { id: 'redline', name: 'Redline Radio', col: '#ff6a00' }, { id: 'apex', name: 'Apex Wheels', col: '#d0d0d0' },
     { id: 'volt', name: 'Volt Batteries', col: '#7cd320' }, { id: 'night', name: 'NightRunner Neon', col: '#ff2bd6' }, { id: 'octane', name: 'Octane Race Fuel', col: '#c8102e' },
@@ -88,21 +89,38 @@
   // e(type, opponents, cash, unlocks, needWins, stars)
   function e(type, opps, cash, unlocks, needWins, stars) { return { type: type, opps: opps, cash: cash, unlocks: unlocks || [], needWins: needWins || 0, stars: stars || 0 }; }
 
+  // a rival written out here (the first league's locals); the build comes from rivals.js
+  function rk(name, carId, skill, color, over) { var o = { name: name, carId: carId, engine: DR.CARS[carId].engine, parts: {}, tune: {}, skill: skill, color: color }; for (var k in over) o[k] = over[k]; return o; }
   DR.STAGES = [
+    { name: 'Backroad Beaters', blurb: 'Grocery-getters, beaters and whatever was in the driveway.', sponsors: ['junk', 'parts', 'taco'], base: 300,
+      events: [
+        e('quarter', [rk('Grandma Edna', 'beetle', 0.2, '#ff8fb8')], 300, ['perf:tires:2', 'vis:tint:1'], 0),
+        e('eighth', [rk('Pizza Pete', 'pip', 0.25, '#ff6a00')], 300, ['perf:body:2', 'vis:tips:1'], 0),
+        e('street', [rk('Cousin Ray', 'bolt', 0.35, '#3a7bd2')], 350, ['perf:susp:2'], 1),
+        e('quarter', [rk('Coach Phil', 'ronin', 0.4, '#d23a3a')], 350, ['perf:engine:2', 'vis:vinyl:1'], 1),
+        e('sponsor', [rk('Brenda', 'fox23', 0.4, '#2b3f8c')], 500, ['perf:drive:2'], 2),
+        e('knockout', [rk('Skip', 'mira', 0.4, '#151515'), rk('Bubba', 'hauler', 0.45, '#2b4d2b'), rk('Lyle', 'monte', 0.45, '#2fb3a8')], 700, ['perf:power:2'], 3),
+        e('eighth', [rk('Kenta', 'hachi', 0.45, '#f4f4f4')], 400, [], 3),
+        e('showcase', [rk('Candy', 'camaro6', 0.45, '#ff8fb8', { vis: { tint: 1, vinyl: 1, tips: 1, rims: 'mesh' } })], 600, [], 4),
+        e('sponsor', [rk('Old Earl', 'monte', 0.5, '#5a5a5a')], 600, [], 5),
+        e('street', [rk('Rico', 'camaro6', 0.5, '#c0c4cc')], 500, [], 5)
+      ],
+      boss: e('boss', [rk('Big Lou', 'fox', 0.55, '#c01515', { vis: { tint: 1, vinyl: 1, tips: 1 }, stripe: '#ffffff' })], 2000, ['perf:all:2'], 6) },
+
     { name: 'Rookie Nights', blurb: 'Parking-lot heroes and Friday night grudge matches.', sponsors: ['nitro', 'torque', 'slick'], base: 600,
       events: [
-        e('quarter', [rv(0, 0)], 450, ['perf:susp:3', 'vis:rims:1'], 0),
-        e('eighth', [rv(0, 1)], 450, ['vis:fbumper:1', 'vis:tint:1'], 0),
-        e('street', [rv(0, 2, { name: 'Jess' })], 550, ['perf:tires:3', 'vis:vinyl:1'], 1),
+        e('quarter', [rv(0, 0, { name: 'Ms. Patty' })], 450, ['perf:susp:3', 'vis:rims:1'], 0),
+        e('eighth', [rv(0, 1)], 450, ['vis:fbumper:1'], 0),
+        e('street', [rv(0, 2, { name: 'Jess' })], 550, ['perf:tires:3'], 1),
         e('quarter', [rv(0, 1, { name: 'Tony B', color: '#2fb3a8', skill: 0.5 })], 550, ['perf:engine:3', 'vis:rbumper:1'], 1),
         e('sponsor', [rv(0, 3)], 800, ['perf:drive:3', 'vis:finish:1'], 2),
-        e('knockout', [rv(0, 0, { name: 'Edna' }), rv(0, 2, { name: 'Kat', color: '#ff2bd6' }), rv(0, 3)], 1100, ['perf:power:3', 'vis:skirt:1'], 3),
-        e('eighth', [rv(0, 4)], 650, ['vis:spoiler:1', 'vis:tips:1'], 3),
+        e('knockout', [rv(0, 0, { name: 'Patty' }), rv(0, 2, { name: 'Kat', color: '#ff2bd6' }), rv(0, 3)], 1100, ['perf:power:3', 'vis:skirt:1'], 3),
+        e('eighth', [rv(0, 4)], 650, ['vis:spoiler:1'], 3),
         e('showcase', [rv(0, 3, { name: 'Neon Nina', color: '#ff2bd6', vis: { neon: '#ff2bd6', fbumper: 1, rims: 'mesh', tint: 1, vinyl: 1 } })], 900, ['vis:hood:1'], 4),
         e('sponsor', [rv(0, 4, { name: 'Mike' })], 900, ['perf:body:3'], 5),
         e('street', [rv(1, 0, { name: 'Dale' })], 750, [], 5)
       ],
-      boss: e('boss', [rv(1, 0, { name: 'Dale "The Mullet" Rhodes', skill: 0.7, vis: { spoiler: 1, rims: 'pony', vinyl: 2, tips: 1 }, stripe: '#ffffff' })], 3500, ['cars:1', 'perf:all:3'], 6) },
+      boss: e('boss', [rv(1, 0, { name: 'Dale "The Mullet" Rhodes', skill: 0.7, vis: { spoiler: 1, rims: 'pony', vinyl: 2, tips: 1 }, stripe: '#ffffff' })], 3500, ['perf:all:3'], 6) },
 
     { name: 'Bracket Bandits', blurb: 'Bolt-ons are not enough anymore. Real builds, real money.', sponsors: ['boost', 'redline', 'apex'], base: 1800,
       events: [
@@ -117,7 +135,7 @@
         e('sponsor', [rv(2, 0)], 2800, ['perf:body:4'], 5),
         e('eighth', [rv(2, 1)], 2200, [], 5)
       ],
-      boss: e('boss', [rv(2, 2, { name: 'Lexi "Boost" Park', skill: 0.8, vis: { fbumper: 2, skirt: 2, spoiler: 2, vinyl: 2, rims: 'turbine', tint: 2, finish: 1 }, stripe: '#ff2bd6' })], 10000, ['cars:2', 'perf:all:4'], 6) },
+      boss: e('boss', [rv(2, 2, { name: 'Lexi "Boost" Park', skill: 0.8, vis: { fbumper: 2, skirt: 2, spoiler: 2, vinyl: 2, rims: 'turbine', tint: 2, finish: 1 }, stripe: '#ff2bd6' })], 10000, ['perf:all:4'], 6) },
 
     { name: 'Street Outlaws', blurb: 'Big turbos, nitrous and no excuses. The cops are watching.', sponsors: ['volt', 'night', 'octane'], base: 5000,
       events: [
@@ -132,7 +150,7 @@
         e('sponsor', [rv(3, 2)], 7000, ['perf:body:5'], 5),
         e('eighth', [rv(3, 1, { name: 'Ricky Radial' })], 5500, [], 5)
       ],
-      boss: e('boss', [rv(3, 2, { name: 'Nitro Nate', skill: 0.85, vis: { hood: 2, vinyl: 3, rims: 'drag', skirt: 2, tips: 1 } })], 25000, ['cars:3', 'perf:all:5'], 6) },
+      boss: e('boss', [rv(3, 2, { name: 'Nitro Nate', skill: 0.85, vis: { hood: 2, vinyl: 3, rims: 'drag', skirt: 2, tips: 1 } })], 25000, ['perf:all:5'], 6) },
 
     { name: 'Radial Wars', blurb: 'Drag radials, transbrakes and four-digit horsepower.', sponsors: ['grip', 'pixel', 'hotrod'], base: 12000,
       events: [
@@ -147,7 +165,7 @@
         e('sponsor', [rv(4, 3, { name: 'Hank' })], 16000, [], 5),
         e('eighth', [rv(4, 1, { name: 'Godzilla' })], 13000, [], 5)
       ],
-      boss: e('boss', [rv(4, 4, { name: 'Twin Turbo Tina', skill: 0.9, vis: { fbumper: 3, skirt: 3, hood: 3, rims: 'drag', tint: 2, vinyl: 3, finish: 3 } })], 60000, ['cars:4', 'perf:all:5'], 6) },
+      boss: e('boss', [rv(4, 4, { name: 'Twin Turbo Tina', skill: 0.9, vis: { fbumper: 3, skirt: 3, hood: 3, rims: 'drag', tint: 2, vinyl: 3, finish: 3 } })], 60000, ['perf:all:5'], 6) },
 
     { name: 'Pro Mod Legends', blurb: 'Six-second cars. One king.', sponsors: ['turbo', 'king', 'vortex'], base: 30000,
       events: [
@@ -178,14 +196,29 @@
       if (set) ev.opps = ev.opps.map(function (o, i) { var g = set[i]; return g ? Object.assign({}, o, { carId: g.carId, engine: g.engine, parts: g.parts, tune: g.tune, skill: g.skill }) : o; });
     });
   });
-  // The stage a car reaches the dealer at: price tiers, so each stage opens
-  // a batch across every category (beat the boss to open the next batch).
-  DR.CAR_STAGE = {};
-  Object.keys(DR.CARS).forEach(function (id) {
-    var p = DR.CARS[id].price;
-    DR.CAR_STAGE[id] = p <= 9000 ? 0 : p <= 24000 ? 1 : p <= 48000 ? 2 : p <= 110000 ? 3 : 4;
+  // Cars reach the dealer a few at a time, like Underground 2: the starters
+  // from day one, the rest as rewards for particular races (event id ->
+  // cars), so nobody can buy a Pro Mod before the career gets there,
+  // however much money they have.
+  DR.CAR_SCHEDULE = {
+    '0.4': ['hauler'],
+    '0.boss': ['volta', 'cobaltss', 'camaro'],
+    '1.2': ['kaze', 'silvia'], '1.4': ['z35', 'nova'], '1.6': ['m3', 'belair'], '1.8': ['s2k', 'vette5'],
+    '1.boss': ['sti', 'evo', 'cobra03', 'camss'],
+    '2.2': ['lightning', 'willys'], '2.4': ['rx7', 'gnx'], '2.6': ['stang15'], '2.8': ['chevelle', 'supra'],
+    '2.boss': ['diesel', 'charger', 'r34'],
+    '3.2': ['z06', 'cuda'], '3.5': ['hellcat'], '3.8': ['gtr'], '3.boss': ['viper'],
+    '4.4': ['p911'], '4.boss': ['lambo'],
+    '5.2': ['promod'], '5.5': ['rail']
+  };
+  DR.CAR_UNLOCK = {};   // car id -> event id ('' = from the start)
+  DR.CAR_STAGE = {};    // car id -> stage it opens in
+  Object.keys(DR.CARS).forEach(function (id) { DR.CAR_UNLOCK[id] = ''; DR.CAR_STAGE[id] = 0; });
+  DR.STAGES.forEach(function (st) {
+    st.all.forEach(function (ev) {
+      (DR.CAR_SCHEDULE[ev.id] || []).forEach(function (id) { DR.CAR_UNLOCK[id] = ev.id; DR.CAR_STAGE[id] = ev.stage; ev.unlocks.push('car:' + id); });
+    });
   });
-  DR.CAR_STAGE.camss = 1;   // the stage 1 boss's headline prize
   DR.carsAtStage = function (si) {
     return Object.keys(DR.CARS).filter(function (id) { return DR.CAR_STAGE[id] === si; }).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; });
   };
@@ -220,7 +253,7 @@
   G.isNewCar = function (id) { return G.carUnlocked(id) && !seenCars()[id]; };
   G.markCarSeen = function (id) { var s = seenCars(); if (!s[id]) { s[id] = 1; G.save(); } };
   G.newCarCount = function (cat) { return Object.keys(DR.CARS).filter(function (id) { return (!cat || DR.CARS[id].cat === cat) && G.isNewCar(id); }).length; };
-  G.carUnlocked = function (carId) { return !!C().cars[carId] || (DR.CAR_STAGE[carId] != null && DR.CAR_STAGE[carId] <= C().stage); };
+  G.carUnlocked = function (carId) { return !!C().cars[carId] || DR.CAR_UNLOCK[carId] === ''; };
   G.partUnlocked = function (cat, lvl) {
     return lvl <= 1 || lvl <= (C().perf[DR.groupOf(cat)] || 1);
   };
@@ -247,7 +280,7 @@
   DR.sponsorById = function (id) { for (var i = 0; i < SPONSORS.length; i++) if (SPONSORS[i].id === id) return SPONSORS[i]; return SPONSORS[0]; };
   // Three offers per stage with different trade-offs.
   G.sponsorOffers = function (si) {
-    var st = DR.STAGES[si], b = st.base, starsReq = [0, 1.5, 3, 5, 7][si];
+    var st = DR.STAGES[si], b = st.base, starsReq = [0, 0, 1.5, 3, 5, 7][si];
     return st.sponsors.map(function (id, k) {
       var sp = DR.sponsorById(id);
       if (k === 0) return { id: id, name: sp.name, col: sp.col, sign: b * 4, perWin: Math.round(b * 0.15), bonus: b * 3, contract: { spon: 2 }, pitch: 'Big signing check, small win bonuses.' };
@@ -259,8 +292,29 @@
     var c = C();
     if (c.sponsor[si]) return false;
     c.sponsor[si] = { id: offer.id, sign: offer.sign, perWin: offer.perWin, bonus: offer.bonus, contract: offer.contract, spon: 0, street: 0, paid: false };
+    // like Underground 2: every sponsor opens a garage slot and pays for a
+    // car (picked at the dealer; an unclaimed one carries over)
+    c.freeCars = (c.freeCars || 0) + 1;
     G.earn(offer.sign); G.save();
     return true;
+  };
+  // ---------------------------------------------------------------- sponsor cars
+  // The free car comes from a short list: cars already at the dealer up to
+  // a price that grows stage by stage, never the Pro race cars.
+  DR.SPONSOR_CAR_CAP = [9000, 15000, 32000, 60000, 110000, 150000];
+  G.freeCars = function () { return C().freeCars || 0; };
+  G.sponsorCarOk = function (carId) {
+    var car = DR.CARS[carId];
+    return car.cat !== 'Pro' && G.carUnlocked(carId) && car.price <= DR.SPONSOR_CAR_CAP[Math.min(C().stage, DR.SPONSOR_CAR_CAP.length - 1)];
+  };
+  G.claimFreeCar = function (carId) {
+    var c = C();
+    if (!c.freeCars || !G.slotFree() || !G.sponsorCarOk(carId)) return false;
+    c.freeCars--;
+    var inst = G.newInst(carId);
+    inst.spent = 0;   // the sponsor paid: it sells for its parts only
+    G.state.cars.push(inst); G.state.active = inst.uid; G.save();
+    return inst;
   };
   G.contractProgress = function (si) {
     var sp = C().sponsor[si];
@@ -322,9 +376,18 @@
   // races already won earn now (never takes anything away).
   G.syncUnlocks = function () {
     var c = C();
+    // saves from before sponsor cars: one owed per sponsor not yet used on a car
+    if (c.freeCars == null) c.freeCars = Math.max(0, Object.keys(c.sponsor || {}).length - Math.max(0, (G.state.cars || []).length - 1));
     Object.keys(c.perf).forEach(function (k) { c.perf[k] = Math.max(c.perf[k] || 1, DR.BASE_PERF); });
     DR.STAGES.forEach(function (st) { st.all.forEach(function (ev) { if (c.won[ev.id]) ev.unlocks.forEach(apply); }); });
   };
+  // a rival's name short enough for a lock tag ('Tony B', 'Rin', 'Mike')
+  function shortName(name) {
+    var nm = name.replace(/ ".*"/, '').split(' ');
+    // three words or an alliterative nickname ('Mullet Mike'): the last word
+    if (nm.length > 2 || (nm.length === 2 && nm[0][0] === nm[1][0])) return nm[nm.length - 1];
+    return nm.length > 1 && nm[1].length <= 2 ? nm[0] + ' ' + nm[1] : nm[0];
+  }
   // Where a part level opens: the first career race whose win unlocks it
   // ('Beat Tony B', 'S2 boss'), for the shop's lock tags.
   G.unlockWhere = function (cat, lvl) {
@@ -335,12 +398,19 @@
         var hit = evs[i].unlocks.some(function (u) { var p = u.split(':'); return p[0] === 'perf' && (p[1] === grp || p[1] === 'all') && +p[2] >= lvl; });
         if (hit) {
           if (evs[i].type === 'boss') return 'S' + (si + 1) + ' boss';
-          var nm = evs[i].opps[evs[i].opps.length - 1].name.replace(/ ".*"/, '').split(' ');
-          return 'Beat ' + (nm.length > 1 && nm[1].length <= 2 ? nm[0] + ' ' + nm[1] : nm[0]);
+          return 'Beat ' + shortName(evs[i].opps[evs[i].opps.length - 1].name);
         }
       }
     }
     return 'Locked';
+  };
+  // Where a car opens, for the dealer's lock tag ('Beat Kenji', 'S3 boss').
+  G.carUnlockWhere = function (carId) {
+    var id = DR.CAR_UNLOCK[carId];
+    if (!id) return '';
+    var p = id.split('.'), st = DR.STAGES[+p[0]], ev = p[1] === 'boss' ? st.boss : st.events[+p[1]];
+    if (ev.type === 'boss') return 'S' + (+p[0] + 1) + ' boss';
+    return 'S' + (+p[0] + 1) + ': beat ' + shortName(ev.opps[ev.opps.length - 1].name);
   };
   // Called when an event is won (for a knockout: the final round).
   // Returns {cash, lines}.
@@ -382,5 +452,9 @@
     if (msgs.length) G.save();
     return msgs;
   };
+  // Style pays: the crowd and the magazines follow a good-looking car, so a
+  // career win pays 3% more per star of visual rating (up to +30%).
+  DR.STYLE_PER_STAR = 0.03;
+  G.styleBonus = function (purse) { var inst = G.car(); return inst ? Math.round(purse * DR.STYLE_PER_STAR * DR.starRating(inst) / 10) * 10 : 0; };
   G.eventReward = function (ev) { return G.eventWon(ev) ? Math.round(ev.cash * 0.35) : ev.cash; };
 })();

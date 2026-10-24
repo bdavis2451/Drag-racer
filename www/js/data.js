@@ -31,10 +31,12 @@ DR.ENGINES = {
   i3_10:   { name: '1.0L I3 (Geo G10)',           cyl: 3,  disp: 1.0, hp: 55,   pk: 5700, tq: 3300, red: 6000, w: 68,  price: 800,   safe: 120, bg: 1.85, bp: 7600 },
   f4_16:   { name: '1.6L Air-Cooled Flat-4',      cyl: 4,  disp: 1.6, hp: 50,   pk: 4400, tq: 2800, red: 5000, w: 105,  price: 900,   safe: 150, bg: 2.28,  bp: 6600 },
   i4_15:   { name: '1.5L I4 SOHC (D15)',          cyl: 4,  disp: 1.5, hp: 102,  pk: 5900, tq: 4900, red: 6800, w: 110, price: 1200,  safe: 220, bg: 1.5,  bp: 8000 },
+  i4_23:   { name: '2.3L I4 SOHC (Lima)',         cyl: 4,  disp: 2.3, hp: 90,   pk: 3800, tq: 2600, red: 5000, w: 145, price: 900,   safe: 170, bg: 1.85, bp: 6400, soundAs: 'i4_20' },
   i4_16:   { name: '1.6L I4 DOHC (4A-GE)',        cyl: 4,  disp: 1.6, hp: 116,  pk: 6600, tq: 5200, red: 7600, w: 120, price: 2000,  safe: 240, bg: 1.66,  bp: 8800 },
   // budget swaps (lvl: shop level they open at, earlier than their price says)
   i4_16sc: { name: '1.6L I4 Supercharged (4A-GZE)', cyl: 4, disp: 1.6, hp: 165, pk: 6400, tq: 4400, red: 7400, w: 132, price: 2200, lvl: 2, safe: 260, fi: { part: 'fi_oem_sc', boost: 9 }, bg: 1.4, bp: 7800, soundAs: 'i4_16' },
   i4_16b:  { name: '1.6L I4 20V (4A-GE Blacktop)', cyl: 4, disp: 1.6, hp: 165, pk: 7800, tq: 6400, red: 8200, w: 125, price: 2500, lvl: 2, safe: 260, bg: 1.35, bp: 8800, soundAs: 'i4_16' },
+  i4_23t:  { name: '2.3L I4 Turbo (Lima SVO)',    cyl: 4,  disp: 2.3, hp: 205,  pk: 5000, tq: 3000, red: 6000, w: 165, price: 2600, lvl: 2, safe: 340, fi: { part: 'fi_oem_s', boost: 14 }, bg: 1.35, bp: 6800, soundAs: 'i4_20t' },
   i4_20k:  { name: '2.0L I4 i-VTEC (K20A)',       cyl: 4,  disp: 2.0, hp: 220,  pk: 8000, tq: 7000, red: 8600, w: 140, price: 4500, lvl: 3, safe: 400, bg: 1.3,  bp: 9200, vtec: 5800, soundAs: 'i4_20hi' },
   i4_20t3s:{ name: '2.0L I4 Turbo (3S-GTE)',      cyl: 4,  disp: 2.0, hp: 245,  pk: 6000, tq: 4000, red: 7200, w: 165, price: 5500, lvl: 3, safe: 500, fi: { part: 'fi_oem_s', boost: 13 }, bg: 1.3, bp: 7800, soundAs: 'i4_20t' },
   i4_18:   { name: '1.8L I4 DOHC VTEC (B18C)',    cyl: 4,  disp: 1.8, hp: 195,  pk: 8000, tq: 7500, red: 8400, w: 130, price: 4500,  safe: 330, bg: 1.25, bp: 9200, vtec: 5200 },
@@ -49,13 +51,15 @@ DR.ENGINES = {
   i6_26tt: { name: '2.6L I6 Twin-Turbo (RB26)',   cyl: 6,  disp: 2.6, hp: 320,  pk: 6800, tq: 4400, red: 8000, w: 255, price: 14000, safe: 650, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.14, bp: 8500 },
   i6_30tt: { name: '3.0L I6 Twin-Turbo (2JZ-GTE)', cyl: 6, disp: 3.0, hp: 320,  pk: 5600, tq: 4000, red: 6800, w: 240, price: 15000, safe: 900, fi: { part: 'fi_oem_tt', boost: 12 }, bg: 1.35, bp: 7800 },
   v6_35:   { name: '3.5L V6 DOHC (VQ35)',         cyl: 6,  disp: 3.5, hp: 287,  pk: 6200, tq: 4800, red: 6600, w: 190, price: 3500,  safe: 420, bg: 1.3,  bp: 7600 },
+  v6_38:   { name: '3.8L V6 (3800 Series II)',    cyl: 6,  disp: 3.8, hp: 200,  pk: 5200, tq: 4000, red: 6000, w: 190, price: 1500,  safe: 320, bg: 1.5,  bp: 6600, soundAs: 'v6_35' },
+  v6_38sc: { name: '3.8L V6 Supercharged (L67 3800)', cyl: 6, disp: 3.8, hp: 240, pk: 5200, tq: 3600, red: 6000, w: 205, price: 3000, lvl: 2, safe: 420, fi: { part: 'fi_oem_sc', boost: 8 }, bg: 1.3, bp: 6400, soundAs: 'v6_35', scSound: 'roots' },
   v6_38t:  { name: '3.8L V6 Turbo (Buick)',       cyl: 6,  disp: 3.8, hp: 245,  pk: 4400, tq: 3000, red: 5500, w: 215, price: 6000,  safe: 520, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.45, bp: 6200 },
   v6_38gnx:{ name: '3.8L V6 Turbo (GNX)',         cyl: 6,  disp: 3.8, hp: 300,  pk: 4400, tq: 3000, red: 5500, w: 220, price: 8500,  safe: 560, fi: { part: 'fi_oem_s', boost: 15 }, bg: 1.33, bp: 6200 },
   v6_38tt: { name: '3.8L V6 Twin-Turbo (VR38)',   cyl: 6,  disp: 3.8, hp: 565,  pk: 6800, tq: 3300, red: 7100, w: 265, price: 28000, safe: 900, fi: { part: 'fi_oem_tt', boost: 14 }, bg: 1.2, bp: 7600 },
   f6_38tt: { name: '3.8L Flat-6 Twin-Turbo',      cyl: 6,  disp: 3.8, hp: 530,  pk: 6250, tq: 2500, red: 7000, w: 225, price: 30000, safe: 850, fi: { part: 'fi_oem_tt', boost: 15 }, bg: 1.2, bp: 7800 },
   v8_46sc: { name: '4.6L V8 Supercharged (Terminator)', cyl: 8, disp: 4.6, hp: 390, pk: 6000, tq: 3500, red: 6500, w: 270, price: 9000, safe: 650, fi: { part: 'fi_oem_sc', boost: 12 }, bg: 1.3, bp: 7200, scSound: 'roots' },
   v8_305:  { name: '5.0L Small Block 305',        cyl: 8,  disp: 5.0, hp: 180,  pk: 4000, tq: 2400, red: 5200, w: 250, price: 1800,  safe: 380, bg: 2.2,  bp: 6800 },
-  v8_50:   { name: '5.0L V8 Pushrod (302 HO)',    cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 6250, w: 210, price: 2500,  safe: 450, bg: 2.2,  bp: 7200 },
+  v8_50:   { name: '5.0L V8 Pushrod (302 HO)',    cyl: 8,  disp: 5.0, hp: 225,  pk: 4200, tq: 3200, red: 6250, w: 210, price: 3000,  lvl: 2,  safe: 450, bg: 2.2,  bp: 7200 },
   v8_50d:  { name: '5.0L V8 DOHC (Coyote)',       cyl: 8,  disp: 5.0, hp: 460,  pk: 7000, tq: 4600, red: 7500, w: 202, price: 9000,  safe: 750, bg: 1.3,  bp: 8000 },
   v8_283:  { name: '4.6L Small Block 283',        cyl: 8,  disp: 4.6, hp: 180,  pk: 4800, tq: 3000, red: 5500, w: 240, price: 2500,  safe: 400, bg: 2.44,  bp: 6800 },
   sbc350:  { name: '5.7L Small Block 350',        cyl: 8,  disp: 5.7, hp: 240,  pk: 4800, tq: 3200, red: 5800, w: 250, price: 3000,  safe: 520, bg: 2.46,  bp: 7000 },
@@ -81,6 +85,9 @@ Object.keys(DR.ENGINES).forEach(function (k) { DR.ENGINES[k].id = k; });
 // ---------------------------------------------------------------------------
 DR.TRANS = {
   m5_light: { name: '5-Speed Manual',            type: 'manual', ratios: [3.59, 2.06, 1.36, 1.03, 0.83], shift: 0.38, maxTq: 460,  eff: 0.86, price: 1500 },
+  m5_t5_4:  { name: '5-Speed T5 (4-cyl)',        type: 'manual', ratios: [3.97, 2.34, 1.46, 1.00, 0.79], shift: 0.38, maxTq: 380,  eff: 0.86, price: 1200 },
+  m5_t5_v6: { name: '5-Speed T5 (V6)',           type: 'manual', ratios: [3.75, 2.19, 1.41, 1.00, 0.72], shift: 0.38, maxTq: 420,  eff: 0.86, price: 1300 },
+  m5_t5_v8: { name: '5-Speed T5 World Class (V8)', type: 'manual', ratios: [3.35, 1.93, 1.29, 1.00, 0.68], shift: 0.38, maxTq: 470,  eff: 0.86, price: 1200 },
   m5_hd:    { name: '5-Speed Manual HD',         type: 'manual', ratios: [2.95, 1.94, 1.34, 1.00, 0.73], shift: 0.36, maxTq: 650,  eff: 0.86, price: 2500 },
   m4_cl:    { name: '4-Speed Close Ratio',       type: 'manual', ratios: [2.32, 1.69, 1.29, 1.00],       shift: 0.40, maxTq: 900,  eff: 0.87, price: 2200 },
   m6:       { name: '6-Speed Manual',            type: 'manual', ratios: [2.66, 1.78, 1.30, 1.00, 0.80, 0.63], shift: 0.33, maxTq: 750,  eff: 0.86, price: 3500 },
@@ -96,7 +103,7 @@ DR.TRANS = {
   seq6:     { name: '6-Speed Sequential',        type: 'seq',    ratios: [2.90, 2.00, 1.50, 1.20, 1.00, 0.86], shift: 0.08, maxTq: 1500, eff: 0.90, price: 14000, adj: true },
   lenco5:   { name: 'Lenco 5-Speed Air-Shift',   type: 'seq',    ratios: [2.39, 1.69, 1.31, 1.12, 1.00], shift: 0.04, maxTq: 4500, eff: 0.91, price: 30000, adj: true }
 };
-DR.TRANS_SHOP = ['m5_hd', 'm4_cl', 'm6', 'm6_hd', 'a4', 'a6', 'a8', 'a3_400', 'pg2', 'dct7', 'seq6', 'lenco5'];
+DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'a4', 'a6', 'a8', 'a3_400', 'pg2', 'dct7', 'seq6', 'lenco5'];
 
 // ---------------------------------------------------------------------------
 // TIRES (driven axle)
@@ -113,6 +120,7 @@ DR.TIRES = {
   st_225: { name: 'Sport 225/45R17',           kind: 'Street',     mu: 1.35, optP: 32, slip: 0.11, fall: 0.20, fk: 1.2, r: 0.317, m: 20, topt: 50, cold: 0.04, price: 500 },
   st_255: { name: 'Performance 255/40R18',     kind: 'Street',     mu: 1.42, optP: 32, slip: 0.12, fall: 0.20, fk: 1.2, r: 0.330, m: 22, topt: 55, cold: 0.05, price: 800 },
   st_305: { name: 'Performance 305/30R20',     kind: 'Street',     mu: 1.48, optP: 32, slip: 0.12, fall: 0.20, fk: 1.2, r: 0.346, m: 26, topt: 55, cold: 0.06, price: 1100 },
+  dr_245: { name: 'Budget Drag Radial 245/50R16', kind: 'Drag Radial',mu: 1.65, optP: 20, slip: 0.13, fall: 0.25, fk: 0.75, r: 0.317, m: 22, topt: 55, cold: 0.12, price: 650 },
   dr_275: { name: 'Drag Radial 275/40R17',     kind: 'Drag Radial',mu: 1.85, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.330, m: 24, topt: 60, cold: 0.15, price: 900 },
   dr_315: { name: 'Drag Radial 315/60R15',     kind: 'Drag Radial',mu: 2.10, optP: 17, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.345, m: 26, topt: 60, cold: 0.16, price: 1300 },
   ets_28: { name: 'ET Street Slick 28x10.5',   kind: 'Slick',      mu: 2.40, optP: 14, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.356, m: 24, topt: 70, cold: 0.24, price: 1600 },
@@ -120,7 +128,7 @@ DR.TIRES = {
   sl_33:  { name: 'Drag Slick 33x16',          kind: 'Slick',      mu: 3.20, optP: 9,  slip: 0.18, fall: 0.32, fk: 1.0, r: 0.419, m: 32, topt: 78, cold: 0.30, price: 4200 },
   sl_36:  { name: 'Pro Slick 36x17',           kind: 'Slick',      mu: 3.60, optP: 7,  slip: 0.19, fall: 0.32, fk: 1.0, r: 0.457, m: 38, topt: 80, cold: 0.32, price: 7500 }
 };
-DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'dr_275', 'dr_315', 'ets_28', 'sl_31', 'sl_33', 'sl_36'];
+DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'dr_245', 'dr_275', 'dr_315', 'ets_28', 'sl_31', 'sl_33', 'sl_36'];
 
 // ---------------------------------------------------------------------------
 // VEHICLES
@@ -139,6 +147,8 @@ DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'dr_275', 'dr_315', 'ets
 DR.CARS = {
   // ---- Muscle ----------------------------------------------------------------
   fox:      { name: 'Ford Mustang GT \'89', alias: 'Fox Stallion \'89', real: '1987-93 Ford Mustang GT hatchback (Fox body)',    cat: 'Muscle',  body: 'hatch',    price: 7000,  m: 1460, f: 0.56, wb: 2.55, len: 4.6, h: 0.53, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_50',  trans: 'm5_light', fd: 2.73, gears: [3.35, 1.93, 1.29, 1, 0.68], tire: 'st_225', diff: 'lsd',  col: '#c01515' },
+  fox23:    { name: 'Ford Mustang LX 2.3 \'89', alias: 'Fox Stallion LX', real: '1987-93 Ford Mustang LX hatchback, 2.3 four-cylinder (Fox body)', art: 'fox', cat: 'Muscle', body: 'hatch', price: 2500, m: 1330, f: 0.53, wb: 2.55, len: 4.6, h: 0.53, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'i4_23', trans: 'm5_t5_4', fd: 3.45, tire: 'st_195', diff: 'open', col: '#2b3f8c' },
+  camaro6:  { name: 'Chevrolet Camaro V6 \'98', alias: 'Camero V6 \'98', real: '1998-02 Chevrolet Camaro coupe, 3.8 V6 (4th gen)', cat: 'Muscle', body: 'sports', price: 5000, m: 1560, f: 0.55, wb: 2.57, len: 4.9, h: 0.50, cda: 0.70, drive: 'RWD', ep: 'front', engine: 'v6_38', trans: 'm5_t5_v6', fd: 3.23, tire: 'st_225', diff: 'open', col: '#c0c4cc' },
   camss:    { name: 'Chevrolet Camaro SS \'12', alias: 'Camero SS \'12', real: '2010-15 Chevrolet Camaro SS coupe (5th gen)',       cat: 'Muscle',  body: 'modern',   price: 36000, m: 1830, f: 0.52, wb: 2.81, len: 4.8, h: 0.51, cda: 0.74, drive: 'RWD', ep: 'front', engine: 'v8_62',  trans: 'a6',       fd: 3.27, tire: 'st_255', diff: 'lsd',  col: '#ffb300' },
   // ---- JDM -------------------------------------------------------------------
   hachi:    { name: 'Toyota AE86 Trueno', alias: 'Hachi Coupe', real: '1983-87 Toyota Sprinter Trueno GT-Apex hatch (AE86)',          cat: 'JDM',  body: 'hatch',    price: 6000,  m: 1020,  f: 0.53, wb: 2.40, len: 4.2, h: 0.50, cda: 0.60, drive: 'RWD', ep: 'front', engine: 'i4_16',  trans: 'm5_light', fd: 4.3, gears: [3.587, 2.022, 1.384, 1, 0.861], tire: 'st_195', diff: 'lsd',  col: '#f4f4f4' },

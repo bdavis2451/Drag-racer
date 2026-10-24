@@ -640,6 +640,12 @@
           var res = G.winEvent(ev);
           moneyDelta = res.cash; firstWin = res.first;
           lines = lines.concat(res.lines);
+          // a launch bonus on the race purse (CSR's perfect-start bonus)
+          var lb = me.rt != null && me.rt >= 0 ? (me.rt <= 0.05 ? 0.15 : me.rt <= 0.15 ? 0.05 : 0) : 0;
+          var purse = res.first ? ev.cash : G.eventReward(ev);
+          if (lb) { var bonus = Math.round(purse * lb / 10) * 10; moneyDelta += bonus; lines.push((lb > 0.1 ? 'PERFECT' : 'GOOD') + ' LAUNCH BONUS: ' + DR.money(bonus)); }
+          var style = G.styleBonus(purse);
+          if (style) { moneyDelta += style; lines.push('STYLE BONUS (' + DR.starText(DR.starRating(inst)) + '): ' + DR.money(style)); }
         }
       }
       if (cfg.mode === 'career' && win === false && ev.type === 'knockout') lines.push('KNOCKED OUT in round ' + (cfg.round + 1) + '. Start over from round 1.');

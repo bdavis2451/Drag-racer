@@ -154,6 +154,9 @@
         disc(12, 12, 10, M2); ring(12, 12, 10, 8, M1); disc(12, 12, 6, M3); ring(12, 12, 6, 5, ac); disc(12, 12, 2, BK); break;
       case 'transbrake':
         r(4, 7, 14, 10, M3); r(4, 7, 14, 1, M2); r(18, 9, 4, 6, M2); disc(11, 12, 3, '#d23a3a'); r(10, 11, 2, 1, '#ff8080'); r(6, 17, 2, 4, ac); r(14, 17, 2, 4, ac); break;
+      case 'shifter':
+        r(4, 18, 16, 4, M3); r(4, 18, 16, 1, M2); r(11, 7, 2, 11, M1); r(12, 7, 1, 11, M2);
+        disc(12, 5, 4, ac); disc(11, 4, 1, DR.shadeHex(ac, 0.4)); r(6, 20, 1, 1, BK); r(17, 20, 1, 1, BK); break;
       case 'flywheel':
         ring(12, 12, 11, 8, M2); for (k = 0; k < 16; k++) { var a2 = k * Math.PI / 8; r(Math.round(12 + Math.cos(a2) * 10), Math.round(12 + Math.sin(a2) * 10), 1, 1, M4); }
         disc(12, 12, 7, M3); disc(12, 12, 2, ac); break;
@@ -418,7 +421,7 @@
   // ---------------------------------------------------------------- PACKAGES
   // Quick upgrade kits (Street / Pro / Extreme per shop group, or the whole
   // car): one tap buys and fits a matched set of parts at a discount.
-  var PKG_LVL = [2, 3, 5];
+  var PKG_LVL = [1, 2, 3, 5];
   function pkgGroups() { return [{ id: 'all', name: 'Full Car', groups: DR.PKG_ORDER }].concat(DR.PKG_ORDER.map(function (gid) { var g = groupById(gid); return { id: gid, name: g.name, groups: [gid], icon: g.icon }; })); }
   function pkgLocked(plan) { var l = plan.steps.filter(function (s) { return !G.partUnlocked(s.cat, s.opt.lvl); }); return l.length ? l : null; }
   function pkgCard(inst, pg, t) {
@@ -450,7 +453,7 @@
       var grid = h('div', { class: 'pgrid' });
       main.appendChild(grid);
       // the full-car row now, the rest a frame or two later
-      var fillRow = function () { [0, 1, 2].forEach(function (t) { grid.appendChild(pkgCard(inst, pg, t)); }); };
+      var fillRow = function () { DR.PKG_TIERS.forEach(function (x, t) { grid.appendChild(pkgCard(inst, pg, t)); }); };
       if (gi === 0) fillRow(); else UI.later(fillRow);
     });
     return main;
