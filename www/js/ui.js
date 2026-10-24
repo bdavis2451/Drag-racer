@@ -196,7 +196,7 @@
       ['Torque', Math.round(S.peakTq) + ' lb-ft'],
       S.fiType !== 'none' ? ['Boost', S.boostSet.toFixed(1) + ' psi ' + DR.FI[S.fiId].name.replace('Factory ', '')] : null,
       ['Weight', kgLb(S.m) + ' (' + Math.round(S.f * 100) + '% front)'],
-      ['Drive', S.drive + ', ' + tr.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
+      ['Drive', S.drive + ', ' + S.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
       tr.type === 'auto' ? ['Converter', S.stall + ' stall' + (S.tbrake ? ' + transbrake' : ', foot brake')] : null,
       ['Tires', S.tire.name],
       ['Visual rating', DR.starText(DR.starRating(inst)), 'acc'],

@@ -482,7 +482,7 @@
           h('div', { class: 'gside' }, h('div', { class: 'pix acc' }, car.name),
             h('div', { class: 'gsmall dim' }, car.real), statBars(S),
             gst('ENGINE', S.eng.name), gst('POWER', Math.round(S.peakHp) + ' hp', 'acc'), gst('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
-            gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
+            gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
             gst('TIRES', S.tire.name),
             owned ? h('div', { class: 'gsmall acc' }, 'You own ' + owned) : null),
           h('div', { class: 'gsel' }, ids.length > 1 ? btn('◀', function () { cyc(-1); }, 'arrow') : null,

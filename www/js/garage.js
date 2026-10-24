@@ -356,7 +356,7 @@
       stat('POWER', Math.round(S.peakHp) + (S.nosHp ? '+' + S.nosHp : '') + ' hp', 'acc'),
       stat('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
       stat('WEIGHT', UI.kgLb(S.m)),
-      stat('DRIVE', S.drive + ' • ' + DR.TRANS[S.transId].ratios.length + '-spd'),
+      stat('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
       inst.best && inst.best.q ? stat('BEST 1/4', inst.best.q.toFixed(3) + 's', 'acc') : null,
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
       S.risk.engine > 0.001 || S.risk.trans > 0.001 || S.risk.axle > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(Math.max(S.risk.engine, S.risk.trans, S.risk.axle) * 100) + '% failure risk') : null,
