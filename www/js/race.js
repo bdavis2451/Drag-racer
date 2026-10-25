@@ -655,7 +655,8 @@
       if (moneyDelta) G.earn(moneyDelta);
       if (them && !testDrive && (cfg.mode === 'career' || cfg.mode === 'street')) {
         var rc = G.payRunCost(S, you.sim.nosT);
-        if (rc.paid) lines.push('Running costs: ' + DR.money(rc.paid) + ' (fuel ' + DR.money(rc.fuel) + ', tires ' + DR.money(rc.tires) + (rc.nos ? ', nitrous ' + DR.money(rc.nos) : '') + ')');
+        var rcParts = [['fuel', rc.fuel], ['tires', rc.tires], ['nitrous', rc.nos]].filter(function (x) { return x[1] > 0; }).map(function (x) { return x[0] + ' ' + DR.money(x[1]); });
+        if (rc.paid) lines.push('Running costs: ' + DR.money(rc.paid) + ' (' + rcParts.join(', ') + ')');
       }
       if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; }
       // personal bests
