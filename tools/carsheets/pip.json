@@ -1,2 +1,2 @@
-{ "id": "pip", "sheet": "tools/carsheets/pip.png", "lenM": 3.6,
-  "panels": { "stock": [36, 165, 765, 420], "street": [776, 165, 1508, 420], "wide": [36, 478, 765, 752], "race": [776, 478, 1508, 752] } }
+{ "id": "pip", "carId": "pip", "sheet": "tools/carsheets/pip.png", "lenM": 3.6,
+  "paint": { "hue": [0.94, 0.04], "minSat": 0.45 } }

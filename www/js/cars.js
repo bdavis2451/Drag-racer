@@ -230,18 +230,28 @@
   var sheetPix = {};
   function sheetOf(id) {
     if (sheetPix[id]) return sheetPix[id];
-    var S = DR.SHEETS[id], pal = S.pal.map(function (x) { return x ? hexToRgb('#' + x) : null; });
-    var d = new Uint8ClampedArray(S.w * S.h * 4), p = 0;
-    for (var i = 0; i < S.rle.length; i += 2) {
-      var col = pal[B64.indexOf(S.rle[i])], n = B64.indexOf(S.rle[i + 1]) + 1;
-      for (var k = 0; k < n; k++, p += 4) if (col) { d[p] = col[0]; d[p + 1] = col[1]; d[p + 2] = col[2]; d[p + 3] = 255; }
+    // pal: hex colours, or 'p0'..'p6' for body paint (kept as its ramp
+    // step, alpha 254); enc 3: runs of [index: 2 chars, run - 1: 1 char]
+    var S = DR.SHEETS[id], pal = S.pal.map(function (x) { return !x ? null : x[0] === 'p' ? [+x.slice(1), 0, 0, 254] : hexToRgb('#' + x).concat(255); });
+    var d = new Uint8ClampedArray(S.w * S.h * 4), p = 0, w = S.enc === 3 ? 3 : 2;
+    for (var i = 0; i < S.rle.length; i += w) {
+      var col = pal[w === 3 ? B64.indexOf(S.rle[i]) * 64 + B64.indexOf(S.rle[i + 1]) : B64.indexOf(S.rle[i])], n = B64.indexOf(S.rle[i + w - 1]) + 1;
+      for (var k = 0; k < n; k++, p += 4) if (col) { d[p] = col[0]; d[p + 1] = col[1]; d[p + 2] = col[2]; d[p + 3] = col[3]; }
     }
     return (sheetPix[id] = { w: S.w, h: S.h, d: d });
   }
-  function sget(sh, x, y) { if (x < 0 || y < 0 || x >= sh.w || y >= sh.h) return null; var i = (y * sh.w + x) * 4; return sh.d[i + 3] ? [sh.d[i], sh.d[i + 1], sh.d[i + 2]] : null; }
+  // a sheet pixel: [r, g, b], or for body paint [0, 0, 0] with .p its ramp step
+  function sget(sh, x, y) {
+    if (x < 0 || y < 0 || x >= sh.w || y >= sh.h) return null;
+    var i = (y * sh.w + x) * 4;
+    if (!sh.d[i + 3]) return null;
+    if (sh.d[i + 3] === 254) { var c = [0, 0, 0]; c.p = sh.d[i]; return c; }
+    return [sh.d[i], sh.d[i + 1], sh.d[i + 2]];
+  }
   function inRect(r, x, y) { return x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]; }
 
-  DR.BITMAP_CARS = {
+  // (sheet_<id>.js files add four-build cars made by tools/carsheet.py)
+  DR.BITMAP_CARS = Object.assign(DR.BITMAP_CARS || {}, {
     // 1992-95 Civic hatch (EG)
     ronin: { sheet: 'eg', body: [33, 8, 224], ground: 74, tireM: 0.30,
       wheelR: [65, 60, 14.5], wheelF: [187, 60, 14.5],
@@ -255,7 +265,7 @@
       // side-view parts on the sheet: [x0, y0, x1, y1]
       wheels: [[7, 85, 34, 113], [37, 85, 65, 112], [68, 85, 95, 112], [98, 85, 126, 112]],
       rims: { deep: 1, mesh: 2, split: 3, drag: 4 } }
-  };
+  });
 
   // the sheet's wheels as rim styles ('sheet:eg:0' is the car's own stock
   // wheel, cut from the body): pre-rendered per size and rotation step
@@ -265,7 +275,9 @@
     if (sheetWheelCache[key]) return sheetWheelCache[key];
     var p = style.split(':'), carId = p[1], k = +p[2], B = DR.BITMAP_CARS[carId], sh = sheetOf(B.sheet);
     var src, cx, cy, sr;
-    if (k === 0) { cx = B.wheelR[0]; cy = B.wheelR[1]; sr = B.wheelR[2]; }
+    var fromCar = k === 0 || !!B.builds;
+    if (B.builds) { cx = B.builds[k].wheelR[0]; cy = B.builds[k].wheelR[1]; sr = B.builds[k].wheelR[2]; }
+    else if (k === 0) { cx = B.wheelR[0]; cy = B.wheelR[1]; sr = B.wheelR[2]; }
     else { src = B.wheels[k - 1]; cx = (src[0] + src[2]) / 2; cy = (src[1] + src[3]) / 2; sr = (src[2] - src[0] + 1) / 2; }
     var R = Math.ceil(r) + 1, S = R * 2 + 1, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
     var ctx = cv.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
@@ -276,7 +288,7 @@
       var sx = Math.round(cx + (dx * ca + dy * sa) * s - 0.5), sy = Math.round(cy + (-dx * sa + dy * ca) * s - 0.5);
       var c = sget(sh, sx, sy);
       // the stock wheel sits in the body: fender paint round its top is tire
-      if (k === 0 && (!c || isPaint(B, c))) c = [27, 27, 34];
+      if (fromCar && (!c || isPaint(B, c))) c = [27, 27, 34];
       if (!c) c = [16, 16, 20];
       var i = (y * S + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
     }
@@ -284,28 +296,53 @@
     return (sheetWheelCache[key] = { canvas: cv, R: R });
   }
   // a sheet pixel that is body paint (the sheet's red), and its ramp step
-  function isPaint(B, c) { var h = rgb2hsv(c); return h[1] > 0.5 && (h[0] > 0.94 || h[0] < 0.03) && h[2] > 0.15; }
+  function isPaint(B, c) { if (c.p != null) return true; if (B.builds) return false; var h = rgb2hsv(c); return h[1] > 0.5 && (h[0] > 0.94 || h[0] < 0.03) && h[2] > 0.15; }
   function paintStep(B, c) {
+    if (c.p != null) return c.p;
     var r = rgb2hsv(c)[2] / B.paintV;
     return r > 1.36 ? 0 : r > 1.18 ? 1 : r > 1.03 ? 2 : r > 0.88 ? 3 : r > 0.74 ? 4 : r > 0.6 ? 5 : 6;
   }
 
+  // A four-build car (stock / street / widebody / race): the body-kit level
+  // (the highest of bumpers, skirts and hood) picks the build; the spoiler
+  // slot adds a build's wing; the wheels follow the rim tier.
+  var BUILD_RIMS = { mesh: 1, pony: 1, turbine: 2, split: 2, deep: 3, drag: 3 };
+  function buildOf(B, look) {
+    var vis = look.vis || {}, lvl = Math.max(vis.fbumper || 0, vis.rbumper || 0, vis.skirt || 0, vis.hood || 0);
+    var bd = B.builds[Math.min(3, lvl)], spT = vis.spoiler || (look.wing ? look.wing + 1 : 0), lists = [];
+    if (spT && B.wings[spT - 1] && B.wings[spT - 1].length) {
+      var ox = Math.round(bd.wheelR[0]), oy = bd.roof;
+      lists.push(B.wings[spT - 1].map(function (q) { return [ox + q[0], oy + q[1], q[2]]; }));
+    }
+    var rims = {}; for (var k in BUILD_RIMS) rims[k] = BUILD_RIMS[k];
+    return { sheet: B.sheet, dens: B.dens, body: [bd.rect[0], bd.rect[1], bd.rect[2]], ground: bd.ground,
+      tireM: DR.TIRES[DR.CARS[look.carId].tire].r, wheelR: bd.wheelR, wheelF: bd.wheelF, keep: [],
+      tail: bd.tail, head: bd.head, exhaust: bd.exhaust, belt: bd.belt, rocker: bd.rocker, hood: [bd.rect[0], bd.rect[2]],
+      livery: bd.livery, rims: rims, builds: B.builds, overlays: lists };
+  }
+
   function buildBitmapSprite(look, key, B) {
-    var RS = look.res || 1, sh = sheetOf(B.sheet), vis = look.vis || {};
+    if (B.builds) B = buildOf(B, look);
+    var RS = look.res || 1, sh = sheetOf(B.sheet), vis = look.vis || {}, F = RS / (B.dens || 1);
     var x0 = B.body[0], y0 = B.body[1], x1 = B.body[2], gy = B.ground;
     var srcLen = x1 - x0 + 1, u = srcLen / 100;
-    // which of the built cars' parts this build wears (street build: tier 1,
-    // race build: tiers 2-3; neither car has a roof scoop or visible tips)
-    var K = B.kit, kitParts = [], spT = vis.spoiler || (look.wing ? look.wing : 0);
-    if (spT) kitParts.push(spT === 1 ? K.spoiler[0] : K.spoiler[1]);
-    ['fbumper', 'rbumper', 'skirt'].forEach(function (slot) { if (vis[slot]) kitParts.push(K[slot][vis[slot] === 1 ? 0 : 1]); });
-    if (vis.hood) kitParts.push(K.hood);
-    if (vis.vinyl === 1) kitParts.push(K.decals);
-    if (look.cage) kitParts.push(K.cage);
-    sh.parts = sh.parts || DR.SHEETS[B.sheet].parts;
+    // pixel lists drawn over the body: a four-build car's wing, or the parts
+    // the EG sheet's built cars wear (street build: tier 1, race build:
+    // tiers 2-3; neither car has a roof scoop or visible tips)
+    var K = B.kit, kitLists = (B.overlays || []).slice(), spT = vis.spoiler || (look.wing ? look.wing : 0);
+    if (K) {
+      var kitParts = [];
+      if (spT) kitParts.push(spT === 1 ? K.spoiler[0] : K.spoiler[1]);
+      ['fbumper', 'rbumper', 'skirt'].forEach(function (slot) { if (vis[slot]) kitParts.push(K[slot][vis[slot] === 1 ? 0 : 1]); });
+      if (vis.hood) kitParts.push(K.hood);
+      if (vis.vinyl === 1) kitParts.push(K.decals);
+      if (look.cage) kitParts.push(K.cage);
+      kitParts.forEach(function (n) { kitLists.push(DR.SHEETS[B.sheet].parts[n]); });
+    }
+    if (B.livery) vis = Object.assign({}, vis, { vinyl: 0 });          // the race build wears its own livery
     var minX = x0, maxX = x1;
-    kitParts.forEach(function (n) { sh.parts[n].forEach(function (q) { minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); }); });
-    var padL = 8 + (x0 - minX), padT = 30;
+    kitLists.forEach(function (l) { l.forEach(function (q) { minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); }); });
+    var padL = 8 + (x0 - minX), padT = 30 * (B.dens || 1);
     var Ws = srcLen + padL + 8 + (maxX - x1), Hs = gy - y0 + padT + 1;
     // layers at 1 px per sheet pixel, scaled up by RS at the end
     var body = new Uint8ClampedArray(Ws * Hs * 4), under = new Uint8ClampedArray(Ws * Hs * 4);
@@ -360,7 +397,7 @@
       if (!keep && isPaint(B, c)) {
         var xu = (sx - x0 + 0.5) / u, yu = (gy - sy + 0.5) / u;
         c = paintCol(paintStep(B, c), px, py);
-        if (stripe && sy <= B.rocker && Math.abs(sy - (B.belt + (B.rocker - B.belt) * 0.3)) < 2.4 * u) c = stripe;
+        if (stripe && !B.livery && sy <= B.rocker && Math.abs(sy - (B.belt + (B.rocker - B.belt) * 0.3)) < 2.4 * u) c = stripe;
         var vc = vinylAt(xu, yu); if (vc) c = vc;
       } else if (vis.tint && sy < B.belt + 2 && rgb2hsv(c)[1] < 0.35 && c[2] > c[0] + 6 && lum(c) > 0.3) {
         c = mix(c, [18, 22, 30], vis.tint === 2 ? 0.72 : 0.42);                                                     // window tint
@@ -373,8 +410,8 @@
     // ---- body kit: the parts the sheet's two built cars wear (a street
     // build and a race build), mapped onto this car (egsheet.js); paint
     // pixels take this car's paint
-    kitParts.forEach(function (name) {
-      sh.parts[name].forEach(function (q) {
+    kitLists.forEach(function (list) {
+      list.forEach(function (q) {
         var c = q[2][0] === 'p' ? paintCol(+q[2].slice(1), lx(q[0]), ly(q[1])) : hexToRgb('#' + q[2]);
         put(body, lx(q[0]), ly(q[1]), c);
       });
@@ -389,25 +426,26 @@
       }
     }
 
-    // ---- scale up to the sprite resolution
-    var W = Ws * RS, H = Hs * RS;
+    // ---- to the sprite resolution: F sprite px per sheet px (RS, or RS / 2
+    // for a sheet drawn at twice the density)
+    var W = Math.round(Ws * F), H = Math.round(Hs * F);
     function toCanvas(L) {
       var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
       var ctx = cv.getContext('2d'), img = ctx.createImageData(W, H), d = img.data;
       for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
-        var si = (((y / RS) | 0) * Ws + ((x / RS) | 0)) * 4, di = (y * W + x) * 4;
+        var si = (Math.min(Hs - 1, (y / F) | 0) * Ws + Math.min(Ws - 1, (x / F) | 0)) * 4, di = (y * W + x) * 4;
         d[di] = L[si]; d[di + 1] = L[si + 1]; d[di + 2] = L[si + 2]; d[di + 3] = L[si + 3];
       }
       ctx.putImageData(img, 0, 0);
       return cv;
     }
     var cv = toCanvas(body), cvU = toCanvas(under);
-    var groundY = H - 1, padLp = padL * RS;
-    function X(sx) { return (sx - x0 + padL + 0.5) * RS; }
-    function Y(sy) { return (sy - y0 + padT + 0.5) * RS; }
-    var wheelR = { x: X(B.wheelR[0]) - 0.5 * RS, y: groundY - rR * RS, r: rR * RS };
-    var wheelF = { x: X(B.wheelF[0]) - 0.5 * RS, y: groundY - rF * RS, r: rF * RS };
-    var raw = { w: W, h: H, padL: padLp, lenPx: srcLen * RS, groundY: groundY, wheelR: wheelR, wheelF: wheelF,
+    var groundY = H - 1, padLp = padL * F;
+    function X(sx) { return (sx - x0 + padL + 0.5) * F; }
+    function Y(sy) { return (sy - y0 + padT + 0.5) * F; }
+    var wheelR = { x: X(B.wheelR[0]) - 0.5 * F, y: groundY - rR * F, r: rR * F };
+    var wheelF = { x: X(B.wheelF[0]) - 0.5 * F, y: groundY - rF * F, r: rF * F };
+    var raw = { w: W, h: H, padL: padLp, lenPx: srcLen * F, groundY: groundY, wheelR: wheelR, wheelF: wheelF,
       tail: { x: Math.round(X(B.tail[0])), y: Math.round(Y(B.tail[1])) }, head: { x: Math.round(X(B.head[0])), y: Math.round(Y(B.head[1])) },
       exhaust: { x: X(B.exhaust[0]) - 2 * RS, y: Y(B.exhaust[1]) } };
     function sc(o) { if (!o) return o; var r = {}; for (var kk in o) r[kk] = o[kk] / RS; return r; }
