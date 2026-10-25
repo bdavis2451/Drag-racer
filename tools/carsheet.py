@@ -153,7 +153,15 @@ def build(cfg, prev_dir=None):
         (wr, wf), ground = info[i]
         builds.append(dict(rgb=rgb, a=a, f=f, wheelR=[wr[0] * f, wr[1] * f, wr[2] * f], wheelF=[wf[0] * f, wf[1] * f, wf[2] * f],
                            ground=int(round(ground * f))))
-        print('%-6s sheet wheelbase %.1f  scale %.3f  size %dx%d  wheels r %.1f / %.1f' % (NAMES[i], wb[i], f, a.shape[1], a.shape[0], wr[2] * f, wf[2] * f))
+        if i:
+            # same tires on every build: one radius per build, no bigger than the
+            # stock's (a fit through a flared arch or a lip reads large), sat on
+            # the ground line
+            sr = (builds[0]['wheelR'][2] + builds[0]['wheelF'][2]) / 2
+            r_ = min((wr[2] + wf[2]) * f / 2, sr * 1.03)
+            for w_ in (builds[-1]['wheelR'], builds[-1]['wheelF']):
+                w_[2] = r_; w_[1] = min(w_[1], builds[-1]['ground'] - r_)
+        print('%-6s sheet wheelbase %.1f  scale %.3f  size %dx%d  wheels r %.1f / %.1f' % (NAMES[i], wb[i], f, a.shape[1], a.shape[0], builds[-1]['wheelR'][2], builds[-1]['wheelF'][2]))
 
     # ---- paint: body-colour pixels become ramp steps by brightness, judged
     # against the stock car's paint (so every build shades the same)
@@ -214,19 +222,42 @@ def build(cfg, prev_dir=None):
                 if not b['a'][y, x] or x > reg_x: continue
                 sx, sy = int(round(x + dx)), int(round(y + dy))
                 inside = 0 <= sx < s['a'].shape[1] and 0 <= sy < s['a'].shape[0] and grown[sy, sx]
-                dark = b['hsv'][y, x, 2] < 0.3 and b['hsv'][y, x, 1] < 0.35
+                # dark or grey (mounts, uprights) over the stock's paint
+                dark = (b['hsv'][y, x, 2] < 0.3 and b['hsv'][y, x, 1] < 0.35) or (b['hsv'][y, x, 1] < 0.2 and not b['paint'][y, x])
                 core = inside and s['a'][sy, sx]
-                if not inside or (core and dark and not (s['hsv'][sy, sx, 2] < 0.3 and s['hsv'][sy, sx, 1] < 0.35)):
+                if not inside or (core and dark and s['paint'][sy, sx]):
                     over.append((x, y))
         # only a real wing (a few dozen pixels), not edge noise
         if len(over) < 30: over = []
+        # the wing's stubs and lips that sit in the 3 px margin: anything joined
+        # to the wing there that the stock outline itself doesn't cover
+        seen = set(over); stack = list(over)
+        while stack:
+            x, y = stack.pop()
+            for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if (nx, ny) in seen or not (0 <= nx < W and 0 <= ny < H) or ny > reg_y or nx > reg_x or not b['a'][ny, nx]: continue
+                sx, sy = int(round(nx + dx)), int(round(ny + dy))
+                if 0 <= sx < s['a'].shape[1] and 0 <= sy < s['a'].shape[0] and s['a'][sy, sx]: continue
+                seen.add((nx, ny)); over.append((nx, ny)); stack.append((nx, ny))
+        hole = []
         for (x, y) in over:
             b.setdefault('wingpx', []).append((x, y, b['rgb'][y, x].copy(), bool(b['paint'][y, x]), int(b['step'][y, x])))
             b['a'][y, x] = False
             sx, sy = int(round(x + dx)), int(round(y + dy))
-            # under an upright that crossed the stock body, put the stock pixel back
-            if 0 <= sx < s['a'].shape[1] and 0 <= sy < s['a'].shape[0] and s['a'][sy, sx]:
-                b['a'][y, x] = True; b['rgb'][y, x] = s['rgb'][sy, sx]; b['paint'][y, x] = s['paint'][sy, sx]; b['step'][y, x] = s['step'][sy, sx]
+            if 0 <= sx < s['a'].shape[1] and 0 <= sy < s['a'].shape[0] and s['a'][sy, sx]: hole.append((x, y))
+        # under an upright that crossed the body, fill in from the build's own
+        # neighbouring body pixels (the stock's pixels there don't line up)
+        hole = set(hole)
+        while hole:
+            done = []
+            for (x, y) in hole:
+                for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                    if 0 <= nx < W and 0 <= ny < H and b['a'][ny, nx] and (nx, ny) not in hole:
+                        done.append((x, y, nx, ny)); break
+            if not done: break
+            for (x, y, nx, ny) in done:
+                b['a'][y, x] = True; b['rgb'][y, x] = b['rgb'][ny, nx]; b['paint'][y, x] = b['paint'][ny, nx]; b['step'][y, x] = b['step'][ny, nx]
+                hole.discard((x, y))
         wings.append(b)
     # ---- palette: paint steps plus the other colours quantised together
     others = np.concatenate([b['rgb'][b['a'] & ~b['paint']] for b in builds] + [np.array([[0, 0, 0]])])
