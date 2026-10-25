@@ -202,7 +202,7 @@
   // however much money they have.
   DR.CAR_SCHEDULE = {
     '0.4': ['hauler'],
-    '0.boss': ['volta', 'cobaltss', 'camaro'],
+    '0.boss': ['fox', 'volta', 'cobaltss', 'camaro'],
     '1.2': ['kaze', 'silvia'], '1.4': ['z35', 'nova'], '1.6': ['m3', 'belair'], '1.8': ['s2k', 'vette5'],
     '1.boss': ['sti', 'evo', 'cobra03', 'camss'],
     '2.2': ['lightning', 'willys'], '2.4': ['rx7', 'gnx'], '2.6': ['stang15'], '2.8': ['chevelle', 'supra'],
@@ -225,7 +225,7 @@
 
   // ---------------------------------------------------------------- state
   G.careerDefaults = function () {
-    return { stage: 0, won: {}, sponsor: {}, perf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF }, vis: {}, cars: { fox: 1, hachi: 1 }, bestStars: 0 };
+    return { stage: 0, won: {}, sponsor: {}, perf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF }, vis: {}, cars: { hachi: 1 }, bestStars: 0 };
   };
   function C() { if (!G.state.career || G.state.career.perf == null) G.state.career = G.careerDefaults(); return G.state.career; }
   G.careerState = C;

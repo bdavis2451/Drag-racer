@@ -128,8 +128,10 @@
   G.pay = function (p) { G.state.money -= p; G.save(); };
   G.earn = function (p) { G.state.money += p; G.state.stats.earned += Math.max(0, p); G.save(); };
 
-  // first-car choices: every car up to $8k (the two with full art first)
-  G.starters = ['fox', 'hachi'].concat(Object.keys(DR.CARS).filter(function (id) { return id !== 'fox' && id !== 'hachi' && DR.CARS[id].price <= 8000; })
+  // first-car choices: every car up to $8k except the Fox GT, which runs
+  // with the first league's boss stock and is his car to win instead
+  DR.NOT_STARTERS = { fox: 1 };
+  G.starters = ['hachi'].concat(Object.keys(DR.CARS).filter(function (id) { return id !== 'hachi' && !DR.NOT_STARTERS[id] && DR.CARS[id].price <= 8000; })
     .sort(function (a, b) { return DR.CARS[b].price - DR.CARS[a].price; }));
   G.newGame = function (starterId) {
     G.state = G.defaults();

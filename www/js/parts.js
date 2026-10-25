@@ -20,11 +20,11 @@
     t_budget:    { name: 'Budget T3/T4 Turbo Kit',    type: 'turbo', maxBoost: 18, flow: 340,  spool: 3500, lag: 0.45, w: 20, price: 1200,  desc: 'A cheap journal-bearing turbo on a log manifold. Lazy, but it is boost.' },
     t_gt28:      { name: 'Ball-Bearing Turbo 50mm',   type: 'turbo', maxBoost: 22, flow: 380,  spool: 2900, lag: 0.24, w: 16, price: 2400,  desc: 'Small ball-bearing turbo: spools early, made for little engines.' },
     t_small:     { name: 'Small Turbo 54mm',          type: 'turbo', maxBoost: 24, flow: 480,  spool: 3300, lag: 0.30, w: 18, price: 3500,  desc: 'Quick spool, runs out of air up top.' },
-    t_61:        { name: 'Turbo 61mm',                type: 'turbo', maxBoost: 28, flow: 640,  spool: 3600, lag: 0.36, w: 20, price: 4500,  desc: 'A step up from the 54mm without much more lag.' },
+    t_61:        { name: 'Turbo 61mm',                type: 'turbo', maxBoost: 28, flow: 640,  spool: 3600, lag: 0.36, w: 20, price: 4500, lvl: 4,  desc: 'A step up from the 54mm without much more lag.' },
     t_twin_sm:   { name: 'Twin 50mm Turbos',          type: 'turbo', maxBoost: 26, flow: 700,  spool: 3300, lag: 0.27, w: 32, price: 5500,  desc: 'Two small turbos, one per bank: quick spool on a V6 or V8.' },
     t_med:       { name: 'Medium Turbo 64mm',         type: 'turbo', maxBoost: 32, flow: 780,  spool: 3900, lag: 0.42, w: 22, price: 6000,  desc: 'The street/strip sweet spot.' },
-    t_67:        { name: 'Turbo 67mm',                type: 'turbo', maxBoost: 35, flow: 950,  spool: 4300, lag: 0.48, w: 24, price: 7500,  desc: 'Radial-tire power with street manners.' },
-    t_large:     { name: 'Large Turbo 76mm',          type: 'turbo', maxBoost: 40, flow: 1150, spool: 4900, lag: 0.55, w: 26, price: 9500,  desc: 'Big power, big lag. Pairs well with a 2-step.' },
+    t_67:        { name: 'Turbo 67mm',                type: 'turbo', maxBoost: 35, flow: 950,  spool: 4300, lag: 0.48, w: 24, price: 7500, lvl: 5,  desc: 'Radial-tire power with street manners.' },
+    t_large:     { name: 'Large Turbo 76mm',          type: 'turbo', maxBoost: 40, flow: 1150, spool: 4900, lag: 0.55, w: 26, price: 9500, lvl: 5,  desc: 'Big power, big lag. Pairs well with a 2-step.' },
     t_80:        { name: 'Turbo 80mm',                type: 'turbo', maxBoost: 45, flow: 1400, spool: 5000, lag: 0.6,  w: 28, price: 13000, desc: 'Big single for big power. Needs a 2-step to launch.' },
     t_twin:      { name: 'Twin 67mm Turbos',          type: 'turbo', maxBoost: 42, flow: 1500, spool: 4300, lag: 0.45, w: 40, price: 16000, desc: 'Two medium turbos: spools faster than one big one.' },
     t_huge:      { name: 'Huge Turbo 88mm',           type: 'turbo', maxBoost: 50, flow: 2000, spool: 5300, lag: 0.70, w: 32, price: 19000, desc: 'Radial-tire monster. Needs revs and an anti-lag.' },
@@ -32,8 +32,8 @@
     sc_m90:      { name: 'Small Roots Blower (M90)',  type: 'roots', maxBoost: 10, flow: 430,  paras: 0.12, w: 22, price: 2600,  desc: 'Factory-style blower: torque off idle, modest top end.' },
     sc_street:   { name: 'Centrifugal Street Kit',    type: 'cent',  maxBoost: 14, flow: 620,  paras: 0.06, w: 18, price: 3800,  desc: 'A bolt-on street blower. Boost builds with rpm.' },
     sc_roots:    { name: 'Roots Blower 6-71',         type: 'roots', maxBoost: 16, flow: 900,  paras: 0.14, w: 40, price: 7000,  desc: 'Instant boost from idle. Sticks out of the hood.' },
-    sc_screw:    { name: 'Twin-Screw 2.9L',           type: 'screw', maxBoost: 22, flow: 1250, paras: 0.10, w: 35, price: 9000,  desc: 'Efficient positive-displacement blower.' },
-    sc_cent:     { name: 'Centrifugal Supercharger',  type: 'cent',  maxBoost: 30, flow: 1350, paras: 0.07, w: 25, price: 8000,  desc: 'Boost climbs with RPM. Gentle on tires off the line.' },
+    sc_screw:    { name: 'Twin-Screw 2.9L',           type: 'screw', maxBoost: 22, flow: 1250, paras: 0.10, w: 35, price: 9000, lvl: 5,  desc: 'Efficient positive-displacement blower.' },
+    sc_cent:     { name: 'Centrifugal Supercharger',  type: 'cent',  maxBoost: 30, flow: 1350, paras: 0.07, w: 25, price: 8000, lvl: 5,  desc: 'Boost climbs with RPM. Gentle on tires off the line.' },
     sc_screw2:   { name: 'Twin-Screw 4.5L',           type: 'screw', maxBoost: 30, flow: 1800, paras: 0.11, w: 45, price: 14000, desc: 'Big-displacement screw blower. Huge torque everywhere.' },
     sc_cent2:    { name: 'Race Centrifugal F-Series', type: 'cent',  maxBoost: 40, flow: 2100, paras: 0.08, w: 30, price: 15000, desc: 'Gear-driven race blower. Builds boost hard up top.' },
     sc_1471:     { name: '14-71 Screw Blower',        type: 'roots', maxBoost: 40, flow: 3200, paras: 0.17, w: 60, price: 38000, desc: 'Pro Mod blower. Brutal, instant torque.' }
@@ -430,13 +430,13 @@
     }
     if (cat === 'rtires') {
       list.push({ id: car.tire, name: DR.TIRES[car.tire].name + ' (Factory)', price: 0, desc: tireDesc(car.tire) });
-      DR.TIRE_SHOP.forEach(function (t) { if (t !== car.tire) list.push({ id: t, name: DR.TIRES[t].name, price: DR.TIRES[t].price, desc: tireDesc(t) }); });
+      DR.TIRE_SHOP.forEach(function (t) { if (t !== car.tire) list.push({ id: t, name: DR.TIRES[t].name, price: DR.TIRES[t].price, lvl: DR.TIRES[t].lvl, desc: tireDesc(t) }); });
       return list;
     }
     if (cat === 'fi') {
       var st = DR.stockPart('fi', inst);
       list.push({ id: st, name: st === 'none' ? 'None (Naturally Aspirated)' : DR.FI[st].name + ' (Factory)', price: 0, desc: st === 'none' ? '' : 'Max ' + DR.FI[st].maxBoost + ' psi, feeds ~' + DR.FI[st].flow + ' hp.' });
-      DR.FI_SHOP.forEach(function (f) { var u = DR.FI[f]; list.push({ id: f, name: u.name, price: u.price, desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp.' }); });
+      DR.FI_SHOP.forEach(function (f) { var u = DR.FI[f]; list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp.' }); });
       return list;
     }
     if (cat === 'diff') {

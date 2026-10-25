@@ -1,7 +1,7 @@
 // Prints every career event's opponents with their estimated ETs, so each
 // stage ramps up and the bosses stay hardest.
 const path = require('path');
-for (const f of ['data.js', 'parts.js', 'physics.js', 'game.js', 'career.js']) require(path.join(__dirname, '..', 'www', 'js', f));
+for (const f of ['data.js', 'parts.js', 'physics.js', 'game.js', 'rivals.js', 'career.js']) require(path.join(__dirname, '..', 'www', 'js', f));
 const DR = globalThis.DR;
 DR.Game.state = DR.Game.defaults();
 DR.STAGES.forEach((st, si) => {
