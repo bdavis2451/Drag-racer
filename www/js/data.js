@@ -101,9 +101,20 @@ DR.TRANS = {
   dct6:     { name: '6-Speed Dual-Clutch',       type: 'dct',    ratios: [4.06, 2.30, 1.60, 1.25, 1.00, 0.80], shift: 0.10, maxTq: 800,  eff: 0.88, price: 10000 },
   dct7:     { name: '7-Speed Dual-Clutch',       type: 'dct',    ratios: [3.36, 2.10, 1.49, 1.13, 0.92, 0.75, 0.63], shift: 0.06, maxTq: 900,  eff: 0.88, price: 12000 },
   seq6:     { name: '6-Speed Sequential',        type: 'seq',    ratios: [2.90, 2.00, 1.50, 1.20, 1.00, 0.86], shift: 0.08, maxTq: 1500, eff: 0.90, price: 14000, adj: true },
+  // Transaxles: gearbox and differential in one case, for an engine that
+  // sits sideways (front-drive, and AWD cars built from them). Smaller
+  // gears and a diff in the case: they hold less than a rear-drive box.
+  tx5:      { name: '5-Speed Manual Transaxle',  type: 'manual', ratios: [3.25, 1.90, 1.27, 0.94, 0.76], shift: 0.38, maxTq: 400,  eff: 0.86, price: 1200, mount: 'T' },
+  tx5_hd:   { name: 'HD 5-Speed Transaxle',      type: 'manual', ratios: [3.38, 1.76, 1.18, 0.89, 0.71], shift: 0.37, maxTq: 600,  eff: 0.86, price: 2500, mount: 'T' },
+  tx6:      { name: '6-Speed Manual Transaxle',  type: 'manual', ratios: [3.36, 2.09, 1.47, 1.10, 0.89, 0.73], shift: 0.35, maxTq: 550, eff: 0.86, price: 3500, mount: 'T' },
+  tx6_hd:   { name: '6-Speed Transaxle (Built, Straight-Cut)', type: 'manual', ratios: [2.92, 2.05, 1.52, 1.17, 0.94, 0.78], shift: 0.30, maxTq: 1000, eff: 0.86, price: 6500, mount: 'T' },
+  tx4a:     { name: '4-Speed Automatic Transaxle', type: 'auto', ratios: [2.92, 1.57, 1.00, 0.71],   shift: 0.28, maxTq: 450,  eff: 0.82, price: 1800, mount: 'T' },
+  txdct:    { name: '6-Speed DSG Transaxle',     type: 'dct',    ratios: [3.46, 2.05, 1.30, 0.90, 0.91, 0.76], shift: 0.10, maxTq: 700, eff: 0.88, price: 9000, mount: 'T' },
+  txseq:    { name: '6-Speed Sequential Transaxle', type: 'seq', ratios: [2.92, 2.05, 1.58, 1.26, 1.04, 0.88], shift: 0.08, maxTq: 1200, eff: 0.90, price: 15000, adj: true, mount: 'T' },
   lenco5:   { name: 'Lenco 5-Speed Air-Shift',   type: 'seq',    ratios: [2.39, 1.69, 1.31, 1.12, 1.00], shift: 0.04, maxTq: 4500, eff: 0.91, price: 30000, adj: true }
 };
-DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'a4', 'a6', 'a8', 'a3_400', 'pg2', 'dct7', 'seq6', 'lenco5'];
+DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'a4', 'a6', 'a8', 'a3_400', 'pg2', 'dct7', 'seq6', 'lenco5',
+  'tx5', 'tx5_hd', 'tx6', 'tx6_hd', 'tx4a', 'txdct', 'txseq'];
 
 // ---------------------------------------------------------------------------
 // TIRES (driven axle)
@@ -231,6 +242,11 @@ DR.CAR_FIT = {
   hauler: [5, 'L', 800], lightning: [5, 'L', 850], diesel: [5, 'L', 1500], promod: [5, 'L', 0], rail: [5, 'L', 0]
 };
 Object.keys(DR.CAR_FIT).forEach(function (id) { var c = DR.CARS[id], f = DR.CAR_FIT[id]; c.bay = f[0]; c.mount = f[1]; c.shell = f[2] || Infinity; });
+// A transverse car's factory gearbox is a transaxle; when one is converted
+// to rear or all-wheel drive it gets the matching rear-drive box.
+DR.TX_FOR = { m5_light: 'tx5', m5_hd: 'tx5_hd', m6: 'tx6' };
+DR.TX_REAR = { tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6' };
+Object.keys(DR.CARS).forEach(function (id) { var c = DR.CARS[id]; if (c.mount === 'T' && DR.TX_FOR[c.trans]) c.trans = DR.TX_FOR[c.trans]; });
 // Dealer tabs, in rail order.
 DR.CAR_CATS =['Compact', 'JDM', 'Euro', 'Muscle', 'Classic', 'Truck', 'Pro'];
 // Kept so code that still looks here resolves.

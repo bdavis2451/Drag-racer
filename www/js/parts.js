@@ -281,8 +281,8 @@
   ]};
   C.layout = { name: 'Drivetrain Layout', options: [
     opt('stock', 'Factory Layout', 0, {}),
-    opt('rwd', 'RWD Conversion', 9000, { layout: 'RWD' }, 'Rear-wheel drive: weight transfer works for you.'),
-    opt('awd', 'AWD Conversion', 16000, { layout: 'AWD' }, 'All four wheels drive. +90 kg and some power loss.')
+    opt('rwd', 'RWD Conversion', 9000, { layout: 'RWD' }, 'Rear-wheel drive: weight transfer works for you. A front-drive car gets a lengthways driveline and a rear-drive gearbox.'),
+    opt('awd', 'AWD Conversion', 16000, { layout: 'AWD' }, 'All four wheels drive. +90 kg and some power loss. A front-drive car gets a lengthways driveline and a rear-drive gearbox.')
   ]};
   // sk: spring rate multiplier. low: fixed drop (m). adjS: ride height and
   // spring rates adjustable within ride [lo, hi] (m) and rate [lo, hi] (x).
@@ -412,11 +412,29 @@
     return e.disp.toFixed(1) + 'L ' + lay + ', ' + asp + (e.diesel ? ' diesel' : '');
   };
 
+  // Which gearboxes fit: a transverse car on its factory layout takes a
+  // transaxle (T); anything rear- or all-wheel drive from a lengthways
+  // driveline, including a converted car, takes a rear-drive box (L).
+  DR.converted = function (inst) { var l = inst.parts && inst.parts.layout; return !!l && l !== 'stock'; };
+  DR.transMount = function (inst) { return DR.CARS[inst.carId].mount === 'T' && !DR.converted(inst) ? 'T' : 'L'; };
+  DR.transFits = function (inst, id) { return (DR.TRANS[id].mount || 'L') === DR.transMount(inst); };
+  // the nearest box of the other kind (rear-drive box -> transaxle and back)
+  var TX_EQUIV = { m5_light: 'tx5', m5_t5_4: 'tx5', m5_t5_v6: 'tx5', m5_t5_v8: 'tx5', m5_hd: 'tx5_hd', m4_cl: 'tx5_hd', m6: 'tx6', m6_hd: 'tx6_hd',
+    a4: 'tx4a', a6: 'tx4a', a8: 'tx4a', a3_400: 'tx4a', pg2: 'tx4a', a2_pg: 'tx4a', dct6: 'txdct', dct7: 'txdct', seq6: 'txseq', lenco5: 'txseq',
+    tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6', tx6_hd: 'm6_hd', tx4a: 'a4', txdct: 'dct7', txseq: 'seq6' };
+  DR.transEquiv = function (id) { return TX_EQUIV[id] || id; };
+  // a build (an opponent's, an old save's) with a gearbox that can't fit
+  // gets the matching box of the right kind
+  DR.fitTrans = function (inst) {
+    var t = inst.parts && inst.parts.trans;
+    if (t && !DR.transFits(inst, t)) { var q = DR.transEquiv(t); if (q === DR.stockPart('trans', inst)) delete inst.parts.trans; else inst.parts.trans = q; }
+    return inst;
+  };
   // Stock option id for a category on this car instance.
   DR.stockPart = function (cat, inst) {
     var car = DR.CARS[inst.carId];
     if (cat === 'engine') return car.engine;
-    if (cat === 'trans') return car.trans;
+    if (cat === 'trans') return DR.converted(inst) && DR.TX_REAR[car.trans] ? DR.TX_REAR[car.trans] : car.trans;
     if (cat === 'rtires') return car.tire;
     if (cat === 'diff') return car.diff;
     if (cat === 'fi') { var e = DR.ENGINES[inst.engine || car.engine]; return e.fi ? e.fi.part : 'none'; }
@@ -450,8 +468,9 @@
       return list;
     }
     if (cat === 'trans') {
-      list.push({ id: car.trans, name: DR.TRANS[car.trans].name + ' (Factory)', price: 0, desc: transDesc(car.trans) });
-      DR.TRANS_SHOP.forEach(function (t) { if (t !== car.trans) list.push({ id: t, name: DR.TRANS[t].name, price: DR.TRANS[t].price, desc: transDesc(t) }); });
+      var fac = DR.stockPart('trans', inst);
+      list.push({ id: fac, name: DR.TRANS[fac].name + (fac === car.trans ? ' (Factory)' : ' (with the conversion)'), price: 0, desc: transDesc(fac) });
+      DR.TRANS_SHOP.forEach(function (t) { if (t !== fac && DR.transFits(inst, t)) list.push({ id: t, name: DR.TRANS[t].name, price: DR.TRANS[t].price, desc: transDesc(t) }); });
       return list;
     }
     if (cat === 'rtires') {
@@ -548,7 +567,7 @@
     var x = DR.TRANS[t];
     var kind = { manual: 'Manual', auto: 'Automatic', seq: 'Sequential', dct: 'Dual-clutch' }[x.type];
     return kind + ', ' + x.ratios.length + ' gears, ' + Math.round(x.shift * 1000) + ' ms shifts, holds ' + x.maxTq + ' Nm' +
-      (x.adj ? '. Adjustable gear ratios.' : '.');
+      (x.adj ? '. Adjustable gear ratios.' : '.') + (x.mount === 'T' ? ' A transaxle, for a sideways engine.' : '');
   }
   function tireDesc(t) {
     var x = DR.TIRES[t];
@@ -636,10 +655,10 @@
     // (a dual-clutch only ever steps up to a sequential: a manual shifts slower)
     var fam = tr.type === 'auto' ? ['auto'] : tr.type === 'dct' ? ['dct', 'seq'] : [tr.type, 'manual', 'seq'];
     for (var f = 0; f < fam.length; f++) {
-      var ok = DR.TRANS_SHOP.filter(function (t) { return DR.TRANS[t].type === fam[f] && DR.TRANS[t].maxTq >= need; }).sort(function (a, b) { return DR.TRANS[a].price - DR.TRANS[b].price; });
+      var ok = DR.TRANS_SHOP.filter(function (t) { return DR.transFits(inst, t) && DR.TRANS[t].type === fam[f] && DR.TRANS[t].maxTq >= need; }).sort(function (a, b) { return DR.TRANS[a].price - DR.TRANS[b].price; });
       if (ok.length) return ok[0];
     }
-    return DR.TRANS_SHOP.filter(function (t) { return fam.indexOf(DR.TRANS[t].type) >= 0; }).sort(function (a, b) { return DR.TRANS[b].maxTq - DR.TRANS[a].maxTq; })[0];
+    return DR.TRANS_SHOP.filter(function (t) { return DR.transFits(inst, t) && fam.indexOf(DR.TRANS[t].type) >= 0; }).sort(function (a, b) { return DR.TRANS[b].maxTq - DR.TRANS[a].maxTq; })[0];
   }
   function clutchFor(min) { return function (inst) {
     var need = torqueNm(inst) * 1.1, opts = C.clutch.options;

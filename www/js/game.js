@@ -28,6 +28,9 @@
     for (var k in d) if (s[k] == null) s[k] = d[k];
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
+    // older saves could put a rear-drive gearbox in a front-drive car: it
+    // becomes the matching transaxle (and the other way around)
+    (s.cars || []).forEach(function (c) { try { if (c.parts) DR.fitTrans(c); } catch (e) { /* keep it */ } });
     G.state = s;
     if (G.syncUnlocks) try { G.syncUnlocks(); } catch (e) { /* keep what loaded */ }
   };
@@ -204,6 +207,7 @@
     }
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
     if (item.cat === 'engine') { var fit = DR.swapFit(inst, item.id); if (fit.block) return fit.block; }
+    if (item.cat === 'trans' && item.id && !DR.transFits(inst, item.id)) return DR.transMount(inst) === 'T' ? 'A rear-drive gearbox: this car takes a transaxle' : 'A transaxle only fits a front-drive (sideways engine) car';
     return '';
   };
   G.invFor = function (cat) { return G.state.inv.filter(function (it) { return it.cat === cat; }); };
@@ -243,6 +247,13 @@
       if (cat === 'chassis' && inst.damage && inst.damage.chassis) inst.damage = null;
     }
     clearTune(inst, cat, fiWas);
+    if (cat === 'layout') swapBoxKind(inst);
+  }
+  // converting to (or back from) a lengthways driveline takes off a gearbox
+  // that no longer fits; the conversion comes with a box of the right kind
+  function swapBoxKind(inst) {
+    var t = inst.parts.trans;
+    if (t && !DR.transFits(inst, t)) { stash(inst, 'trans'); delete inst.parts.trans; delete inst.tune.gears; }
   }
 
   G.buyPart = function (cat, id) {
@@ -279,7 +290,7 @@
   G.removePart = function (inst, cat) {
     if (DR.partId(cat, inst) === DR.stockPart(cat, inst) || G.removeIssue(inst, cat)) return false;
     if (cat === 'engine') setPart(inst, 'engine', DR.CARS[inst.carId].engine);
-    else { var fiWas = DR.partId('fi', inst); stash(inst, cat); delete inst.parts[cat]; clearTune(inst, cat, fiWas); }
+    else { var fiWas = DR.partId('fi', inst); stash(inst, cat); delete inst.parts[cat]; clearTune(inst, cat, fiWas); if (cat === 'layout') swapBoxKind(inst); }
     G.save();
     return true;
   };
@@ -414,7 +425,7 @@
   DR.RIVALS = BANDS.map(function (b) { return b.opps; });
 
   G.oppInst = function (o) {
-    return { uid: -1, carId: o.carId, engine: o.engine, parts: o.parts, tune: o.tune, vis: o.vis || {}, color: o.color || DR.CARS[o.carId].col, stripe: o.stripe || '', rim: o.rim || '#d0d0d0' };
+    return { uid: -1, carId: o.carId, engine: o.engine, parts: DR.fitTrans({ carId: o.carId, parts: Object.assign({}, o.parts) }).parts, tune: o.tune, vis: o.vis || {}, color: o.color || DR.CARS[o.carId].col, stripe: o.stripe || '', rim: o.rim || '#d0d0d0' };
   };
   // Estimated ET for an opponent / car (cached per build).
   var etCache = {};
