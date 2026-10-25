@@ -38,6 +38,12 @@
     sc_cent2:    { name: 'Race Centrifugal F-Series', type: 'cent',  maxBoost: 40, flow: 2100, paras: 0.08, w: 30, price: 15000, desc: 'Gear-driven race blower. Builds boost hard up top.' },
     sc_1471:     { name: '14-71 Screw Blower',        type: 'roots', maxBoost: 40, flow: 3200, paras: 0.17, w: 60, price: 38000, desc: 'Pro Mod blower. Brutal, instant torque.' }
   };
+  // compressor efficiency at its sweet spot: cheap and small units and
+  // roots blowers heat the air the most
+  var ETA = { fi_oem_s: 0.68, fi_oem_tt: 0.7, fi_oem_sc: 0.62, fi_oem_vgt: 0.72, t_budget: 0.6, t_gt28: 0.72, t_small: 0.68, t_61: 0.73, t_twin_sm: 0.71,
+    t_med: 0.74, t_67: 0.75, t_large: 0.76, t_80: 0.77, t_twin: 0.76, t_huge: 0.77, t_promod: 0.78,
+    sc_m90: 0.55, sc_street: 0.68, sc_roots: 0.52, sc_screw: 0.66, sc_cent: 0.72, sc_screw2: 0.68, sc_cent2: 0.74, sc_1471: 0.6 };
+  Object.keys(ETA).forEach(function (id) { if (DR.FI[id]) DR.FI[id].eta = ETA[id]; });
   DR.FI_SHOP = ['t_budget', 't_gt28', 't_small', 't_61', 't_twin_sm', 't_med', 't_67', 't_large', 't_80', 't_twin', 't_huge', 't_promod',
     'sc_m90', 'sc_street', 'sc_roots', 'sc_screw', 'sc_cent', 'sc_screw2', 'sc_cent2', 'sc_1471'];
 
@@ -166,10 +172,10 @@
     opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'Feeds 5000 hp.')
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
-    opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Boost over 17 psi will knock and stress the engine.'),
-    opt('e85', 'E85 Ethanol', 800, { knock: 30, fmul: 1.04, ff: 0.75 }, '+4% power, 30 psi safe. Needs 33% more fuel flow.'),
-    opt('race', 'Race Gas 116', 1200, { knock: 34, fmul: 1.03, ff: 1 }, '+3% power, 34 psi safe.'),
-    opt('meth', 'Methanol', 2500, { knock: 50, fmul: 1.06, ff: 0.62 }, '+6% power, 50 psi safe. Needs 60% more fuel flow.')
+    opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Knocks past 17 psi with a cool, intercooled charge, far sooner with a hot one.'),
+    opt('e85', 'E85 Ethanol', 800, { knock: 30, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, 30 psi safe with a cool charge, and it cools a hot one 15 C. Needs 33% more fuel flow.'),
+    opt('race', 'Race Gas 116', 1200, { knock: 34, fmul: 1.03, ff: 1 }, '+3% power, 34 psi safe with a cool charge.'),
+    opt('meth', 'Methanol', 2500, { knock: 50, fmul: 1.06, ff: 0.62, cool: 35 }, '+6% power, 50 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs 60% more fuel flow.')
   ]};
   // spark: extra psi of boost (and nitrous) the ignition can light before it
   // starts to misfire (stock ignition gives out a few psi past factory boost)
@@ -187,11 +193,11 @@
     opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3 }, 'Adjustable rev limiter and traction control.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
-    opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler; aftermarket kits have none.'),
-    opt('ic0', 'Budget Front-Mount', 500, { ic: 0.88 }, 'A thin core and long pipes. Better than nothing.'),
-    opt('ic1', 'Front-Mount Intercooler', 1200, { ic: 0.93 }, 'Cooler charge = more power per psi.'),
-    opt('ic2', 'Large Race Intercooler', 2200, { ic: 0.97 }),
-    opt('ic3', 'Air-to-Water + Ice Tank', 4000, { lvl: 4, ic: 1.0 }, 'Maximum charge cooling.')
+    opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler (takes out 60% of the heat); a bolt-on kit has none, so the charge goes in hot.'),
+    opt('ic0', 'Budget Front-Mount', 500, { ic: 0.55 }, 'A thin core and long pipes: takes out 55% of the heat. Better than nothing.'),
+    opt('ic1', 'Front-Mount Intercooler', 1200, { ic: 0.72 }, 'Takes out 72% of the heat: a cooler, denser charge makes more power per psi and knocks later.'),
+    opt('ic2', 'Large Race Intercooler', 2200, { ic: 0.82 }, 'Takes out 82% of the heat.'),
+    opt('ic3', 'Air-to-Water + Ice Tank', 4000, { lvl: 4, ic: 0.88, sink: 5 }, 'Ice water in the core: the charge can go in colder than the air outside.')
   ]};
   // gate: share of the turbo's max boost the wastegate can hold steady
   // (an aftermarket turbo's little internal gate creeps and can't hold much)
@@ -420,7 +426,7 @@
   DR.transFits = function (inst, id) { return (DR.TRANS[id].mount || 'L') === DR.transMount(inst); };
   // the nearest box of the other kind (rear-drive box -> transaxle and back)
   var TX_EQUIV = { m5_light: 'tx5', m5_t5_4: 'tx5', m5_t5_v6: 'tx5', m5_t5_v8: 'tx5', m5_hd: 'tx5_hd', m4_cl: 'tx5_hd', m6: 'tx6', m6_hd: 'tx6_hd',
-    a4: 'tx4a', a6: 'tx4a', a8: 'tx4a', a3_400: 'tx4a', pg2: 'tx4a', a2_pg: 'tx4a', dct6: 'txdct', dct7: 'txdct', seq6: 'txseq', lenco5: 'txseq',
+    a4: 'tx4a', a6: 'tx4a', a4_hd: 'tx4a', a6_hd: 'tx4a', m6_tr: 'tx6_hd', a8: 'tx4a', a3_400: 'tx4a', pg2: 'tx4a', a2_pg: 'tx4a', dct6: 'txdct', dct7: 'txdct', seq6: 'txseq', lenco5: 'txseq',
     tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6', tx6_hd: 'm6_hd', tx4a: 'a4', txdct: 'dct7', txseq: 'seq6' };
   DR.transEquiv = function (id) { return TX_EQUIV[id] || id; };
   // a build (an opponent's, an old save's) with a gearbox that can't fit
@@ -789,6 +795,9 @@
       var want = Math.min(DR.PKG_BOOST[tier], S.knock - 1, S.sparkPsi, S.maxBoost);
       var was = S.boostSet;
       copy.tune.boost = Math.max(was, Math.round(want * 2) / 2);
+      // more boost heats the charge and lowers the knock limit: back off
+      // until it is a psi under it again
+      while (copy.tune.boost > was && DR.buildSpec(copy).knock - 1 < copy.tune.boost) copy.tune.boost -= 0.5;
       // and no more than the engine's internals take (that's the bottom-end
       // package's job)
       while (copy.tune.boost > was && DR.buildSpec(copy).risk.engine > 0) copy.tune.boost -= 0.5;

@@ -101,6 +101,10 @@ DR.TRANS = {
   dct6:     { name: '6-Speed Dual-Clutch',       type: 'dct',    ratios: [4.06, 2.30, 1.60, 1.25, 1.00, 0.80], shift: 0.10, maxTq: 800,  eff: 0.88, price: 10000 },
   dct7:     { name: '7-Speed Dual-Clutch',       type: 'dct',    ratios: [3.36, 2.10, 1.49, 1.13, 0.92, 0.75, 0.63], shift: 0.06, maxTq: 900,  eff: 0.88, price: 12000 },
   seq6:     { name: '6-Speed Sequential',        type: 'seq',    ratios: [2.90, 2.00, 1.50, 1.20, 1.00, 0.86], shift: 0.08, maxTq: 1500, eff: 0.90, price: 14000, adj: true },
+  // heavy-duty factory boxes for the cars that make the most torque stock
+  m6_tr:    { name: '6-Speed Manual (TR6060)',   type: 'manual', ratios: [2.26, 1.58, 1.19, 1.00, 0.77, 0.63], shift: 0.33, maxTq: 950,  eff: 0.86, price: 4500 },
+  a4_hd:    { name: '4-Speed Automatic HD (4R100)', type: 'auto', ratios: [2.71, 1.54, 1.00, 0.71],    shift: 0.28, maxTq: 900,  eff: 0.83, price: 2800 },
+  a6_hd:    { name: '6-Speed Automatic HD (68RFE)', type: 'auto', ratios: [3.23, 1.84, 1.41, 1.00, 0.82, 0.63], shift: 0.24, maxTq: 1600, eff: 0.83, price: 6000 },
   // Transaxles: gearbox and differential in one case, for an engine that
   // sits sideways (front-drive, and AWD cars built from them). Smaller
   // gears and a diff in the case: they hold less than a rear-drive box.
@@ -202,11 +206,11 @@ DR.CARS = {
   vette5:   { name: 'Chevrolet Corvette C5', alias: 'Corsa C5', real: '1997-04 Chevrolet Corvette coupe (C5)',             cat: 'Muscle',  body: 'sports',   price: 21000, m: 1555, f: 0.51, wb: 2.65, len: 4.6, h: 0.47, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'm6',       fd: 3.42, gears: [2.66, 1.78, 1.3, 1, 0.74, 0.5], tire: 'st_255', diff: 'lsd',  col: '#ffd200' },
   z06:      { name: 'Chevrolet Corvette Z06', alias: 'Corsa Z06', real: '2006-13 Chevrolet Corvette Z06 (C6)',            cat: 'Muscle',  body: 'sports',   price: 60000, m: 1500, f: 0.51, wb: 2.69, len: 4.5, h: 0.47, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_70',  trans: 'm6',       fd: 3.42, gears: [2.66, 1.78, 1.3, 1, 0.74, 0.5], tire: 'st_305', diff: 'lsd',  col: '#e6e6e6' },
   hellcat:  { name: 'Dodge Challenger Hellcat', alias: 'Hellhound SRT', real: '2015-23 Dodge Challenger SRT Hellcat',        cat: 'Muscle',  body: 'modern',   price: 68000, m: 2100, f: 0.56, wb: 2.95, len: 5.0, h: 0.54, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_62sc',trans: 'a8',       fd: 2.62, tire: 'st_305', diff: 'lsd',  col: '#4b1a6e' },
-  viper:    { name: 'Dodge Viper ACR', alias: 'Serpent ACR', real: '2016-17 Dodge Viper ACR (VX)',          cat: 'Muscle',  body: 'supercar', price: 110000,m: 1610, f: 0.50, wb: 2.51, len: 4.5, h: 0.45, cda: 0.66, drive: 'RWD', ep: 'front', engine: 'v10_84', trans: 'm6',       fd: 3.55, gears: [2.26, 1.58, 1.19, 1, 0.77, 0.63], tire: 'st_305', diff: 'lsd',  col: '#c8102e' },
+  viper:    { name: 'Dodge Viper ACR', alias: 'Serpent ACR', real: '2016-17 Dodge Viper ACR (VX)',          cat: 'Muscle',  body: 'supercar', price: 110000,m: 1610, f: 0.50, wb: 2.51, len: 4.5, h: 0.45, cda: 0.66, drive: 'RWD', ep: 'front', engine: 'v10_84', trans: 'm6_tr',       fd: 3.55, gears: [2.26, 1.58, 1.19, 1, 0.77, 0.63], tire: 'st_305', diff: 'lsd',  col: '#c8102e' },
   // ---- Trucks -----------------------------------------------------------------
   hauler:   { name: 'Chevrolet C1500', alias: 'Workhorse 1500', real: '1988-98 Chevrolet C1500 regular cab (GMT400)',       cat: 'Truck',   body: 'truck',    price: 9000,  m: 2150, f: 0.57, wb: 3.58, len: 5.8, h: 0.68, cda: 1.15, drive: 'RWD', ep: 'front', engine: 'v8_57tbi',  trans: 'a4',       fd: 3.42, tire: 'st_255', diff: 'open', col: '#2b4d2b' },
-  lightning:{ name: 'Ford F-150 Lightning', alias: 'Lightning SVX', real: '1999-04 Ford F-150 SVT Lightning',        cat: 'Truck',   body: 'truck',    price: 26000, m: 2200, f: 0.57, wb: 3.06, len: 5.3, h: 0.65, cda: 1.05, drive: 'RWD', ep: 'front', engine: 'v8_46sc',trans: 'a4',       fd: 3.55, gears: [2.71, 1.54, 1, 0.71], tire: 'st_305', diff: 'lsd',  col: '#d4d4d4' },
-  diesel:   { name: 'Ram 2500 Cummins', alias: 'Heavy Duty 2500 Diesel', real: '2010-18 Ram 2500 Cummins 6.7 crew cab',cat: 'Truck',  body: 'truck',    price: 48000, m: 3300, f: 0.60, wb: 3.80, len: 6.1, h: 0.75, cda: 1.30, drive: 'AWD', ep: 'front', engine: 'd_67',   trans: 'a6',       fd: 3.42, gears: [3.23, 1.84, 1.41, 1, 0.82, 0.63], tire: 'st_305', diff: 'lsd',  col: '#8b0000' },
+  lightning:{ name: 'Ford F-150 Lightning', alias: 'Lightning SVX', real: '1999-04 Ford F-150 SVT Lightning',        cat: 'Truck',   body: 'truck',    price: 26000, m: 2200, f: 0.57, wb: 3.06, len: 5.3, h: 0.65, cda: 1.05, drive: 'RWD', ep: 'front', engine: 'v8_46sc',trans: 'a4_hd',       fd: 3.55, gears: [2.71, 1.54, 1, 0.71], tire: 'st_305', diff: 'lsd',  col: '#d4d4d4' },
+  diesel:   { name: 'Ram 2500 Cummins', alias: 'Heavy Duty 2500 Diesel', real: '2010-18 Ram 2500 Cummins 6.7 crew cab',cat: 'Truck',  body: 'truck',    price: 48000, m: 3300, f: 0.60, wb: 3.80, len: 6.1, h: 0.75, cda: 1.30, drive: 'AWD', ep: 'front', engine: 'd_67',   trans: 'a6_hd',       fd: 3.42, gears: [3.23, 1.84, 1.41, 1, 0.82, 0.63], tire: 'st_305', diff: 'lsd',  col: '#8b0000' },
   // ---- Pro / Race ---------------------------------------------------------------
   promod:   { name: 'Pro Mod Camaro', alias: 'Pro Mod Camero', real: 'Pro Mod Camaro (tube-chassis drag car, Camaro body)',       cat: 'Pro',     body: 'promod',   price: 210000,m: 1180, f: 0.48, wb: 2.67, len: 4.9, h: 0.46, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_86b', trans: 'lenco5',   fd: 3.20, tire: 'sl_33',  diff: 'spool',col: '#e31b6d' },
   rail:     { name: 'Top Dragster', alias: 'Rail Dragster', real: 'Rear-engine Top Dragster / Top Alcohol rail',        cat: 'Pro',     body: 'dragster', price: 320000,m: 900,  f: 0.25, wb: 6.4,  len: 8.0, h: 0.42, cda: 0.50, drive: 'RWD', ep: 'mid',   engine: 'bb_94',  trans: 'pg2',      fd: 3.70, tire: 'sl_36',  diff: 'spool',col: '#ffde00' }
@@ -226,6 +230,7 @@ DR.ENGINE_FIT = {
   v8_305: [4, 'L'], v8_283: [4, 'L'], sbc350: [4, 'L'], v8_57tbi: [4, 'L'], v8_50: [4, 'L'], v8_57: [4, 'L'], v8_62: [4, 'L'], v8_70: [4, 'L'],
   v8_46sc: [5, 'L'], v8_50d: [5, 'L'], hemi_70: [5, 'L'], bb_74: [5, 'L'], bb_94: [5, 'L'], v8_62sc: [5, 'L'], v10_84: [5, 'L'], v12_65: [5, 'L'], d_67: [5, 'L'], v8_86b: [5, 'L']
 };
+Object.keys(DR.ENGINES).forEach(function (id) { DR.ENGINES[id].id = id; });
 Object.keys(DR.ENGINE_FIT).forEach(function (id) { DR.ENGINES[id].size = DR.ENGINE_FIT[id][0]; DR.ENGINES[id].mount = DR.ENGINE_FIT[id][1]; });
 // Engine bays and shells: [bay size, mount, shell]. The bay takes engines up
 // to its size without cutting metal; shell is the power (hp, nitrous

@@ -25,16 +25,49 @@
     return Math.max(0.05, s);
   }
 
+  // ---- charge air. Compressing air heats it: the outlet temperature is
+  // T1 (1 + (PR^0.288 - 1) / eta), eta the compressor's efficiency (a
+  // cheap or small unit pushed near its limit is less efficient and runs
+  // hotter). The intercooler takes back its share of the heat down to
+  // ambient (an ice tank cools below it), and E85 or methanol cool the
+  // charge as they evaporate. Hot air is thin (less power per psi) and
+  // knocks sooner: the fuel's knock limit is for a 50 C charge and drops
+  // 0.12 psi per degree over it.
+  DR.AMBIENT_C = 25;
+  function chargeTemp(S, boost) {
+    if (S.fiType === 'none' || !(boost > 0)) return DR.AMBIENT_C;
+    var pr = (14.7 + boost) / 14.7, frac = S.fiMax ? boost / S.fiMax : 0;
+    var eta = Math.max(0.35, S.etaC - Math.max(0, frac - 0.75) * 0.3);
+    var t1 = DR.AMBIENT_C + 273.15, t2 = t1 * (1 + (Math.pow(pr, 0.288) - 1) / eta);
+    var sink = (S.icSink != null ? S.icSink : DR.AMBIENT_C) + 273.15;
+    return t2 - S.icE * (t2 - sink) - 273.15 - S.cool * Math.min(1, boost / 10);
+  }
+  function knockAt(S, iat) { return Math.min(S.knockFuel + 2, S.knockFuel - 0.12 * (iat - 50)); }
+  // A factory boosted engine is built for its boost (lower compression,
+  // timing to match): it gets the knock margin it needs to run factory boost
+  // on pump gas with its own intercooler, plus 2 psi.
+  var knockAddCache = {};
+  function engineKnockAdd(engId) {
+    if (knockAddCache[engId] != null) return knockAddCache[engId];
+    var e = DR.ENGINES[engId], add = 0;
+    if (e.fi && !e.diesel) {
+      var S = engineCore(e, { knock: 17, noAdd: true }, 1);
+      add = Math.max(0, e.fi.boost + 2 - knockAt(S, chargeTemp(S, e.fi.boost)));
+    }
+    return (knockAddCache[engId] = add);
+  }
+  DR.chargeTemp = chargeTemp;
   // Full-throttle torque (Nm) at rpm with a given boost (psi). No nitrous.
   function boostedTorque(S, rpm, boost) {
     var w = Math.max(rpm, 300) * RPM2W;
     var Tna = S.Tpk * shape(S, rpm);
     // past the mechanical limit the valves float: power falls away fast
     if (S.mech && rpm > S.mech) Tna *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
-    var be = Math.min(boost, S.knock) + Math.max(0, boost - S.knock) * 0.35;
+    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat) : 99;
+    var be = Math.min(boost, kn) + Math.max(0, boost - kn) * 0.35;
     // past what the ignition can light, cylinders misfire
     if (S.sparkPsi != null && boost > S.sparkPsi) be -= (boost - S.sparkPsi) * 0.7;
-    var T = Tna * (1 + be / 14.7 * S.icEff);
+    var T = Tna * (1 + be / 14.7) * (DR.AMBIENT_C + 273.15) / (iat + 273.15);
     if (S.fiType === 'roots' || S.fiType === 'screw' || S.fiType === 'cent')
       T -= S.paras * S.Tpk * (boost / 14.7) * Math.min(1, rpm / S.ref) * 1.2;
     // past what the compressor can flow it chokes and heats the charge:
@@ -104,8 +137,17 @@
     }
     S.paras = fi.paras || 0;
     S.flowW = fi.flow ? fi.flow * DR.HP : 0;
-    S.icEff = mods.ic || (fiId.indexOf('fi_oem') === 0 ? 0.92 : 0.82);
-    S.knock = e.diesel ? 99 : (mods.knock || 17);
+    // compressor efficiency, intercooler effectiveness (factory boosted
+    // engines have their own intercooler; a bolt-on kit has none) and fuel
+    // charge cooling
+    // (a factory turbo or blower is matched to its engine: it has headroom
+    // past factory boost before it falls off its sweet spot)
+    S.fiMax = fi.price ? fi.maxBoost || 0 : (fi.maxBoost || 0) * 1.25;
+    S.etaC = fi.eta || { turbo: 0.7, roots: 0.55, screw: 0.66, cent: 0.7 }[fi.type] || 0.7;
+    S.icE = mods.ic != null && mods.ic > 0 ? mods.ic : fiId.indexOf('fi_oem') === 0 ? 0.65 : 0;
+    S.icSink = mods.icSink;
+    S.cool = mods.cool || 0;
+    S.knockFuel = S.knock = e.diesel ? 99 : (mods.knock || 17) + (mods.noAdd ? 0 : engineKnockAdd(e.id));
     S.fuelW = 1e12;
     return S;
   }
@@ -124,7 +166,7 @@
     // asks for is under ~40% of what the turbo is built to flow, it sits
     // way left on its compressor map and needs a lot more revs to light
     if (sized && S.flowW && DR.FI[S.fiId].price) {
-      var want = shapePeak(S) * S.Tpk * (1 + S.boostSet / 14.7 * S.icEff), frac = want / S.flowW;
+      var want = shapePeak(S) * S.Tpk * (1 + S.boostSet / 14.7) * (DR.AMBIENT_C + 273.15) / (chargeTemp(S, S.boostSet) + 273.15), frac = want / S.flowW;
       if (frac < 0.4) S.spoolHi *= Math.min(1.6, Math.sqrt(0.4 / Math.max(0.05, frac)));
     }
     S.spoolLo = S.spoolHi * 0.55;
@@ -162,7 +204,7 @@
     var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
     // compression: high-comp pistons make more power but knock sooner
     var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crKnock = -3 * (pist.cr || 0);
-    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, knock: fuel.knock + (e.diesel ? 0 : crKnock) };
+    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: fuel.cool || 0, knock: fuel.knock + (e.diesel ? 0 : crKnock) };
     var S = engineCore(e, mods, 1);
     var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
     S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) / shapePeak(S);
@@ -272,6 +314,9 @@
     S.tune = T;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
     setSpool(S, true);
+    // the charge at full boost, and the knock limit that leaves the fuel
+    S.iat = chargeTemp(S, S.boostSet);
+    if (S.fiType !== 'none') S.knock = Math.floor(knockAt(S, S.iat) * 2) / 2;
     S.ratios = tr.adj ? T.gears.slice() : DR.boxRatios(trId, car);
     S.fd = T.fd;
 
@@ -478,6 +523,7 @@
     }
     if ((S.fiType !== 'none' && S.boostSet > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
     if (S.fiType !== 'none' && S.boostSet > S.knock + 0.5) out.fueltype = 'Knocking at ' + S.boostSet + ' psi';
+    if (S.fiType !== 'none' && !S.diesel && S.iat > 75) out.ic = 'Charge is ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F)';
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) out.fi = 'Out of breath';
     if (r.axle > 0.005) out.rearend = 'Axles may snap';
     if (r.trans > 0.005) out.trans = 'Too much torque';
@@ -534,7 +580,8 @@
       r.notes.push('Rev limiter is ' + (S.red - S.mech) + ' rpm past the ' + (S.vtLimit <= S.beLimit ? 'valvetrain (valve float)' : WEAK[S.beWeak] || 'bottom end'));
     }
     if (S.boostSet > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + S.boostSet + ' psi - misfiring past ' + S.sparkPsi + ' psi');
-    if (S.boostSet > S.knock + 0.5) { r.engine += Math.min(0.6, (S.boostSet - S.knock) * 0.05); r.notes.push('Boost is past the knock limit of the fuel (' + S.knock + ' psi)'); }
+    if (S.boostSet > S.knock + 0.5) { r.engine += Math.min(0.6, (S.boostSet - S.knock) * 0.05); r.notes.push('Boost is past the knock limit (' + S.knock + ' psi' + (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + ')'); }
+    if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
     if (S.fuelW < (S.peakHp * DR.HP) * 1.001) r.notes.push((S.fuelInj < S.fuelPump ? 'Injectors are' : S.fuelPump < S.fuelInj ? 'Fuel pump is' : 'Fuel system is') + ' maxed out - power is limited');
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);

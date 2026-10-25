@@ -362,6 +362,7 @@
       stat('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
       inst.best && inst.best.q ? stat('BEST 1/4', inst.best.q.toFixed(3) + 's', 'acc') : null,
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
+      S.fiType !== 'none' && !S.diesel && S.iat > 75 ? h('div', { class: 'bad gsmall' }, '🌡 Hot intake: ' + Math.round(S.iat) + ' C / ' + Math.round(S.iat * 1.8 + 32) + ' F at ' + S.boostSet + ' psi') : null,
       DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null,
       h('div', { class: 'gsmall acc' }, UI.careerLine().textContent.replace('Career: ', '')),
       h('div', { class: 'gsmall dim' }, 'Record ' + G.state.stats.wins + 'W / ' + (G.state.stats.races - G.state.stats.wins) + 'L'));
