@@ -1,0 +1,2 @@
+{ "id": "fox23", "sheet": "tools/carsheets/fox23.png", "lenM": 4.6,
+  "panels": { "stock": [25, 160, 765, 402], "street": [780, 160, 1512, 402], "wide": [25, 450, 765, 708], "race": [780, 450, 1512, 708] } }
