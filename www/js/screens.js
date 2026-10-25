@@ -81,7 +81,7 @@
   }
   function nextEvent(st) {
     var next = null;
-    st.all.forEach(function (ev) { if (!next && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) next = ev; });
+    st.all.forEach(function (ev) { if (!next && !ev.side && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) next = ev; });
     return next;
   }
 
@@ -152,7 +152,7 @@
         h('div', { class: 'gsmall dim' }, wins + ' / ' + st.events.length + ' races won')),
       sponsorCard(c));
     var grid = h('div', { class: 'egrid' }), hidden = 0, next = null;
-    st.all.forEach(function (ev) { if (!next && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) next = ev; });
+    st.all.forEach(function (ev) { if (!next && !ev.side && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) next = ev; });
     st.all.forEach(function (ev) {
       if (!G.eventVisible(ev)) { hidden++; return; }
       var card = eventCard(ev, ev === next);
@@ -175,17 +175,20 @@
   function oppCanvas(oi) { return UI.lazyPreview('ecv', oi, { aspect: 0.42 }); }
   function eventCard(ev, isNext) {
     var T = DR.EVENT_TYPES[ev.type], lock = G.eventLock(ev), won = G.eventWon(ev), o = ev.opps[0], oi = G.oppInst(o);
+    var issue = G.car() ? G.carIssue(G.car(), ev) : '';
     var who = ev.opps.length > 1 ? ev.opps.map(function (x) { return x.name; }).join(' → ') : o.name;
     var cls = 'ecard t-' + ev.type + (lock ? ' locked' : '') + (won ? ' won' : '') + (isNext ? ' next' : '');
     return h('div', { class: cls },
-      h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, ev.type === 'boss' ? 'BOSS' : T.name), won ? h('span', { class: 'ewon' }, 'WON') : null,
+      h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, ev.type === 'boss' ? 'BOSS' : ev.cls ? DR.CLASSES[ev.cls].name.toUpperCase() : T.name), won ? h('span', { class: 'ewon' }, 'WON') : null,
         isNext ? h('span', { class: 'enext' }, 'NEXT UP') : null),
       h('div', { class: 'acc ename' }, who),
       h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name),
+      ev.cls ? h('div', { class: 'gsmall acc' }, 'Side race • ' + DR.CLASSES[ev.cls].rule) : null,
       ev.unlocks.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + ev.unlocks.map(DR.unlockText).join(' • ')) : null,
       lock ? h('div', { class: 'warn gsmall' }, '🔒 ' + lock) : null,
-      h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))),
-        btn('Race', function () { if (lock) return UI.toast(lock); DR.Race.careerEvent(ev, 0); }, 'small ' + (lock ? 'disabled' : 'red'))));
+      !lock && issue ? h('div', { class: 'warn gsmall' }, '⚠ ' + issue) : null,
+      h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))), G.car() ? h('span', { class: 'dim gsmall' }, '−' + DR.money(DR.runCost(G.spec(G.car())).total) + ' run') : null,
+        btn('Race', function () { if (lock || issue) return UI.toast(lock || issue); DR.Race.careerEvent(ev, 0); }, 'small ' + (lock || issue ? 'disabled' : 'red'))));
   }
   function sponsorPicker(si) {
     var offers = G.sponsorOffers(si), close;

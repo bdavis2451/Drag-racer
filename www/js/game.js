@@ -203,6 +203,7 @@
       return 'Does not fit this car';
     }
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
+    if (item.cat === 'engine') { var fit = DR.swapFit(inst, item.id); if (fit.block) return fit.block; }
     return '';
   };
   G.invFor = function (cat) { return G.state.inv.filter(function (it) { return it.cat === cat; }); };
@@ -239,6 +240,7 @@
       if (id === DR.stockPart(cat, inst)) delete inst.parts[cat]; else inst.parts[cat] = id;
       if (cat === 'trans' && inst.damage && inst.damage.trans) inst.damage = null;
       if (cat === 'rearend' && inst.damage && inst.damage.axle) inst.damage = null;
+      if (cat === 'chassis' && inst.damage && inst.damage.chassis) inst.damage = null;
     }
     clearTune(inst, cat, fiWas);
   }
@@ -257,14 +259,25 @@
     if (!item) return { ok: false, msg: 'Part not found' };
     var why = G.partFitIssue(item, inst);
     if (why) { inv.push(item); return { ok: false, msg: why }; }
+    // an engine swap pays the shop for the install (labour, adapters,
+    // fabrication); it is work, not a part, so it never comes back
+    var fee = item.cat === 'engine' ? DR.swapFit(inst, item.id).install : 0;
+    if (fee && !G.canAfford(fee)) { inv.push(item); return { ok: false, msg: 'The install costs ' + DR.money(fee) }; }
+    if (fee) G.pay(fee);
     setPart(inst, item.cat, item.id);
     inst.spent += item.price;
     G.save();
     return { ok: true, msg: 'Installed ' + G.partName(item) };
   };
+  // Why a part can't come off right now ('' if it can).
+  G.removeIssue = function (inst, cat) {
+    var car = DR.CARS[inst.carId];
+    if (cat === 'layout' && car.drive === 'FWD' && DR.ENGINES[inst.engine].mount === 'L') return 'The ' + DR.ENGINES[inst.engine].name + ' needs the conversion. Swap the engine out first.';
+    return '';
+  };
   // Back to the factory part; the old one goes on the shelf.
   G.removePart = function (inst, cat) {
-    if (DR.partId(cat, inst) === DR.stockPart(cat, inst)) return false;
+    if (DR.partId(cat, inst) === DR.stockPart(cat, inst) || G.removeIssue(inst, cat)) return false;
     if (cat === 'engine') setPart(inst, 'engine', DR.CARS[inst.carId].engine);
     else { var fiWas = DR.partId('fi', inst); stash(inst, cat); delete inst.parts[cat]; clearTune(inst, cat, fiWas); }
     G.save();
@@ -299,6 +312,28 @@
     return 0;
   };
 
+  // ---------------------------------------------------------------- running costs
+  // What a race pass burns: fuel by power and fuel type, tire wear by power
+  // and compound (slicks cost more per pass), and the nitrous actually
+  // sprayed. Paid automatically after every race against someone (never on
+  // solo or test passes), and never more than you have.
+  var FUEL_COST = { stock: 1, e85: 1.15, race: 1.8, meth: 1.5 };
+  var TIRE_COST = { Street: 0.5, 'Drag Radial': 1, Slick: 1.4 };
+  DR.runCost = function (S, nosT) {
+    var k = 0.0006, fuel = k * Math.pow(S.peakHp, 1.8) * (FUEL_COST[S.fuelId] || 1);
+    var tires = k * Math.pow(S.peakHp + S.nosHp, 1.8) * (TIRE_COST[S.tire.kind] || 1) * (S.tire.price > 5000 ? 1.3 : 1);
+    var nos = S.nosHp ? S.nosRated * (nosT == null ? 6 : nosT) * 0.035 : 0;
+    var r = { fuel: Math.round(fuel), tires: Math.round(tires), nos: Math.round(nos) };
+    r.total = r.fuel + r.tires + r.nos;
+    return r;
+  };
+  G.payRunCost = function (S, nosT) {
+    var c = DR.runCost(S, nosT);
+    c.paid = Math.min(c.total, Math.max(0, G.state.money));
+    if (c.paid) G.pay(c.paid);
+    return c;
+  };
+
   // ---------------------------------------------------------------- damage
   // no other car that runs: the shop takes whatever you have, so a blown
   // engine can never leave you stuck with nothing to race
@@ -311,6 +346,7 @@
     if (!inst.damage) return 0;
     if (inst.damage.engine) return Math.round((DR.ENGINES[inst.engine].price * 0.35 + 800) / 50) * 50;
     if (inst.damage.axle) return 600;
+    if (inst.damage.chassis) return Math.round(Math.min(6000, 900 + DR.CARS[inst.carId].price * 0.04) / 50) * 50;
     if (inst.damage.trans) return Math.round((DR.TRANS[DR.partId('trans', inst)].price * 0.4 + 500) / 50) * 50;
     return 0;
   }

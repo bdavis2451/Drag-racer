@@ -200,8 +200,39 @@ DR.CARS = {
   promod:   { name: 'Pro Mod Camaro', alias: 'Pro Mod Camero', real: 'Pro Mod Camaro (tube-chassis drag car, Camaro body)',       cat: 'Pro',     body: 'promod',   price: 210000,m: 1180, f: 0.48, wb: 2.67, len: 4.9, h: 0.46, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_86b', trans: 'lenco5',   fd: 3.20, tire: 'sl_33',  diff: 'spool',col: '#e31b6d' },
   rail:     { name: 'Top Dragster', alias: 'Rail Dragster', real: 'Rear-engine Top Dragster / Top Alcohol rail',        cat: 'Pro',     body: 'dragster', price: 320000,m: 900,  f: 0.25, wb: 6.4,  len: 8.0, h: 0.42, cda: 0.50, drive: 'RWD', ep: 'mid',   engine: 'bb_94',  trans: 'pg2',      fd: 3.70, tire: 'sl_36',  diff: 'spool',col: '#ffde00' }
 };
+// Engine packaging for swaps: [size, mount]. size 1 (three-cylinder,
+// rotary) .. 5 (big-block, DOHC V8, V10/V12, Cummins); mount is how the
+// engine was built to sit: T transverse, L longitudinal, B both (the
+// block came both ways from the factory).
+DR.ENGINE_FIT = {
+  i3_10: [1, 'T'], f4_16: [1, 'L'], rot_13t: [1, 'L'],
+  i4_15: [2, 'T'], i4_18: [2, 'T'], i4_20: [2, 'T'], i4_20k: [2, 'T'], i4_20t3s: [2, 'T'],
+  i4_16: [2, 'B'], i4_16sc: [2, 'B'], i4_16b: [2, 'B'], i4_20t: [2, 'B'], i4_20tev: [2, 'B'],
+  i4_23: [2, 'L'], i4_23t: [2, 'L'], i4_20hi: [2, 'L'], f4_25t: [2, 'L'],
+  v6_38: [3, 'B'], v6_38sc: [3, 'B'], v6_35: [3, 'B'],
+  v6_38t: [3, 'L'], v6_38gnx: [3, 'L'], v6_38tt: [3, 'L'], f6_38tt: [3, 'L'],
+  i6_30: [3, 'L'], i6_30tt: [3, 'L'], i6_26tt: [3, 'L'], i6_32: [3, 'L'],
+  v8_305: [4, 'L'], v8_283: [4, 'L'], sbc350: [4, 'L'], v8_57tbi: [4, 'L'], v8_50: [4, 'L'], v8_57: [4, 'L'], v8_62: [4, 'L'], v8_70: [4, 'L'],
+  v8_46sc: [5, 'L'], v8_50d: [5, 'L'], hemi_70: [5, 'L'], bb_74: [5, 'L'], bb_94: [5, 'L'], v8_62sc: [5, 'L'], v10_84: [5, 'L'], v12_65: [5, 'L'], d_67: [5, 'L'], v8_86b: [5, 'L']
+};
+Object.keys(DR.ENGINE_FIT).forEach(function (id) { DR.ENGINES[id].size = DR.ENGINE_FIT[id][0]; DR.ENGINES[id].mount = DR.ENGINE_FIT[id][1]; });
+// Engine bays and shells: [bay size, mount, shell]. The bay takes engines up
+// to its size without cutting metal; shell is the power (hp, nitrous
+// included) the stock body takes before it starts to twist and crack.
+// Pro cars are tube chassis.
+DR.CAR_FIT = {
+  pip: [1, 'T', 250], ronin: [2, 'T', 300], bolt: [2, 'T', 350], kaze: [2, 'T', 350], volta: [3, 'T', 450], cobaltss: [3, 'T', 450], evo: [2, 'T', 500],
+  beetle: [2, 'L', 250], hachi: [2, 'L', 300], mira: [2, 'L', 300], s2k: [2, 'L', 450], sti: [2, 'L', 500],
+  silvia: [3, 'L', 400], rx7: [3, 'L', 450], m3: [3, 'L', 500], r34: [3, 'L', 550], p911: [3, 'L', 700],
+  fox: [4, 'L', 400], fox23: [4, 'L', 400], camaro6: [4, 'L', 450], camaro: [4, 'L', 450], supra: [4, 'L', 550], z35: [4, 'L', 500], gtr: [4, 'L', 700],
+  gnx: [4, 'L', 500], belair: [4, 'L', 600], vette5: [4, 'L', 600], z06: [4, 'L', 650],
+  nova: [5, 'L', 450], chevelle: [5, 'L', 600], charger: [5, 'L', 550], cuda: [5, 'L', 550], willys: [5, 'L', 600], monte: [5, 'L', 550],
+  camss: [5, 'L', 650], stang15: [5, 'L', 650], cobra03: [5, 'L', 500], hellcat: [5, 'L', 750], viper: [5, 'L', 800], lambo: [5, 'L', 900],
+  hauler: [5, 'L', 800], lightning: [5, 'L', 850], diesel: [5, 'L', 1500], promod: [5, 'L', 0], rail: [5, 'L', 0]
+};
+Object.keys(DR.CAR_FIT).forEach(function (id) { var c = DR.CARS[id], f = DR.CAR_FIT[id]; c.bay = f[0]; c.mount = f[1]; c.shell = f[2] || Infinity; });
 // Dealer tabs, in rail order.
-DR.CAR_CATS = ['Compact', 'JDM', 'Euro', 'Muscle', 'Classic', 'Truck', 'Pro'];
+DR.CAR_CATS =['Compact', 'JDM', 'Euro', 'Muscle', 'Classic', 'Truck', 'Pro'];
 // Kept so code that still looks here resolves.
 DR.CARS_RESERVE = {};
 

@@ -183,6 +183,7 @@
     if (r.engine > 0.001) out.push(h('div', { class: 'warnbox' }, 'Engine failure risk: ' + Math.round(r.engine * 100) + '% per run'));
     if (r.trans > 0.001) out.push(h('div', { class: 'warnbox' }, 'Transmission failure risk: ' + Math.round(r.trans * 100) + '% per run'));
     if (r.axle > 0.001) out.push(h('div', { class: 'warnbox' }, 'Broken axle risk: ' + Math.round(r.axle * 100) + '% per run'));
+    if (r.chassis > 0.001) out.push(h('div', { class: 'warnbox' }, 'Cracked chassis risk: ' + Math.round(r.chassis * 100) + '% per run'));
     r.notes.forEach(function (n) { out.push(h('div', { class: 'dim', style: { fontSize: '16px' } }, '• ' + n)); });
     return out;
   }
@@ -199,6 +200,7 @@
       ['Drive', S.drive + ', ' + S.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
       tr.type === 'auto' ? ['Converter', S.stall + ' stall' + (S.tbrake ? ' + transbrake' : ', foot brake')] : null,
       ['Tires', S.tire.name],
+      ['Chassis', (S.shell === Infinity ? 'takes any power' : 'takes ' + Math.round(S.shell) + ' hp') + ' • ' + ['no roll bar', 'roll bar', 'roll cage'][S.tech || 0], S.peakHp + S.nosHp > S.shell ? 'bad' : ''],
       ['Visual rating', DR.starText(DR.starRating(inst)), 'acc'],
       inst.best && inst.best.q ? ['Best 1/4', inst.best.q.toFixed(3) + 's', 'acc'] : null,
       inst.best && inst.best.e ? ['Best 1/8', inst.best.e.toFixed(3) + 's', 'acc'] : null
@@ -261,6 +263,7 @@
         p('6. The time slip comes up a couple of seconds after the finish. Tap WATCH to slide it away and see the cars coast down the shutdown. The back button (or Esc) always takes you back a screen.'),
         h('h2', {}, 'Career'),
         p('The career has six stages, from backroad beaters to Pro Mods. Each stage has a run of races (1/4 mile, 1/8 mile, night street races, three-round knockouts, sponsor races and night invitationals) and ends with a boss. Winning races reveals more races and unlocks parts. Beat the boss to open the next stage and new cars at the dealer.'),
+        p('Class races are side races with a rule, like real heads-up classes: four cylinders only, all motor, street tires, 275 radials, small blocks and more. They pay well for a car built to the rule, but you never need them to move on.'),
         p('A quick launch pays: a career win with a reaction time of 0.05 s or better earns a 15% perfect-launch bonus, 0.15 s or better a 5% good-launch bonus.'),
         p('Garage slots work like Underground 2: you start with room for one car, and every sponsor you sign opens another slot and pays for a car. Pick it at the dealer from the cars marked Take free (cars up to a price that grows each stage; Pro race cars are cash only). An unclaimed sponsor car waits for you. Sell a car to free up a slot; a sponsor car sells for its parts only.'),
         p('Sign one sponsor per stage. You get a signing bonus and a bonus for every win, plus a big payout when you fulfil the contract. The boss will only race you once your contract is done.'),
@@ -272,6 +275,10 @@
         p('Spend your winnings in the Parts Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod, colour-coded grey, green, blue, purple and orange) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
         p('Bought parts go into your inventory. Fit them in the garage under Install Parts: the old part comes off and goes back on the shelf, so you can swap it back, move it to another car or sell it for half price. Engine parts are built for one engine; swapping engines takes its parts off with it. Use the arrows in the garage to switch cars.'),
         p('Watch the risk warnings: too much power for your weakest bottom-end part (pistons, rods, crank or block), boost past your fuel\'s knock limit, or more torque than the gearbox or axles can hold can break parts mid-race. Repairs cost money!'),
+        p('Engine swaps pay the shop to fit the engine, on top of the engine. An engine that sits the same way as the old one (sideways in a front-drive car, lengthways in a rear-drive car) and fits the engine bay is a bolt-in job. A sideways (transverse) engine in a rear-drive car needs an adapter kit; a lengthways engine in a front-drive car needs a RWD or AWD conversion first. Every size bigger than the bay was built for means cutting and fabricating, up to a tube front half for a big-block in a small car.'),
+        p('Every body has a limit: past the power the stock shell takes, it twists on the launch and can crack. Subframe connectors, a roll bar or a cage let it take more; a tube chassis takes anything.'),
+        p('Tech inspection at the strip works like the NHRA\'s: a car that runs quicker than 11.50 in the quarter needs a roll bar, quicker than 10.00 a roll cage, and open cars need the roll bar from 13.50. Street races have no tech.'),
+        p('Racing costs a little: after every race against someone you pay for the fuel, tire wear and any nitrous you sprayed. More power, race fuel and slicks cost more per pass. It comes out automatically, never more than you have, and test passes are free.'),
         p('Race opens on the city map. Yellow markers are races (the number is how many), the bouncing arrow is your next race, red is the boss, green is the Route 99 street-race meet and blue markers are places to visit. Tap a marker to see what is there; tap a blue one twice to go. Drag to pan, pinch or use + and - to zoom.'),
         p('Drag the garage, dealer, body shop or paint shop view to look around the car up close (pinch or scroll to zoom, double-tap to reset).'),
         p('In a hurry? Parts Shop > Packages sells Budget, Street, Pro and Extreme kits for each group (or the whole car) at 10% off. They fit a matched set of parts sized to your car and skip anything you already have that is as good.'),

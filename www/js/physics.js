@@ -212,6 +212,7 @@
     S.twostep = launch.twostep;
     S.nosHp = Math.round(nos.nos * (nos.nos ? nheat.nosk : 1));
     S.nosRated = nos.nos;
+    S.fuelId = DR.partId('fueltype', inst);
     S.nosCut = S.nosHp > S.sparkNos;
     if (S.nosCut) S.nosHp = Math.round(S.sparkNos + (S.nosHp - S.sparkNos) * 0.4);   // spark blows out
     S.nosW = S.nosHp * DR.HP;
@@ -324,6 +325,12 @@
     for (var lr = S.idle + 500; lr <= S.red; lr += 250) tq0 = Math.max(tq0, boostedTorque(S, lr, lb === null ? steadyBoost(S, lr) : lb));
     var hit = tq0 * S.ratios[0] * S.fd * S.eff / S.r / (S.tire.mu * S.pf * S.dgrip * axleN);
     S.slipAssist = S.trType === 'auto' ? 0 : clamp((1.5 - hit) / 0.5, 0, 1);
+    // what the body takes before it twists (hp, nitrous included), and the
+    // safety gear tech inspection sees (0 none, 1 roll bar, 2 cage). A tube
+    // chassis has both covered.
+    var tube = DR.partId('weight', inst) === 'w4' || car.shell === Infinity;
+    S.shell = tube ? Infinity : car.shell * (chas.shellK || 1);
+    S.tech = tube ? 2 : chas.tech || 0;
     S.risk = DR.riskOf(S);
     return S;
   };
@@ -514,6 +521,8 @@
     return { pts: pts, peakHp: peakHp, peakTq: peakTq, peakHpRpm: peakHpRpm };
   };
 
+  // The worst failure chance per run, whatever breaks.
+  DR.riskMax = function (r) { return Math.max(r.engine, r.trans, r.axle || 0, r.chassis || 0); };
   // Probability (0..1) of engine / gearbox failure on a run.
   DR.riskOf = function (S) {
     var r = { engine: 0, trans: 0, notes: [] };
@@ -537,6 +546,10 @@
     if (hit > S.axleTq) { r.axle = Math.min(0.7, (hit / S.axleTq - 1) * 1.2); r.notes.push('Launch torque is ' + Math.round(hit / S.axleTq * 100) + '% of what the axles hold'); }
     if (S.nosCut) r.notes.push('Ignition blows out the spark on a ' + S.nosRated + ' shot - get a stronger ignition');
     if (S.clCap && tqNm > S.clCap) r.notes.push('Clutch will slip - consider an upgrade');
+    // the body: past what the shell takes it twists on the launch and cracks
+    r.chassis = 0;
+    var shellX = (S.peakHp + S.nosHp) / (S.shell || Infinity);
+    if (shellX > 1) { r.chassis = Math.min(0.6, (shellX - 1) * 0.9); r.notes.push('Power is ' + Math.round(shellX * 100) + '% of what the body takes - fit subframe connectors, a roll bar or a cage'); }
     r.engine = Math.min(0.9, r.engine);
     return r;
   };
@@ -639,7 +652,7 @@
 
     // -------- failures scheduled for this run
     if (this.failAt && this.launched && !dead && this.t >= this.failAt) {
-      if (this.failType === 'trans' || this.failType === 'axle') { this.broke = true; this.brokeWhat = this.failType; this.events.push('broke'); }
+      if (this.failType === 'trans' || this.failType === 'axle' || this.failType === 'chassis') { this.broke = true; this.brokeWhat = this.failType; this.events.push('broke'); }
       else { this.blown = true; this.events.push('blown'); }
       dead = true;
     }

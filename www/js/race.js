@@ -184,6 +184,7 @@
     if (Math.random() < r.engine) return { failAt: 0.6 + Math.random() * span, failType: 'engine' };
     if (Math.random() < r.trans) return { failAt: 0.4 + Math.random() * span, failType: 'trans' };
     if (Math.random() < (r.axle || 0)) return { failAt: 0.05 + Math.random() * 0.5, failType: 'axle' };
+    if (Math.random() < (r.chassis || 0)) return { failAt: 0.05 + Math.random() * 0.4, failType: 'chassis' };
     return {};
   }
 
@@ -587,7 +588,7 @@
           if (e === 'backfire' && isYou && !(r.voice && r.voice.wk) && Math.random() < 0.3) A.pop();
           if (e === 'crash') { if (isYou) { A.boom(); note('YOU FLIPPED IT!'); } else note(r.label + ' FLIPPED!'); }
           if (e === 'blown') { A.boom(); if (isYou) note('ENGINE BLEW UP!'); else note(r.label + ' BLEW UP!'); }
-          if (e === 'broke') { if (isYou) note(r.sim.brokeWhat === 'axle' ? 'SNAPPED AN AXLE!' : 'TRANSMISSION BROKE!'); else note(r.label + ' BROKE!'); }
+          if (e === 'broke') { if (isYou) note(r.sim.brokeWhat === 'axle' ? 'SNAPPED AN AXLE!' : r.sim.brokeWhat === 'chassis' ? 'CHASSIS CRACKED!' : 'TRANSMISSION BROKE!'); else note(r.label + ' BROKE!'); }
         });
         r.sim.events = [];
       });
@@ -631,7 +632,7 @@
         else win = me.total < them.total;
       }
       var lines = [], moneyDelta = 0, firstWin = false;
-      var damaged = you.sim.blown ? { engine: true } : you.sim.broke ? (you.sim.brokeWhat === 'axle' ? { axle: true } : { trans: true }) : null;
+      var damaged = you.sim.blown ? { engine: true } : you.sim.broke ? (you.sim.brokeWhat === 'axle' ? { axle: true } : you.sim.brokeWhat === 'chassis' ? { chassis: true } : { trans: true }) : null;
       var ev = cfg.ev, nextRound = null;
       if (cfg.mode === 'career' && win) {
         if (ev.type === 'knockout' && cfg.round < ev.opps.length - 1) {
@@ -652,6 +653,10 @@
       if (cfg.mode === 'career' && win === false && ev.type === 'knockout') lines.push('KNOCKED OUT in round ' + (cfg.round + 1) + '. Start over from round 1.');
       if (cfg.mode === 'street') moneyDelta = win ? cfg.bet : -cfg.bet;
       if (moneyDelta) G.earn(moneyDelta);
+      if (them && !testDrive && (cfg.mode === 'career' || cfg.mode === 'street')) {
+        var rc = G.payRunCost(S, you.sim.nosT);
+        if (rc.paid) lines.push('Running costs: ' + DR.money(rc.paid) + ' (fuel ' + DR.money(rc.fuel) + ', tires ' + DR.money(rc.tires) + (rc.nos ? ', nitrous ' + DR.money(rc.nos) : '') + ')');
+      }
       if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; }
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
@@ -664,7 +669,7 @@
       if (damaged && testDrive) { lines.push('Good thing it was a test drive.'); damaged = null; }
       if (damaged) {
         inst.damage = damaged;
-        lines.push((damaged.engine ? 'Your engine is toast.' : damaged.axle ? 'You snapped an axle.' : 'Your transmission is broken.') + ' Repair cost: ' + DR.money(G.repairCost(inst)));
+        lines.push((damaged.engine ? 'Your engine is toast.' : damaged.axle ? 'You snapped an axle.' : damaged.chassis ? 'The body twisted and cracked a torque box.' : 'Your transmission is broken.') + ' Repair cost: ' + DR.money(G.repairCost(inst)));
       }
       G.save();
 

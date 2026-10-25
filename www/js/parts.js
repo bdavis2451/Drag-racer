@@ -310,10 +310,10 @@
   // stiff: how much of the rear links' bite reaches the tires instead of
   // twisting the body; kg added
   C.chassis = { name: 'Chassis / Roll Cage', options: [
-    opt('stock', 'Stock Unibody', 0, { stiff: 0.9, kg: 0 }, 'The body twists on a hard launch.'),
-    opt('cg1', 'Subframe Connectors', 400, { stiff: 0.95, kg: 7 }, 'Ties the front and rear frame rails together.'),
-    opt('cg2', '8-Point Roll Bar', 1500, { stiff: 0.98, kg: 18 }, 'Stiffer chassis and a safer car.'),
-    opt('cg3', '25.3 Chromoly Roll Cage', 4000, { stiff: 1, kg: 26 }, 'A rigid chassis. Every bit of anti-squat goes to the tires.')
+    opt('stock', 'Stock Unibody', 0, { stiff: 0.9, kg: 0, shellK: 1 }, 'The body twists on a hard launch.'),
+    opt('cg1', 'Subframe Connectors', 400, { stiff: 0.95, kg: 7, shellK: 1.3 }, 'Ties the front and rear frame rails together: the shell takes 30% more power.'),
+    opt('cg2', '8-Point Roll Bar', 1500, { stiff: 0.98, kg: 18, shellK: 1.8, tech: 1 }, 'Stiffer chassis, 80% more power before it twists, and tech lets you run quicker than 11.50.'),
+    opt('cg3', '25.3 Chromoly Roll Cage', 4000, { stiff: 1, kg: 26, shellK: 3, tech: 2 }, 'A rigid chassis that takes 3x the power. Tech lets you run quicker than 10.00. Every bit of anti-squat goes to the tires.')
   ]};
   C.frontsusp = { name: 'Front Suspension', options: [
     opt('stock', 'Stock K-Member & Arms', 0, { fkg: 0 }),
@@ -350,7 +350,7 @@
     opt('w1', 'Stage 1: Interior Strip', 1000, { wr: 0.05 }, '-5% chassis weight.'),
     opt('w2', 'Stage 2: Lightweight Panels', 4000, { wr: 0.10 }, '-10% chassis weight.'),
     opt('w3', 'Stage 3: Carbon Body & Lexan', 12000, { wr: 0.16 }, '-16% chassis weight.'),
-    opt('w4', 'Stage 4: Tube Chassis', 35000, { wr: 0.24, low: 0.03 }, '-24% chassis weight and a lower CG.')
+    opt('w4', 'Stage 4: Tube Chassis', 35000, { wr: 0.24, low: 0.03 }, '-24% chassis weight and a lower CG. A tube chassis with a certified cage: it takes any power.')
   ]};
   // bat: kg moved from the nose to the trunk; bkgW: kg saved
   C.battery = { name: 'Battery', options: [
@@ -378,6 +378,30 @@
   DR.enginePriceMul = function (engId) {
     var e = DR.ENGINES[engId];
     return Math.max(0.6, Math.min(3, 0.5 + e.hp / 400));
+  };
+
+  // What it takes to put an engine in this car, on top of the engine:
+  // { install: $, lines: [[what, $]], block: reason it can't go in yet }.
+  // Same orientation and a bay big enough is a bolt-in job; a transverse
+  // engine in a rear-drive car needs an adapter kit; a longitudinal engine
+  // in a front-drive car needs the car converted first; every size over
+  // what the bay takes means cutting and fabricating.
+  DR.swapFit = function (inst, engId) {
+    var car = DR.CARS[inst.carId], e = DR.ENGINES[engId], out = { install: 0, lines: [], block: '' };
+    if (engId === car.engine) return out;
+    var lay = inst.parts && inst.parts.layout, carMount = car.mount === 'T' && lay && lay !== 'stock' ? 'L' : car.mount;
+    function add(what, $) { out.lines.push([what, $]); out.install += $; }
+    add('Labour, mounts & wiring harness', 550 + 250 * e.size);
+    if (e.mount !== 'B' && e.mount !== carMount) {
+      if (e.mount === 'T') add('Rear-drive adapter: bellhousing, custom mounts, driveshaft', 2500);
+      else if (car.drive === 'FWD') out.block = 'A longitudinal engine needs a RWD or AWD conversion first (Drivetrain)';
+      else add('Longitudinal conversion: transfer case & tunnel', 8000);
+    }
+    var over = e.size - car.bay;
+    if (over === 1) add('Fabrication: crossmember notch, shock-tower & header clearance', 1800);
+    else if (over === 2) add('Fabrication: tube front clip, firewall set back', 6000);
+    else if (over >= 3) add('Fabrication: tube front half, engine set back', 12000);
+    return out;
   };
 
   // "2.0L inline-4, turbocharged" style summary of an engine
@@ -418,8 +442,10 @@
       var ids = Object.keys(DR.ENGINES).sort(function (a, b) { return DR.ENGINES[a].hp - DR.ENGINES[b].hp; });
       for (i = 0; i < ids.length; i++) {
         var e = DR.ENGINES[ids[i]];
-        list.push({ id: ids[i], name: e.name, price: ids[i] === car.engine ? 0 : e.price, lvl: ids[i] === car.engine ? 0 : e.lvl,
-          desc: e.hp + ' hp at ' + e.pk + ' rpm. ' + DR.engineLayout(e) + '. Weighs ' + e.w + ' kg (' + Math.round(e.w * 2.2046) + ' lb) dressed.' });
+        var fit = DR.swapFit(inst, ids[i]);
+        list.push({ id: ids[i], name: e.name, price: ids[i] === car.engine ? 0 : e.price, lvl: ids[i] === car.engine ? 0 : e.lvl, install: fit.install, fit: fit,
+          desc: e.hp + ' hp at ' + e.pk + ' rpm. ' + DR.engineLayout(e) + '. Weighs ' + e.w + ' kg (' + Math.round(e.w * 2.2046) + ' lb) dressed.' +
+            (fit.block ? ' ' + fit.block + '.' : fit.install ? ' Install in this car: $' + fit.install.toLocaleString('en-US') + '.' : '') });
       }
       return list;
     }
@@ -625,6 +651,12 @@
     for (var i = min; i < opts.length; i++) if (opts[i].axle >= need) return opts[i].id;
     return opts[opts.length - 1].id;
   }; }
+  // the lightest chassis brace that keeps the body in one piece
+  function chassisFor(inst) {
+    var S = DR.buildSpec(inst), need = (S.peakHp + S.nosHp) / (S.shell / (DR.getOption('chassis', inst).shellK || 1)), opts = C.chassis.options;
+    for (var i = 1; i < opts.length; i++) if (opts[i].shellK >= need) return opts[i].id;
+    return opts[opts.length - 1].id;
+  }
   DR.PACKAGES = {
     engine: [
       [['airfilter', 'af2'], ['intake', 'i1'], ['throttle', 'tb1'], ['headers', 'h1']],
@@ -788,9 +820,10 @@
         if (cat === 'clutch') return S.clCap && S.peakTq / 0.7376 > S.clCap;
         if (cat === 'rearend') return S.risk.axle > 0;
         if (cat === 'trans') return S.risk.trans > 0;
+        if (cat === 'chassis') return S.risk.chassis > 0;
         return true;
       };
-      [['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)], ['trans', transFor], ['clutch', clutchFor(1)], ['rearend', axleFor(1)]].forEach(function (e) {
+      [['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)], ['trans', transFor], ['clutch', clutchFor(1)], ['rearend', axleFor(1)], ['chassis', chassisFor]].forEach(function (e) {
         if (!need(e[0])) return;
         var id = e[1](copy);
         if (!id || !DR.partApplies(e[0], copy) || id === DR.partId(e[0], copy)) return;

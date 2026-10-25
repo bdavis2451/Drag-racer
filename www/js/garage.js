@@ -309,7 +309,7 @@
       var lim = own.concat([['safe', S0.safeHp, S1.safeHp, 'hp safe'], ['fuel', S0.fuelW / DR.HP, S1.fuelW / DR.HP, 'hp fuel'],
         ['rpm', S0.mech, S1.mech, 'rpm safe'], ['vt', S0.vtLimit, S1.vtLimit, 'rpm valves'], ['spark', S0.sparkPsi, S1.sparkPsi, 'psi spark'],
         ['boost', S0.maxBoost, S1.maxBoost, 'psi max'], ['axle', S0.axleTq, S1.axleTq, 'Nm axles'],
-        ['risk', -Math.max(S0.risk.engine, S0.risk.trans, S0.risk.axle) * 100, -Math.max(S1.risk.engine, S1.risk.trans, S1.risk.axle) * 100, '% risk']]);
+        ['risk', -DR.riskMax(S0.risk) * 100, -DR.riskMax(S1.risk) * 100, '% risk']]);
       for (var i = 0; i < lim.length && out.length < 2; i++) {
         var d = Math.round(lim[i][2] - lim[i][1]);
         var v = lim[i][0] === 'risk' ? -d : d;
@@ -336,7 +336,7 @@
     var dmg = null;
     if (inst.damage) {
       var cost = G.repairCost(inst);
-      dmg = h('div', { class: 'gdmg warnbox' }, (inst.damage.engine ? 'ENGINE BLOWN! ' : inst.damage.axle ? 'BROKEN AXLE! ' : 'TRANSMISSION BROKEN! ') + 'Repair: ' + DR.money(cost) + ' ',
+      dmg = h('div', { class: 'gdmg warnbox' }, (inst.damage.engine ? 'ENGINE BLOWN! ' : inst.damage.axle ? 'BROKEN AXLE! ' : inst.damage.chassis ? 'CRACKED CHASSIS! ' : 'TRANSMISSION BROKEN! ') + 'Repair: ' + DR.money(cost) + ' ',
         btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'));
     }
     var spare = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length;
@@ -362,7 +362,7 @@
       stat('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
       inst.best && inst.best.q ? stat('BEST 1/4', inst.best.q.toFixed(3) + 's', 'acc') : null,
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
-      S.risk.engine > 0.001 || S.risk.trans > 0.001 || S.risk.axle > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(Math.max(S.risk.engine, S.risk.trans, S.risk.axle) * 100) + '% failure risk') : null,
+      DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null,
       h('div', { class: 'gsmall acc' }, UI.careerLine().textContent.replace('Career: ', '')),
       h('div', { class: 'gsmall dim' }, 'Record ' + G.state.stats.wins + 'W / ' + (G.state.stats.races - G.state.stats.wins) + 'L'));
     var sel = h('div', { class: 'gsel' },
@@ -409,8 +409,8 @@
         h('div', { class: 'pname' }, o.name),
         // what it does for this car, at a glance
         !locked && !installed && DR.partApplies(shopCat, inst) ? gainLine(inst, shopCat, o.id) : null,
-        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(shopCat, lvl)) : h('span', { class: 'price' + (G.canAfford(o.price) ? '' : ' bad') }, DR.money(o.price)),
-          installed ? h('span', { class: 'tag g' }, 'ON CAR') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
+        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(shopCat, lvl)) : h('span', { class: 'price' + (G.canAfford(o.price + (o.install || 0)) ? '' : ' bad') }, DR.money(o.price + (o.install || 0)) + (o.install ? ' fitted' : '')),
+          installed ? h('span', { class: 'tag g' }, 'ON CAR') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
     var note = weak[shopCat] && DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, 'Holding your build back: ' + weak[shopCat] + '.') : !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
@@ -441,7 +441,7 @@
     var dhp = Math.round(S1.peakHp + S1.nosHp - S0.peakHp - S0.nosHp), dlb = Math.round((S1.m - S0.m) * 2.2046);
     if (dhp) out.push(h('span', { class: dhp > 0 ? 'good' : 'bad' }, (dhp > 0 ? '+' : '') + dhp + 'hp'));
     if (dlb) out.push(h('span', { class: dlb < 0 ? 'good' : 'bad' }, (dlb > 0 ? '+' : '') + dlb + 'lb'));
-    var rk = Math.max(S1.risk.engine, S1.risk.trans, S1.risk.axle);
+    var rk = DR.riskMax(S1.risk);
     if (rk > 0.005) out.push(h('span', { class: 'bad' }, '⚠' + Math.round(rk * 100) + '%'));
     return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'handling & grip');
   }
@@ -506,16 +506,17 @@
       ['Car weight', deltaRow(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)],
       Math.abs(S0.f - S1.f) > 0.002 ? ['Front weight', deltaRow(S0.f * 100, S1.f * 100, '%', 1, true)] : null,
       ['Stock internals hold', Math.round(S1.safeHp) + ' hp'],
-      ['Price', DR.money(opt.price), 'good']
-    ]);
+      ['Engine price', DR.money(opt.price), 'good']
+    ].concat(opt.fit && !opt.fit.block ? opt.fit.lines.map(function (l) { return [l[0], DR.money(l[1])]; }).concat([['Installed price', DR.money(opt.price + opt.fit.install), 'acc']]) : []));
   }
   function partModal(inst, cat, id) {
     var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt), locked = !G.partUnlocked(cat, lvl);
     var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
     var fits = DR.partApplies(cat, inst), owned = G.ownedCount(cat, id), installed = DR.partId(cat, inst) === id;
     var close;
+    var total = opt.price + (opt.install || 0);
     function buy(andInstall) {
-      if (!G.canAfford(opt.price)) return UI.toast('Not enough money');
+      if (!G.canAfford(andInstall ? total : opt.price)) return UI.toast('Not enough money');
       var item = G.buyPart(cat, id); A.cash();
       if (andInstall) { var r = G.installPart(inst, item.uid); UI.toast(r.msg); } else UI.toast(opt.name + ' added to your parts');
       close(); UI.refresh();
@@ -540,16 +541,17 @@
         owned ? ['In your parts', '×' + owned, 'acc'] : null
       ]) : h('div', { class: 'warnbox' }, G.partFitIssue({ cat: cat, id: id }, inst)),
       fits ? UI.riskBox(S1) : null,
-      cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory.') : null,
+      cat === 'engine' && opt.fit && opt.fit.block ? h('div', { class: 'warnbox' }, opt.fit.block + '.') : null,
+      cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory. The install is paid when the engine goes in.') : null,
       G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : null,
       locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock as you win career races.') :
         h('div', { class: 'row', style: { flexWrap: 'wrap' } },
           btn('Buy ' + DR.money(opt.price), function () { buy(false); }, 'go' + (G.canAfford(opt.price) ? '' : ' disabled')),
-          fits && !installed && owned ? btn('Install Yours', function () {
+          fits && !installed && owned && !(opt.fit && opt.fit.block) ? btn('Install Yours' + (opt.install ? ' ' + DR.money(opt.install) : ''), function () {
             var it = G.state.inv.filter(function (x) { return x.cat === cat && x.id === id; })[0];
             var r = G.installPart(inst, it.uid); UI.toast(r.msg); close(); UI.refresh();
           }, 'primary') : null,
-          fits && !installed && !owned ? btn('Buy & Install', function () { buy(true); }, 'primary' + (G.canAfford(opt.price) ? '' : ' disabled')) : null),
+          fits && !installed && !owned && !(opt.fit && opt.fit.block) ? btn('Buy & Install' + (total !== opt.price ? ' ' + DR.money(total) : ''), function () { buy(true); }, 'primary' + (G.canAfford(total) ? '' : ' disabled')) : null),
       btn('Close', function () { close(); }, 'small')));
   }
 
@@ -668,6 +670,8 @@
         h('div', { class: 'grow' }, h('div', { class: 'plvl' }, stock ? 'FACTORY' : 'INSTALLED • ' + DR.LEVEL_NAMES[lvlOf(opt)]), h('div', { class: 'pix' }, opt.name),
           opt.desc ? h('div', { class: 'dim', style: { fontSize: '16px' } }, opt.desc) : null),
         stock ? null : btn('Remove', function () {
+          var why = G.removeIssue(inst, bayCat);
+          if (why) return UI.toast(why);
           var go = function () { G.removePart(inst, bayCat); A.click(); UI.toast(opt.name + ' moved to your parts'); UI.refresh(); };
           if (bayCat === 'engine') UI.confirm('Pull the ' + opt.name + '? It and its engine parts go to your inventory and the factory engine goes back in.', go, 'Remove');
           else go();
@@ -682,7 +686,8 @@
         h('div', { class: 'name' }, h('div', {}, G.partName(it)), why ? h('div', { class: 'warn', style: { fontSize: '15px' } }, why) : gainLine(inst, it.cat, it.id)),
         why ? null : btn('Install', function () {
           var go = function () { var r = G.installPart(inst, it.uid); UI.toast(r.msg); if (r.ok) A.click(); UI.refresh(); };
-          if (it.cat === 'engine') UI.confirm('Swap in the ' + G.partName(it) + '? Your current engine parts come off with the old engine.', go, 'Swap');
+          var fee = it.cat === 'engine' ? DR.swapFit(inst, it.id).install : 0;
+          if (it.cat === 'engine') UI.confirm('Swap in the ' + G.partName(it) + '?' + (fee ? ' The install costs ' + DR.money(fee) + '.' : '') + ' Your current engine parts come off with the old engine.', go, 'Swap');
           else go();
         }, 'small go'),
         btn('Sell ' + DR.money(G.partSellValue(it)), function () {
