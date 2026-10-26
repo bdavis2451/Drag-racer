@@ -351,7 +351,7 @@
     function bbtn(label, icon, fn, cls, badge) {
       return btn([iconEl(icon, 1, '', 26, 'gico'), h('span', {}, label), badge ? h('span', { class: badge === 'NEW' || badge === 'FREE' ? 'newdot' : 'badge' }, String(badge)) : null], fn, 'gbb ' + (cls || ''));
     }
-    var spare = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length;
+    var spare = G.state.inv.filter(function (it) { return !it.stock && !G.partFitIssue(it, inst); }).length;
     var bar = h('div', { class: 'gbar' },
       bbtn('Upgrade', 'g_shop', function () { UI.openSection('upgrade'); }, 'shop', G.newPartsCount() ? 'NEW' : spare || 0),
       bbtn('Style', 'g_body', function () { UI.openSection('style'); }, 'purple', G.newVisCount() ? 'NEW' : 0),
@@ -414,7 +414,7 @@
       var fits = DR.partApplies(c, inst);
       return btn((weak[c] ? '! ' : '') + DR.catName(c, inst), function () { shopCat = c; UI.refresh(); }, 'chip' + (c === shopCat ? ' on' : '') + (fits ? '' : ' nofit') + (weak[c] ? ' hot' : ''));
     }));
-    var curId = DR.partId(shopCat, inst);
+    var curId = DR.partId(shopCat, inst), tunedNow = G.spec(inst).tuned;
     var grid = h('div', { class: 'pgrid' });
     DR.partOptions(shopCat, inst).forEach(function (o) {
       if (!o.price) return;                                  // stock / factory parts are not sold
@@ -426,7 +426,7 @@
         // what it does for this car, at a glance
         !locked && !installed && DR.partApplies(shopCat, inst) ? gainLine(inst, shopCat, o.id) : null,
         h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(shopCat, lvl)) : h('span', { class: 'price' + (G.canAfford(o.price + (o.install || 0)) ? '' : ' bad') }, DR.money(o.price + (o.install || 0)) + (o.install ? ' fitted' : '')),
-          installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(shopCat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
+          installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(shopCat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
     if (group) G.markGroupSeen(group);
@@ -568,6 +568,8 @@
       cat === 'engine' && opt.fit && opt.fit.block ? h('div', { class: 'warnbox' }, opt.fit.block + '.') : null,
       cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory. The install is paid when the engine goes in.') : null,
       G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : null,
+      opt.tune && opt.tune !== true && !S0.tuned ? h('div', { class: 'warnbox' }, opt.tune === 'soft' ? 'Runs on your stock ECU, but only makes about half its gain until you get an ECU flash (Fuel & Spark > ECU).' :
+        cat === 'fi' ? 'Needs an ECU tune: on the stock ECU it can only run about 5 psi. Plan on injectors and a fuel pump too.' : 'Needs an ECU tune (Fuel & Spark > ECU: a flash or a standalone). Without one ' + (cat === 'injectors' ? 'it runs pig-rich and loses power.' : cat === 'fueltype' ? 'it runs lean and can burn a piston.' : 'the stock ECU can\'t run it properly.')) : null,
       locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock in the career: ' + G.unlockWhere(cat, lvl) + '.') :
         h('div', { class: 'row', style: { flexWrap: 'wrap' } },
           btn('Buy ' + DR.money(opt.price), function () { buy(false); }, 'go' + (G.canAfford(opt.price) ? '' : ' disabled')),
@@ -679,7 +681,7 @@
       list.appendChild(h('div', { class: 'bay-h' }, g.name));
       g.cats.forEach(function (c) {
         var applies = DR.partApplies(c, inst);
-        var spare = G.invFor(c).filter(function (it) { return !G.partFitIssue(it, inst); }).length;
+        var spare = G.invFor(c).filter(function (it) { return !it.stock && !G.partFitIssue(it, inst); }).length;
         if (!applies && !G.invFor(c).length) return;
         var id = DR.partId(c, inst), opt = DR.getOption(c, inst, id), stock = id === DR.stockPart(c, inst);
         list.appendChild(h('div', { class: 'item' + (c === bayCat ? ' sel' : '') + (applies ? '' : ' locked'), onclick: function () { bayCat = c; UI.refresh(); } },
@@ -697,13 +699,20 @@
         iconEl(DR.iconCat(bayCat, inst), stock ? 0 : lvlOf(opt), id, 44),
         h('div', { class: 'grow' }, h('div', { class: 'plvl' }, stock ? 'FACTORY' : 'INSTALLED • ' + DR.LEVEL_NAMES[lvlOf(opt)]), h('div', { class: 'pix' }, opt.name),
           opt.desc ? h('div', { class: 'dim', style: { fontSize: '16px' } }, opt.desc) : null),
-        stock ? null : btn('Remove', function () {
-          var why = G.removeIssue(inst, bayCat);
-          if (why) return UI.toast(why);
-          var go = function () { G.removePart(inst, bayCat); A.click(); UI.toast(opt.name + ' moved to your inventory'); UI.refresh(); };
-          if (bayCat === 'engine') UI.confirm('Pull the ' + opt.name + '? It and its engine parts go to your inventory and the factory engine goes back in.', go, 'Remove');
-          else go();
-        }, 'small red')),
+        stock ? null : (function () {
+          // the factory part goes back in: yours if you kept it, else a used one
+          var fac = G.factoryFor(inst, bayCat);
+          return btn('Remove' + (fac.cost ? ' ' + DR.money(fac.cost) : ''), function () {
+            var why = G.removeIssue(inst, bayCat);
+            if (why) return UI.toast(why);
+            if (fac.cost && !G.canAfford(fac.cost)) return UI.toast('A used factory part costs ' + DR.money(fac.cost));
+            var go = function () { if (!G.removePart(inst, bayCat)) return; A.click(); UI.toast(opt.name + ' moved to your inventory'); UI.refresh(); };
+            var used = fac.cost ? ' You don\'t have the factory part any more: a used one costs ' + DR.money(fac.cost) + '.' : '';
+            if (bayCat === 'engine') UI.confirm('Pull the ' + opt.name + '? It and its engine parts go to your inventory and the factory engine goes back in.' + used, go, 'Remove');
+            else if (used) UI.confirm('Take off the ' + opt.name + '?' + used, go, 'Remove');
+            else go();
+          }, 'small red');
+        })()),
       h('h3', {}, 'IN YOUR INVENTORY'));
     var items = G.invFor(bayCat);
     if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat, inst).toLowerCase() + ' parts in your inventory.'));
@@ -735,7 +744,7 @@
   // fits, the kind of part and what it's worth, then fit it or sell it.
   // Sales can be bought back (at the sale price) until your next race.
   var VALUE_BANDS = [['any', 'Any value', 0, Infinity], ['lt500', 'Under $500', 0, 500], ['mid', '$500-2k', 500, 2000], ['hi', '$2k-10k', 2000, 10000], ['top', '$10k+', 10000, Infinity]];
-  var invF = { car: 'all', grp: 'all', val: 'any', sort: 'hi' };
+  var invF = { car: 'all', grp: 'all', val: 'any', kind: 'all', sort: 'hi' };
   function groupOfCat(cat) { for (var i = 0; i < DR.PART_GROUPS.length; i++) if (DR.PART_GROUPS[i].cats.indexOf(cat) >= 0) return DR.PART_GROUPS[i]; return null; }
   function carShort(inst) { var w = DR.CARS[inst.carId].name.split(' '); return w.length > 2 ? w.slice(1).join(' ') : w.join(' '); }
   UI.Inventory = function () {
@@ -744,7 +753,7 @@
     var cars = G.state.cars, inst = G.car();
     if (invF.car !== 'all' && invF.car !== 'none' && !cars.some(function (c) { return String(c.uid) === invF.car; })) invF.car = 'all';
     if (invF.open == null) invF.open = window.innerWidth >= 700;
-    UI.remember({ invF: { car: invF.car, grp: invF.grp, val: invF.val, sort: invF.sort, open: invF.open } });
+    UI.remember({ invF: { car: invF.car, grp: invF.grp, val: invF.val, kind: invF.kind, sort: invF.sort, open: invF.open } });
     function set(k, v) { return function () { invF[k] = v; A.click(); UI.refresh(); }; }
     function chipRow(label, opts, key) {
       return h('div', { class: 'invrow' }, h('span', { class: 'invlbl pix small' }, label),
@@ -756,25 +765,28 @@
     var shown = all.filter(function (r) {
       if (invF.car === 'none' ? r.fits.length : invF.car !== 'all' && !r.fits.some(function (c) { return String(c.uid) === invF.car; })) return false;
       if (invF.grp !== 'all' && (!r.g || r.g.id !== invF.grp)) return false;
+      if (invF.kind !== 'all' && (invF.kind === 'stock') !== !!r.it.stock) return false;
       return r.v >= band[2] && r.v < band[3];
     });
     shown.sort(invF.sort === 'lo' ? function (a, b) { return a.v - b.v; } : invF.sort === 'new' ? function (a, b) { return b.it.uid - a.it.uid; } : function (a, b) { return b.v - a.v; });
     var total = shown.reduce(function (t, r) { return t + r.v; }, 0);
     var carOpts = [['all', 'All cars']].concat(cars.map(function (c) { return [String(c.uid), (c.uid === inst.uid ? '★ ' : '') + carShort(c)]; })).concat([['none', 'Fits none']]);
     var grpOpts = [['all', 'All']].concat(DR.PART_GROUPS.filter(function (g) { return all.some(function (r) { return r.g === g; }); }).map(function (g) { return [g.id, g.name]; }));
-    var filtered = invF.car !== 'all' || invF.grp !== 'all' || invF.val !== 'any';
+    var filtered = invF.car !== 'all' || invF.grp !== 'all' || invF.val !== 'any' || invF.kind !== 'all';
+    var KINDS = [['all', 'All'], ['after', 'Aftermarket'], ['stock', 'Factory']];
     // what's filtered, as removable tags (shown above the list)
     function optName(opts, v) { return (opts.filter(function (o) { return o[0] === v; })[0] || ['', v])[1].replace('★ ', ''); }
     var active = [];
     if (invF.car !== 'all') active.push(['car', invF.car === 'none' ? 'Fits none' : 'Fits ' + optName(carOpts, invF.car)]);
     if (invF.grp !== 'all') active.push(['grp', optName(grpOpts, invF.grp)]);
     if (invF.val !== 'any') active.push(['val', optName(VALUE_BANDS.map(function (b) { return [b[0], b[1]]; }), invF.val)]);
-    var reset = { car: 'all', grp: 'all', val: 'any' };
+    if (invF.kind !== 'all') active.push(['kind', optName(KINDS, invF.kind)]);
+    var reset = { car: 'all', grp: 'all', val: 'any', kind: 'all' };
     var tags = active.length ? h('div', { class: 'invtags' }, active.map(function (a) { return btn(a[1] + ' ✕', function () { invF[a[0]] = reset[a[0]]; A.click(); UI.refresh(); }, 'chip on small'); }),
-      active.length > 1 ? btn('Clear all', function () { invF.car = 'all'; invF.grp = 'all'; invF.val = 'any'; A.click(); UI.refresh(); }, 'chip small') : null) : null;
+      active.length > 1 ? btn('Clear all', function () { invF.car = 'all'; invF.grp = 'all'; invF.val = 'any'; invF.kind = 'all'; A.click(); UI.refresh(); }, 'chip small') : null) : null;
     var toggle = btn((invF.open ? '◀ Hide filters' : '☰ Filters') + (active.length && !invF.open ? ' (' + active.length + ')' : ''), function () { invF.open = !invF.open; A.click(); UI.refresh(); }, 'small' + (active.length ? ' blue' : ''));
     var filters = !invF.open ? null : h('div', { class: 'invfilters' },
-      chipRow('FITS', carOpts, 'car'), chipRow('TYPE', grpOpts, 'grp'), chipRow('VALUE', VALUE_BANDS.map(function (b) { return [b[0], b[1]]; }), 'val'),
+      chipRow('FITS', carOpts, 'car'), chipRow('KIND', KINDS, 'kind'), chipRow('TYPE', grpOpts, 'grp'), chipRow('VALUE', VALUE_BANDS.map(function (b) { return [b[0], b[1]]; }), 'val'),
       chipRow('SORT', [['hi', 'Most $'], ['lo', 'Least $'], ['new', 'Newest']], 'sort'));
     var bar = h('div', { class: 'invbar' },
       toggle,
@@ -788,14 +800,14 @@
     if (!all.length) list.appendChild(h('div', { class: 'dim', style: { padding: '10px' } }, 'No spare parts. Parts you buy, and parts you take off a car, land here.'));
     else if (!shown.length) list.appendChild(h('div', { class: 'dim', style: { padding: '10px' } }, 'Nothing matches these filters.'));
     shown.forEach(function (r) {
-      var it = r.it, lvl = lvlOf(G.itemOption(it) || { price: it.price, lvl: DR.partLevel(it.price) });
+      var it = r.it, lvl = it.stock ? 0 : lvlOf(G.itemOption(it) || { price: it.price, lvl: DR.partLevel(it.price) });
       var from = it.from != null ? cars.filter(function (c) { return c.uid === it.from; })[0] : null;
       var fitsHere = r.fits.indexOf(inst) >= 0;
       var fitTxt = r.fits.length ? 'Fits: ' + r.fits.map(carShort).join(', ') : G.partFitIssue(it, inst) || 'Fits none of your cars';
       list.appendChild(h('div', { class: 'item inv l' + lvl + (r.fits.length ? '' : ' locked') },
         iconEl(DR.iconCat(it.cat, inst), lvl, it.id, 32),
         h('div', { class: 'name' },
-          h('div', {}, G.partName(it)),
+          h('div', {}, it.stock ? h('span', { class: 'tag' }, 'FACTORY') : null, it.stock ? ' ' : null, G.partName(it)),
           h('div', { class: 'dim', style: { fontSize: '15px' } }, DR.catName(it.cat, inst) + (it.eng && DR.ENGINES[it.eng] ? ' • for ' + DR.ENGINES[it.eng].name : '') + (from ? ' • off your ' + carShort(from) : '')),
           h('div', { class: r.fits.length ? 'acc' : 'warn', style: { fontSize: '15px' } }, fitTxt)),
         fitsHere ? btn('Fit ▶', function () { UI.show(UI.Parts, it.cat); }, 'small go') : null,

@@ -217,7 +217,7 @@
     function badge(id) {
       if (id === 'shop' && G.newPartsCount && G.newPartsCount()) return 'NEW';
       if (id === 'body' && G.newVisCount && G.newVisCount()) return 'NEW';
-      if (id === 'install' && inst) { var n = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length; return n ? String(n) : ''; }
+      if (id === 'install' && inst) { var n = G.state.inv.filter(function (it) { return !it.stock && !G.partFitIssue(it, inst); }).length; return n ? String(n) : ''; }
       if (id === 'inv') return G.state.inv.length ? String(G.state.inv.length) : '';
       return '';
     }
@@ -362,6 +362,9 @@
         p('Drag the garage, dealer, body shop or paint shop view to look around the car up close (pinch or scroll to zoom, double-tap to reset).'),
         p('In a hurry? Upgrade > Packages sells Budget, Street, Pro and Extreme kits for each group (or the whole car) at 10% off. They fit a matched set of parts sized to your car and skip anything you already have that is as good.'),
         p('Builds are only as strong as their weakest part. The shop marks the parts holding you back with a red "!": maxed-out injectors or pump, an ignition that misfires under boost, valve springs that float, axles that will snap.'),
+        p('Factory fuel systems are sized for the factory engine, with about 25% to spare (less on a factory turbo engine). Add power past that and the injectors or pump can\'t keep up: the engine runs lean, and lean engines burn pistons. The dyno\'s FUEL row shows what the injectors or pump feed against what the build needs.'),
+        p('Some parts need an ECU tune (a Street Tune Flash or a standalone ECU), just like a real car. Bigger injectors run pig-rich without one; E85 and methanol run lean; a turbo or supercharger kit only runs about 5 psi on the stock ECU; stage 2 and bigger cams surge and lose power. A stage 1 cam runs on the stock ECU, but makes only about half its gain until it\'s tuned. A performance chip is not a tune. Parts that need one say NEEDS TUNE in the shop, and packages bring the tune and the fuel parts their power needs.'),
+        p('Parts you take off go to your inventory, factory parts included. A factory part is worth a little as a used part and fits the car (or engine) it came off. Taking an aftermarket part off puts your factory one back in; if you sold it, a used one is bought for you.'),
         p('Nitrous needs fuel too. A dry kit adds its fuel through your injectors, so the injectors and pump must feed the engine plus the shot; a wet kit sprays its own fuel but draws it from your pump; the big foggers bring their own. Short on fuel, the spray runs lean and can burn a piston: the dyno shows SPRAY FUEL.'),
         h('h2', {}, 'Tuning'),
         p('Grip comes from tire compound, tire pressure (each tire has an ideal psi), tire temperature and weight transfer. Ladder bars / 4-links, springs and shocks change how hard the car hits the tires. Gearing, launch RPM, boost, and throttle management decide whether you hook or go up in smoke.'),

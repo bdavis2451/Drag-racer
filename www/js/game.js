@@ -186,6 +186,13 @@
     return null;
   };
   G.partName = function (item) {
+    var base = partBaseName(item);
+    // a factory part says what it came off
+    if (item.stock && !G.isEngineBound(item.cat) && item.cat !== 'engine' && item.car && DR.CARS[item.car]) return base + ' (' + DR.CARS[item.car].name.replace(/ '\d+$/, '') + ')';
+    if (item.stock && G.isEngineBound(item.cat) && DR.ENGINES[item.eng]) return base + ' (' + DR.ENGINES[item.eng].name.replace(/ \(.*\)$/, '') + ')';
+    return base;
+  };
+  function partBaseName(item) {
     if (item.cat === 'engine') return DR.ENGINES[item.id].name;
     if (item.cat === 'trans') return DR.TRANS[item.id].name;
     if (item.cat === 'rtires') return DR.TIRES[item.id].name;
@@ -194,9 +201,12 @@
     var opts = DR.partOptions(item.cat, ctx);
     for (var i = 0; i < opts.length; i++) if (opts[i].id === item.id) return opts[i].name.replace(' (Factory)', '');
     return item.id;
-  };
+  }
   // '' when the item can go on this car, otherwise why not.
   G.partFitIssue = function (item, inst) {
+    // a generic factory part only fits the model it came off
+    if (item.stock && item.id === 'stock' && !G.isEngineBound(item.cat) && item.car && item.car !== inst.carId) return 'Factory part for the ' + DR.CARS[item.car].name;
+    if (DR.partId(item.cat, inst) === item.id && (item.id !== 'stock' || DR.stockPart(item.cat, inst) === 'stock')) return 'Already on this car';
     if (G.isEngineBound(item.cat) && item.eng !== inst.engine) return DR.ENGINES[item.eng] ? 'Made for the ' + DR.ENGINES[item.eng].name : 'Made for another engine';
     if (!DR.partApplies(item.cat, inst)) {
       if (item.cat === 'clutch' || item.cat === 'flywheel') return 'Needs a manual gearbox';
@@ -213,12 +223,39 @@
   };
   G.invFor = function (cat) { return G.state.inv.filter(function (it) { return it.cat === cat; }); };
   G.ownedCount = function (cat, id) { return G.state.inv.filter(function (it) { return it.cat === cat && it.id === id; }).length; };
-  G.partSellValue = function (item) { return Math.round((item.price || 0) * 0.5 / 10) * 10; };
+  G.partSellValue = function (item) { return item.stock ? item.val || 0 : Math.round((item.price || 0) * 0.5 / 10) * 10; };
+  // Whether the factory "part" in a slot is a real part you can take off and
+  // keep: not pump gas, an empty nitrous slot, the factory weight or layout,
+  // or the block (studs, girdles and sleeves go on the same block); a
+  // factory turbo's bits only when the engine came boosted.
+  var NO_PART = { weight: 1, layout: 1, fueltype: 1, launch: 1, nitrous: 1, nosctrl: 1, nosheat: 1, transbrake: 1, wheeliebar: 1, aero: 1, chassis: 1, block: 1 };
+  var FI_PARTS = { fi: 1, ic: 1, wastegate: 1, bov: 1 };
+  G.stockIsPart = function (cat, inst) {
+    if (cat === 'engine') return true;
+    if (NO_PART[cat] || !DR.partApplies(cat, inst)) return false;
+    if (FI_PARTS[cat]) return !!DR.ENGINES[inst.engine].fi;
+    return true;
+  };
+  // What a used factory part is worth: an engine about a third of a new
+  // one, anything else about 20% of the cheapest new part of its kind.
+  G.stockValue = function (cat, inst, id) {
+    if (cat === 'engine') return Math.round(DR.ENGINES[id].price * 0.35 / 10) * 10;
+    var cheapest = DR.partOptions(cat, inst).filter(function (o) { return o.price; }).sort(function (a, b) { return a.price - b.price; })[0];
+    return Math.max(10, Math.round((cheapest ? cheapest.price : 100) * 0.2 / 10) * 10);
+  };
 
-  // Moves the part installed in `cat` to the inventory (if it is not stock).
-  function stash(inst, cat) {
+  // Moves the part installed in `cat` to the inventory. A factory part goes
+  // too (as a used factory part, worth a little), unless it leaves with its
+  // engine (keepStock: the engine's own factory bits stay on it).
+  function stash(inst, cat, keepStock) {
     var id = DR.partId(cat, inst);
-    if (id === DR.stockPart(cat, inst)) return null;
+    if (id === DR.stockPart(cat, inst)) {
+      if (keepStock || !G.stockIsPart(cat, inst)) return null;
+      var st = { uid: G.state.uid++, cat: cat, id: id, price: 0, stock: true, val: G.stockValue(cat, inst, id), from: inst.uid };
+      if (G.isEngineBound(cat)) st.eng = inst.engine; else if (id === 'stock') st.car = inst.carId;
+      G.state.inv.push(st);
+      return st;
+    }
     var opt = DR.getOption(cat, inst, id);
     var item = { uid: G.state.uid++, cat: cat, id: id, price: opt.price || 0, eng: G.isEngineBound(cat) ? inst.engine : undefined, from: inst.uid };
     G.state.inv.push(item);
@@ -236,7 +273,7 @@
   function setPart(inst, cat, id) {
     var fiWas = DR.partId('fi', inst);
     if (cat === 'engine') {
-      DR.ENGINE_BOUND.forEach(function (c) { stash(inst, c); delete inst.parts[c]; });
+      DR.ENGINE_BOUND.forEach(function (c) { stash(inst, c, true); delete inst.parts[c]; });
       stash(inst, 'engine');
       inst.engine = id;
       if (inst.damage && inst.damage.engine) inst.damage = null;
@@ -287,9 +324,26 @@
     if (cat === 'layout' && car.drive === 'FWD' && DR.ENGINES[inst.engine].mount === 'L') return 'The ' + DR.ENGINES[inst.engine].name + ' needs the conversion. Swap the engine out first.';
     return '';
   };
-  // Back to the factory part; the old one goes on the shelf.
+  // The factory part that goes back in when an aftermarket one comes off:
+  // yours from the inventory if you kept it, else a used one bought for
+  // what it's worth. { item, cost }
+  G.factoryFor = function (inst, cat) {
+    var id = DR.stockPart(cat, inst);
+    var mine = G.state.inv.filter(function (it) { return it.stock && it.cat === cat && it.id === id && !G.partFitIssueStock(it, inst); })[0];
+    if (!G.stockIsPart(cat, inst)) return { item: null, cost: 0 };
+    return { item: mine || null, cost: mine ? 0 : G.stockValue(cat, inst, cat === 'engine' ? DR.CARS[inst.carId].engine : id) };
+  };
+  G.partFitIssueStock = function (it, inst) {
+    if (it.id === 'stock' && !G.isEngineBound(it.cat) && it.car && it.car !== inst.carId) return 'other car';
+    if (G.isEngineBound(it.cat) && it.eng !== inst.engine) return 'other engine';
+    return '';
+  };
+  // Back to the factory part; the old one goes to the inventory.
   G.removePart = function (inst, cat) {
     if (DR.partId(cat, inst) === DR.stockPart(cat, inst) || G.removeIssue(inst, cat)) return false;
+    var f = G.factoryFor(inst, cat);
+    if (f.cost && !G.canAfford(f.cost)) return false;
+    if (f.item) G.state.inv.splice(G.state.inv.indexOf(f.item), 1); else if (f.cost) G.pay(f.cost);
     if (cat === 'engine') setPart(inst, 'engine', DR.CARS[inst.carId].engine);
     else { var fiWas = DR.partId('fi', inst); stash(inst, cat); delete inst.parts[cat]; clearTune(inst, cat, fiWas); if (cat === 'layout') swapBoxKind(inst); }
     G.save();
@@ -345,6 +399,12 @@
   G.clearSold = function () { G.state.sold = []; };
   // Every aftermarket part comes off and goes to your shelf; the car keeps
   // its factory parts (and is worth that much).
+  // What stripping a car costs: used factory parts for any you sold.
+  G.stripCost = function (inst) {
+    var cats = Object.keys(inst.parts).filter(function (c) { return DR.partId(c, inst) !== DR.stockPart(c, inst); });
+    if (inst.engine !== DR.CARS[inst.carId].engine) cats.push('engine');
+    return cats.reduce(function (t, c) { return t + G.factoryFor(inst, c).cost; }, 0);
+  };
   G.stripCar = function (inst) {
     var n = G.state.inv.length;
     if (inst.engine !== DR.CARS[inst.carId].engine) G.removePart(inst, 'engine');
@@ -455,12 +515,13 @@
   DR.RIVALS = BANDS.map(function (b) { return b.opps; });
 
   G.oppInst = function (o) {
-    return { uid: -1, carId: o.carId, engine: o.engine, parts: DR.fitTrans({ carId: o.carId, parts: Object.assign({}, o.parts) }).parts, tune: o.tune, vis: o.vis || {}, color: o.color || DR.CARS[o.carId].col, stripe: o.stripe || '', rim: o.rim || '#d0d0d0' };
+    // ai: a rival's build is always fuelled and tuned properly
+    return { uid: -1, ai: true, carId: o.carId, engine: o.engine, parts: DR.fitTrans({ carId: o.carId, parts: Object.assign({}, o.parts) }).parts, tune: o.tune, vis: o.vis || {}, color: o.color || DR.CARS[o.carId].col, stripe: o.stripe || '', rim: o.rim || '#d0d0d0' };
   };
   // Estimated ET for an opponent / car (cached per build).
   var etCache = {};
   G.estimate = function (inst, dist, grip) {
-    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune, dist, grip || 1]);
+    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune, dist, grip || 1, !!inst.ai]);
     if (etCache[key]) return etCache[key];
     var r = DR.simulate(DR.buildSpec(inst), { dist: dist || DR.QUARTER, grip: grip || 1 });
     etCache[key] = { et: r.et, trap: r.trap };

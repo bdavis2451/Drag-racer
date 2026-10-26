@@ -427,8 +427,12 @@
       gst('LIMITER', S.red + ' rpm' + (S.ecu === 0 ? ' (stock)' : ''), S.red > S.mech ? 'bad' : ''),
       S.rotary ? null : gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst(S.rotary ? 'ROTATING' : 'BOTTOM END', S.beLimit + ' rpm (' + DR.catName(S.beWeak, inst).toLowerCase() + ')', S.red > S.beLimit ? 'bad' : ''),
       gst('SAFE POWER', Math.round(S.safeHp) + ' hp (' + DR.catName(S.safeWeak, inst).toLowerCase() + ')', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),
-      gst('FUEL', Math.round(S.fuelW / DR.HP) + ' hp (' + (S.fuelInj < S.fuelPump ? 'injectors' : S.fuelPump < S.fuelInj ? 'pump' : 'stock') + ')', S.fuelW < dy.peakHp * DR.HP * 1.001 || DR.nosLean(S).short > 0 ? 'bad' : ''),
-      S.nosHp && S.nosFuel !== 'own' ? gst('SPRAY FUEL', DR.nosLean(S).short > 0 ? 'short ' + Math.round(DR.nosLean(S).short) + ' hp' : 'OK (' + (S.nosFuel === 'inj' ? 'dry' : 'wet') + ')', DR.nosLean(S).short > 0 ? 'bad' : 'good') : null,
+      (function () {
+        // what the injectors / pump feed against what the engine (and any shot) wants
+        var fs = DR.fuelShort(S), lean = fs.ratio > 1.02;
+        return gst('FUEL', Math.round(fs.cap) + ' hp ' + (fs.by === 'injectors' ? 'injectors' : 'pump') + (S.stockFuel ? ' (stock)' : '') + ' • needs ' + Math.round(fs.need), lean ? 'bad' : fs.ratio > 0.9 ? 'acc' : 'good');
+      })(),
+      S.untuned && S.untuned.length ? gst('TUNE', 'Untuned: ' + S.untuned.map(function (u) { return DR.catName(u[0], inst).toLowerCase(); }).join(', '), 'bad') : gst('TUNE', S.tuned ? 'Tuned' : 'Stock ECU', ''),
       S.fiType !== 'none' && !S.diesel ? gst('IGNITION', S.sparkPsi + ' psi', S.boostSet > S.sparkPsi ? 'bad' : '') : null,
       UI.riskBox(S));
     function delta(v, p0) { if (p0 == null) return ''; var d = Math.round(v - p0); return d ? ' (' + (d > 0 ? '+' : '') + d + ')' : ''; }
@@ -553,7 +557,9 @@
         h('div', { class: 'efoot' },
           active ? null : btn('Drive', function () { G.state.active = inst.uid; G.save(); UI.show(UI.Garage); }, 'small go'),
           modded(inst) ? btn('Strip parts', function () {
-            UI.confirm('Take every aftermarket part off the ' + DR.CARS[inst.carId].name + '? They go to your inventory and the car goes back to factory spec.', function () {
+            var sc = G.stripCost(inst);
+            if (sc && !G.canAfford(sc)) return UI.toast('Used factory parts to replace the ones you sold cost ' + DR.money(sc));
+            UI.confirm('Take every aftermarket part off the ' + DR.CARS[inst.carId].name + '? They go to your inventory and its factory parts go back in' + (sc ? ' (used ones for those you sold: ' + DR.money(sc) + ')' : '') + '.', function () {
               var n = G.stripCar(inst); A.click(); UI.toast(n + ' part' + (n === 1 ? '' : 's') + ' moved to your inventory'); UI.refresh();
             }, 'Strip');
           }, 'small') : null,
@@ -571,7 +577,7 @@
       modded(inst) ? h('p', { class: 'dim' }, 'Sell it as it sits and the parts go with it, or strip the parts to your inventory first and sell the factory car.') : null,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '10px', flexWrap: 'wrap', gap: '6px' } },
         btn('Cancel', function () { close(); }),
-        modded(inst) ? btn('Strip, then sell', function () { close(); var n = G.stripCar(inst), v = G.carValue(inst); G.sellCar(inst.uid); A.cash(); UI.toast('Sold for ' + DR.money(v) + ' • ' + n + ' parts kept'); UI.refresh(); }) : null,
+        modded(inst) ? btn('Strip, then sell' + (G.stripCost(inst) ? ' (-' + DR.money(G.stripCost(inst)) + ')' : ''), function () { close(); var n = G.stripCar(inst), v = G.carValue(inst); G.sellCar(inst.uid); A.cash(); UI.toast('Sold for ' + DR.money(v) + ' • ' + n + ' parts kept'); UI.refresh(); }) : null,
         btn('Sell ' + DR.money(G.carValue(inst)), function () { close(); G.sellCar(inst.uid); A.cash(); UI.refresh(); }, 'primary'))]);
   }
 

@@ -101,10 +101,10 @@
   ]};
   C.cams = { name: 'Camshafts', engineScaled: true, options: [
     opt('stock', 'Stock Cams', 0, { bw: 0, stress: 0 }),
-    opt('c1', 'Stage 1 Cams', 800, { bw: 0.08, low: 0.05, stress: 0 }, 'Mild cams. Fine on stock valve springs.'),
-    opt('c2', 'Stage 2 Cams', 1400, { bw: 0.16, low: 0.12, stress: 300 }, 'Moves the power peak up. More lift: floats stock springs 300 rpm sooner.'),
-    opt('c3', 'Stage 3 Race Cams', 2600, { bw: 0.25, low: 0.22, stress: 600 }, 'Big power up top, lumpy idle. Needs real valve springs.'),
-    opt('c4', 'Solid Roller Race Cams', 5000, { bw: 0.33, low: 0.30, stress: 900 }, 'All top end. Needs a race valvetrain to live.')
+    opt('c1', 'Stage 1 Cams', 800, { bw: 0.08, low: 0.05, stress: 0, tune: 'soft' }, 'Mild cams. Fine on stock valve springs.'),
+    opt('c2', 'Stage 2 Cams', 1400, { bw: 0.16, low: 0.12, stress: 300, tune: 'hard' }, 'Moves the power peak up. More lift: floats stock springs 300 rpm sooner.'),
+    opt('c3', 'Stage 3 Race Cams', 2600, { bw: 0.25, low: 0.22, stress: 600, tune: 'hard' }, 'Big power up top, lumpy idle. Needs real valve springs.'),
+    opt('c4', 'Solid Roller Race Cams', 5000, { bw: 0.33, low: 0.30, stress: 900, tune: 'hard' }, 'All top end. Needs a race valvetrain to live.')
   ]};
   C.valvetrain = { name: 'Valvetrain', engineScaled: true, options: [
     opt('stock', 'Stock Valve Springs', 0, { vt: 0 }),
@@ -159,12 +159,12 @@
   // system feeds (hp on gasoline; alcohol needs more flow).
   C.injectors = { name: 'Fuel Injectors', options: [
     opt('stock', 'Stock Injectors', 0, { fuel: 0 }),
-    opt('inj0', '440cc Injectors', 250, { fuel: 420 }, 'Feeds 420 hp on gasoline.'),
-    opt('inj1', '550cc Injectors', 400, { fuel: 600 }, 'Feeds 600 hp on gasoline.'),
-    opt('inj2', '1000cc Injectors', 800, { fuel: 1000 }, 'Feeds 1000 hp.'),
-    opt('inj3', '1700cc Injectors', 1500, { fuel: 1800 }, 'Feeds 1800 hp.'),
-    opt('inj4', '2400cc Injectors', 3000, { lvl: 4, fuel: 2800 }, 'Feeds 2800 hp.'),
-    opt('inj5', 'Twin Injectors per Cylinder', 6000, { lvl: 5, fuel: 5000 }, 'Feeds 5000 hp.')
+    opt('inj0', '440cc Injectors', 250, { tune: 'hard', fuel: 420 }, 'Feeds 420 hp on gasoline.'),
+    opt('inj1', '550cc Injectors', 400, { tune: 'hard', fuel: 600 }, 'Feeds 600 hp on gasoline.'),
+    opt('inj2', '1000cc Injectors', 800, { tune: 'hard', fuel: 1000 }, 'Feeds 1000 hp.'),
+    opt('inj3', '1700cc Injectors', 1500, { tune: 'hard', fuel: 1800 }, 'Feeds 1800 hp.'),
+    opt('inj4', '2400cc Injectors', 3000, { tune: 'hard', lvl: 4, fuel: 2800 }, 'Feeds 2800 hp.'),
+    opt('inj5', 'Twin Injectors per Cylinder', 6000, { tune: 'hard', lvl: 5, fuel: 5000 }, 'Feeds 5000 hp.')
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
@@ -176,9 +176,9 @@
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
     opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Knocks past 17 psi with a cool, intercooled charge, far sooner with a hot one.'),
-    opt('e85', 'E85 Ethanol', 800, { knock: 30, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, 30 psi safe with a cool charge, and it cools a hot one 15 C. Needs 33% more fuel flow.'),
+    opt('e85', 'E85 Ethanol', 800, { tune: 'hard', knock: 30, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, 30 psi safe with a cool charge, and it cools a hot one 15 C. Needs 33% more fuel flow.'),
     opt('race', 'Race Gas 116', 1200, { knock: 34, fmul: 1.03, ff: 1 }, '+3% power, 34 psi safe with a cool charge.'),
-    opt('meth', 'Methanol', 2500, { knock: 50, fmul: 1.06, ff: 0.62, cool: 35 }, '+6% power, 50 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs 60% more fuel flow.')
+    opt('meth', 'Methanol', 2500, { tune: 'hard', knock: 50, fmul: 1.06, ff: 0.62, cool: 35 }, '+6% power, 50 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs 60% more fuel flow.')
   ]};
   // spark: extra psi of boost (and nitrous) the ignition can light before it
   // starts to misfire (stock ignition gives out a few psi past factory boost)
@@ -190,10 +190,10 @@
   ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
     opt('stock', 'Stock ECU', 0, { bw: 0, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
-    opt('ecu0', 'Performance Chip', 350, { bw: 0.015, ecu: 0 }, 'A plug-in chip: a little more timing and fuel. Keeps the factory limiter.'),
-    opt('ecu1', 'Street Tune Flash', 600, { bw: 0.03, ecu: 1 }, 'Better fuel and timing. Raises the rev limiter as far as your engine parts safely allow (up to +800 rpm).'),
-    opt('ecu2', 'Standalone ECU', 2000, { bw: 0.05, ecu: 2 }, 'Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
-    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3 }, 'Adjustable rev limiter and traction control.')
+    opt('ecu0', 'Performance Chip', 350, { bw: 0.015, ecu: 0 }, 'An off-the-shelf plug-in chip: a little more timing and fuel for a stock engine. It is not a tune: it can\'t scale new injectors, boost, alcohol fuel or cams. Keeps the factory limiter.'),
+    opt('ecu1', 'Street Tune Flash', 600, { bw: 0.03, ecu: 1, tune: true }, 'A custom flash of the factory ECU for your parts: injectors, boost, E85, cams. Better fuel and timing, and the rev limiter goes as far as your engine parts safely allow (up to +800 rpm).'),
+    opt('ecu2', 'Standalone ECU', 2000, { bw: 0.05, ecu: 2, tune: true }, 'Tuned for your parts. Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
+    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3, tune: true }, 'Tuned for your parts. Adjustable rev limiter and traction control.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
     opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler (takes out 60% of the heat); a bolt-on kit has none, so the charge goes in hot.'),
@@ -493,7 +493,7 @@
     if (cat === 'fi') {
       var st = DR.stockPart('fi', inst);
       list.push({ id: st, name: st === 'none' ? 'None (Naturally Aspirated)' : DR.FI[st].name + ' (Factory)', price: 0, desc: st === 'none' ? '' : 'Max ' + DR.FI[st].maxBoost + ' psi, feeds ~' + DR.FI[st].flow + ' hp.' });
-      DR.FI_SHOP.forEach(function (f) { var u = DR.FI[f]; list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp.' }); });
+      DR.FI_SHOP.forEach(function (f) { var u = DR.FI[f]; list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, tune: 'hard', desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp. Needs an ECU tune: the stock one can only run ~5 psi. Plan on injectors and a pump too.' }); });
       return list;
     }
     if (cat === 'diff') {
@@ -511,6 +511,8 @@
       if (rot) { var r = rot.options[i]; o = Object.assign({}, o, { name: r[0], desc: r[1] }, r[2] || {}); }
       var x = Object.assign({}, o, { price: Math.round(o.price * mul / 50) * 50, lvl: lvlOf(o) });
       if (o.hold) x.desc = (o.desc ? o.desc + ' ' : '') + 'About ' + Math.round(eng.safe * o.hold / 10) * 10 + ' hp on this engine.';
+      if (o.tune === 'hard' || (o.tune === true && cat !== 'ecu')) x.desc = (x.desc ? x.desc + ' ' : '') + 'Needs an ECU tune (flash or standalone).';
+      if (o.tune === 'soft') x.desc = (x.desc ? x.desc + ' ' : '') + 'Runs on the stock tune, but only makes about half its gain without one.';
       return x;
     }).filter(Boolean).sort(function (a, b) { return (a.price ? 1 : 0) - (b.price ? 1 : 0) || (b.only ? 1 : 0) - (a.only ? 1 : 0); });
   }
@@ -651,7 +653,7 @@
   function withParts(inst, p) { var c = JSON.parse(JSON.stringify(inst)); for (var k in p) c.parts[k] = p[k]; return c; }
   function fuelFor(cat, min) { return function (inst) {
     // power the engine would make with unlimited fuel, plus a margin
-    var S = DR.buildSpec(withParts(inst, { injectors: 'inj5', fuelpump: 'fp4' }));
+    var S = DR.buildSpec(withParts(inst, { injectors: 'inj5', fuelpump: 'fp4', ecu: DR.getOption('ecu', inst).tune ? DR.partId('ecu', inst) : 'ecu1' }));
     // nitrous that takes its fuel from this part counts too (dry: injectors
     // and pump; wet: the pump)
     var spray = S.nosHp && (S.nosFuel === 'inj' || (S.nosFuel === 'pump' && cat === 'fuelpump')) ? S.nosHp : 0;
@@ -710,7 +712,7 @@
       [['pistons', function (i) { return boosted(i) ? 'p1' : 'p2'; }], ['rods', 'r2'], ['crank', 'k1'], ['block', 'b1'], ['oiling', 'o1']],
       [['pistons', 'p3'], ['rods', 'r3'], ['crank', 'k2'], ['block', 'b2'], ['oiling', 'o2']]],
     fuel: [
-      [['ignition', 'ig1'], ['ecu', 'ecu0'], ['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)]],
+      [['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)]],
       [['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 2)], ['fuelpump', fuelFor('fuelpump', 2)]],
       [['fueltype', 'e85'], ['ignition', 'ig2'], ['ecu', 'ecu2'], ['injectors', fuelFor('injectors', 3)], ['fuelpump', fuelFor('fuelpump', 3)]],
       [['fueltype', 'e85'], ['ignition', 'ig3'], ['ecu', 'ecu3'], ['injectors', fuelFor('injectors', 4)], ['fuelpump', fuelFor('fuelpump', 4)]]],
@@ -794,9 +796,23 @@
       if (cat === 'fi') delete copy.tune.boost;
       if (id === DR.stockPart(cat, copy)) delete copy.parts[cat]; else copy.parts[cat] = id;
       steps.push({ cat: cat, id: id, opt: opt });
+      if (cat !== 'ecu') ensureTune();
       return true;
     }
-    function risky() { var r = DR.buildSpec(copy).risk; return r.engine > 0 || r.trans > 0 || r.axle > 0; }
+    // a part that needs a tune brings the tune with it (the cheapest ECU
+    // flash unlocked), so the rest of the package is sized for a tuned car
+    function ensureTune() {
+      var S = DR.buildSpec(copy);
+      if (S.tuned || !S.untuned.length) return;
+      var t = DR.partOptions('ecu', copy).filter(function (o) { return o.tune && (unl('ecu', o) || anyLevel); }).sort(function (a, b) { return a.price - b.price; })[0];
+      if (t) fit('ecu', t.id);
+    }
+    function risky(fuelLater) {
+      var c = copy;
+      // the fuel system is added after the power parts: judge as if fed
+      if (fuelLater) { c = JSON.parse(JSON.stringify(copy)); c.parts.injectors = 'inj5'; c.parts.fuelpump = 'fp4'; if (!DR.getOption('ecu', c).tune) c.parts.ecu = 'ecu1'; }
+      var r = DR.buildSpec(c).risk; return r.engine > 0 || r.trans > 0 || r.axle > 0;
+    }
     // power packages turn the boost up to suit, within the fuel's knock
     // limit, the ignition and the turbo (never below what it was); done
     // straight after the power parts so the rest is sized for it
@@ -833,7 +849,7 @@
         for (var k = shots.length - 1; k >= 0; k--) {
           var keep = JSON.stringify(copy.parts);
           copy.parts.nitrous = shots[k].id;
-          if (!risky()) { delete copy.parts.nitrous; copy.parts = JSON.parse(keep); fit('nitrous', shots[k].id); if (DR.partId('nosheat', copy) === 'stock') { var nh = pick('nosheat', 'nh1'); if (nh) fit('nosheat', nh); } break; }
+          if (!risky(true)) { delete copy.parts.nitrous; copy.parts = JSON.parse(keep); fit('nitrous', shots[k].id); if (DR.partId('nosheat', copy) === 'stock') { var nh = pick('nosheat', 'nh1'); if (nh) fit('nosheat', nh); } break; }
           copy.parts = JSON.parse(keep);
         }
       }
@@ -855,7 +871,7 @@
       }
       var need = function (cat) {
         var S = DR.buildSpec(copy);
-        if (cat === 'injectors' || cat === 'fuelpump') return S.fuelW < S.peakHp * DR.HP * 1.001;
+        if (cat === 'injectors' || cat === 'fuelpump') { var f = DR.fuelShort(S); return (cat === 'injectors' ? f.ri : f.rp) > 0.98; }
         if (cat === 'clutch') return S.clCap && S.peakTq / 0.7376 > S.clCap;
         if (cat === 'rearend') return S.risk.axle > 0;
         if (cat === 'trans') return S.risk.trans > 0;
@@ -887,7 +903,7 @@
   // line, flat out after the hit). Only settings the parts allow.
   var launchMemo = {};
   DR.launchTune = function (inst) {
-    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune && inst.tune.boost]);
+    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune && inst.tune.boost, !!inst.ai]);
     if (launchMemo[key]) return launchMemo[key];
     var S0 = DR.buildSpec(inst), out = {};
     // the rear gear first: keep the launch gear about where the factory had

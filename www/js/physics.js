@@ -198,7 +198,14 @@
     // Power goes from stock towards bg x stock and the power peak from pk
     // towards bp; the torque peak follows. The curve's peak torque is then
     // solved so the NA-equivalent peak power lands on that target.
-    var B = clamp([air, intake, tb, exh, hdr, cams, heads, ecu].reduce(function (a, p) { return a + (p.bw || 0); }, 0), 0, 1);
+    // ---- the tune: a flash (or standalone) recalibrates the ECU for the
+    // parts. Rival builds (inst.ai) are always set up properly. Parts that
+    // need it (part.tune): 'hard' won't run right without one, 'soft' runs
+    // but leaves power on the table.
+    var ai = !!inst.ai, tuned = ai || !!ecu.tune, untuned = [];
+    var camK = 1;
+    if (!tuned && cams.tune) { camK = cams.tune === 'soft' ? 0.5 : 0; untuned.push(cams.tune === 'soft' ? ['cams', 'Stage 1 cams on the stock tune: about half the gain, rough idle'] : ['cams', 'The stock tune can\'t run these cams: it surges and loses power']); }
+    var B = clamp([air, intake, tb, exh, hdr, heads, ecu].reduce(function (a, p) { return a + (p.bw || 0); }, 0) + (cams.bw || 0) * camK, 0, 1);
     var bg = e.bg || 1.3, bp = e.bp || e.pk + 1000;
     var pkB = e.pk + (bp - e.pk) * B;
     var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
@@ -207,7 +214,10 @@
     var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: fuel.cool || 0, knock: fuel.knock + (e.diesel ? 0 : crKnock) };
     var S = engineCore(e, mods, 1);
     var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
-    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) / shapePeak(S);
+    var untunedK = 1;
+    if (!tuned && cams.tune === 'hard') untunedK *= 0.94;
+    if (!tuned && inj.tune) { untunedK *= 0.88; untuned.push(['injectors', 'Bigger injectors on the stock tune: it runs pig-rich']); }
+    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) * untunedK / shapePeak(S);
     S.breathing = B;
     S.carId = inst.carId; S.car = car; S.engId = engId; S.eng = e;
     S.name = car.name;
@@ -236,8 +246,13 @@
     S.safeHp = e.safe * holdBy[0][1];
     S.safeWeak = holdBy[0][0];
     S.partHold = { pistons: e.safe * pist.hold, rods: e.safe * rods.hold, crank: e.safe * crank.hold, block: e.safe * block.hold };
-    var stockFuelHp = Math.max(e.hp * 1.35 + 60, 300);
-    S.fuelInj = inj.fuel || stockFuelHp; S.fuelPump = pump.fuel || stockFuelHp;
+    // factory fuel systems: the injectors feed the engine they came on with
+    // ~25% to spare (~15% on a factory boosted one); the pump is the car's
+    // and has a little more (a Fox's 88 lph pump is good for ~250 hp NA)
+    var stockInj = ai ? Math.max(e.hp * 1.35 + 60, 300) : e.hp * (e.fi ? 1.15 : 1.25);
+    var stockPump = ai ? stockInj : Math.max(stockEng.hp * 1.3, 180);
+    S.fuelInj = inj.fuel || stockInj; S.fuelPump = pump.fuel || stockPump;
+    S.stockFuel = !inj.fuel && !pump.fuel;
     S.fuelW = Math.min(S.fuelInj, S.fuelPump) * (e.diesel ? 1 : fuel.ff) * DR.HP;
     // ignition: the factory coils light factory boost plus a few psi (about
     // 10 psi on an engine that never had a turbo)
@@ -249,6 +264,10 @@
       if (fiU.price) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // factory turbos come with a gate sized for them
       S.lag *= gate.spoolK;
     }
+    if (!tuned && fiU.type !== 'none' && fiU.price) { S.maxBoost = Math.min(S.maxBoost, 5); untuned.push(['fi', 'The stock tune can\'t fuel or time more than ~5 psi']); }
+    else if (!tuned && fiU.type !== 'none' && e.fi) S.maxBoost = Math.min(S.maxBoost, e.fi.boost + 2);
+    if (!tuned && fuel.tune) untuned.push(['fueltype', fuel.name + ' on a gasoline tune runs lean']);
+    S.untuned = untuned; S.tuned = tuned; S.e85Lean = !tuned && !!fuel.tune;
     S.bovT = fiU.type === 'turbo' ? (fiU.price ? bov.bov : Math.max(0.3, bov.bov)) : 0.15;
     S.ecu = ecu.ecu;
     S.twostep = launch.twostep;
@@ -362,6 +381,8 @@
 
     // ---- summary numbers
     var dyno = DR.dyno(S);
+    // what the engine would make with all the fuel it wants (for lean risk)
+    var fw = S.fuelW; S.fuelW = 1e12; S.fuelDemand = DR.dyno(S).peakHp; S.fuelW = fw;
     S.peakHp = dyno.peakHp; S.peakTq = dyno.peakTq; S.peakHpRpm = dyno.peakHpRpm;
     S.totalHp = S.peakHp + S.nosHp;
     // Launch clutch slip: a car that can't overpower its tires in 1st has its
@@ -525,8 +546,9 @@
       if (S.fuelInj <= S.fuelPump) out.injectors = 'Maxed out';
       if (S.fuelPump <= S.fuelInj) out.fuelpump = 'Maxed out';
     }
-    var nl = DR.nosLean(S);
-    if (nl.short > 0) out[nl.by] = out[nl.by] || 'Can\'t feed the nitrous';
+    var fs = DR.fuelShort(S);
+    if (fs.ratio > 1.02) out[fs.by] = out[fs.by] || (fs.nos ? 'Can\'t feed the nitrous' : 'Running lean');
+    if (S.untuned && S.untuned.length) out.ecu = 'Needs a tune';
     if ((S.fiType !== 'none' && S.boostSet > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
     if (S.fiType !== 'none' && S.boostSet > S.knock + 0.5) out.fueltype = 'Knocking at ' + S.boostSet + ' psi';
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) out.ic = 'Charge is ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F)';
@@ -576,12 +598,15 @@
   // The worst failure chance per run, whatever breaks.
   DR.riskMax = function (r) { return Math.max(r.engine, r.trans, r.axle || 0, r.chassis || 0); };
   // Probability (0..1) of engine / gearbox failure on a run.
-  // How much fuel the nitrous has: { cap, need, short, by: 'injectors' | 'fuelpump' } in hp
-  DR.nosLean = function (S) {
-    if (!S.nosHp || S.nosFuel === 'own') return { cap: 0, need: 0, short: 0 };
-    var inj = S.fuelInj * S.fuelFF, pump = S.fuelPump * S.fuelFF;
-    var cap = S.nosFuel === 'inj' ? Math.min(inj, pump) : pump, need = S.peakHp + S.nosHp;
-    return { cap: cap, need: need, short: Math.max(0, need - cap * 1.001), by: S.nosFuel === 'inj' && inj < pump ? 'injectors' : 'fuelpump' };
+  // Fuel the build needs against what the injectors and pump feed (hp):
+  // the engine's full demand, plus a dry shot (through the injectors) or a
+  // wet one (from the pump). { ratio, by: 'injectors' | 'fuelpump', need, cap, nos }
+  DR.fuelShort = function (S) {
+    var eng = S.fuelDemand || S.peakHp, nos = S.nosHp && S.nosFuel !== 'own' ? S.nosHp : 0;
+    var injNeed = eng + (S.nosFuel === 'inj' ? nos : 0), pumpNeed = eng + nos;
+    var injCap = S.fuelInj * S.fuelFF, pumpCap = S.fuelPump * S.fuelFF;
+    var ri = injNeed / injCap, rp = pumpNeed / pumpCap, inj = ri >= rp;
+    return { ratio: Math.max(ri, rp), ri: ri, rp: rp, by: inj ? 'injectors' : 'fuelpump', need: inj ? injNeed : pumpNeed, cap: inj ? injCap : pumpCap, nos: nos > 0 && (inj ? S.nosFuel === 'inj' : true) };
   };
   DR.riskOf = function (S) {
     var r = { engine: 0, trans: 0, notes: [] };
@@ -595,11 +620,15 @@
     if (S.boostSet > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + S.boostSet + ' psi - misfiring past ' + S.sparkPsi + ' psi');
     if (S.boostSet > S.knock + 0.5) { r.engine += Math.min(0.6, (S.boostSet - S.knock) * 0.05); r.notes.push('Boost is past the knock limit (' + S.knock + ' psi' + (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + ')'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
-    if (S.fuelW < (S.peakHp * DR.HP) * 1.001) r.notes.push((S.fuelInj < S.fuelPump ? 'Injectors are' : S.fuelPump < S.fuelInj ? 'Fuel pump is' : 'Fuel system is') + ' maxed out - power is limited');
-    // nitrous it can't feed runs lean: it still makes the power, until it
-    // burns a piston
-    var nl = DR.nosLean(S);
-    if (nl.short > 0) { r.engine += Math.min(0.7, (nl.need / nl.cap - 1) * 2.5); r.notes.push('Spraying lean: the ' + (S.nosFuel === 'inj' ? 'injectors and pump feed' : 'fuel pump feeds') + ' ' + Math.round(nl.cap) + ' hp, the engine plus the shot need ' + Math.round(nl.need) + ' hp' + (S.nosFuel === 'inj' ? ' (a dry kit adds its fuel through the injectors)' : '')); }
+    // short of fuel it runs lean: it makes what the fuel allows (or the
+    // nitrous still hits) until it burns a piston
+    var fs = DR.fuelShort(S);
+    if (fs.ratio > 1.02) {
+      r.engine += Math.min(0.7, (fs.ratio - 1) * 2.5);
+      r.notes.push('Running lean: the ' + (fs.by === 'injectors' ? 'injectors feed' : 'fuel pump feeds') + ' ' + Math.round(fs.cap) + ' hp, the engine' + (fs.nos ? ' plus the shot' : '') + ' wants ' + Math.round(fs.need) + ' hp' + (fs.nos && S.nosFuel === 'inj' ? ' (a dry kit adds its fuel through the injectors)' : ''));
+    }
+    if (S.e85Lean) { r.engine += 0.45; r.notes.push('Alcohol fuel needs ~30% more fuel: on a gasoline tune it runs lean - get a tune'); }
+    (S.untuned || []).forEach(function (u) { if (u[0] !== 'fueltype') r.notes.push(u[1] + ' - get an ECU flash'); });
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     // gearbox ratings carry a little margin: trouble starts 5% past them
