@@ -112,11 +112,52 @@
     jobs.length = 0;
     // a dialog belongs to the screen it was opened on: leaving closes it
     if (!UI.refreshing) document.querySelectorAll('.modal').forEach(function (m) { m.parentNode.removeChild(m); });
+    // redrawn in place: every scrolled row and list keeps its place
+    var scrolls = UI.refreshing && UI.cur && UI.cur.fn === fn ? scrollSnap() : null;
     UI.app.innerHTML = '';
     UI.app.appendChild(fn(arg));
     UI.cur = { fn: fn, arg: arg };
     UI.app.querySelectorAll('input[type=range]').forEach(rangeFill);
+    if (scrolls) { scrollRestore(scrolls); requestAnimationFrame(function () { scrollRestore(scrolls); showSelected(true); }); }
+    else requestAnimationFrame(function () { showSelected(false); });
   };
+  // Which tab, category or slot each screen was last on, kept in the save so
+  // the game reopens where you left it. UI.memory(owner) is true once per
+  // loaded game (time to read G.state.ui); UI.remember stores and saves.
+  var memLoaded = {}, memTimer = null;
+  UI.memory = function (owner) {
+    if (memLoaded[owner] === G.state) return null;
+    memLoaded[owner] = G.state;
+    return G.state.ui || {};
+  };
+  UI.remember = function (o) {
+    var m = G.state.ui || (G.state.ui = {}), changed = false;
+    for (var k in o) if (m[k] !== o[k]) { m[k] = o[k]; changed = true; }
+    if (changed) { clearTimeout(memTimer); memTimer = setTimeout(function () { G.save(); }, 400); }
+  };
+  // scroll positions by element class and position among its look-alikes
+  function scrollKeys() {
+    var seen = {}, out = [];
+    UI.app.querySelectorAll('*').forEach(function (el) {
+      if (el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1) return;
+      var k = el.tagName + '.' + el.className, n = seen[k] = (seen[k] || 0) + 1;
+      out.push([k + '#' + n, el]);
+    });
+    return out;
+  }
+  function scrollSnap() { var m = {}; scrollKeys().forEach(function (e) { if (e[1].scrollLeft || e[1].scrollTop) m[e[0]] = [e[1].scrollLeft, e[1].scrollTop]; }); return m; }
+  function scrollRestore(m) { scrollKeys().forEach(function (e) { var v = m[e[0]]; if (v) { e[1].scrollLeft = v[0]; e[1].scrollTop = v[1]; } }); }
+  // a selected chip or tab that sits off the edge of its row slides into the middle
+  function showSelected(smooth) {
+    UI.app.querySelectorAll('.schips').forEach(function (row) {
+      var on = row.querySelector('.on');
+      if (!on || row.scrollWidth <= row.clientWidth + 1) return;
+      var l = on.offsetLeft, r = l + on.offsetWidth;
+      if (l >= row.scrollLeft && r <= row.scrollLeft + row.clientWidth) return;
+      var to = Math.max(0, l - (row.clientWidth - on.offsetWidth) / 2);
+      if (smooth && row.scrollTo) row.scrollTo({ left: to, behavior: 'smooth' }); else row.scrollLeft = to;
+    });
+  }
   // sliders fill their track up to the value (CSS --p)
   function rangeFill(el) {
     var lo = +el.min || 0, hi = el.max === '' ? 100 : +el.max;

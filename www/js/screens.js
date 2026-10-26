@@ -55,13 +55,27 @@
   var streetOpps = null, selStage = null, seenStage = null, betSel = 1000;
   // the stage to show: the newest one as soon as it opens up (or after a
   // new game), otherwise whichever the player picked
+  // the last race tab, stage, tune section, dealer category and paint tab,
+  // kept in the save (UI.remember)
+  function memory() {
+    var m = UI.memory('screens');
+    if (!m) return;
+    if (['map', 'career', 'street', 'test'].indexOf(m.raceTab) >= 0) UI.raceTab = m.raceTab;
+    if (m.selStage != null) { selStage = m.selStage; seenStage = m.seenStage; }
+    if (TUNE_ICONS[m.tuneGroup]) tuneGroup = m.tuneGroup;
+    if (DR.CAR_CATS.indexOf(m.dealerCat) >= 0) dealerCat = m.dealerCat;
+    if (PAINT_TABS.some(function (t) { return t[0] === m.paintTab; })) paintTab = m.paintTab;
+  }
+  function remember() { UI.remember({ raceTab: UI.raceTab, selStage: selStage, seenStage: seenStage, tuneGroup: tuneGroup, dealerCat: dealerCat, paintTab: paintTab }); }
   function pickStage(c) {
     if (selStage == null || selStage > c.stage || seenStage !== c.stage) selStage = c.stage;
     seenStage = c.stage;
   }
   UI.RaceMenu = function (tab) {
-    tab = tab || 'map';
+    memory();
+    tab = tab || UI.raceTab || 'map';
     UI.raceTab = tab;
+    remember();
     var inst = G.car();
     var rail = h('div', { class: 'srail' },
       railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
@@ -89,7 +103,7 @@
   var selPlace = null, cityView = null;
   function mapView(inst) {
     var c = G.careerState();
-    pickStage(c);
+    pickStage(c); remember();
     G.checkContracts().forEach(function (m) { UI.toast(m); });
     var st = DR.STAGES[selStage], next = nextEvent(st), pins = {};
     st.all.forEach(function (ev) {
@@ -142,7 +156,7 @@
 
   function careerView() {
     var c = G.careerState();
-    pickStage(c);
+    pickStage(c); remember();
     G.checkContracts().forEach(function (m) { UI.toast(m); });
     var chips = stageChips();
     var st = DR.STAGES[selStage], wins = G.stageWins(selStage);
@@ -284,6 +298,7 @@
     return h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, label, rs), vEl), inp);
   }
   UI.Tune = function () {
+    memory(); remember();
     var inst = G.car(), S = G.spec(inst);
     var rail = h('div', { class: 'srail' }, Object.keys(TUNE_ICONS).map(function (g) {
       return railItem(TUNE_ICONS[g], 3, g, g === tuneGroup, function () { tuneGroup = g; UI.refresh(); });
@@ -464,6 +479,7 @@
   }
   var dealerCat = DR.CAR_CATS[0], dealerIdx = 0;
   UI.Dealer = function () {
+    memory(); remember();
     var ids = Object.keys(DR.CARS).filter(function (id) { return DR.CARS[id].cat === dealerCat; }).sort(function (a, b) { return DR.CARS[a].price - DR.CARS[b].price; });
     if (dealerIdx >= ids.length) dealerIdx = 0;
     var rail = h('div', { class: 'srail' }, DR.CAR_CATS.map(function (c, k) {
@@ -541,6 +557,7 @@
   var RIM_COLS = ['#c8c8c8', '#ffffff', '#ffd700', '#151515', '#d23a3a', '#3a7bd2', '#7cd320', '#ff6a00', '#8a8f99', '#b06bff'];
   var paintDraft = null;
   UI.Paint = function () {
+    memory(); remember();
     var inst = G.car();
     if (!paintDraft || paintDraft.uid !== inst.uid) paintDraft = { uid: inst.uid, color: inst.color, stripe: inst.stripe, rim: inst.rim };
     var d = paintDraft;

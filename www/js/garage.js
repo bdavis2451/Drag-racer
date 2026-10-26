@@ -380,10 +380,24 @@
   var shopGroup = 'engine', shopCat = 'intake';
   function groupById(id) { return DR.PART_GROUPS.filter(function (g) { return g.id === id; })[0]; }
   function firstCat(group, inst) { return group.cats.filter(function (c) { return DR.partApplies(c, inst) || ((c === 'clutch' || c === 'converter') && DR.partExists(c, inst)); })[0] || group.cats[0]; }
+  // the last shop section, category, body-kit slot and install slot, kept
+  // in the save (UI.remember)
+  function memory() {
+    var m = UI.memory('garage');
+    if (m) {
+      if (m.shopGroup === 'pkg' || groupById(m.shopGroup)) shopGroup = m.shopGroup;
+      if (m.shopCat && DR.PART_CATS[m.shopCat]) shopCat = m.shopCat;
+      if (m.bodySlot && DR.visSlot(m.bodySlot)) bodySlot = m.bodySlot;
+      if (m.bayCat && DR.PART_CATS[m.bayCat]) bayCat = m.bayCat;
+    }
+  }
+  function remember() { UI.remember({ shopGroup: shopGroup, shopCat: shopCat, bodySlot: bodySlot, bayCat: bayCat }); }
   UI.Shop = function (jump) {
     var inst = G.car();
+    memory();
     // jump only when arriving (a refresh replays the same argument)
     if (jump && !UI.refreshing) { shopCat = jump; DR.PART_GROUPS.forEach(function (g) { if (g.cats.indexOf(jump) >= 0) shopGroup = g.id; }); }
+    remember();
     var group = groupById(shopGroup), weak = DR.bottlenecks(G.spec(inst));
     if (group && group.cats.indexOf(shopCat) < 0) shopCat = firstCat(group, inst);
     var rail = h('div', { class: 'srail' }, h('div', { class: 'srail-i pkg' + (shopGroup === 'pkg' ? ' on' : ''), onclick: function () { shopGroup = 'pkg'; UI.refresh(); } },
@@ -598,6 +612,7 @@
   }
   UI.Body = function () {
     var inst = G.car();
+    memory(); remember();
     if (!inst.vis) inst.vis = {};
     // parts already on the car count as owned (older saves)
     var own = inst.visOwned || (inst.visOwned = {});
@@ -653,7 +668,9 @@
   var bayCat = 'intake';
   UI.Parts = function (jump) {
     var inst = G.car(), S = G.spec(inst), weak = DR.bottlenecks(S);
+    memory();
     if (jump && !UI.refreshing) bayCat = jump;
+    remember();
     var cv = h('canvas', { class: 'preview' });
     DR.drawPreview(cv, inst);
     var list = h('div', { class: 'list bay-list' });
