@@ -345,11 +345,11 @@
     }
     var menu = h('div', { class: 'gmenu' },
       mbtn('Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race', 0, 'g_race'),
-      mbtn('Parts Shop', function () { UI.show(UI.Shop); }, 'shop', 0, 'g_shop'),
+      mbtn('Parts Shop', function () { UI.show(UI.Shop); }, 'shop', G.newPartsCount() ? 'NEW' : 0, 'g_shop'),
       mbtn('Install Parts', function () { UI.show(UI.Parts); }, 'blue', spare, 'g_install'),
       mbtn('Tune', function () { UI.show(UI.Tune); }, '', 0, 'g_tune'),
       mbtn('Dyno', function () { UI.show(UI.Dyno); }, '', 0, 'g_dyno'),
-      mbtn('Body Shop', function () { UI.show(UI.Body); }, 'purple', 0, 'g_body'),
+      mbtn('Body Shop', function () { UI.show(UI.Body); }, 'purple', G.newVisCount() ? 'NEW' : 0, 'g_body'),
       mbtn('Paint', function () { UI.show(UI.Paint); }, '', 0, 'g_paint'),
       mbtn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }, '', 0, 'g_shows'),
       mbtn('Dealer', function () { UI.show(UI.Dealer); }, '', G.newCarCount() ? 'NEW' : 0, 'g_dealer'));
@@ -390,8 +390,8 @@
       iconEl('g_shop', 4, '', 26), h('span', {}, 'Packages')), DR.PART_GROUPS.map(function (g) {
       var hot = g.cats.some(function (c) { return weak[c]; });
       return h('div', { class: 'srail-i' + (g.id === shopGroup ? ' on' : '') + (hot ? ' hot' : ''), onclick: function () { shopGroup = g.id; shopCat = firstCat(g, inst); UI.refresh(); } },
-        iconEl(g.icon || g.cats[0], 2, '', 26), h('span', {}, g.name));
-    }), h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Body); } }, iconEl('aero', 4, '', 26), h('span', {}, 'Body Kits')),
+        iconEl(g.icon || g.cats[0], 2, '', 26), h('span', {}, g.name), G.groupHasNew(g) && g.id !== shopGroup ? h('span', { class: 'newdot' }, 'NEW') : null);
+    }), h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Body); } }, iconEl('aero', 4, '', 26), h('span', {}, 'Body Kits'), G.newVisCount() ? h('span', { class: 'newdot' }, 'NEW') : null),
       h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Paint); } }, iconEl('fueltype', 1, '', 26), h('span', {}, 'Paint')));
     if (shopGroup === 'pkg') return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts); }, 'small blue')),
       h('div', { class: 'shopwrap' }, rail, packagesMain(inst)));
@@ -411,9 +411,10 @@
         // what it does for this car, at a glance
         !locked && !installed && DR.partApplies(shopCat, inst) ? gainLine(inst, shopCat, o.id) : null,
         h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(shopCat, lvl)) : h('span', { class: 'price' + (G.canAfford(o.price + (o.install || 0)) ? '' : ' bad') }, DR.money(o.price + (o.install || 0)) + (o.install ? ' fitted' : '')),
-          installed ? h('span', { class: 'tag g' }, 'ON CAR') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
+          installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(shopCat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
+    if (group) G.markGroupSeen(group);
     var note = weak[shopCat] && DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, 'Holding your build back: ' + weak[shopCat] + '.') : !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
     return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts, shopCat); }, 'small blue')),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, storeHead(), chips, note, grid)));
@@ -604,7 +605,7 @@
     var slot = DR.visSlot(bodySlot);
     var rail = h('div', { class: 'srail' }, DR.VISUAL.map(function (sl) {
       return h('div', { class: 'srail-i' + (sl.id === bodySlot ? ' on' : ''), onclick: function () { bodySlot = sl.id; UI.refresh(); } },
-        iconEl('v_' + sl.id, inst.vis[sl.id] ? 4 : 1, '', 26), h('span', {}, sl.name));
+        iconEl('v_' + sl.id, inst.vis[sl.id] ? 4 : 1, '', 26), h('span', {}, sl.name), sl.id !== bodySlot && G.visSlotHasNew(sl.id) ? h('span', { class: 'newdot' }, 'NEW') : null);
     }));
     var cv = UI.dragCam(h('canvas', { class: 'preview' }));
     DR.drawPreview(cv, inst, { aspect: 0.34 });
@@ -616,9 +617,10 @@
         h('div', { class: 'pic' }, iconEl('v_' + slot.id, lvl, '', 44)),
         h('div', { class: 'plvl' }, o.tier ? 'Tier ' + o.tier + ' • +' + o.stars + ' stars' : 'Stock'),
         h('div', { class: 'pname' }, o.name),
-        h('div', { class: 'pfoot' }, on ? h('span', { class: 'tag g' }, 'FITTED') : locked ? h('span', { class: 'tag' }, '🔒 WIN RACES') :
+        h('div', { class: 'pfoot' }, on ? h('span', { class: 'tag g' }, 'FITTED') : locked ? h('span', { class: 'tag' }, '🔒 WIN RACES') : G.isNewVis(slot.id, o.tier) && !owned ? h('span', { class: 'newdot' }, 'NEW') :
           owned && o.price ? h('span', { class: 'tag b' }, 'OWNED') : h('span', { class: 'price' }, o.price ? DR.money(o.price) : 'FREE'))));
     });
+    G.markVisSeen(slot.id);
     var extra = null;
     if (slot.id === 'neon') {
       extra = h('div', {}, h('h3', {}, 'NEON COLOR' + (inst.vis.neon ? ' (free to change)' : '')), h('div', { class: 'swatches' }, slot.colors.map(function (c) {

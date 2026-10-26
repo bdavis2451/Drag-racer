@@ -677,7 +677,10 @@
       if (damaged && testDrive) { notes.push(['dim', 'Good thing it was a test drive.']); damaged = null; }
       if (damaged) {
         inst.damage = damaged;
-        notes.push(['bad', (damaged.engine ? 'Engine blown.' : damaged.axle ? 'Snapped an axle.' : damaged.chassis ? 'Cracked the chassis.' : 'Transmission broken.') + ' Repair: ' + DR.money(G.repairCost(inst))]);
+        var what = damaged.engine ? 'Engine blown.' : damaged.axle ? 'Snapped an axle.' : damaged.chassis ? 'Cracked the chassis.' : 'Transmission broken.', fix = G.repairCost(inst);
+        // auto-repair (Settings): the shop fixes it straight away when you can pay
+        if (settings.autoRepair && G.canAfford(fix) && G.repair(inst)) { notes.push(['bad', what + ' Auto-repaired: ' + DR.money(fix)]); damaged = null; }
+        else notes.push(['bad', what + ' Repair: ' + DR.money(fix)]);
       }
       G.save();
 
@@ -722,7 +725,19 @@
             if (them) UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career');
             else DR.Race.start(cfg);
           }, 'primary') : null,
-          damaged ? btn('Garage (repair)', function () { UI.show(UI.Garage); }, 'primary') : null,
+          // broke something: fix it and go again from here
+          damaged ? (function () {
+            var fix = G.repairCost(inst), career = them && cfg.mode === 'career';
+            if (!G.canAfford(fix)) return btn('Garage (repair ' + DR.money(fix) + ')', function () { UI.show(UI.Garage); }, 'primary');
+            return btn('Repair ' + DR.money(fix) + (career ? ' & Race Again' : ''), function () {
+              if (!G.repair(inst)) return UI.toast('Not enough money');
+              A.cash();
+              if (career) DR.Race.careerEvent(ev, nextRound != null ? nextRound : 0);
+              else if (cfg.mode === 'street') UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : 'street');
+              else DR.Race.start(cfg);
+            }, 'primary');
+          })() : null,
+          damaged ? btn('Garage', function () { UI.show(UI.Garage); }) : null,
           h('div', { class: 'btngrid' },
             !damaged && them && cfg.mode === 'career' && !win ? btn(ev.type === 'knockout' ? 'Retry KO' : 'Rematch', function () { DR.Race.careerEvent(ev, 0); }, 'red') : null,
             !damaged && them && cfg.mode === 'career' && win && nextRound == null ? btn('Again ' + DR.money(G.eventReward(ev)), function () { DR.Race.careerEvent(ev, 0); }) : null,

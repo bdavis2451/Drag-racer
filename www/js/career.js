@@ -284,6 +284,23 @@
   }
   G.isNewCar = function (id) { return G.carUnlocked(id) && !seenCars()[id]; };
   G.markCarSeen = function (id) { var s = seenCars(); if (!s[id]) { s[id] = 1; G.save(); } };
+  // Parts and body-shop items unlocked since you last opened their shop
+  // section. A save that has never tracked this starts with everything seen.
+  function seenParts() {
+    var c = C();
+    if (!c.seenPerf) { c.seenPerf = {}; DR.PART_GROUPS.forEach(function (g) { c.seenPerf[g.id] = c.perf[g.unlock || g.id] || 1; }); }
+    if (!c.seenVis) { c.seenVis = {}; DR.VISUAL.forEach(function (v) { c.seenVis[v.id] = c.vis[v.id] || 0; }); }
+    return c;
+  }
+  function shopGroupOf(cat) { for (var i = 0; i < DR.PART_GROUPS.length; i++) if (DR.PART_GROUPS[i].cats.indexOf(cat) >= 0) return DR.PART_GROUPS[i]; return null; }
+  G.isNewPart = function (cat, lvl) { var g = shopGroupOf(cat); return !!g && lvl > 1 && G.partUnlocked(cat, lvl) && lvl > (seenParts().seenPerf[g.id] || 1); };
+  G.groupHasNew = function (g) { return (C().perf[g.unlock || g.id] || 1) > (seenParts().seenPerf[g.id] || 1); };
+  G.markGroupSeen = function (g) { var c = seenParts(), l = c.perf[g.unlock || g.id] || 1; if (c.seenPerf[g.id] !== l) { c.seenPerf[g.id] = l; G.save(); } };
+  G.isNewVis = function (slot, tier) { return tier > 0 && G.visUnlocked(slot, tier) && tier > (seenParts().seenVis[slot] || 0); };
+  G.visSlotHasNew = function (slot) { return (C().vis[slot] || 0) > (seenParts().seenVis[slot] || 0); };
+  G.markVisSeen = function (slot) { var c = seenParts(), t = c.vis[slot] || 0; if (c.seenVis[slot] !== t) { c.seenVis[slot] = t; G.save(); } };
+  G.newPartsCount = function () { return DR.PART_GROUPS.filter(G.groupHasNew).length; };
+  G.newVisCount = function () { return DR.VISUAL.filter(function (v) { return G.visSlotHasNew(v.id); }).length; };
   G.newCarCount = function (cat) { return Object.keys(DR.CARS).filter(function (id) { return (!cat || DR.CARS[id].cat === cat) && G.isNewCar(id); }).length; };
   G.carUnlocked = function (carId) { return !!C().cars[carId] || DR.CAR_UNLOCK[carId] === ''; };
   G.partUnlocked = function (cat, lvl) {
