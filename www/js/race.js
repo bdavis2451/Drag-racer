@@ -665,7 +665,7 @@
         var rc = G.payRunCost(S, you.sim.nosT);
         if (rc.paid) { money.push(['Fuel & tires' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }
       }
-      if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; }
+      if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; G.clearSold(); }
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
       if (!testDrive && you.sim.finished && cfg.grip >= 1 && !redLight && (!inst.best[key] || you.sim.et < inst.best[key])) { inst.best[key] = you.sim.et; notes.unshift(['good', 'New personal best!']); }

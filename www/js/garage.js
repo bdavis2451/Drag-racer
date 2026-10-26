@@ -1,11 +1,13 @@
 // ===========================================================================
 // GARAGE, PARTS SHOP & INSTALL BAY — laid out like Pixel Car Racer:
-//  * Garage: the car big in the middle of a lit garage, the menu down the
-//    side and arrows to switch between your cars.
+//  * Garage: the car big in the middle of a lit garage, arrows to switch
+//    cars and five big buttons along the bottom (Upgrade, Style, Dealer,
+//    Shows, Race).
 //  * Parts Shop: part cards with pixel icons, colour-coded by level. Parts
 //    go into your inventory.
 //  * Parts (install bay): fit parts from your inventory, take parts off
 //    (they go back on the shelf) and sell spares.
+//  * Inventory: every spare part, filtered by car, kind and value.
 // ===========================================================================
 (function () {
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, A = DR.Audio, h = UI.h, btn = UI.btn;
@@ -339,45 +341,46 @@
       dmg = h('div', { class: 'gdmg warnbox' }, (inst.damage.engine ? 'ENGINE BLOWN! ' : inst.damage.axle ? 'BROKEN AXLE! ' : inst.damage.chassis ? 'CRACKED CHASSIS! ' : 'TRANSMISSION BROKEN! ') + 'Repair: ' + DR.money(cost) + ' ',
         btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'));
     }
-    var spare = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length;
-    function mbtn(label, fn, cls, badge, icon) {
-      return btn([icon ? iconEl(icon, 1, '', 24, 'gico') : null, h('span', {}, label), badge ? h('span', { class: 'badge' }, String(badge)) : null], fn, 'gbtn ' + (cls || ''));
+    // the hub: what you're working toward on top, the car in the middle,
+    // the five places to go along the bottom (Race on the right, under the thumb)
+    var c = G.careerState(), st = DR.STAGES[c.stage], sp = c.sponsor[c.stage];
+    var status = h('div', { class: 'gstatus', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
+      h('span', { class: 'acc' }, 'Stage ' + (c.stage + 1) + ': ' + st.name),
+      h('span', {}, G.stageWins(c.stage) + '/' + st.events.length + ' wins'),
+      h('span', { class: sp ? '' : 'warn' }, sp ? DR.sponsorById(sp.id).name : 'No sponsor yet'));
+    function bbtn(label, icon, fn, cls, badge) {
+      return btn([iconEl(icon, 1, '', 26, 'gico'), h('span', {}, label), badge ? h('span', { class: badge === 'NEW' || badge === 'FREE' ? 'newdot' : 'badge' }, String(badge)) : null], fn, 'gbb ' + (cls || ''));
     }
-    var menu = h('div', { class: 'gmenu' },
-      mbtn('Race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race', 0, 'g_race'),
-      mbtn('Parts Shop', function () { UI.show(UI.Shop); }, 'shop', G.newPartsCount() ? 'NEW' : 0, 'g_shop'),
-      mbtn('Install Parts', function () { UI.show(UI.Parts); }, 'blue', spare, 'g_install'),
-      mbtn('Tune', function () { UI.show(UI.Tune); }, '', 0, 'g_tune'),
-      mbtn('Dyno', function () { UI.show(UI.Dyno); }, '', 0, 'g_dyno'),
-      mbtn('Body Shop', function () { UI.show(UI.Body); }, 'purple', G.newVisCount() ? 'NEW' : 0, 'g_body'),
-      mbtn('Paint', function () { UI.show(UI.Paint); }, '', 0, 'g_paint'),
-      mbtn('Car Shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }, '', 0, 'g_shows'),
-      mbtn('Dealer', function () { UI.show(UI.Dealer); }, '', G.newCarCount() ? 'NEW' : 0, 'g_dealer'));
+    var spare = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length;
+    var bar = h('div', { class: 'gbar' },
+      bbtn('Upgrade', 'g_shop', function () { UI.openSection('upgrade'); }, 'shop', G.newPartsCount() ? 'NEW' : spare || 0),
+      bbtn('Style', 'g_body', function () { UI.openSection('style'); }, 'purple', G.newVisCount() ? 'NEW' : 0),
+      bbtn('Dealer', 'g_dealer', function () { UI.show(UI.Dealer); }, '', G.freeCars && G.freeCars() ? 'FREE' : G.newCarCount() ? 'NEW' : 0),
+      bbtn('Shows', 'g_shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }, ''),
+      bbtn('Race', 'g_race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'));
     var stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };
     var side = h('div', { class: 'gside' },
       stat('POWER', Math.round(S.peakHp) + (S.nosHp ? '+' + S.nosHp : '') + ' hp', 'acc'),
-      stat('TORQUE', Math.round(S.peakTq) + ' lb-ft'),
       stat('WEIGHT', UI.kgLb(S.m)),
       stat('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
-      inst.best && inst.best.q ? stat('BEST 1/4', inst.best.q.toFixed(3) + 's', 'acc') : null,
+      stat('BEST 1/4', inst.best && inst.best.q ? inst.best.q.toFixed(3) + 's' : '—', 'acc'),
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
-      S.fiType !== 'none' && !S.diesel && S.iat > 75 ? h('div', { class: 'bad gsmall' }, '🌡 Hot intake: ' + Math.round(S.iat) + ' C / ' + Math.round(S.iat * 1.8 + 32) + ' F at ' + S.boostSet + ' psi') : null,
-      DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null,
-      h('div', { class: 'gsmall acc' }, UI.careerLine().textContent.replace('Career: ', '')),
-      h('div', { class: 'gsmall dim' }, 'Record ' + G.state.stats.wins + 'W / ' + (G.state.stats.races - G.state.stats.wins) + 'L'));
+      S.fiType !== 'none' && !S.diesel && S.iat > 75 ? h('div', { class: 'bad gsmall' }, '🌡 Hot intake: ' + Math.round(S.iat) + ' C at ' + S.boostSet + ' psi') : null,
+      DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null);
     var sel = h('div', { class: 'gsel' },
       cars.length > 1 ? btn('◀', function () { cycle(-1); }, 'arrow') : null,
-      h('div', { class: 'gname' }, h('div', { class: 'pix acc' }, DR.CARS[inst.carId].name), h('div', { class: 'dim' }, (idx + 1) + ' / ' + cars.length + ' • ' + DR.ENGINES[inst.engine].name)),
-      cars.length > 1 ? btn('▶', function () { cycle(1); }, 'arrow') : null,
-      btn('My Cars', function () { UI.show(UI.Cars); }, 'small back'));
+      h('div', { class: 'gname', onclick: function () { UI.show(UI.Cars); } }, h('div', { class: 'pix acc' }, DR.CARS[inst.carId].name), h('div', { class: 'dim' }, (idx + 1) + ' / ' + cars.length + ' • My Cars ▸')),
+      cars.length > 1 ? btn('▶', function () { cycle(1); }, 'arrow') : null);
     return h('div', { class: 'screen' }, UI.top('GARAGE', function () { UI.show(UI.Title); }, h('div', { class: 'row', style: { gap: '6px' } },
         btn('?', function () { UI.show(UI.Help, UI.Garage); }, 'small back'), btn('⚙', function () { UI.show(UI.Settings, UI.Garage); }, 'small back'))),
-      h('div', { class: 'gwrap' }, cv, menu, side, sel, dmg));
+      h('div', { class: 'gwrap hub' }, cv, status, side, sel, dmg), bar);
   };
 
   // ---------------------------------------------------------------- PARTS SHOP
-  var shopGroup = 'engine', shopCat = 'intake';
+  var shopGroup = 'engine', shopCat = 'intake', partsGroup = 'engine';
+  UI.openPackages = function () { if (shopGroup !== 'pkg') partsGroup = shopGroup; shopGroup = 'pkg'; UI.show(UI.Shop); };
+  UI.openShop = function () { if (shopGroup === 'pkg') shopGroup = partsGroup; UI.show(UI.Shop); };
   function groupById(id) { return DR.PART_GROUPS.filter(function (g) { return g.id === id; })[0]; }
   function firstCat(group, inst) { return group.cats.filter(function (c) { return DR.partApplies(c, inst) || ((c === 'clutch' || c === 'converter') && DR.partExists(c, inst)); })[0] || group.cats[0]; }
   // the last shop section, category, body-kit slot and install slot, kept
@@ -400,14 +403,12 @@
     remember();
     var group = groupById(shopGroup), weak = DR.bottlenecks(G.spec(inst));
     if (group && group.cats.indexOf(shopCat) < 0) shopCat = firstCat(group, inst);
-    var rail = h('div', { class: 'srail' }, h('div', { class: 'srail-i pkg' + (shopGroup === 'pkg' ? ' on' : ''), onclick: function () { shopGroup = 'pkg'; UI.refresh(); } },
-      iconEl('g_shop', 4, '', 26), h('span', {}, 'Packages')), DR.PART_GROUPS.map(function (g) {
+    var rail = h('div', { class: 'srail' }, DR.PART_GROUPS.map(function (g) {
       var hot = g.cats.some(function (c) { return weak[c]; });
       return h('div', { class: 'srail-i' + (g.id === shopGroup ? ' on' : '') + (hot ? ' hot' : ''), onclick: function () { shopGroup = g.id; shopCat = firstCat(g, inst); UI.refresh(); } },
         iconEl(g.icon || g.cats[0], 2, '', 26), h('span', {}, g.name), G.groupHasNew(g) && g.id !== shopGroup ? h('span', { class: 'newdot' }, 'NEW') : null);
-    }), h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Body); } }, iconEl('aero', 4, '', 26), h('span', {}, 'Body Kits'), G.newVisCount() ? h('span', { class: 'newdot' }, 'NEW') : null),
-      h('div', { class: 'srail-i', onclick: function () { UI.show(UI.Paint); } }, iconEl('fueltype', 1, '', 26), h('span', {}, 'Paint')));
-    if (shopGroup === 'pkg') return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts); }, 'small blue')),
+    }));
+    if (shopGroup === 'pkg') return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'pkg'),
       h('div', { class: 'shopwrap' }, rail, packagesMain(inst)));
     var chips = h('div', { class: 'schips' }, group.cats.filter(function (c) { return DR.partExists(c, inst); }).map(function (c) {
       var fits = DR.partApplies(c, inst);
@@ -430,7 +431,7 @@
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
     if (group) G.markGroupSeen(group);
     var note = weak[shopCat] && DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, 'Holding your build back: ' + weak[shopCat] + '.') : !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
-    return h('div', { class: 'screen' }, UI.top('PARTS SHOP', function () { UI.show(UI.Garage); }, btn('Install ▶', function () { UI.show(UI.Parts, shopCat); }, 'small blue')),
+    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'shop'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, storeHead(), chips, note, grid)));
   };
 
@@ -645,7 +646,7 @@
       })));
     }
     if (slot.id === 'vinyl' || slot.id === 'finish') extra = h('p', { class: 'dim' }, slot.id === 'vinyl' ? 'Vinyls use your stripe color from the Paint Shop when you have one.' : 'Finishes change how the paint catches the light.');
-    return h('div', { class: 'screen' }, UI.top('BODY SHOP', function () { UI.show(UI.Garage); }, btn('Paint ▶', function () { UI.show(UI.Paint); }, 'small')),
+    return h('div', { class: 'screen' }, UI.sectionTop('style', 'body'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' },
         h('div', { class: 'bodyhead' }, cv, h('div', { class: 'bodystars' }, h('span', { class: 'pix small acc' }, 'VISUAL RATING ' + (Math.round(stars * 100) / 100)), starMeter(stars))),
         h('h2', { style: { marginTop: '8px' } }, slot.name), grid, extra)));
@@ -722,11 +723,82 @@
         }, 'small')));
     });
     right.appendChild(btn('Shop for ' + DR.catName(bayCat, inst) + ' ▶', function () { UI.show(UI.Shop, bayCat); }, 'shop'));
-    return h('div', { class: 'screen' }, UI.top('INSTALL PARTS', function () { UI.show(UI.Garage); }, btn('Shop ▶', function () { UI.show(UI.Shop, bayCat); }, 'small shop')),
+    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'install'),
       h('div', { class: 'content' }, h('div', { class: 'split' },
         h('div', { class: 'left bay-left' }, cv,
           h('div', { class: 'row bay-quick' }, h('span', { class: 'acc' }, Math.round(S.peakHp + S.nosHp) + 'hp'), h('span', {}, UI.kgLb(S.m)), h('span', { class: 'good' }, inst.best && inst.best.q ? inst.best.q.toFixed(2) + 's' : '—')),
           UI.riskBox(S), list),
         h('div', { class: 'right' }, right))));
+  };
+  // ---------------------------------------------------------------- INVENTORY
+  // Every spare part you own, whatever car it came off. Filter by the car it
+  // fits, the kind of part and what it's worth, then fit it or sell it.
+  // Sales can be bought back (at the sale price) until your next race.
+  var VALUE_BANDS = [['any', 'Any value', 0, Infinity], ['lt500', 'Under $500', 0, 500], ['mid', '$500-2k', 500, 2000], ['hi', '$2k-10k', 2000, 10000], ['top', '$10k+', 10000, Infinity]];
+  var invF = { car: 'all', grp: 'all', val: 'any', sort: 'hi' };
+  function groupOfCat(cat) { for (var i = 0; i < DR.PART_GROUPS.length; i++) if (DR.PART_GROUPS[i].cats.indexOf(cat) >= 0) return DR.PART_GROUPS[i]; return null; }
+  function carShort(inst) { var w = DR.CARS[inst.carId].name.split(' '); return w.length > 2 ? w.slice(1).join(' ') : w.join(' '); }
+  UI.Inventory = function () {
+    var m = UI.memory('inv');
+    if (m && m.invF) for (var k in m.invF) invF[k] = m.invF[k];
+    var cars = G.state.cars, inst = G.car();
+    if (invF.car !== 'all' && invF.car !== 'none' && !cars.some(function (c) { return String(c.uid) === invF.car; })) invF.car = 'all';
+    UI.remember({ invF: { car: invF.car, grp: invF.grp, val: invF.val, sort: invF.sort } });
+    function set(k, v) { return function () { invF[k] = v; A.click(); UI.refresh(); }; }
+    function chipRow(label, opts, key) {
+      return h('div', { class: 'invrow' }, h('span', { class: 'invlbl pix small' }, label),
+        h('div', { class: 'schips' }, opts.map(function (o) { return btn(o[1], set(key, o[0]), 'chip' + (invF[key] === o[0] ? ' on' : '')); })));
+    }
+    var fitsOf = function (it) { return cars.filter(function (c) { return !G.partFitIssue(it, c); }); };
+    var band = VALUE_BANDS.filter(function (b) { return b[0] === invF.val; })[0] || VALUE_BANDS[0];
+    var all = G.state.inv.map(function (it) { return { it: it, fits: fitsOf(it), v: G.partSellValue(it), g: groupOfCat(it.cat) }; });
+    var shown = all.filter(function (r) {
+      if (invF.car === 'none' ? r.fits.length : invF.car !== 'all' && !r.fits.some(function (c) { return String(c.uid) === invF.car; })) return false;
+      if (invF.grp !== 'all' && (!r.g || r.g.id !== invF.grp)) return false;
+      return r.v >= band[2] && r.v < band[3];
+    });
+    shown.sort(invF.sort === 'lo' ? function (a, b) { return a.v - b.v; } : invF.sort === 'new' ? function (a, b) { return b.it.uid - a.it.uid; } : function (a, b) { return b.v - a.v; });
+    var total = shown.reduce(function (t, r) { return t + r.v; }, 0);
+    var carOpts = [['all', 'All cars']].concat(cars.map(function (c) { return [String(c.uid), (c.uid === inst.uid ? '★ ' : '') + carShort(c)]; })).concat([['none', 'Fits none']]);
+    var grpOpts = [['all', 'All']].concat(DR.PART_GROUPS.filter(function (g) { return all.some(function (r) { return r.g === g; }); }).map(function (g) { return [g.id, g.name]; }));
+    var filtered = invF.car !== 'all' || invF.grp !== 'all' || invF.val !== 'any';
+    var filters = h('div', { class: 'invfilters' },
+      chipRow('FITS', carOpts, 'car'), chipRow('TYPE', grpOpts, 'grp'), chipRow('VALUE', VALUE_BANDS.map(function (b) { return [b[0], b[1]]; }), 'val'),
+      chipRow('SORT', [['hi', 'Value ▼'], ['lo', 'Value ▲'], ['new', 'Newest']], 'sort'));
+    var bar = h('div', { class: 'invbar' },
+      h('div', { class: 'grow' }, h('span', { class: 'pix small' }, shown.length + ' of ' + all.length + ' parts'), ' ', h('span', { class: 'good' }, 'worth ' + DR.money(total)),
+        filtered ? btn('Clear filters', function () { invF.car = 'all'; invF.grp = 'all'; invF.val = 'any'; A.click(); UI.refresh(); }, 'small') : null),
+      shown.length ? btn('Sell all shown ' + DR.money(total), function () {
+        UI.confirm('Sell ' + shown.length + ' part' + (shown.length > 1 ? 's' : '') + ' for ' + DR.money(total) + '? You can buy them back until your next race.', function () {
+          G.sellParts(shown.map(function (r) { return r.it.uid; })); A.cash(); UI.toast('Sold for ' + DR.money(total)); UI.refresh();
+        }, 'Sell all');
+      }, 'small red') : null);
+    var list = h('div', { class: 'list invlist' });
+    if (!all.length) list.appendChild(h('div', { class: 'dim', style: { padding: '10px' } }, 'No spare parts. Parts you buy, and parts you take off a car, land here.'));
+    else if (!shown.length) list.appendChild(h('div', { class: 'dim', style: { padding: '10px' } }, 'Nothing matches these filters.'));
+    shown.forEach(function (r) {
+      var it = r.it, lvl = lvlOf(G.itemOption(it) || { price: it.price, lvl: DR.partLevel(it.price) });
+      var from = it.from != null ? cars.filter(function (c) { return c.uid === it.from; })[0] : null;
+      var fitsHere = r.fits.indexOf(inst) >= 0;
+      var fitTxt = r.fits.length ? 'Fits: ' + r.fits.map(carShort).join(', ') : G.partFitIssue(it, inst) || 'Fits none of your cars';
+      list.appendChild(h('div', { class: 'item inv l' + lvl + (r.fits.length ? '' : ' locked') },
+        iconEl(DR.iconCat(it.cat, inst), lvl, it.id, 32),
+        h('div', { class: 'name' },
+          h('div', {}, G.partName(it)),
+          h('div', { class: 'dim', style: { fontSize: '15px' } }, DR.catName(it.cat, inst) + (it.eng && DR.ENGINES[it.eng] ? ' • for ' + DR.ENGINES[it.eng].name : '') + (from ? ' • off your ' + carShort(from) : '')),
+          h('div', { class: r.fits.length ? 'acc' : 'warn', style: { fontSize: '15px' } }, fitTxt)),
+        fitsHere ? btn('Fit ▶', function () { UI.show(UI.Parts, it.cat); }, 'small go') : null,
+        btn('Sell ' + DR.money(r.v), function () { G.sellPart(it.uid); A.cash(); UI.toast('Sold the ' + G.partName(it) + ' for ' + DR.money(r.v)); UI.refresh(); }, 'small')));
+    });
+    var sold = G.state.sold || [];
+    var soldBox = sold.length ? h('div', { class: 'invsold' },
+      h('h3', {}, 'SOLD - BUY BACK UNTIL YOUR NEXT RACE'),
+      sold.map(function (s) {
+        return h('div', { class: 'item inv' },
+          h('div', { class: 'name' }, h('div', {}, G.partName(s.item)), h('div', { class: 'dim', style: { fontSize: '15px' } }, DR.catName(s.item.cat, inst))),
+          btn('Buy back ' + DR.money(s.v), function () { if (G.buyBack(s.item.uid)) { A.cash(); UI.refresh(); } else UI.toast('Not enough cash'); }, 'small' + (G.canAfford(s.v) ? '' : ' disabled')));
+      })) : null;
+    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'inv'),
+      h('div', { class: 'content invwrap' }, filters, h('div', { class: 'invmain' }, bar, list, soldBox)));
   };
 })();

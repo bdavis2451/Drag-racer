@@ -671,3 +671,81 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .srail-i { position: relative; }
 .srail-i .newdot { top: 2px; right: 2px; }
 .pfoot .newdot { position: static; }
+
+/* ---------------------------------------------------------------- hub */
+.gwrap.hub .gstatus { position: absolute; left: 8px; top: 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; max-width: calc(100% - 250px);
+  background: linear-gradient(180deg, rgba(36,38,48,.92), rgba(16,17,22,.92)); box-shadow: var(--edge), inset 0 0 0 3px #3a3e4b; padding: 6px 10px; cursor: pointer;
+  font-family: 'Press Start 2P', monospace; font-size: 8px; line-height: 1.5; color: var(--text); }
+.gwrap.hub .gstatus .warn { color: #ffb347; }
+.gwrap.hub .gsel .gname { cursor: pointer; }
+.gbar { display: flex; gap: 6px; padding: 6px 8px; background: linear-gradient(180deg, #1b1c23, #101116); box-shadow: 0 -2px 0 #000; flex: none; }
+.gbb { flex: 1; flex-direction: column; gap: 2px; min-height: 52px; font-size: 9px; padding: 5px 4px; position: relative; --bc: rgba(40,42,52,.95); }
+.gbb .gico { width: 26px; height: 26px; }
+.gbb.shop { --bc: #c95a12; color: #fff; }
+.gbb.purple { --bc: #6a3bb0; color: #fff; }
+.gbb.race { --bc: #bf2f2f; color: #fff; flex: 1.4; font-size: 12px; text-shadow: 2px 2px 0 rgba(0,0,0,.5); }
+.gbb .badge, .gbb .newdot { position: absolute; top: 3px; right: 4px; left: auto; transform: none; }
+@media (max-height: 420px) {
+  .gbb { min-height: 44px; font-size: 8px; padding: 3px 4px; }
+  .gbb .gico { width: 20px; height: 20px; }
+  .gbb.race { font-size: 11px; }
+  .gwrap.hub .gstatus { font-size: 7px; padding: 4px 8px; }
+}
+
+/* ---------------------------------------------------------------- section header (Upgrade / Style tabs) */
+.top.sectop { gap: 8px; }
+.top.sectop .sectitle { flex: none; font-size: 11px; }
+.top.sectop .stabs { flex: 1; min-width: 0; padding: 0; gap: 4px; }
+.top.sectop .stab { position: relative; font-size: 9px; padding: 6px 9px; white-space: nowrap; flex: none; }
+.top.sectop .stab .tcount { margin-left: 5px; font-size: 7px; background: #ffcc00; color: #111; padding: 2px 3px; font-family: 'Press Start 2P', monospace; }
+.top.sectop .stab .newdot { position: static; margin-left: 5px; }
+@media (max-width: 900px) { .top.sectop .sectitle { display: none; } }
+/* inventory */
+.invwrap { display: flex; gap: 10px; align-items: flex-start; }
+.invfilters { flex: 0 0 280px; display: flex; flex-direction: column; gap: 6px; position: sticky; top: 0; }
+.invrow .invlbl { display: block; font-size: 8px; color: #9aa4b0; margin-bottom: 3px; }
+.invrow .schips { flex-wrap: wrap; overflow: visible; padding-bottom: 2px; }
+.invrow .schips .chip { min-height: 24px; padding: 4px 6px; }
+.invmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.invbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.invbar .grow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.invsold { margin-top: 8px; opacity: .85; }
+@media (max-width: 620px) { .invwrap { flex-direction: column; align-items: stretch; } .invfilters { position: static; flex: none; } .invrow .schips { flex-wrap: nowrap; overflow-x: auto; } }
+/* career road */
+.rwrap { display: flex; gap: 10px; align-items: flex-start; }
+.rleft { flex: 1; min-width: 0; }
+.rdetail { flex: 0 0 270px; display: flex; flex-direction: column; gap: 8px; }
+.rdetail .ecard { width: auto; }
+.rhead { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.rhead .pbar { margin-top: 4px; }
+.road { position: relative; display: flex; overflow-x: auto; padding: 4px 4px 2px; scrollbar-width: thin; }
+.rcol::after { content: ''; position: absolute; left: 0; right: 0; top: 104px; height: 32px; background: #23272e; box-shadow: inset 0 2px 0 #3a404a, inset 0 -2px 0 #3a404a; }
+.rcol:first-child::after, .rcol:first-child::before { left: 50%; }
+.rcol.boss::after { right: 50%; }
+.rcol { flex: none; width: 54px; display: flex; flex-direction: column; align-items: center; position: relative; }
+.rcol::before { content: ''; position: absolute; z-index: 1; left: 0; right: 0; top: 118px; height: 4px; background: repeating-linear-gradient(90deg, #ffcc00 0 10px, transparent 10px 20px); opacity: .55; }
+.rcol.boss::before { right: 50%; }
+.rside { height: 74px; display: flex; align-items: flex-start; justify-content: center; }
+.rbranch { position: relative; }
+.rbranch::after { content: ''; position: absolute; left: 50%; top: 54px; height: 22px; border-left: 3px dashed #8a6cff; }
+.rmain { min-height: 92px; display: flex; flex-direction: column; justify-content: center; gap: 6px; position: relative; z-index: 2; }
+.rcol.fork .rmain { min-height: 0; }
+.rwins { margin-top: 4px; font-size: 12px; }
+.rnode { position: relative; width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: linear-gradient(180deg, #3b4250, #262b34); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #59627a; }
+.rnode .rglyph { font-family: 'Press Start 2P', monospace; font-size: 8px; color: #ffd84a; text-align: center; line-height: 1.1; }
+.rnode.t-class { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #8a6cff; }
+.rnode.t-class .rglyph { color: #c9b8ff; font-size: 7px; }
+.rnode.t-boss { width: 54px; height: 50px; background: linear-gradient(180deg, #6a1e1e, #3a1010); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #d43030; }
+.rnode.t-boss .rglyph { color: #ff8a7a; font-size: 7px; }
+.rnode.won { background: linear-gradient(180deg, #1f4a2c, #143220); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3ccf6e; }
+.rnode.won .rglyph { color: #9ef0b4; }
+.rnode.locked { filter: saturate(.3) brightness(.75); }
+.rnode.hidden { filter: brightness(.55); }
+.rnode.hidden .rglyph { color: #888; }
+.rnode.next { animation: rpulse 1.1s ease-in-out infinite; }
+.rnode.sel { outline: 3px solid #fff; outline-offset: 2px; }
+.rnode .rmark { position: absolute; right: -4px; top: -6px; font-size: 13px; }
+@keyframes rpulse { 50% { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #ffcc00, 0 0 12px 2px rgba(255, 204, 0, .7); } }
+.rtip { margin-top: 6px; }
+@media (max-width: 700px) { .rwrap { flex-direction: column; align-items: stretch; } .rdetail { flex: none; } }

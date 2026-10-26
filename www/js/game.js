@@ -219,7 +219,7 @@
     var id = DR.partId(cat, inst);
     if (id === DR.stockPart(cat, inst)) return null;
     var opt = DR.getOption(cat, inst, id);
-    var item = { uid: G.state.uid++, cat: cat, id: id, price: opt.price || 0, eng: G.isEngineBound(cat) ? inst.engine : undefined };
+    var item = { uid: G.state.uid++, cat: cat, id: id, price: opt.price || 0, eng: G.isEngineBound(cat) ? inst.engine : undefined, from: inst.uid };
     G.state.inv.push(item);
     inst.spent = Math.max(0, inst.spent - item.price);
     return item;
@@ -314,13 +314,42 @@
     G.save();
     return true;
   };
-  G.sellPart = function (uid) {
-    var inv = G.state.inv;
+  // Sold parts wait at the counter until your next race: buy one back for
+  // what you sold it for, in case a sale was a mistake.
+  G.sellPart = function (uid, noSave) {
+    var inv = G.state.inv, sold = G.state.sold || (G.state.sold = []);
     for (var i = 0; i < inv.length; i++) if (inv[i].uid === uid) {
       var v = G.partSellValue(inv[i]);
-      inv.splice(i, 1); G.earn(v); return v;
+      sold.unshift({ item: inv[i], v: v });
+      if (sold.length > 30) sold.length = 30;
+      inv.splice(i, 1); G.earn(v);
+      if (!noSave) G.save();
+      return v;
     }
     return 0;
+  };
+  G.sellParts = function (uids) {
+    var t = 0;
+    uids.forEach(function (u) { t += G.sellPart(u, true); });
+    G.save(); return t;
+  };
+  G.buyBack = function (uid) {
+    var sold = G.state.sold || [];
+    for (var i = 0; i < sold.length; i++) if (sold[i].item.uid === uid) {
+      if (!G.canAfford(sold[i].v)) return false;
+      G.pay(sold[i].v); G.state.inv.push(sold[i].item); sold.splice(i, 1); G.save(); return true;
+    }
+    return false;
+  };
+  G.clearSold = function () { G.state.sold = []; };
+  // Every aftermarket part comes off and goes to your shelf; the car keeps
+  // its factory parts (and is worth that much).
+  G.stripCar = function (inst) {
+    var n = G.state.inv.length;
+    if (inst.engine !== DR.CARS[inst.carId].engine) G.removePart(inst, 'engine');
+    Object.keys(inst.parts).forEach(function (c) { G.removePart(inst, c); });
+    G.save();
+    return G.state.inv.length - n;
   };
 
   // ---------------------------------------------------------------- running costs

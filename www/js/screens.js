@@ -73,13 +73,13 @@
   }
   UI.RaceMenu = function (tab) {
     memory();
-    tab = tab || UI.raceTab || 'map';
+    tab = tab || UI.raceTab || 'career';
     UI.raceTab = tab;
     remember();
     var inst = G.car();
     var rail = h('div', { class: 'srail' },
-      railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
       railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }),
+      railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
       railItem('u_street', 2, 'Street $', tab === 'street', function () { UI.show(UI.RaceMenu, 'street'); }),
       railItem('u_test', 2, 'Test & Tune', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }));
     var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'street' ? streetView(inst) : testView(inst);
@@ -99,7 +99,7 @@
     return next;
   }
 
-  // the city map: tap a place to see what races are there, or to go shopping
+  // the city map: tap a place to see what races are there
   var selPlace = null, cityView = null;
   function mapView(inst) {
     var c = G.careerState();
@@ -134,7 +134,7 @@
       btn('+', function () { ctl.zoomBy(1.5); }, 'small'), btn('−', function () { ctl.zoomBy(1 / 1.5); }, 'small'), btn('⤢', function () { ctl.reset(); }, 'small'));
     var wins = G.stageWins(selStage);
     var legend = h('div', { class: 'gsmall dim citylegend' },
-      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg g' }, 'street $'), h('span', { class: 'lg b' }, 'shops & home'), h('span', {}, 'drag / pinch to zoom'),
+      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg g' }, 'street $'), h('span', {}, 'drag / pinch to zoom'),
       h('span', {}, 'Stage ' + (selStage + 1) + ': ' + wins + ' / ' + st.events.length + ' won'));
     var spBar = c.sponsor[selStage] ? null : h('div', { class: 'warnbox citysp' }, h('span', { class: 'grow' }, 'No sponsor for stage ' + (selStage + 1) + ' yet. Sponsors pay per win, and the boss only races sponsored drivers.'),
       btn('Choose Sponsor', function () { sponsorPicker(selStage); }, 'small go'));
@@ -154,27 +154,42 @@
     return h('div', {}, head, grid, p.test ? h('div', { style: { marginTop: '8px' } }, btn('Test & Tune', function () { UI.show(UI.RaceMenu, 'test'); }, 'small')) : null);
   }
 
+  // The stage as a road (No Limits style): races in the order they open,
+  // two stacked where you can pick either, side races branching off above,
+  // and the boss at the end. Tap a stop to see it on the right.
+  var selEv = null;
+  var NODE_GLYPH = { quarter: '1/4', eighth: '1/8', street: 'ST', knockout: 'KO', sponsor: '$', showcase: 'SHOW', boss: 'BOSS', 'class': 'SIDE' };
   function careerView() {
     var c = G.careerState();
     pickStage(c); remember();
     G.checkContracts().forEach(function (m) { UI.toast(m); });
-    var chips = stageChips();
-    var st = DR.STAGES[selStage], wins = G.stageWins(selStage);
-    var head = h('div', { class: 'stagehead' },
-      h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STAGE ' + (selStage + 1)), h('div', { class: 'pix acc' }, st.name), h('div', { class: 'dim' }, st.blurb),
-        h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(wins / st.events.length * 100) + '%' } })),
-        h('div', { class: 'gsmall dim' }, wins + ' / ' + st.events.length + ' races won')),
-      sponsorCard(c));
-    var grid = h('div', { class: 'egrid' }), hidden = 0, next = null;
-    st.all.forEach(function (ev) { if (!next && !ev.side && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) next = ev; });
-    st.all.forEach(function (ev) {
-      if (!G.eventVisible(ev)) { hidden++; return; }
-      var card = eventCard(ev, ev === next);
-      grid.appendChild(card);
-      if (ev === next) setTimeout(function () { if (card.scrollIntoView && card.getBoundingClientRect().bottom > window.innerHeight) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 60);
-    });
-    if (hidden) grid.appendChild(h('div', { class: 'ecard locked hiddenev' }, h('div', { class: 'pix big dim' }, '?'), h('div', { class: 'dim' }, hidden + ' more race' + (hidden > 1 ? 's' : '') + ' — keep winning to reveal them')));
-    return h('div', {}, chips, head, grid);
+    var st = DR.STAGES[selStage], wins = G.stageWins(selStage), next = nextEvent(st), arriving = !UI.refreshing;
+    if (arriving) selEv = null;
+    if (!selEv || selEv.stage !== selStage || !G.eventVisible(selEv)) selEv = next || st.boss;
+    var cols = [];
+    function col(n) { while (cols.length <= n) cols.push({ main: [], side: [] }); return cols[n]; }
+    st.events.slice().sort(function (a, b) { return a.needWins - b.needWins || a.idx - b.idx; }).forEach(function (ev) { col(ev.needWins).main.push(ev); });
+    var bossCol = col(Math.max(cols.length, st.boss.needWins)); bossCol.main.push(st.boss); bossCol.boss = true;
+    st.side.forEach(function (ev) { col(Math.min(ev.needWins, cols.length - 1)).side.push(ev); });
+    function node(ev) {
+      var vis = G.eventVisible(ev), won = G.eventWon(ev), lock = vis && G.eventLock(ev);
+      var cls = 'rnode t-' + ev.type + (won ? ' won' : '') + (!vis ? ' hidden' : lock ? ' locked' : '') + (ev === next ? ' next' : '') + (ev === selEv ? ' sel' : '');
+      var label = !vis ? '?' : ev.cls ? DR.CLASSES[ev.cls].name.split(' ')[0].toUpperCase() : NODE_GLYPH[ev.type] || ev.type;
+      return h('div', { class: cls, onclick: function () { if (!vis) return UI.toast('Win more races in this stage to reveal this one'); selEv = ev; A.click(); UI.refresh(); } },
+        h('span', { class: 'rglyph' }, label), won ? h('span', { class: 'rmark good' }, '✔') : lock && vis ? h('span', { class: 'rmark' }, '🔒') : null);
+    }
+    var road = h('div', { class: 'road' }, cols.map(function (k, i) {
+      return h('div', { class: 'rcol' + (k.boss ? ' boss' : '') + (k.main.length > 1 ? ' fork' : '') },
+        h('div', { class: 'rside' }, k.side.map(function (ev) { return h('div', { class: 'rbranch' }, node(ev)); })),
+        h('div', { class: 'rmain' }, k.main.map(node)),
+        h('div', { class: 'rwins gsmall dim' }, k.boss ? 'FINAL' : i ? i + ' win' + (i > 1 ? 's' : '') : 'START'));
+    }));
+    var head = h('div', { class: 'rhead' },
+      h('div', { class: 'grow' }, h('span', { class: 'pix acc' }, st.name), ' ', h('span', { class: 'gsmall dim' }, wins + ' / ' + st.events.length + ' won'),
+        h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(wins / st.events.length * 100) + '%' } }))));
+    var side = h('div', { class: 'rdetail' }, eventCard(selEv, selEv === next), sponsorCard(c));
+    setTimeout(function () { var el = road.querySelector('.rnode.sel'); if (el && arriving) road.scrollLeft = Math.max(0, el.offsetLeft - road.clientWidth / 2 + 28); }, 0);
+    return h('div', {}, stageChips(), h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, road, h('div', { class: 'gsmall dim rtip' }, 'Stacked stops: race either one. Side races branch off above the road and have entry rules.')), side));
   }
   function sponsorCard(c) {
     var sp = c.sponsor[selStage];
@@ -347,7 +362,7 @@
       btn('Reset', function () { UI.confirm('Reset every tuning value to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }); }, 'small red'),
       btn('Dyno', function () { UI.show(UI.Dyno); }, 'small'),
       btn('Test Run', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, back: 'tune' }); }, 'small go')));
-    return h('div', { class: 'screen' }, UI.top('TUNING', function () { UI.show(UI.Garage); }),
+    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'tune'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain tunemain' }, h('div', { class: 'col grow' }, h('h2', {}, tuneGroup), list), statBox)));
   };
 
@@ -454,7 +469,7 @@
       })();
     }
     UI.cleanup = function () { cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); A.stopAll(); voice = null; };
-    return h('div', { class: 'screen' }, UI.top('DYNO', function () { UI.show(UI.Garage); }),
+    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'dyno'),
       h('div', { class: 'dynowrap' }, h('div', { class: 'dynomain' }, h('div', { class: 'dynoscene' }, room, rpmEl), cv), info));
   };
 
@@ -543,13 +558,28 @@
         h('div', { class: 'gsmall' }, inst.best && inst.best.q ? 'Best 1/4: ' + inst.best.q.toFixed(3) + 's' : 'No timeslip yet'),
         h('div', { class: 'efoot' },
           active ? h('span', { class: 'tag g' }, 'IN THE BAY') : btn('Drive', function () { G.state.active = inst.uid; G.save(); UI.show(UI.Garage); }, 'small go'),
-          G.state.cars.length > 1 ? btn('Sell ' + DR.money(G.carValue(inst)), function () {
-            UI.confirm('Sell the ' + DR.CARS[inst.carId].name + ' for ' + DR.money(G.carValue(inst)) + '? Installed parts go with it.', function () { G.sellCar(inst.uid); A.cash(); UI.refresh(); }, 'Sell');
-          }, 'small red') : null)));
+          modded(inst) ? btn('Strip parts', function () {
+            UI.confirm('Take every aftermarket part off the ' + DR.CARS[inst.carId].name + '? They go to your inventory and the car goes back to factory spec.', function () {
+              var n = G.stripCar(inst); A.click(); UI.toast(n + ' part' + (n === 1 ? '' : 's') + ' moved to your inventory'); UI.refresh();
+            }, 'Strip');
+          }, 'small') : null,
+          G.state.cars.length > 1 ? btn('Sell ' + DR.money(G.carValue(inst)), function () { sellCarModal(inst); }, 'small red') : null)));
     });
     return h('div', { class: 'screen' }, UI.top('MY CARS', function () { UI.show(UI.Garage); }, btn('Dealer ▶', function () { UI.show(UI.Dealer); }, 'small')),
       h('div', { class: 'content' }, h('div', { class: 'tipline' }, 'Garage slots: ' + G.state.cars.length + ' / ' + G.carSlots() + '. Every sponsor you sign opens another slot and pays for a car.' + (G.freeCars() ? ' You have ' + G.freeCars() + ' free sponsor car' + (G.freeCars() > 1 ? 's' : '') + ' to pick at the dealer.' : '')), grid));
   };
+
+  function modded(inst) { return inst.engine !== DR.CARS[inst.carId].engine || Object.keys(inst.parts).length > 0; }
+  // Sell as it sits (parts go with it, at 60% of what went into it), or pull
+  // the parts first and sell the shell (the parts stay yours).
+  function sellCarModal(inst) {
+    var name = DR.CARS[inst.carId].name, close = UI.modal([h('p', { class: 'pix' }, 'Sell the ' + name + '?'),
+      modded(inst) ? h('p', { class: 'dim' }, 'Sell it as it sits and the parts go with it, or strip the parts to your inventory first and sell the factory car.') : null,
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '10px', flexWrap: 'wrap', gap: '6px' } },
+        btn('Cancel', function () { close(); }),
+        modded(inst) ? btn('Strip, then sell', function () { close(); var n = G.stripCar(inst), v = G.carValue(inst); G.sellCar(inst.uid); A.cash(); UI.toast('Sold for ' + DR.money(v) + ' • ' + n + ' parts kept'); UI.refresh(); }) : null,
+        btn('Sell ' + DR.money(G.carValue(inst)), function () { close(); G.sellCar(inst.uid); A.cash(); UI.refresh(); }, 'primary'))]);
+  }
 
   // ---------------------------------------------------------------- PAINT
   var paintTab = 'color';
@@ -584,7 +614,7 @@
       UI.show(UI.Garage);
       UI.afterStars(G.noteStars());
     }, 'go');
-    return h('div', { class: 'screen' }, UI.top('PAINT SHOP', function () { paintDraft = null; UI.show(UI.Garage); }, btn('Body Shop ▶', function () { UI.show(UI.Body); }, 'small')),
+    return h('div', { class: 'screen' }, UI.sectionTop('style', 'paint', function () { paintDraft = null; }),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'dmain' },
         h('div', { class: 'gwrap' }, cv, h('div', { class: 'gsel topsel' }, costEl, btn('Undo', function () { paintDraft = null; UI.refresh(); }, 'small'), apply)),
         h('div', { class: 'paintbar' }, h('div', { class: 'plvl' }, paintTab === 'stripe' ? 'STRIPE • +0.25 STARS' : paintTab === 'rim' ? 'WHEEL COLOR' : 'BODY COLOR'), sw))));

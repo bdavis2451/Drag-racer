@@ -203,6 +203,39 @@
       h('h1', {}, title),
       h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)), extra || null);
   }
+  // The garage's two work areas share one header: back to the garage, a row
+  // of tabs, the money. Upgrade = everything that makes the car quicker,
+  // Style = everything that makes it look good.
+  UI.SECTIONS = {
+    upgrade: [['shop', 'Shop', function () { UI.openShop(); }], ['pkg', 'Packages', function () { UI.openPackages(); }],
+      ['install', 'Install', function () { UI.show(UI.Parts); }], ['inv', 'Inventory', function () { UI.show(UI.Inventory); }],
+      ['tune', 'Tune', function () { UI.show(UI.Tune); }], ['dyno', 'Dyno', function () { UI.show(UI.Dyno); }]],
+    style: [['body', 'Body Kits', function () { UI.show(UI.Body); }], ['paint', 'Paint', function () { UI.show(UI.Paint); }]]
+  };
+  UI.sectionTop = function (section, active, onLeave) {
+    var inst = G.car();
+    function badge(id) {
+      if (id === 'shop' && G.newPartsCount && G.newPartsCount()) return 'NEW';
+      if (id === 'body' && G.newVisCount && G.newVisCount()) return 'NEW';
+      if (id === 'install' && inst) { var n = G.state.inv.filter(function (it) { return !G.partFitIssue(it, inst); }).length; return n ? String(n) : ''; }
+      if (id === 'inv') return G.state.inv.length ? String(G.state.inv.length) : '';
+      return '';
+    }
+    var tabs = h('div', { class: 'schips stabs' }, UI.SECTIONS[section].map(function (t) {
+      var b = badge(t[0]);
+      return btn([h('span', {}, t[1]), b ? h('span', { class: b === 'NEW' ? 'newdot' : 'tcount' }, b) : null], function () { if (t[0] === active) return; if (onLeave) onLeave(); t[2](); }, 'chip stab' + (t[0] === active ? ' on' : ''));
+    }));
+    var rem = {}; rem['sec_' + section] = active; UI.remember(rem);
+    return h('div', { class: 'top sectop' },
+      btn('◀', function () { if (onLeave) onLeave(); UI.show(UI.Garage); }, 'back'),
+      h('h1', { class: 'sectitle' }, section === 'upgrade' ? 'UPGRADE' : 'STYLE'), tabs,
+      h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
+  };
+  // open a section on the tab it was last left on
+  UI.openSection = function (section) {
+    var last = (G.state.ui || {})['sec_' + section], tabs = UI.SECTIONS[section];
+    (tabs.filter(function (t) { return t[0] === last; })[0] || tabs[0])[2]();
+  };
   function updMoney() { var m = document.getElementById('money'); if (m) m.textContent = DR.money(G.state.money); }
   UI.updMoney = updMoney;
 
@@ -315,14 +348,15 @@
         p('Park your car at a booth at a car show. Your rating, how rare and loud the build is, and the show itself decide how many people stop by. You earn a little per visitor, and the three most-visited cars take the podium and the prize money. Show judges get bored of the same build: change something up between entries. Each new star level also puts your car on the cover of Pixel Tuner, with a small bonus.'),
         h('h2', {}, 'Building'),
         p('Spend your winnings in the Parts Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod, colour-coded grey, green, blue, purple and orange) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
-        p('Bought parts go into your inventory. Fit them in the garage under Install Parts: the old part comes off and goes back on the shelf, so you can swap it back, move it to another car or sell it for half price. Engine parts are built for one engine; swapping engines takes its parts off with it. Use the arrows in the garage to switch cars.'),
+        p('The garage is home: Upgrade (shop, packages, install, inventory, tune, dyno), Style (body kits, paint), Dealer, Shows and Race sit along the bottom. Use the arrows to switch cars; tap the car name for My Cars.'),
+        p('Bought parts go into your inventory. Fit them under Upgrade > Install: the old part comes off and goes back to your inventory, so you can swap it back, move it to another car or sell it for half price. Engine parts are built for one engine; swapping engines takes its parts off with it. Upgrade > Inventory lists every spare part: filter by the car it fits, the kind of part and its value, sell one or everything shown, and buy back anything you sold until your next race. In My Cars you can strip a car of its parts, or strip it before you sell it.'),
         p('Watch the risk warnings: too much power for your weakest bottom-end part (pistons, rods, crank or block), boost past your fuel\'s knock limit, or more torque than the gearbox or axles can hold can break parts mid-race. Repairs cost money!'),
         p('Engine swaps pay the shop to fit the engine, on top of the engine. An engine that sits the same way as the old one (sideways in a front-drive car, lengthways in a rear-drive car) and fits the engine bay is a bolt-in job. A sideways (transverse) engine in a rear-drive car needs an adapter kit; a lengthways engine in a front-drive car needs a RWD or AWD conversion first. Gearboxes follow the driveline: a front-drive car (and an AWD car built from one) takes a transaxle, everything else a rear-drive gearbox, and a conversion comes with a rear-drive box. Every size bigger than the bay was built for means cutting and fabricating, up to a tube front half for a big-block in a small car.'),
         p('Boost heats the air: the harder a compressor works, and the cheaper or smaller it is for the boost you ask, the hotter the charge. Hot air is thin (less power per psi) and knocks sooner: pump gas knocks around 17 psi with a cool intercooled charge but near 8-10 psi with no intercooler. An intercooler takes most of the heat back out (an ice-tank air-to-water core even cools below the air outside), and E85 and methanol cool the charge as they evaporate, which is why blown alcohol cars skip the intercooler. Factory turbo engines come with their own intercooler and are built for their factory boost. The garage shows your intake temperature and knock limit.'),
         p('Every body has a limit: past the power the stock shell takes, it twists on the launch and can crack. Subframe connectors, a roll bar or a cage let it take more; a tube chassis takes anything.'),
         p('Tech inspection at the strip works like the NHRA\'s: a car that runs quicker than 11.50 in the quarter needs a roll bar, quicker than 10.00 a roll cage, and open cars need the roll bar from 13.50. Street races have no tech.'),
         p('Racing costs a little: after every race against someone you pay for the fuel, tire wear and any nitrous you sprayed. More power, race fuel and slicks cost more per pass. It comes out automatically, never more than you have, and test passes are free.'),
-        p('Race opens on the city map. Yellow markers are races (the number is how many), the bouncing arrow is your next race, red is the boss, green is the Route 99 street-race meet and blue markers are places to visit. Tap a marker to see what is there; tap a blue one twice to go. Drag to pan, pinch or use + and - to zoom.'),
+        p('Race opens on the career road: each stop is a race, in the order they open. Two stops stacked means either one. Side races branch off above the road and have entry rules; the boss waits at the end. Tap a stop to see it. The City Map tab shows the same races by where they happen (yellow races, red boss, green the Route 99 street-race meet). Drag to pan, pinch or use + and - to zoom.'),
         p('Drag the garage, dealer, body shop or paint shop view to look around the car up close (pinch or scroll to zoom, double-tap to reset).'),
         p('In a hurry? Parts Shop > Packages sells Budget, Street, Pro and Extreme kits for each group (or the whole car) at 10% off. They fit a matched set of parts sized to your car and skip anything you already have that is as good.'),
         p('Builds are only as strong as their weakest part. The shop marks the parts holding you back with a red "!": maxed-out injectors or pump, an ignition that misfires under boost, valve springs that float, axles that will snap.'),

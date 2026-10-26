@@ -18,11 +18,7 @@
     { id: 'runway', name: 'Airfield Runway', x: 442, y: 158, icon: 'plane', blurb: 'Knockout night on the old runway. Wide, flat and fast.', events: ['knockout'] },
     { id: 'highway', name: 'Route 99', x: 392, y: 118, icon: 'shield', blurb: 'Street racers meet on the loop. Bet on yourself.', street: true },
     { id: 'downtown', name: 'Downtown', x: 300, y: 134, icon: 'tower', blurb: 'Stoplight to stoplight between the towers. Cold asphalt, less grip.', events: ['street'] },
-    { id: 'docks', name: 'Harbor Docks', x: 205, y: 163, icon: 'anchor', blurb: 'Invitation-only night races between the container stacks.', events: ['showcase'] },
-    { id: 'dealer', name: 'Pixel Motors', x: 262, y: 104, icon: 'car', blurb: 'New and used cars.', go: 'Dealer' },
-    { id: 'parts', name: 'Parts Store', x: 340, y: 158, icon: 'wrench', blurb: 'Performance parts and quick upgrade packages.', go: 'Shop' },
-    { id: 'home', name: 'Your Garage', x: 434, y: 50, icon: 'house', blurb: 'Home base.', go: 'Garage' },
-    { id: 'shows', name: 'Convention Center', x: 352, y: 60, icon: 'trophy', blurb: 'Car shows: park your build and win over the crowd.', go: 'Shows' }
+    { id: 'docks', name: 'Harbor Docks', x: 205, y: 163, icon: 'anchor', blurb: 'Invitation-only night races between the container stacks.', events: ['showcase'] }
   ];
   DR.cityPlaceOf = function (evType) {
     for (var i = 0; i < DR.CITY.length; i++) if ((DR.CITY[i].events || []).indexOf(evType) >= 0) return DR.CITY[i];
