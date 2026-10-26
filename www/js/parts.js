@@ -225,12 +225,15 @@
   ]};
   C.nitrous = { name: 'Nitrous Oxide', options: [
     opt('stock', 'None', 0, { nos: 0 }),
-    opt('n50', '50 Shot Dry Kit', 500, { nos: 50 }, 'Adds 50 hp when sprayed. The cheapest horsepower there is.'),
-    opt('n75', '75 Shot Wet Kit', 800, { nos: 75 }, 'Adds 75 hp when sprayed.'),
-    opt('n150', '150 Shot Wet Kit', 1500, { nos: 150 }),
-    opt('n250', '250 Shot Plate System', 2500, { nos: 250 }),
-    opt('n400', '400 Shot Fogger', 4500, { lvl: 4, nos: 400 }),
-    opt('n650', '650 Shot Dual-Stage Fogger', 8000, { lvl: 5, nos: 650 }, 'Pro nitrous. Spray it carefully!')
+    // where the extra fuel comes from: a dry kit adds it through your
+    // injectors (and pump); a wet kit sprays its own but draws on your pump;
+    // the big foggers come with their own pump and lines
+    opt('n50', '50 Shot Dry Kit', 500, { nos: 50, nosFuel: 'inj' }, 'Adds 50 hp when sprayed. The cheapest horsepower there is. Dry: the extra fuel comes through your injectors, so they and the pump must feed the engine plus the shot.'),
+    opt('n75', '75 Shot Wet Kit', 800, { nos: 75, nosFuel: 'pump' }, 'Adds 75 hp when sprayed. Wet: sprays its own fuel, drawn from your fuel pump.'),
+    opt('n150', '150 Shot Wet Kit', 1500, { nos: 150, nosFuel: 'pump' }, 'Wet: sprays its own fuel, drawn from your fuel pump.'),
+    opt('n250', '250 Shot Plate System', 2500, { nos: 250, nosFuel: 'pump' }, 'Wet: sprays its own fuel, drawn from your fuel pump.'),
+    opt('n400', '400 Shot Fogger', 4500, { lvl: 4, nos: 400, nosFuel: 'own' }, 'Comes with its own fuel pump and lines.'),
+    opt('n650', '650 Shot Dual-Stage Fogger', 8000, { lvl: 5, nos: 650, nosFuel: 'own' }, 'Pro nitrous with its own fuel system. Spray it carefully!')
   ]};
   C.nosctrl = { name: 'Nitrous Controller', needsNos: true, options: [
     opt('stock', 'On/Off Solenoid', 0, { prog: 0 }),
@@ -649,7 +652,10 @@
   function fuelFor(cat, min) { return function (inst) {
     // power the engine would make with unlimited fuel, plus a margin
     var S = DR.buildSpec(withParts(inst, { injectors: 'inj5', fuelpump: 'fp4' }));
-    var need = S.peakHp * 1.12 / (S.diesel ? 1 : DR.getOption('fueltype', inst).ff);
+    // nitrous that takes its fuel from this part counts too (dry: injectors
+    // and pump; wet: the pump)
+    var spray = S.nosHp && (S.nosFuel === 'inj' || (S.nosFuel === 'pump' && cat === 'fuelpump')) ? S.nosHp : 0;
+    var need = (S.peakHp * 1.12 + spray) / (S.diesel ? 1 : DR.getOption('fueltype', inst).ff);
     // nothing to do if what's fitted already feeds it
     var now = DR.buildSpec(inst);
     if ((cat === 'injectors' ? now.fuelInj : now.fuelPump) >= need) return null;

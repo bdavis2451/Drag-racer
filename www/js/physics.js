@@ -258,6 +258,10 @@
     S.nosCut = S.nosHp > S.sparkNos;
     if (S.nosCut) S.nosHp = Math.round(S.sparkNos + (S.nosHp - S.sparkNos) * 0.4);   // spark blows out
     S.nosW = S.nosHp * DR.HP;
+    // the fuel that feeds the spray: injectors and pump (dry), pump (wet) or
+    // its own system; what's there for it is worked out with the risk
+    S.nosFuel = nos.nosFuel || 'own';
+    S.fuelFF = e.diesel ? 1 : fuel.ff;
     S.prog = nosc.prog && nos.nos > 0;
     S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly * (crank.ie || 1);
 
@@ -521,6 +525,8 @@
       if (S.fuelInj <= S.fuelPump) out.injectors = 'Maxed out';
       if (S.fuelPump <= S.fuelInj) out.fuelpump = 'Maxed out';
     }
+    var nl = DR.nosLean(S);
+    if (nl.short > 0) out[nl.by] = out[nl.by] || 'Can\'t feed the nitrous';
     if ((S.fiType !== 'none' && S.boostSet > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
     if (S.fiType !== 'none' && S.boostSet > S.knock + 0.5) out.fueltype = 'Knocking at ' + S.boostSet + ' psi';
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) out.ic = 'Charge is ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F)';
@@ -570,6 +576,13 @@
   // The worst failure chance per run, whatever breaks.
   DR.riskMax = function (r) { return Math.max(r.engine, r.trans, r.axle || 0, r.chassis || 0); };
   // Probability (0..1) of engine / gearbox failure on a run.
+  // How much fuel the nitrous has: { cap, need, short, by: 'injectors' | 'fuelpump' } in hp
+  DR.nosLean = function (S) {
+    if (!S.nosHp || S.nosFuel === 'own') return { cap: 0, need: 0, short: 0 };
+    var inj = S.fuelInj * S.fuelFF, pump = S.fuelPump * S.fuelFF;
+    var cap = S.nosFuel === 'inj' ? Math.min(inj, pump) : pump, need = S.peakHp + S.nosHp;
+    return { cap: cap, need: need, short: Math.max(0, need - cap * 1.001), by: S.nosFuel === 'inj' && inj < pump ? 'injectors' : 'fuelpump' };
+  };
   DR.riskOf = function (S) {
     var r = { engine: 0, trans: 0, notes: [] };
     var over = (S.peakHp + S.nosHp) / S.safeHp;
@@ -583,6 +596,10 @@
     if (S.boostSet > S.knock + 0.5) { r.engine += Math.min(0.6, (S.boostSet - S.knock) * 0.05); r.notes.push('Boost is past the knock limit (' + S.knock + ' psi' + (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + ')'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
     if (S.fuelW < (S.peakHp * DR.HP) * 1.001) r.notes.push((S.fuelInj < S.fuelPump ? 'Injectors are' : S.fuelPump < S.fuelInj ? 'Fuel pump is' : 'Fuel system is') + ' maxed out - power is limited');
+    // nitrous it can't feed runs lean: it still makes the power, until it
+    // burns a piston
+    var nl = DR.nosLean(S);
+    if (nl.short > 0) { r.engine += Math.min(0.7, (nl.need / nl.cap - 1) * 2.5); r.notes.push('Spraying lean: the ' + (S.nosFuel === 'inj' ? 'injectors and pump feed' : 'fuel pump feeds') + ' ' + Math.round(nl.cap) + ' hp, the engine plus the shot need ' + Math.round(nl.need) + ' hp' + (S.nosFuel === 'inj' ? ' (a dry kit adds its fuel through the injectors)' : '')); }
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     // gearbox ratings carry a little margin: trouble starts 5% past them
