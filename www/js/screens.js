@@ -207,7 +207,7 @@
       lock ? h('div', { class: 'warn gsmall' }, '🔒 ' + lock) : null,
       !lock && issue ? h('div', { class: 'warn gsmall' }, '⚠ ' + issue) : null,
       h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))), G.car() ? h('span', { class: 'dim gsmall' }, '−' + DR.money(DR.runCost(G.spec(G.car())).total) + ' run') : null,
-        btn('Race', function () { if (lock || issue) return UI.toast(lock || issue); DR.Race.careerEvent(ev, 0); }, 'small ' + (lock || issue ? 'disabled' : 'red'))));
+        btn('Race', function () { if (lock || issue) return UI.toast(lock || issue); DR.Race.careerEvent(ev, 0); }, 'erace ' + (lock || issue ? 'disabled' : 'red'))));
   }
   function sponsorPicker(si) {
     var offers = G.sponsorOffers(si), close;

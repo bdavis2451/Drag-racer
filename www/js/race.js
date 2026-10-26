@@ -9,12 +9,28 @@
   var DASH_W = 232, DASH_H = 44;
   var BOX_X = -16;           // where cars sit for the burnout (m)
 
+  var loading = null;   // the loading veil while a race screen is being built
+  var lastStray = 0;    // when a tap last landed on the veil (or was ignored)
   DR.Race = {
     // cfg.inst: race a car you don't own (dealer test drive)
     start: function (cfg) {
       var inst = cfg.inst || G.car();
       if (inst.damage) { UI.toast('Repair your car first!'); return; }
-      UI.show(RaceScreen, cfg);
+      if (loading) return;            // already on the way: a second tap does nothing
+      // show that the tap landed before the (slow) race screen is built; the
+      // veil also eats any extra taps so none reach the STAGE button
+      loading = document.createElement('div');
+      loading.className = 'loadveil';
+      loading.innerHTML = '<div class="loadbox"><div class="spin"></div><div class="pix">LOADING RACE</div></div>';
+      ['pointerdown', 'pointerup', 'click', 'touchstart'].forEach(function (t) { loading.addEventListener(t, function (e) { e.preventDefault(); e.stopPropagation(); lastStray = Date.now(); }); });
+      document.body.appendChild(loading);
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        try { UI.show(RaceScreen, cfg); } finally {
+          // stay up a moment so taps queued while loading land here, then fade
+          var v = loading;
+          setTimeout(function () { v.classList.add('out'); setTimeout(function () { if (v.parentNode) v.parentNode.removeChild(v); if (loading === v) loading = null; }, 200); }, 350);
+        }
+      }); });
     },
     // A career event (round: knockout round, 0-based).
     careerEvent: function (ev, round) {
@@ -248,7 +264,18 @@
     gasBtn.addEventListener('pointermove', function (e) { if (input.gasHeld) input.gas = gasFromEvent(e); });
     function gasUp() { input.gasHeld = false; input.gas = 0; }
     gasBtn.addEventListener('pointerup', gasUp); gasBtn.addEventListener('pointercancel', gasUp);
-    actBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); A.init(); A.resume(); input.act = true; actBtn.classList.add('on'); });
+    // STAGE ignores taps in the first second of the burnout, and any tap
+    // that is part of a burst started on the Race button: a stray second
+    // tap would otherwise end the burnout before it starts
+    var actReady = Infinity;   // set when the burnout actually starts
+    actBtn.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); A.init(); A.resume();
+      // a burst of taps that started on the Race button: keep ignoring it
+      // until the player pauses
+      var now = Date.now();
+      if (now < actReady || now - lastStray < 600) { lastStray = now; return; }
+      input.act = true; actBtn.classList.add('on');
+    });
     function actUp() { actBtn.classList.remove('on'); }
     actBtn.addEventListener('pointerup', actUp); actBtn.addEventListener('pointercancel', actUp); actBtn.addEventListener('pointerleave', actUp);
     nosBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); input.nos = !input.nos; nosBtn.classList.toggle('on', input.nos); });
@@ -372,7 +399,7 @@
       phaseT += dt;
       var act = input.act; input.act = false;
       if (phase === 'pre' || phase === 'burnout' || phase === 'stage') {
-        if (phase === 'pre') startBurnout();
+        if (phase === 'pre') { startBurnout(); actReady = Date.now() + 1000; }
         if (act && phase !== 'stage') startStaging();
         var tt = S.tire.topt, thr = playerThrottle();
         if (phase === 'burnout') {
