@@ -83,7 +83,8 @@
     bike(x, Math.round(W * 0.42), Math.round(wt + (fl - wt) * 0.3), '#6b7d5e');
     bike(x, Math.round(W * 0.42), Math.round(wt + (fl - wt) * 0.6), '#7a7090');
     // wall TV
-    var tx = Math.round(W * 0.5), tw = Math.round(W * 0.1), ty = Math.round(wt + (fl - wt) * 0.24);
+    // sits in the gap between the bikes (to 0.47W) and the cabinets (from 0.58W)
+    var tx = Math.round(W * 0.483), tw = Math.round(W * 0.084), ty = Math.round(wt + (fl - wt) * 0.24);
     var th = Math.round(tw * 0.56);
     r(tx - 2, ty - 2, tw + 4, th + 4, '#2a2c33');
     // it's on: a drag race on TV (sky, grandstand, the strip and the tree)
