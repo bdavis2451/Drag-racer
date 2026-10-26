@@ -123,7 +123,10 @@
     opt('p1', 'Forged Pistons (Boost, Low Comp)', 1600, { hold: 2.0, be: 1200, cr: -1 }, 'Holds 2x stock power. Lower compression: -2% power, +3 psi before knock.'),
     opt('p2', 'Forged Pistons (NA, High Comp)', 1600, { hold: 1.7, be: 1200, cr: 1 }, 'Holds 1.7x stock power. Higher compression: +4% power, 3 psi less before knock.'),
     opt('p3', 'Billet Race Pistons', 4000, { lvl: 4, hold: 3.4, be: 1800, cr: 0 }, 'Holds 3.4x stock power.'),
-    opt('p4', 'Pro Mod Pistons', 9000, { lvl: 5, hold: 6, be: 2600, cr: 0 }, 'Coated skirts and gas ports. Holds 6x stock power.')
+    opt('p4', 'Pro Mod Pistons', 9000, { lvl: 5, hold: 6, be: 2600, cr: 0 }, 'Coated skirts and gas ports. Holds 6x stock power.'),
+    // the Lima's own upgrade: the forged, low-compression pistons Ford put in
+    // the 2.3 Turbo (SVO, Thunderbird Turbo Coupe) drop straight into the NA block
+    opt('p_lima', 'Factory 2.3 Turbo Pistons (Forged)', 900, { lvl: 2, hold: 2.0, be: 1000, cr: -1, only: ['i4_23'] }, 'Ford\'s forged, low-compression pistons from the 2.3 Turbo, a drop-in for the NA Lima. Holds 2x stock power. -2% power, +3 psi before knock.')
   ]};
   C.rods = { name: 'Connecting Rods', engineScaled: true, options: [
     opt('stock', 'Stock Rods', 0, { hold: 1.3, be: 800 }, 'Good for 1.3x stock power.'),
@@ -499,12 +502,14 @@
     }
     var c = C[cat], mul = c.engineScaled ? DR.enginePriceMul(inst.engine || car.engine) : 1;
     var eng = DR.ENGINES[inst.engine || car.engine], rot = eng.rotary && ROTARY[cat];
+    var engId = inst.engine || car.engine;
     return c.options.map(function (o, i) {
+      if (o.only && o.only.indexOf(engId) < 0) return null;   // made for one engine
       if (rot) { var r = rot.options[i]; o = Object.assign({}, o, { name: r[0], desc: r[1] }, r[2] || {}); }
       var x = Object.assign({}, o, { price: Math.round(o.price * mul / 50) * 50, lvl: lvlOf(o) });
       if (o.hold) x.desc = (o.desc ? o.desc + ' ' : '') + 'About ' + Math.round(eng.safe * o.hold / 10) * 10 + ' hp on this engine.';
       return x;
-    });
+    }).filter(Boolean).sort(function (a, b) { return (a.price ? 1 : 0) - (b.price ? 1 : 0) || (b.only ? 1 : 0) - (a.only ? 1 : 0); });
   }
 
   // Whether a category applies to this car right now (e.g. clutch vs converter).
