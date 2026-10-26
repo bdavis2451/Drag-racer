@@ -424,16 +424,23 @@
   // car): one tap buys and fits a matched set of parts at a discount.
   var PKG_LVL = [1, 2, 3, 5];
   function pkgGroups() { return [{ id: 'all', name: 'Full Car', groups: DR.PKG_ORDER }].concat(DR.PKG_ORDER.map(function (gid) { var g = groupById(gid); return { id: gid, name: g.name, groups: [gid], icon: g.icon }; })); }
-  function pkgLocked(plan) { var l = plan.steps.filter(function (s) { return !G.partUnlocked(s.cat, s.opt.lvl); }); return l.length ? l : null; }
+  // A tier opens when every shop group in it reaches the tier's level
+  // ('' = open, else where it unlocks); a locked tier previews its real parts
+  function pkgLocked(pg, t) {
+    var need = DR.PKG_TIERS[t].lvl, where = '';
+    pg.groups.forEach(function (gid) { var cat = groupById(gid).cats[0]; if (!where && !G.partUnlocked(cat, need)) where = G.unlockWhere(cat, need); });
+    return where;
+  }
+  function pkgPlan(inst, pg, t) { return DR.packagePlan(inst, pg.groups, t, !!pkgLocked(pg, t)); }
   function pkgCard(inst, pg, t) {
-    var plan = DR.packagePlan(inst, pg.groups, t), tier = DR.PKG_TIERS[t], lvl = PKG_LVL[t], locked = pkgLocked(plan);
+    var plan = pkgPlan(inst, pg, t), tier = DR.PKG_TIERS[t], lvl = PKG_LVL[t], locked = pkgLocked(pg, t);
     var done = !plan.steps.length;
     return h('div', { class: 'pcard pkgcard l' + lvl + (locked ? ' locked' : '') + (done ? ' inst' : ''), onclick: function () { if (!done) pkgModal(inst, pg, t, plan); } },
       h('div', { class: 'plvl' }, tier.name),
       h('div', { class: 'pname' }, tier.name + ' ' + (pg.id === 'all' ? 'Build' : 'Package')),
       done ? h('span', { class: 'gain dim' }, 'all fitted') : h('div', { class: 'dim', style: { fontSize: '15px' } }, plan.steps.length + ' parts'),
       done ? null : pkgGain(inst, plan),
-      h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + locked.map(function (s) { return G.unlockWhere(s.cat, s.opt.lvl); }).sort().pop()) : done ? h('span', { class: 'tag g' }, 'ON CAR') :
+      h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + locked) : done ? h('span', { class: 'tag g' }, 'ON CAR') :
         h('span', { class: 'price' + (G.canAfford(plan.price) ? '' : ' bad') }, DR.money(plan.price)),
         !locked && !done ? h('span', { class: 'tag b' }, '-' + Math.round(DR.PKG_DISCOUNT * 100) + '%') : null));
   }
@@ -460,10 +467,10 @@
     return main;
   }
   function pkgModal(inst, pg, t, plan) {
-    var tier = DR.PKG_TIERS[t], lvl = PKG_LVL[t], locked = pkgLocked(plan);
+    var tier = DR.PKG_TIERS[t], lvl = PKG_LVL[t], locked = pkgLocked(pg, t);
     var S0 = G.spec(inst), S1 = DR.buildSpec(plan.after), close;
     var list = h('div', { class: 'pkglist' }, plan.steps.map(function (s) {
-      var lk = !G.partUnlocked(s.cat, s.opt.lvl);
+      var lk = !!locked && !G.partUnlocked(s.cat, s.opt.lvl);
       return h('div', { class: 'pkgrow' + (lk ? ' bad' : '') }, iconEl(s.cat, s.opt.lvl, s.id, 20), h('span', { class: 'dim' }, DR.catName(s.cat, inst)), h('span', {}, (lk ? '🔒 ' : '') + s.opt.name.replace(' (Factory)', '')));
     }));
     close = UI.modal(h('div', { class: 'col pmodal l' + lvl },
@@ -477,7 +484,7 @@
         ['Package price', DR.money(plan.price), 'good']
       ]),
       UI.riskBox(S1),
-      locked ? h('div', { class: 'warnbox' }, '🔒 ' + locked.length + ' of these parts unlock as you win career races.') :
+      locked ? h('div', { class: 'warnbox' }, '🔒 ' + tier.name + ' ' + (pg.id === 'all' ? 'builds' : 'packages') + ' unlock as you win career races: ' + locked + '.') :
         h('div', { class: 'row' }, btn('Buy & Install ' + DR.money(plan.price), function () {
           if (!G.canAfford(plan.price)) return UI.toast('Not enough money');
           G.buyPackage(inst, plan); A.cash(); close(); UI.toast(tier.name + ' ' + (pg.id === 'all' ? 'build' : 'package') + ' installed!'); UI.refresh();

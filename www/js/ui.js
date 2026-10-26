@@ -239,7 +239,6 @@
         toggle('Christmas tree', 'proTree', false, true, 'Sportsman', 'Pro', 'Pro tree: all ambers flash at once, green 0.4s later.'),
         toggle('Speed units', 'units', 'mph', 'kmh', 'MPH', 'KM/H'),
         toggle('Gas pedal', 'pedal', 'hold', 'slide', 'Hold', 'Slide', 'Slide: how high you touch the pedal sets the throttle - feather it to stop wheelspin.'),
-        toggle('Burnout pull-up', 'autoStage', true, false, 'Auto', 'Manual', 'Auto: once the tires are in the window, let off the gas and the car rolls up to stage.'),
         h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Unlock everything'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For testing: every stage, car, part level and body-kit tier, plus $5,000,000.')),
           btn('Unlock', function () {
             UI.confirm('Unlock everything on this save? This cannot be undone (except by erasing the save).', function () { G.unlockAll(); A.cash(); UI.toast('Everything unlocked'); UI.refresh(); }, 'Unlock');
@@ -255,7 +254,7 @@
     return h('div', { class: 'screen' }, top('HOW TO PLAY', function () { UI.show(back || UI.Garage); }),
       h('div', { class: 'content' }, h('div', { class: 'panel', style: { maxWidth: '820px' } },
         h('h2', {}, 'Racing'),
-        p('1. Optional: hit BURNOUT and hold GAS to heat your tires. Slicks need heat to grip - watch the tire temp meter. Once it is in the green window, let off the gas and the car pulls up to the line on its own (or hit STAGE any time; the Burnout pull-up setting turns the auto pull-up off).'),
+        p('1. Every race starts in the burnout box with the line lock on. Hold GAS to spin the rear tires and heat them (slicks need heat to grip - watch the tire temp meter), then hit STAGE to end the burnout and roll up to the line. Hit STAGE straight away to skip it and race on cold tires.'),
         p('2. Your opponent does their own burnout and stages when they are ready; the tree comes down once both cars are staged. Hold GAS to rev the engine and keep the RPM in the green launch zone (a 2-step holds it for you).'),
         p('Automatics: the torque converter decides how high the engine revs on the line (low, medium or high stall). Without a transbrake you are on the foot brake: it can only hold so much, so the game eases off the throttle for you (BRAKES AT LIMIT) and the launch is a bit softer. A transbrake holds full throttle and boost and lets go instantly.'),
         p('3. When the light turns GREEN, tap LAUNCH. Too early = red light and you lose.'),

@@ -232,8 +232,7 @@
       drawActButton(actCv.getContext('2d'), mode, actLabel.textContent, actBtn.classList.contains('on'));
       if (S.nosW && !S.prog) drawNosButton(nosCv.getContext('2d'), input.nos);
     }
-    var burnBtn = btn('Burnout', function () { startBurnout(); }, 'primary');
-    var stageBar = h('div', { class: 'stagebar' }, burnBtn);
+    var stageBar = h('div', { class: 'stagebar' });
     var quitBtn = btn('✖', function () { quit(); }, 'small back quit');
     var controls = h('div', { class: 'controls' }, gasBtn, actBtn, nosBtn, stageBar, quitBtn);
     var root = h('div', { class: 'screen race' }, cv, hud, controls);
@@ -261,7 +260,6 @@
       if (k === 'ArrowUp' || k === 'w' || k === 'W') { input.gasHeld = down; input.gas = down ? 1 : 0; e.preventDefault(); }
       else if (down && (k === ' ' || k === 'ArrowRight' || k === 'Enter')) { input.act = true; e.preventDefault(); }
       else if (down && (k === 'n' || k === 'N')) { input.nos = !input.nos; nosBtn.classList.toggle('on', input.nos); }
-      else if (down && (k === 'b' || k === 'B') && phase === 'pre') startBurnout();
     }
     var kd = function (e) { key(e, true); }, ku = function (e) { key(e, false); };
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
@@ -281,16 +279,17 @@
     if (testDrive) estLine = 'TEST DRIVE • ';
     var vsLine = opp ? 'VS ' + opp.label : 'TEST & TUNE';
     infoEl.innerHTML = '';
-    setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (cfg.ev.type === 'knockout' ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Burnout to heat the tires, or Stage to race.' : 'Burnout to heat the tires, or Stage to race.');
+    setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (cfg.ev.type === 'knockout' ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Hold GAS to do your burnout.' : 'Hold GAS to do your burnout.');
     if (estLine) subEl.textContent = estLine + subEl.textContent;
+    var introSub = subEl.textContent;
 
+    // You start in the burnout box with the line lock on (an AWD car holds
+    // all four on the brakes): hold GAS to heat the tires, then STAGE to end
+    // the burnout and roll up to the line. STAGE straight away skips it.
     function startBurnout() {
       if (phase !== 'pre') return;
       phase = 'burnout'; phaseT = 0;
-      stageBar.innerHTML = '';
-      var lineLock = you.sim.burnout(true);
-      setMsg('', lineLock ? 'HOLD GAS to spin the tires. Watch the temp meter, then hit STAGE.'
-        : 'AWD: all four wheels are on the brakes. HOLD GAS to scrub some heat in, then hit STAGE.');
+      you.lineLock = you.sim.burnout(true);
     }
     // Pull out of the box and creep into the beams. Each car does this on its
     // own; the tree comes down once both are staged.
@@ -373,20 +372,22 @@
       phaseT += dt;
       var act = input.act; input.act = false;
       if (phase === 'pre' || phase === 'burnout' || phase === 'stage') {
+        if (phase === 'pre') startBurnout();
         if (act && phase !== 'stage') startStaging();
-        var thr = playerThrottle();
-        stepSim(you, dt, thr, true);
+        var tt = S.tire.topt, thr = playerThrottle();
         if (phase === 'burnout') {
           if (you.sim.burnMode) you.burn = burnAmt(you);
           else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.burn = thr * 0.5; }
-          // tires in the window and off the gas: roll up to the line on its own
-          var tt = S.tire.topt;
-          you.offGas = thr > 0.05 ? 0 : (you.offGas || 0) + dt;
-          // (once they've reached the window: they cool a little while you wait)
-          if (you.sim.tireT >= tt - 8) you.hitWindow = true;
-          if (settings.autoStage !== false && you.hitWindow && you.sim.tireT >= tt - 14 && you.sim.tireT <= tt + 30 && you.offGas > 0.5 && phaseT > 1) startStaging(true);
-          else if (you.sim.tireT >= tt - 8 && thr > 0.05) setMsg('', you.sim.tireT > tt + 25 ? 'Too hot! Let off the gas.' : settings.autoStage !== false ? 'Tires are in the window. Let off the gas to pull up.' : 'Tires are in the window. Hit STAGE.');
+          // coach the burnout off the tire temperature
+          var tT = you.sim.tireT, msg;
+          if (tT > tt + 25) msg = 'Too hot! Ease off the gas.';
+          else if (tT >= tt - 8) msg = thr > 0.05 ? 'Tires are in the window! Let off and hit STAGE.' : 'Tires are hot. Hit STAGE to pull up to the line.';
+          else if (thr > 0.05) { msg = 'Spinning... keep it pinned.'; you.spun = true; }
+          else if (!you.spun) msg = introSub;
+          else msg = you.lineLock ? 'Hold GAS to spin the tires. Hit STAGE when they\'re hot.' : 'AWD: hold GAS to scrub heat in on the brakes. Hit STAGE when ready.';
+          if (msg !== you.burnMsg) { you.burnMsg = msg; setMsg(vsLine, msg); }
         }
+        stepSim(you, dt, thr, true);
         stepRoll(you, dt);
         oppBox(dt);
         if (phase === 'stage' && you.box === 'staged') {
@@ -631,46 +632,52 @@
         else if (them.red && !me.red) win = true;
         else win = me.total < them.total;
       }
-      var lines = [], moneyDelta = 0, firstWin = false;
+      // what the slip shows besides the times: news (stage unlocked, next
+      // round), a money breakdown, unlock chips and a few short notes
+      var moneyDelta = 0, firstWin = false, news = [], money = [], unlocks = [], notes = [];
       var damaged = you.sim.blown ? { engine: true } : you.sim.broke ? (you.sim.brokeWhat === 'axle' ? { axle: true } : you.sim.brokeWhat === 'chassis' ? { chassis: true } : { trans: true }) : null;
       var ev = cfg.ev, nextRound = null;
       if (cfg.mode === 'career' && win) {
         if (ev.type === 'knockout' && cfg.round < ev.opps.length - 1) {
           nextRound = cfg.round + 1;
-          lines.push('ROUND ' + (cfg.round + 1) + ' OF ' + ev.opps.length + ' WON! Next up: ' + ev.opps[nextRound].name);
+          news.push('Round ' + (cfg.round + 1) + ' of ' + ev.opps.length + ' won! Next: ' + ev.opps[nextRound].name);
         } else {
           var res = G.winEvent(ev);
           moneyDelta = res.cash; firstWin = res.first;
-          lines = lines.concat(res.lines);
+          money.push([res.first ? 'Prize' : 'Prize (rerun)', res.purse]);
+          money = money.concat(res.money);
+          if (res.banner) news.push(res.banner);
+          if (res.contract) news.push(res.contract);
+          unlocks = res.unlocks;
+          if (res.newRaces) notes.push(['dim', res.newRaces + ' new race' + (res.newRaces > 1 ? 's' : '') + ' to run']);
           // a launch bonus on the race purse (CSR's perfect-start bonus)
           var lb = me.rt != null && me.rt >= 0 ? (me.rt <= 0.05 ? 0.15 : me.rt <= 0.15 ? 0.05 : 0) : 0;
-          var purse = res.first ? ev.cash : G.eventReward(ev);
-          if (lb) { var bonus = Math.round(purse * lb / 10) * 10; moneyDelta += bonus; lines.push((lb > 0.1 ? 'PERFECT' : 'GOOD') + ' LAUNCH BONUS: ' + DR.money(bonus)); }
+          var purse = res.purse;
+          if (lb) { var bonus = Math.round(purse * lb / 10) * 10; moneyDelta += bonus; money.push([(lb > 0.1 ? 'Perfect' : 'Good') + ' launch', bonus]); }
           var style = G.styleBonus(purse);
-          if (style) { moneyDelta += style; lines.push('STYLE BONUS (' + DR.starText(DR.starRating(inst)) + '): ' + DR.money(style)); }
+          if (style) { moneyDelta += style; money.push(['Style ' + DR.starText(DR.starRating(inst)), style]); }
         }
       }
-      if (cfg.mode === 'career' && win === false && ev.type === 'knockout') lines.push('KNOCKED OUT in round ' + (cfg.round + 1) + '. Start over from round 1.');
-      if (cfg.mode === 'street') moneyDelta = win ? cfg.bet : -cfg.bet;
+      if (cfg.mode === 'career' && win === false && ev.type === 'knockout') news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
+      if (cfg.mode === 'street') { moneyDelta = win ? cfg.bet : -cfg.bet; money.push([win ? 'Bet won' : 'Bet lost', moneyDelta]); }
       if (moneyDelta) G.earn(moneyDelta);
       if (them && !testDrive && (cfg.mode === 'career' || cfg.mode === 'street')) {
         var rc = G.payRunCost(S, you.sim.nosT);
-        var rcParts = [['fuel', rc.fuel], ['tires', rc.tires], ['nitrous', rc.nos]].filter(function (x) { return x[1] > 0; }).map(function (x) { return x[0] + ' ' + DR.money(x[1]); });
-        if (rc.paid) lines.push('Running costs: ' + DR.money(rc.paid) + ' (' + rcParts.join(', ') + ')');
+        if (rc.paid) { money.push(['Fuel & tires' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }
       }
       if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; }
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
-      if (!testDrive && you.sim.finished && cfg.grip >= 1 && !redLight && (!inst.best[key] || you.sim.et < inst.best[key])) { inst.best[key] = you.sim.et; lines.push('NEW PERSONAL BEST!'); }
+      if (!testDrive && you.sim.finished && cfg.grip >= 1 && !redLight && (!inst.best[key] || you.sim.et < inst.best[key])) { inst.best[key] = you.sim.et; notes.unshift(['good', 'New personal best!']); }
       else if (you.sim.finished && prevBest) pbLine = 'Your best ' + (key === 'q' ? '1/4' : '1/8') + ': ' + prevBest.toFixed(3) + ' (' + '+' + (you.sim.et - prevBest).toFixed(3) + ')';
       // how close it was
       var margin = null;
       if (them && me.total < Infinity && them.total < Infinity && !me.red && !them.red) margin = (win ? 'Won' : 'Lost') + ' by ' + Math.abs(them.total - me.total).toFixed(3) + 's';
       else if (them && win && them.total === Infinity && !them.red) margin = opp.label + (opp.sim.crashed ? ' crashed' : opp.sim.blown ? ' blew up' : opp.sim.broke ? ' broke' : ' did not finish');
-      if (damaged && testDrive) { lines.push('Good thing it was a test drive.'); damaged = null; }
+      if (damaged && testDrive) { notes.push(['dim', 'Good thing it was a test drive.']); damaged = null; }
       if (damaged) {
         inst.damage = damaged;
-        lines.push((damaged.engine ? 'Your engine is toast.' : damaged.axle ? 'You snapped an axle.' : damaged.chassis ? 'The body twisted and cracked a torque box.' : 'Your transmission is broken.') + ' Repair cost: ' + DR.money(G.repairCost(inst)));
+        notes.push(['bad', (damaged.engine ? 'Engine blown.' : damaged.axle ? 'Snapped an axle.' : damaged.chassis ? 'Cracked the chassis.' : 'Transmission broken.') + ' Repair: ' + DR.money(G.repairCost(inst))]);
       }
       G.save();
 
@@ -698,23 +705,30 @@
         h('div', { class: 'col slipside', style: { width: '38%', minWidth: '210px' } },
         h('div', { class: 'pix big ' + (win === false ? 'bad' : 'good'), style: { textAlign: 'center' } }, head),
         margin ? h('div', { class: 'margin' }, margin) : null,
-        moneyDelta ? h('div', { class: 'pix ' + (moneyDelta > 0 ? 'good' : 'bad'), style: { textAlign: 'center' } }, (moneyDelta > 0 ? '+' : '') + DR.money(moneyDelta)) : null,
-        pbLine ? h('div', { class: 'dim', style: { textAlign: 'center' } }, pbLine) : null,
-        lines.map(function (l) { return h('div', { class: 'acc', style: { textAlign: 'center' } }, l); }),
+        news.map(function (n) { return h('div', { class: 'slipnews' }, n); }),
+        money.length ? h('div', { class: 'slipmoney' },
+          h('div', { class: 'pix total ' + (moneyDelta >= 0 ? 'good' : 'bad') }, (moneyDelta > 0 ? '+' : '') + DR.money(moneyDelta)),
+          money.length > 1 ? money.map(function (m) { return h('div', { class: 'mrow' }, h('span', {}, m[0]), h('span', { class: m[1] < 0 ? 'bad' : '' }, (m[1] > 0 ? '+' : '') + DR.money(m[1]))); }) : null) : null,
+        unlockBox(unlocks),
+        notes.length ? h('div', { class: 'slipnote' }, notes.map(function (n, i) { return h('span', { class: n[0] }, (i ? ' • ' : '') + n[1]); })) : null,
+        pbLine ? h('div', { class: 'slipnote dim' }, pbLine) : null,
         testDrive ? h('div', { class: 'col' },
           btn('Back to Dealer', function () { UI.show(UI.Dealer); }, 'primary'),
           btn('Run Again', function () { DR.Race.start(cfg); })) :
-        h('div', { class: 'col' },
-          btn('Garage', function () { UI.show(UI.Garage); }),
-          btn('Tune', function () { UI.show(UI.Tune); }),
+        // the main action on top, the rest two to a row
+        h('div', { class: 'col slipbtns' },
           !damaged && nextRound != null ? btn('Next Round', function () { DR.Race.careerEvent(ev, nextRound); }, 'primary') : null,
           !damaged && nextRound == null ? btn(them ? (cfg.mode === 'street' ? 'Back to Street' : 'Back to Career') : 'Run Again', function () {
             if (them) UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career');
             else DR.Race.start(cfg);
           }, 'primary') : null,
-          !damaged && them && cfg.mode === 'career' && !win ? btn(ev.type === 'knockout' ? 'Retry Knockout' : 'Rematch', function () { DR.Race.careerEvent(ev, 0); }, 'red') : null,
-          !damaged && them && cfg.mode === 'career' && win && nextRound == null ? btn('Race Again (' + DR.money(G.eventReward(ev)) + ')', function () { DR.Race.careerEvent(ev, 0); }) : null,
-          back && !damaged ? btn('Back to Tuning', function () { UI.show(back); }) : null))));
+          damaged ? btn('Garage (repair)', function () { UI.show(UI.Garage); }, 'primary') : null,
+          h('div', { class: 'btngrid' },
+            !damaged && them && cfg.mode === 'career' && !win ? btn(ev.type === 'knockout' ? 'Retry KO' : 'Rematch', function () { DR.Race.careerEvent(ev, 0); }, 'red') : null,
+            !damaged && them && cfg.mode === 'career' && win && nextRound == null ? btn('Again ' + DR.money(G.eventReward(ev)), function () { DR.Race.careerEvent(ev, 0); }) : null,
+            back && !damaged ? btn('Back to Tuning', function () { UI.show(back); }) : null,
+            damaged ? null : btn('Garage', function () { UI.show(UI.Garage); }),
+            btn('Tune', function () { UI.show(UI.Tune); }))))));
       // peek: slide the slip down to watch the cars coast through the shutdown
       var peekBtn = btn('▼ Watch', function () { var on = slip.classList.toggle('peek'); peekBtn.textContent = on ? '▲ Slip' : '▼ Watch'; }, 'small peekbtn');
       slip.firstChild.appendChild(peekBtn);
@@ -725,6 +739,19 @@
       root._back = testDrive ? function () { UI.show(UI.Dealer); } : function () { UI.show(UI.RaceMenu, cfg.mode === 'test' ? 'test' : UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career'); };
     }
 
+    // unlocks as chips under three small headings, with "+N more" past a few
+    function unlockBox(list) {
+      if (!list || !list.length) return null;
+      var by = { parts: [], body: [], car: [] };
+      list.forEach(function (u) { var c = DR.unlockChip(u); by[c.kind].push(c.text); });
+      var rows = [['parts', 'Parts'], ['body', 'Body shop'], ['car', 'New cars']].filter(function (k) { return by[k[0]].length; }).map(function (k) {
+        var items = by[k[0]], shown = items.slice(0, 3);
+        return h('div', { class: 'urow' }, h('span', { class: 'uhead' }, k[1]),
+          shown.map(function (t) { return h('span', { class: 'chip c-' + k[0] }, t); }),
+          items.length > 3 ? h('span', { class: 'chip more' }, '+' + (items.length - 3) + ' more') : null);
+      });
+      return h('div', { class: 'slipunl' }, h('div', { class: 'uttl' }, 'UNLOCKED'), rows);
+    }
     function quit() {
       if (you.sim.launched && cfg.mode === 'street' && !resultShown) {
         UI.confirm('Leaving now forfeits your ' + DR.money(cfg.bet) + ' bet. Quit?', function () { G.earn(-cfg.bet); G.state.stats.races++; G.save(); UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : 'street'); });

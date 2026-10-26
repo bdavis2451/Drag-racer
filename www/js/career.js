@@ -412,6 +412,14 @@
     return u;
   }
   DR.unlockText = unlockText;
+  // The short form for the time slip: { kind: parts|body|car, text }.
+  DR.unlockChip = function (u) {
+    var p = u.split(':');
+    if (p[0] === 'car') return { kind: 'car', text: DR.CARS[p[1]].name };
+    if (p[0] === 'perf') return { kind: 'parts', text: (p[1] === 'all' ? 'All parts' : DR.UNLOCK_NAMES[p[1]] || p[1]) + ' → ' + DR.LEVEL_NAMES[+p[2]] };
+    if (p[0] === 'vis') return { kind: 'body', text: DR.visSlot(p[1]).name + (+p[2] > 1 ? ' ' + ['', 'I', 'II', 'III'][+p[2]] : '') };
+    return { kind: 'parts', text: unlockText(u) };
+  };
   function apply(u) {
     var c = C(), p = u.split(':');
     if (p[0] === 'car') c.cars[p[1]] = 1;
@@ -464,6 +472,7 @@
   // Returns {cash, lines}.
   G.winEvent = function (ev) {
     var c = C(), st = DR.STAGES[ev.stage], first = !c.won[ev.id], lines = [], cash = first ? ev.cash : Math.round(ev.cash * 0.35);
+    var out = { purse: cash, unlocks: first ? ev.unlocks.slice() : [], money: [], banner: '', newRaces: 0 };
     var sp = c.sponsor[ev.stage];
     var newlyVisible = [];
     if (first) {
@@ -478,17 +487,24 @@
         if (ev.stage + 1 < DR.STAGES.length) {
           c.stage = Math.max(c.stage, ev.stage + 1);
           lines.push('STAGE ' + (ev.stage + 2) + ' UNLOCKED: ' + DR.STAGES[ev.stage + 1].name);
-        } else lines.push('YOU ARE THE KING OF THE STRIP!');
+          out.banner = 'Stage ' + (ev.stage + 2) + ' unlocked: ' + DR.STAGES[ev.stage + 1].name;
+        } else { lines.push('YOU ARE THE KING OF THE STRIP!'); out.banner = 'You are the King of the Strip!'; }
       }
       st.all.forEach(function (x) { if (!c.won[x.id] && G.eventVisible(x) && !G.eventLock(x) && before.indexOf(x.id) < 0) newlyVisible.push(x); });
       if (newlyVisible.length) lines.push(newlyVisible.length + ' new race' + (newlyVisible.length > 1 ? 's' : '') + ' available');
+      out.newRaces = newlyVisible.length;
     }
     if (sp) {
-      cash += sp.perWin; lines.push(DR.sponsorById(sp.id).name + ' win bonus: ' + DR.money(sp.perWin));
-      if (!sp.paid && G.contractProgress(ev.stage).done) { sp.paid = true; cash += sp.bonus; lines.push('CONTRACT FULFILLED! Bonus ' + DR.money(sp.bonus) + (ev.type === 'boss' ? '' : '. The boss will race you now.')); }
+      var spName = DR.sponsorById(sp.id).name;
+      cash += sp.perWin; lines.push(spName + ' win bonus: ' + DR.money(sp.perWin)); out.money.push([spName, sp.perWin]);
+      if (!sp.paid && G.contractProgress(ev.stage).done) {
+        sp.paid = true; cash += sp.bonus; lines.push('CONTRACT FULFILLED! Bonus ' + DR.money(sp.bonus) + (ev.type === 'boss' ? '' : '. The boss will race you now.'));
+        out.money.push(['Contract bonus', sp.bonus]); out.contract = ev.type === 'boss' ? 'Contract fulfilled!' : 'Contract fulfilled: the boss will race you now.';
+      }
     }
     G.save();
-    return { cash: cash, lines: lines, first: first };
+    out.cash = cash; out.lines = lines; out.first = first;
+    return out;
   };
   // Stars can complete a contract too (checked when you come back to the menu).
   G.checkContracts = function () {

@@ -177,6 +177,30 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .slip .slipside { padding-top: 22px; }   /* clear of the Watch button */
 .slip .panel { position: relative; }
 .slip .margin { text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--dim); }
+/* the slip's side panel: news, money, unlocks, notes */
+.slip .slipnews { text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; line-height: 1.5; color: var(--accent); background: rgba(255,204,0,.08); border: 1px solid rgba(255,204,0,.35); padding: 5px 6px; }
+.slip .slipmoney { background: var(--panel2); border: 1px solid var(--line); padding: 4px 8px 5px; }
+.slip .slipmoney .total { text-align: center; font-size: 14px; padding: 2px 0 3px; }
+.slip .slipmoney .mrow { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; color: var(--dim); line-height: 1.25; }
+.slip .slipmoney .mrow span:last-child { color: var(--text, #e8e8ee); }
+.slip .slipmoney .mrow span.bad { color: var(--bad); }
+.slip .slipunl { border-top: 1px dashed var(--line); padding-top: 4px; }
+.slip .slipunl .uttl { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--dim); letter-spacing: 1px; margin-bottom: 3px; }
+.slip .slipunl .urow { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin-bottom: 3px; }
+.slip .slipunl .uhead { font-size: 13px; color: var(--dim); margin-right: 2px; }
+.slip .slipunl .chip { font-size: 14px; line-height: 1.2; padding: 1px 6px; border-radius: 3px; background: var(--panel2); border: 1px solid var(--line); white-space: nowrap; }
+.slip .slipunl .chip.c-parts { border-color: #3a7bd2; }
+.slip .slipunl .chip.c-body { border-color: #a24bd6; }
+.slip .slipunl .chip.c-car { border-color: var(--good); }
+.slip .slipunl .chip.more { color: var(--dim); }
+.slip .slipnote { text-align: center; font-size: 15px; }
+.slip .slipnote.good { color: var(--good); }
+.slip .slipnote.bad { color: var(--bad); }
+.slip .slipnote.dim, .slip .slipnote .dim { color: var(--dim); }
+.slip .slipnote .good { color: var(--good); }
+.slip .slipnote .bad { color: var(--bad); }
+.slip .slipbtns .btngrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.slip .slipbtns .btngrid .btn { width: auto; padding-left: 4px; padding-right: 4px; }
 
 /* ---------------------------------------------------------------- dyno */
 .dyno canvas { width: 100%; height: 100%; background: #0c0d10; box-shadow: 0 0 0 2px #000; }
