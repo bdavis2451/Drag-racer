@@ -204,13 +204,18 @@
   ]};
   // gate: share of the turbo's max boost the wastegate can hold steady
   // (an aftermarket turbo's little internal gate creeps and can't hold much)
+  // spring: psi the gate opens at (the least boost it runs); ctrl: boost
+  // controller ('none' stays at the spring, 'mbc' a manual bleed valve up
+  // to 2x the spring, 'ebc' electronic, up to the turbo's limit); creep:
+  // how much of the engine's boost creep the gate lets through (internal
+  // gates). gate: the old share-of-max model, kept for rival builds.
   C.wastegate = { name: 'Wastegate & Boost Control', needsTurbo: true, options: [
-    opt('stock', 'Internal Wastegate', 0, { gate: 0.7, spoolK: 1 }, 'On a bolt-on turbo kit boost tops out at 70% of what the turbo can make. Factory turbos are fine.'),
-    opt('ws1', 'Stiffer Actuator Spring', 150, { gate: 0.76, spoolK: 1 }, 'A heavier spring holds the internal gate shut longer: boost up to 76% of the turbo\'s max.'),
-    opt('ws2', 'Manual Boost Controller', 300, { lvl: 2, gate: 0.82, spoolK: 0.99 }, 'A bleed valve on the actuator line: boost up to 82% of the turbo\'s max.'),
-    opt('ws3', 'Ported Gate + Race Spring', 650, { lvl: 2, gate: 0.86, spoolK: 0.98 }, 'Ported flapper and a race spring stop the creep: up to 86%.'),
-    opt('wg1', 'External Wastegate', 900, { gate: 0.9, spoolK: 0.95 }, 'Holds up to 90% of a bolt-on turbo\'s max boost, and no boost creep: a little quicker spool.'),
-    opt('wg2', 'Dual Gates + Electronic Boost Controller', 2200, { gate: 1, spoolK: 0.88 }, 'Full boost range, and the gates stay shut until target: quicker spool.')
+    opt('stock', 'Internal Wastegate, 7 psi Spring', 0, { gate: 0.7, spoolK: 1, spring: 7, ctrl: 'none', creep: 1 }, 'What a bolt-on kit comes with: the gate opens at 7 psi, so it runs 7 psi and no more. On a big engine the small internal gate lets boost creep up near redline. Factory turbos use their own gate and the ECU.'),
+    opt('ws1', 'Stiffer Actuator Spring (10 psi)', 150, { gate: 0.76, spoolK: 1, spring: 10, ctrl: 'none', creep: 1 }, 'A 10 psi spring: it runs 10 psi, no more, no less.'),
+    opt('ws2', 'Manual Boost Controller', 300, { lvl: 2, gate: 0.82, spoolK: 0.99, spring: 7, ctrl: 'mbc', creep: 1 }, 'A bleed valve on the actuator line holds the gate shut longer: 7 psi spring, up to 14 psi.'),
+    opt('ws3', 'Ported Gate + 10 psi Spring + Controller', 650, { lvl: 2, gate: 0.86, spoolK: 0.98, spring: 10, ctrl: 'mbc', creep: 0.5 }, 'A ported flapper flows more (half the boost creep), a 10 psi spring and a manual controller: 10 to 20 psi.'),
+    opt('wg1', 'External Wastegate + Manual Controller', 900, { gate: 0.9, spoolK: 0.95, spring: 10, ctrl: 'mbc', creep: 0 }, 'A big external gate: no boost creep and a little quicker spool. 10 psi spring with a manual controller: 10 to 20 psi.'),
+    opt('wg2', 'Dual Gates + Electronic Boost Controller', 2200, { gate: 1, spoolK: 0.88, spring: 10, ctrl: 'ebc', creep: 0 }, 'Two external gates and an electronic controller: any target from 10 psi up to the turbo\'s limit, no creep, quicker spool.')
   ]};
   // bov: how long boost hangs on while the throttle is shut for a shift (s)
   C.bov = { name: 'Blow-Off Valve', needsTurbo: true, options: [

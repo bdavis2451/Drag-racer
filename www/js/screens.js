@@ -345,6 +345,8 @@
       var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; G.save(); recalc(); }, def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null,
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; G.save(); UI.refresh(); } : null);
       row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F); knock limit ' + S.knock + ' psi.' : '')));
+      // what sets the boost range, part by part
+      if (def.key === 'boost') row.appendChild(h('div', { class: 'boostwhy' }, h('div', { class: 'plvl' }, 'RANGE ' + (S.boostMin || 0) + '-' + S.maxBoost + ' PSI: WHY'), DR.boostWhy(S).map(function (l) { return h('div', { class: 'help' }, '• ' + l); })));
       list.appendChild(row);
     });
     if (!list.children.length) list.appendChild(h('div', { class: 'dim' }, lockedRows.length ? 'Nothing to adjust yet: every setting here needs a part first.' : 'Nothing to adjust here yet.'));
@@ -423,7 +425,7 @@
       gst('PEAK HP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm + delta(dy.peakHp, prev && prev.peakHp), 'acc'), gst('PEAK TQ', Math.round(dy.peakTq) + ' lb-ft' + delta(dy.peakTq, prev && prev.peakTq)),
       prev ? h('div', { class: 'gsmall dim' }, 'Faded lines: your last pull before the changes.') : null,
       S.nosHp ? gst('W/ NITROUS', Math.round(dy.peakHp + S.nosHp) + ' hp', 'acc') : null,
-      S.fiType !== 'none' ? gst('BOOST', S.boostSet.toFixed(1) + ' psi') : null,
+      S.fiType !== 'none' ? gst('BOOST', S.boostSet.toFixed(1) + ' psi' + (S.creep ? ' (+' + S.creep + ' creep)' : '') + ' • range ' + (S.boostMin || 0) + '-' + S.maxBoost, S.creep ? 'acc' : '') : null,
       gst('LIMITER', S.red + ' rpm' + (S.ecu === 0 ? ' (stock)' : ''), S.red > S.mech ? 'bad' : ''),
       S.rotary ? null : gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst(S.rotary ? 'ROTATING' : 'BOTTOM END', S.beLimit + ' rpm (' + DR.catName(S.beWeak, inst).toLowerCase() + ')', S.red > S.beLimit ? 'bad' : ''),
       gst('SAFE POWER', Math.round(S.safeHp) + ' hp (' + DR.catName(S.safeWeak, inst).toLowerCase() + ')', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),

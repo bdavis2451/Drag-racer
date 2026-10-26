@@ -77,10 +77,12 @@
     return T;
   }
 
+  // Boost creep (psi) at this rpm: builds from the power peak to redline.
+  function creepAt(S, rpm) { return S.creep ? S.creep * clamp((rpm - S.pkRpm) / Math.max(300, S.red - S.pkRpm), 0, 1) : 0; }
   // Boost (psi) a fully spooled system makes at this rpm with full throttle.
   function steadyBoost(S, rpm) {
     if (S.fiType === 'none') return 0;
-    if (S.fiType === 'turbo') return S.boostSet * clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1);
+    if (S.fiType === 'turbo') return S.boostSet * clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1) + creepAt(S, rpm);
     if (S.fiType === 'cent') return S.boostSet * Math.pow(Math.min(rpm, S.ref) / S.ref, 2);
     return S.boostSet * clamp(rpm / 1800, 0, 1);
   }
@@ -258,14 +260,40 @@
     // 10 psi on an engine that never had a turbo)
     S.sparkPsi = e.diesel ? 99 : (e.fi ? e.fi.boost + 6 : 10) + (ign.spark || 0);
     S.sparkNos = e.diesel ? 9999 : 150 + (ign.spark || 0) * 15;
-    // a bolt-on turbo's wastegate sets how much of its boost you can use
-    var fiU = DR.FI[fiId];
+    // ---- boost range. A turbo's wastegate spring is the least boost it
+    // runs (the gate opens at spring pressure); a boost controller holds the
+    // gate shut longer: a manual bleed valve to about twice the spring, an
+    // electronic one to whatever the turbo can make. The compressor's own
+    // limit (where it chokes and overspeeds) caps it all. A factory turbo
+    // runs what the factory ECU asks for; a flash turns it up ~40%. A
+    // blower's boost is its pulley, up to the blower's limit. An internal
+    // gate too small for the engine can't dump enough exhaust up top, so
+    // boost creeps past the target at high rpm.
+    var fiU = DR.FI[fiId], comp = S.maxBoost, oem = !fiU.price;
+    S.boostMin = 0; S.creep = 0;
+    S.boostWhy = { type: fiU.type, comp: comp, oem: oem };
     if (fiU.type === 'turbo') {
-      if (fiU.price) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // factory turbos come with a gate sized for them
       S.lag *= gate.spoolK;
+      if (ai) {
+        if (fiU.price) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // rival builds: the old gate model
+      } else {
+        var fSpring = oem && e.fi ? Math.round(e.fi.boost * 0.7 * 2) / 2 : 0;
+        var spring = Math.max(gate.spring || 7, fSpring), ctrl = gate.ctrl || 'none', top;
+        if (oem && DR.partId('wastegate', inst) === 'stock') { ctrl = 'ecu'; spring = fSpring; top = tuned ? e.fi.boost * 1.4 : e.fi.boost; }
+        else top = ctrl === 'mbc' ? spring * 2 : ctrl === 'ebc' ? comp : spring;
+        S.maxBoost = Math.round(Math.min(comp, top) * 2) / 2;
+        S.boostMin = Math.min(spring, S.maxBoost);
+        // creep: internal gates on a bolt-on turbo, worse on a big engine
+        if (!oem) S.creep = Math.round((gate.creep || 0) * clamp((airDisp(e) * S.red / 1000 - 8) / 10, 0, 1) * 4 * 2) / 2;
+        S.boostWhy.spring = S.boostMin; S.boostWhy.ctrl = ctrl; S.boostWhy.ctrlMax = Math.round(top * 2) / 2; S.boostWhy.creep = S.creep;
+      }
     }
-    if (!tuned && fiU.type !== 'none' && fiU.price) { S.maxBoost = Math.min(S.maxBoost, 5); untuned.push(['fi', 'The stock tune can\'t fuel or time more than ~5 psi']); }
-    else if (!tuned && fiU.type !== 'none' && e.fi) S.maxBoost = Math.min(S.maxBoost, e.fi.boost + 2);
+    // without a tune the ECU can't fuel or time much boost: a bolt-on kit
+    // past ~5 psi (a factory turbo past about factory boost) runs lean and
+    // knocks
+    S.untunedBoost = ai || tuned || fiU.type === 'none' ? 0 : fiU.price ? 5 : (e.fi ? e.fi.boost + 1 : 5);
+    if (S.untunedBoost && fiU.price) untuned.push(['fi', 'The stock tune can\'t fuel or time more than ~5 psi']);
+    S.boostWhy.untuned = S.untunedBoost;
     if (!tuned && fuel.tune) untuned.push(['fueltype', fuel.name + ' on a gasoline tune runs lean']);
     S.untuned = untuned; S.tuned = tuned; S.e85Lean = !tuned && !!fuel.tune;
     S.bovT = fiU.type === 'turbo' ? (fiU.price ? bov.bov : Math.max(0.3, bov.bov)) : 0.15;
@@ -336,6 +364,7 @@
     var T = DR.fullTune(inst, S, tuneOverride);
     S.tune = T;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
+    S.boostTop = S.boostSet + (S.creep || 0);   // what it really sees up top
     setSpool(S, true);
     // the charge at full boost, and the knock limit that leaves the fuel
     S.iat = chargeTemp(S, S.boostSet);
@@ -451,7 +480,7 @@
     { key: 'revLimit', label: 'Rev Limiter', unit: 'rpm', step: 100, min: revMin, max: revMax,
       show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU (a Flash tune raises it automatically)', group: 'Engine',
       help: 'Past your valvetrain or bottom-end limit the valves float and the engine may let go.' },
-    { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function () { return 0; }, max: function (S) { return S.maxBoost; },
+    { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost; },
       show: function (S) { return S.fiType !== 'none'; }, req: 'Requires a turbo or supercharger', group: 'Engine',
       help: 'More boost = more power, but watch the knock limit of your fuel and your internals.' },
     { key: 'launchRpm', label: 'Launch RPM (2-Step)', unit: 'rpm', step: 100, min: function (S) { return S.idle + 600; }, max: function (S) { return S.red - 200; },
@@ -549,8 +578,9 @@
     var fs = DR.fuelShort(S);
     if (fs.ratio > 1.02) out[fs.by] = out[fs.by] || (fs.nos ? 'Can\'t feed the nitrous' : 'Running lean');
     if (S.untuned && S.untuned.length) out.ecu = 'Needs a tune';
-    if ((S.fiType !== 'none' && S.boostSet > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
-    if (S.fiType !== 'none' && S.boostSet > S.knock + 0.5) out.fueltype = 'Knocking at ' + S.boostSet + ' psi';
+    if ((S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
+    if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.knock + 0.5) out.fueltype = 'Knocking at ' + (S.boostTop || S.boostSet) + ' psi';
+    if (S.creep) out.wastegate = 'Boost creeps +' + S.creep + ' psi';
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) out.ic = 'Charge is ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F)';
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) out.fi = 'Out of breath';
     if (r.axle > 0.005) out.rearend = 'Axles may snap';
@@ -608,6 +638,27 @@
     var ri = injNeed / injCap, rp = pumpNeed / pumpCap, inj = ri >= rp;
     return { ratio: Math.max(ri, rp), ri: ri, rp: rp, by: inj ? 'injectors' : 'fuelpump', need: inj ? injNeed : pumpNeed, cap: inj ? injCap : pumpCap, nos: nos > 0 && (inj ? S.nosFuel === 'inj' : true) };
   };
+  // Why the boost range is what it is, as lines for the tuning screen.
+  DR.boostWhy = function (S) {
+    var w = S.boostWhy || {}, out = [];
+    if (w.type === 'none' || !w.type) return out;
+    if (w.type !== 'turbo') {
+      out.push('Boost is set by the blower pulley: a smaller pulley spins it faster. This blower tops out at ' + w.comp + ' psi.');
+    } else if (w.spring == null) {
+      out.push('The turbo makes up to ' + S.maxBoost + ' psi.');
+    } else {
+      if (w.ctrl === 'ecu') out.push('Factory turbo: the ECU holds ' + S.eng.fi.boost + ' psi' + (S.tuned ? ', and your flash lets it run up to ' + w.ctrlMax + ' psi.' : '. A flash lets it run about 40% more; a boost controller works too.'));
+      else {
+        out.push('Wastegate spring: ' + w.spring + ' psi. The gate opens at spring pressure, so that is the least boost it runs.');
+        out.push(w.ctrl === 'none' ? 'No boost controller: boost stays at the spring. A manual controller doubles it; an electronic one goes to the turbo\'s limit.' :
+          w.ctrl === 'mbc' ? 'Manual boost controller: up to twice the spring, ' + w.ctrlMax + ' psi.' : 'Electronic boost controller: any target up to the turbo\'s limit.');
+      }
+      out.push('This turbo\'s compressor tops out at ' + w.comp + ' psi (past that it chokes and overspeeds).');
+      if (w.creep) out.push('The internal wastegate is too small for this engine: boost creeps ' + w.creep + ' psi over the target near redline. A ported gate halves it; an external gate stops it.');
+    }
+    if (w.untuned) out.push('No ECU tune: about ' + w.untuned + ' psi is all the stock tune can fuel and time. More runs lean and knocks.');
+    return out;
+  };
   DR.riskOf = function (S) {
     var r = { engine: 0, trans: 0, notes: [] };
     var over = (S.peakHp + S.nosHp) / S.safeHp;
@@ -617,8 +668,11 @@
       r.engine += Math.min(0.7, (S.red - S.mech) / 1000 * 0.8);
       r.notes.push('Rev limiter is ' + (S.red - S.mech) + ' rpm past the ' + (S.vtLimit <= S.beLimit ? 'valvetrain (valve float)' : WEAK[S.beWeak] || 'bottom end'));
     }
-    if (S.boostSet > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + S.boostSet + ' psi - misfiring past ' + S.sparkPsi + ' psi');
-    if (S.boostSet > S.knock + 0.5) { r.engine += Math.min(0.6, (S.boostSet - S.knock) * 0.05); r.notes.push('Boost is past the knock limit (' + S.knock + ' psi' + (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + ')'); }
+    var bTop = S.boostTop || S.boostSet;
+    if (S.creep && S.fiType !== 'none') r.notes.push('Boost creeps ' + S.creep + ' psi past the target up top: the internal wastegate can\'t dump enough exhaust (a ported or external gate fixes it)');
+    if (bTop > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + bTop + ' psi - misfiring past ' + S.sparkPsi + ' psi');
+    if (bTop > S.knock + 0.5) { r.engine += Math.min(0.6, (bTop - S.knock) * 0.05); r.notes.push('Boost is past the knock limit (' + S.knock + ' psi' + (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + ')'); }
+    if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
     // short of fuel it runs lean: it makes what the fuel allows (or the
     // nitrous still hits) until it burns a piston
@@ -628,7 +682,7 @@
       r.notes.push('Running lean: the ' + (fs.by === 'injectors' ? 'injectors feed' : 'fuel pump feeds') + ' ' + Math.round(fs.cap) + ' hp, the engine' + (fs.nos ? ' plus the shot' : '') + ' wants ' + Math.round(fs.need) + ' hp' + (fs.nos && S.nosFuel === 'inj' ? ' (a dry kit adds its fuel through the injectors)' : ''));
     }
     if (S.e85Lean) { r.engine += 0.45; r.notes.push('Alcohol fuel needs ~30% more fuel: on a gasoline tune it runs lean - get a tune'); }
-    (S.untuned || []).forEach(function (u) { if (u[0] !== 'fueltype') r.notes.push(u[1] + ' - get an ECU flash'); });
+    (S.untuned || []).forEach(function (u) { if (u[0] !== 'fueltype' && u[0] !== 'fi') r.notes.push(u[1] + ' - get an ECU flash'); });
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     // gearbox ratings carry a little margin: trouble starts 5% past them
@@ -782,7 +836,7 @@
     var thrB = this.thr;
     if (S.fiType === 'turbo') {
       var sf = clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1);
-      var target = S.boostSet * sf * thrB;
+      var target = (S.boostSet * sf + creepAt(S, rpm)) * thrB;
       // revving with no load on it (clutch in, in neutral) a turbo makes next
       // to no boost: only a 2-step builds it on the line
       if (pre) target *= 0.1;
