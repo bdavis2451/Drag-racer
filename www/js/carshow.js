@@ -21,6 +21,25 @@
     { id: 'expo', name: 'Import vs Domestic Expo', where: 'Convention hall', entry: 1000, minStars: 5, crowd: 260, pay: 7, prizes: [4000, 2000, 1000], field: [3.5, 7.5], rivals: 5, night: false, theme: 'hall' },
     { id: 'nationals', name: 'Pixel Nationals', where: 'Arena show floor', entry: 3000, minStars: 7, crowd: 420, pay: 12, prizes: [12000, 6000, 3000], field: [5.5, 10], rivals: 6, night: true, theme: 'hall' }
   ];
+  DR.showById = function (id) { return DR.SHOWS.filter(function (sh) { return sh.id === id; })[0] || DR.SHOWS[0]; };
+  // the career side event this entry counts for (set by DR.enterShow)
+  var careerEv = null;
+  // Enter a show: checks the rating, the car and the entry fee first.
+  // ev: a career 'show' side event this entry counts towards, if any.
+  DR.enterShow = function (sh, ev) {
+    var inst = G.car();
+    if (DR.starRating(inst) < sh.minStars) return UI.toast('Your car needs a ' + sh.minStars + '-star rating for this show');
+    if (inst.damage) return UI.toast('Fix your car first: broken cars stay home');
+    if (!G.canAfford(sh.entry)) return UI.toast('You can\'t cover the ' + DR.money(sh.entry) + ' entry fee');
+    careerEv = ev || null;
+    UI.show(ShowScreen, sh);
+  };
+  // the career goal still open at this show, if any
+  function openGoal(sh) {
+    var out = null;
+    DR.STAGES.forEach(function (st) { st.side.forEach(function (ev) { if (!out && ev.type === 'show' && ev.show === sh.id && G.eventVisible(ev) && !G.eventWon(ev) && !G.eventLock(ev)) out = ev; }); });
+    return out;
+  }
   var NAMES = ['Marco', 'Jenna', 'Dev', 'Ayumi', 'Luis', 'Tasha', 'Ricky', 'Bea', 'Kofi', 'Hana', 'Vic', 'Sam', 'Nadia', 'Toby', 'Rene', 'Kai', 'Mo', 'Priya', 'Gus', 'Zoe'];
   var RARITY = { fox: 0.5, hachi: 0.7, camss: 0.5, supra: 0.9 };
 
@@ -76,6 +95,7 @@
   DR.showRival = rival;
   // ---------------------------------------------------------------- screen: list
   // a postcard of the venue: its backdrop and floor with your car parked
+  DR.showThumb = function (show, inst) { return showThumb(show, inst); };
   function showThumb(show, inst) {
     var c = h('canvas', { class: 'ecv' }), x = DR.hiCanvas(c, 400, 168);
     var bg = backdrop(show, 800), top = GROUND + 50 - 168;
@@ -89,22 +109,18 @@
     var inst = G.car(), stars = DR.starRating(inst);
     var grid = h('div', { class: 'egrid shows' });
     DR.SHOWS.forEach(function (sh) {
-      var st = showState(sh.id), ok = stars >= sh.minStars, bored = st.sig === buildSig(inst) && st.entries > 0;
+      var st = showState(sh.id), ok = stars >= sh.minStars, bored = st.sig === buildSig(inst) && st.entries > 0, goal = openGoal(sh);
       grid.appendChild(h('div', { class: 'ecard' + (ok ? '' : ' locked') + (sh.theme === 'hall' ? ' t-showcase' : '') },
         h('div', { class: 'ecvwrap' }, showThumb(sh, inst), h('span', { class: 'etype' }, sh.minStars ? sh.minStars + '+ STARS' : 'OPEN TO ALL'), sh.night ? h('span', { class: 'ewon', style: { background: '#3a2a7a' } }, 'NIGHT') : null),
         h('div', { class: 'acc ename' }, sh.name),
         h('div', { class: 'gsmall dim' }, sh.where + ' • about ' + sh.crowd + ' visitors • ' + DR.money(sh.pay) + '/visitor'),
         h('div', { class: 'gsmall' }, 'Prizes ' + sh.prizes.map(DR.money).join(' / ')),
         h('div', { class: 'gsmall' }, '🥇' + st.places[0] + '  🥈' + st.places[1] + '  🥉' + st.places[2] + (st.best ? '  • best crowd ' + st.best : '')),
-        bored ? h('div', { class: 'warn gsmall' }, 'The regulars have seen this build — change it up for a bigger crowd.') : null,
+        goal ? h('div', { class: 'gsmall eunl' }, '🏁 Career: ' + DR.showGoal(goal).replace(' at the ' + sh.name, '') + ' for ' + DR.money(G.eventReward(goal))) : null,
+        bored ? h('div', { class: 'warn gsmall' }, 'The regulars have seen this build. Change it up for a bigger crowd.') : null,
         !ok ? h('div', { class: 'warn gsmall' }, '🔒 Needs a ' + sh.minStars + '-star car') : null,
         h('div', { class: 'efoot' }, h('span', { class: 'efee' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free entry'),
-          btn('Enter', function () {
-            if (!ok) return UI.toast('Your car needs a ' + sh.minStars + '-star rating for this show');
-            if (inst.damage) return UI.toast('Fix your car first — broken cars stay home');
-            if (!G.canAfford(sh.entry)) return UI.toast('You cannot cover the entry fee');
-            UI.show(ShowScreen, sh);
-          }, 'small ' + (ok ? 'go' : 'disabled')))));
+          btn('Enter', function () { DR.enterShow(sh, goal); }, 'small ' + (ok ? 'go' : 'disabled')))));
     });
     var covers = (G.state.covers || []).length;
     return h('div', { class: 'screen' }, UI.top('CAR SHOWS', function () { UI.show(UI.Garage); }, btn('Covers ' + covers + '/10', function () { UI.show(UI.Covers); }, 'small blue')),
@@ -118,7 +134,8 @@
   var W = function () { return DR.VIEW_W; }, Hh = function () { return DR.VIEW_H; };
   var SPACING = 330, GROUND = 352;
   function ShowScreen(show) {
-    var inst = G.car(), st = showState(show.id), seed = (Date.now() & 0xffff) + 7;
+    var inst = G.car(), st = showState(show.id), seed = (Date.now() & 0xffff) + 7, ev = careerEv;
+    careerEv = null;
     var rnd = DR.rng(seed);
     G.pay(show.entry);
     // the field: your car somewhere in the row
@@ -233,10 +250,13 @@
       st.entries = st.sig === buildSig(inst) ? st.entries + 1 : 1;
       st.sig = buildSig(inst);
       st.best = Math.max(st.best, field[you].visits);
-      G.earn(visitCash + prize); G.save();
-      if (visitCash + prize > 0) A.cash();
+      // a career side event: the right placing wins it
+      var career = null;
+      if (ev && place < ev.top) career = G.winEvent(ev);
+      G.earn(visitCash + prize + (career ? career.cash : 0)); G.save();
+      if (visitCash + prize > 0 || career) A.cash();
       podiumT = 0;
-      showResult(order, place, visitCash, prize);
+      showResult(order, place, visitCash, prize, career);
     }
 
     function drawPodium() {
@@ -272,7 +292,7 @@
       }
     }
 
-    function showResult(order, place, visitCash, prize) {
+    function showResult(order, place, visitCash, prize, career) {
       var head = place === 0 ? '1ST PLACE!' : place === 1 ? '2ND PLACE' : place === 2 ? '3RD PLACE' : place + 1 + 'TH PLACE';
       var tbl = h('table');
       tbl.appendChild(h('tr', {}, h('th', {}, '#'), h('th', {}, 'Owner'), h('th', {}, 'Car'), h('th', {}, 'Rating'), h('th', {}, 'Visitors')));
@@ -284,7 +304,9 @@
       if (prize) lines.push(head + ' prize: ' + DR.money(prize) + (st.places[place] > 1 ? ' (repeat winner)' : ''));
       if (show.entry) lines.push('Entry fee: -' + DR.money(show.entry));
       if (bored) lines.push('The regulars had seen your build before.');
-      var net = visitCash + prize - show.entry;
+      if (career) { lines.push('Career side event won: ' + DR.money(career.cash)); career.lines.forEach(function (l) { if (/UNLOCKED|CONTRACT/.test(l)) lines.push(l); }); }
+      else if (ev) lines.push('Career goal missed (' + DR.showGoal(ev).replace(' at the ' + show.name, '').toLowerCase() + '). Try again any time.');
+      var net = visitCash + prize + (career ? career.cash : 0) - show.entry;
       setTimeout(function () {
         root.appendChild(h('div', { class: 'slip' }, h('div', { class: 'panel row' },
           h('div', { class: 'grow' }, tbl),
@@ -292,7 +314,7 @@
             h('div', { class: 'pix big ' + (place < 3 ? 'good' : ''), style: { textAlign: 'center' } }, head),
             h('div', { class: 'pix ' + (net >= 0 ? 'good' : 'bad'), style: { textAlign: 'center' } }, (net >= 0 ? '+' : '') + DR.money(net)),
             lines.map(function (l) { return h('div', { class: 'dim', style: { textAlign: 'center' } }, l); }),
-            btn('Back to Shows', function () { UI.show(UI.Shows); }, 'primary'),
+            ev ? btn('Back to Career', function () { UI.show(UI.RaceMenu, 'career'); }, 'primary') : btn('Back to Shows', function () { UI.show(UI.Shows); }, 'primary'),
             btn('Garage', function () { UI.show(UI.Garage); })))));
       }, 2600);
     }

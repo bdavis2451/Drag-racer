@@ -84,6 +84,7 @@
     knockout: { name: 'Knockout', dist: function () { return DR.QUARTER; }, theme: 'strip', grip: 1 },
     sponsor:  { name: 'Sponsor Race', dist: function () { return DR.QUARTER; }, theme: 'strip', grip: 1 },
     class:    { name: 'Class Race', dist: function () { return DR.QUARTER; }, theme: 'strip', grip: 1 },
+    show:     { name: 'Car Show', dist: function () { return DR.QUARTER; }, theme: 'show', grip: 1 },
     showcase: { name: 'Night Invitational', dist: function () { return DR.QUARTER; }, theme: 'street', grip: 0.92 },
     boss:     { name: 'BOSS', dist: function () { return DR.QUARTER; }, theme: 'strip', grip: 1 }
   };
@@ -204,6 +205,9 @@
   };
   DR.classIssue = function (cls, inst) { var K = DR.CLASSES[cls]; return !K || K.ok(DR.buildSpec(inst)) ? '' : 'Class: ' + K.rule.charAt(0).toLowerCase() + K.rule.slice(1); };
   function side(cls, needWins, cash, opp) { var ev = e('class', [opp], cash, [], needWins); ev.cls = cls; ev.side = true; return ev; }
+  // a car show as a side event: place in the top `top` at that show
+  function showEv(show, top, needWins, cash) { var ev = e('show', [], cash, [], needWins); ev.show = show; ev.top = top; ev.side = true; return ev; }
+  var SHOW_SIDE = [showEv('meet', 3, 4, 500), showEv('meet', 1, 4, 900), showEv('regional', 3, 4, 2500), showEv('regional', 1, 4, 6000), showEv('expo', 3, 4, 14000), showEv('nationals', 3, 4, 35000)];
   var SIDE = [
     [side('four', 2, 600, rk('Tina "Twin Cam"', 'hachi', 0.45, '#ff8fb8')), side('stock', 5, 700, rk('Gus', 'monte', 0.45, '#8b5a2b'))],
     [side('na', 2, 1000, rk('Mo Torr', 'camaro', 0.55, '#151515')), side('street', 6, 1200, rk('Daily Dave', 'z35', 0.55, '#c0c4cc'))],
@@ -214,7 +218,7 @@
   ];
   DR.STAGES.forEach(function (st, si) {
     st.events.forEach(function (ev, i) { ev.id = si + '.' + i; ev.stage = si; ev.idx = i; });
-    st.side = SIDE[si] || [];
+    st.side = (SIDE[si] || []).concat(SHOW_SIDE[si] ? [SHOW_SIDE[si]] : []);
     st.side.forEach(function (ev, i) { ev.id = si + '.s' + i; ev.stage = si; ev.idx = 's' + i; });
     st.boss.id = si + '.boss'; st.boss.stage = si; st.boss.idx = 'boss';
     st.all = st.events.concat(st.side, [st.boss]);
@@ -338,7 +342,14 @@
     return 'Tech: ' + (open && line === 13.5 ? 'open cars' : 'cars') + ' quicker than ' + line.toFixed(2) + ' need ' + what + ' (Suspension: Chassis)';
   };
   // Anything about this car that keeps it out of the event ('' = good to go).
-  G.carIssue = function (inst, ev) { return (ev.cls && DR.classIssue(ev.cls, inst)) || G.techIssue(inst, ev); };
+  G.carIssue = function (inst, ev) { return ev.type === 'show' ? DR.showIssue(ev, inst) : (ev.cls && DR.classIssue(ev.cls, inst)) || G.techIssue(inst, ev); };
+  DR.showIssue = function (ev, inst) {
+    var sh = DR.showById(ev.show);
+    if (DR.starRating(inst) < sh.minStars) return 'Needs a ' + sh.minStars + '-star car (yours: ' + (Math.floor(DR.starRating(inst) * 10) / 10) + ')';
+    if (inst.damage) return 'Fix your car first: broken cars stay home';
+    return '';
+  };
+  DR.showGoal = function (ev) { return ev.top === 1 ? 'Win the ' + DR.showById(ev.show).name : 'Place top ' + ev.top + ' at the ' + DR.showById(ev.show).name; };
   G.eventVisible = function (ev) { return ev.stage <= C().stage && (G.stageWins(ev.stage) >= ev.needWins - 1 || ev.type === 'boss'); };
 
   // ---------------------------------------------------------------- sponsors

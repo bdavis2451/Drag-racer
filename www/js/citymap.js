@@ -13,18 +13,15 @@
 
   // places: x, y = marker position in map pixels. events: which career event
   // types happen there. go: a screen to open instead. icon: marker art.
+  // Street-race spots: bet races against locals, each with its own
+  // distance, grip and stakes. More open up as you move up the career.
+  //   dist: 'eighth' | 'quarter'   bets: the bet choices   stage: opens at
   DR.CITY = [
-    { id: 'strip', name: 'Pixel Dragway', x: 214, y: 229, icon: 'flag', blurb: 'The prepped quarter mile out on the island: grandstands, a timing tower and full grip.', events: ['quarter', 'eighth', 'sponsor', 'boss'], test: true },
-    { id: 'runway', name: 'Airfield Runway', x: 442, y: 158, icon: 'plane', blurb: 'Knockout night on the old runway. Wide, flat and fast.', events: ['knockout'] },
-    { id: 'highway', name: 'Route 99', x: 392, y: 118, icon: 'shield', blurb: 'Street racers meet on the loop. Bet on yourself.', street: true },
-    { id: 'downtown', name: 'Downtown', x: 300, y: 134, icon: 'tower', blurb: 'Stoplight to stoplight between the towers. Cold asphalt, less grip.', events: ['street'] },
-    { id: 'docks', name: 'Harbor Docks', x: 205, y: 163, icon: 'anchor', blurb: 'Invitation-only night races between the container stacks.', events: ['showcase'] }
+    { id: 'downtown', name: 'Downtown Lights', x: 300, y: 134, icon: 'tower', blurb: 'Stoplight to stoplight between the towers. Cold asphalt, low grip, small money.', dist: 'eighth', grip: 0.85, bets: [250, 500, 1000, 2500, 5000], stage: 0 },
+    { id: 'highway', name: 'Route 99', x: 392, y: 118, icon: 'shield', blurb: 'The regulars meet at the on-ramp. Better road, bigger bets.', dist: 'eighth', grip: 0.88, bets: [1000, 2500, 5000, 10000, 25000], stage: 1 },
+    { id: 'docks', name: 'Harbor Docks', x: 205, y: 163, icon: 'anchor', blurb: 'Dusty concrete between the container stacks. Hard to hook, serious money.', dist: 'eighth', grip: 0.8, bets: [2500, 5000, 10000, 25000, 50000], stage: 2 },
+    { id: 'runway', name: 'Airfield Runway', x: 442, y: 158, icon: 'plane', blurb: 'A full quarter mile on the old runway, for big-power cars and big bets.', dist: 'quarter', grip: 0.92, bets: [5000, 10000, 25000, 50000, 100000], stage: 3 }
   ];
-  DR.cityPlaceOf = function (evType) {
-    for (var i = 0; i < DR.CITY.length; i++) if ((DR.CITY[i].events || []).indexOf(evType) >= 0) return DR.CITY[i];
-    return DR.CITY[0];
-  };
-
   // ---------------------------------------------------------------- geography
   var MAINLAND = [[150, -8], [490, -8], [490, 200], [450, 207], [420, 196], [394, 202], [366, 194], [338, 197], [314, 188], [288, 190], [262, 180], [240, 174], [222, 164],
     [204, 156], [186, 152], [170, 140], [158, 122], [144, 112], [126, 104], [114, 88], [120, 70], [106, 56], [94, 42], [98, 22], [116, 6]];

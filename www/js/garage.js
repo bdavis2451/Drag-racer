@@ -373,7 +373,7 @@
       h('div', { class: 'gname', onclick: function () { UI.show(UI.Cars); } }, h('div', { class: 'pix acc' }, DR.CARS[inst.carId].name), h('div', { class: 'dim' }, (idx + 1) + ' / ' + cars.length + ' • My Cars ▸')),
       cars.length > 1 ? btn('▶', function () { cycle(1); }, 'arrow') : null);
     return h('div', { class: 'screen' }, UI.top('GARAGE', function () { UI.show(UI.Title); }, h('div', { class: 'row', style: { gap: '6px' } },
-        btn('?', function () { UI.show(UI.Help, UI.Garage); }, 'small back'), btn('⚙', function () { UI.show(UI.Settings, UI.Garage); }, 'small back'))),
+        btn('?', function () { UI.show(UI.Help, UI.Garage); }, 'small back', { title: 'How to play', 'aria-label': 'How to play' }), btn(h('span', { class: 'gearic', html: '<svg viewBox="0 0 16 16" width="14" height="14" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v2h2v1h1v1h1v2h2v4h-2v2h-1v1h-1v1H9v2H7v-2H5v-1H4v-1H3v-2H1V6h2V4h1V3h1V2h2zm0 5v1H6v4h1v1h2v-1h1V6H9V5z"/></svg>' }), function () { UI.show(UI.Settings, UI.Garage); }, 'small back', { title: 'Settings', 'aria-label': 'Settings' }))),
       h('div', { class: 'gwrap hub' }, cv, status, side, sel, dmg), bar);
   };
 
@@ -471,7 +471,7 @@
   }
   function packagesMain(inst) {
     var main = h('div', { class: 'smain' }, storeHead(),
-      h('div', { class: 'tipline' }, 'Quick upgrades: a matched set of parts in one go, ' + Math.round(DR.PKG_DISCOUNT * 100) + '% off. Parts you already have that are as good or better are skipped; replaced parts go to your shelf.'));
+      h('div', { class: 'tipline' }, 'Quick upgrades: a matched set of parts in one go, ' + Math.round(DR.PKG_DISCOUNT * 100) + '% off. Parts you already have that are as good or better are skipped; replaced parts go to your inventory.'));
     pkgGroups().forEach(function (pg, gi) {
       main.appendChild(h('h2', { style: { marginTop: '10px' } }, pg.name));
       var grid = h('div', { class: 'pgrid' });
@@ -542,7 +542,7 @@
     function buy(andInstall) {
       if (!G.canAfford(andInstall ? total : opt.price)) return UI.toast('Not enough money');
       var item = G.buyPart(cat, id); A.cash();
-      if (andInstall) { var r = G.installPart(inst, item.uid); UI.toast(r.msg); } else UI.toast(opt.name + ' added to your parts');
+      if (andInstall) { var r = G.installPart(inst, item.uid); UI.toast(r.msg); } else UI.toast(opt.name + ' added to your inventory');
       close(); UI.refresh();
     }
     close = UI.modal(h('div', { class: 'col pmodal l' + lvl },
@@ -560,15 +560,15 @@
         S0.maxBoost !== S1.maxBoost && S0.fiId === S1.fiId ? ['Max boost', deltaRow(S0.maxBoost, S1.maxBoost, ' psi', 1)] : null,
         Math.round(S0.axleTq) !== Math.round(S1.axleTq) ? ['Axles hold', deltaRow(S0.axleTq, S1.axleTq, ' Nm')] : null,
         Math.abs(S0.f - S1.f) > 0.002 ? ['Front weight', deltaRow(S0.f * 100, S1.f * 100, '%', 1, true)] : null,
-        ['Car weight', deltaRow(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)],
+        Math.round(S0.m * 2.2046) !== Math.round(S1.m * 2.2046) ? ['Car weight', deltaRow(S0.m * 2.2046, S1.m * 2.2046, ' lb', 0, true)] : null,
         ['Price', DR.money(opt.price), 'good'],
-        owned ? ['In your parts', '×' + owned, 'acc'] : null
+        owned ? ['In your inventory', '×' + owned, 'acc'] : null
       ]) : h('div', { class: 'warnbox' }, G.partFitIssue({ cat: cat, id: id }, inst)),
       fits ? UI.riskBox(S1) : null,
       cat === 'engine' && opt.fit && opt.fit.block ? h('div', { class: 'warnbox' }, opt.fit.block + '.') : null,
       cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory. The install is paid when the engine goes in.') : null,
       G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : null,
-      locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock as you win career races.') :
+      locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock in the career: ' + G.unlockWhere(cat, lvl) + '.') :
         h('div', { class: 'row', style: { flexWrap: 'wrap' } },
           btn('Buy ' + DR.money(opt.price), function () { buy(false); }, 'go' + (G.canAfford(opt.price) ? '' : ' disabled')),
           fits && !installed && owned && !(opt.fit && opt.fit.block) ? btn('Install Yours' + (opt.install ? ' ' + DR.money(opt.install) : ''), function () {
@@ -700,13 +700,13 @@
         stock ? null : btn('Remove', function () {
           var why = G.removeIssue(inst, bayCat);
           if (why) return UI.toast(why);
-          var go = function () { G.removePart(inst, bayCat); A.click(); UI.toast(opt.name + ' moved to your parts'); UI.refresh(); };
+          var go = function () { G.removePart(inst, bayCat); A.click(); UI.toast(opt.name + ' moved to your inventory'); UI.refresh(); };
           if (bayCat === 'engine') UI.confirm('Pull the ' + opt.name + '? It and its engine parts go to your inventory and the factory engine goes back in.', go, 'Remove');
           else go();
         }, 'small red')),
-      h('h3', {}, 'ON THE SHELF'));
+      h('h3', {}, 'IN YOUR INVENTORY'));
     var items = G.invFor(bayCat);
-    if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat, inst).toLowerCase() + ' parts.'));
+    if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat, inst).toLowerCase() + ' parts in your inventory.'));
     items.sort(function (a, b) { return (G.partFitIssue(a, inst) ? 1 : 0) - (G.partFitIssue(b, inst) ? 1 : 0) || b.price - a.price; }).forEach(function (it) {
       var why = G.partFitIssue(it, inst), lvl = lvlOf(G.itemOption(it) || { price: it.price, lvl: DR.partLevel(it.price) });
       right.appendChild(h('div', { class: 'item inv l' + lvl + (why ? ' locked' : '') },
@@ -726,7 +726,7 @@
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'install'),
       h('div', { class: 'content' }, h('div', { class: 'split' },
         h('div', { class: 'left bay-left' }, cv,
-          h('div', { class: 'row bay-quick' }, h('span', { class: 'acc' }, Math.round(S.peakHp + S.nosHp) + 'hp'), h('span', {}, UI.kgLb(S.m)), h('span', { class: 'good' }, inst.best && inst.best.q ? inst.best.q.toFixed(2) + 's' : '—')),
+          h('div', { class: 'row bay-quick' }, h('span', { class: 'acc' }, Math.round(S.peakHp + S.nosHp) + 'hp'), h('span', {}, UI.kgLb(S.m)), h('span', { class: 'good' }, inst.best && inst.best.q ? '1/4 ' + inst.best.q.toFixed(2) + 's' : 'no 1/4 yet')),
           UI.riskBox(S), list),
         h('div', { class: 'right' }, right))));
   };
@@ -743,7 +743,8 @@
     if (m && m.invF) for (var k in m.invF) invF[k] = m.invF[k];
     var cars = G.state.cars, inst = G.car();
     if (invF.car !== 'all' && invF.car !== 'none' && !cars.some(function (c) { return String(c.uid) === invF.car; })) invF.car = 'all';
-    UI.remember({ invF: { car: invF.car, grp: invF.grp, val: invF.val, sort: invF.sort } });
+    if (invF.open == null) invF.open = window.innerWidth >= 700;
+    UI.remember({ invF: { car: invF.car, grp: invF.grp, val: invF.val, sort: invF.sort, open: invF.open } });
     function set(k, v) { return function () { invF[k] = v; A.click(); UI.refresh(); }; }
     function chipRow(label, opts, key) {
       return h('div', { class: 'invrow' }, h('span', { class: 'invlbl pix small' }, label),
@@ -762,12 +763,22 @@
     var carOpts = [['all', 'All cars']].concat(cars.map(function (c) { return [String(c.uid), (c.uid === inst.uid ? '★ ' : '') + carShort(c)]; })).concat([['none', 'Fits none']]);
     var grpOpts = [['all', 'All']].concat(DR.PART_GROUPS.filter(function (g) { return all.some(function (r) { return r.g === g; }); }).map(function (g) { return [g.id, g.name]; }));
     var filtered = invF.car !== 'all' || invF.grp !== 'all' || invF.val !== 'any';
-    var filters = h('div', { class: 'invfilters' },
+    // what's filtered, as removable tags (shown above the list)
+    function optName(opts, v) { return (opts.filter(function (o) { return o[0] === v; })[0] || ['', v])[1].replace('★ ', ''); }
+    var active = [];
+    if (invF.car !== 'all') active.push(['car', invF.car === 'none' ? 'Fits none' : 'Fits ' + optName(carOpts, invF.car)]);
+    if (invF.grp !== 'all') active.push(['grp', optName(grpOpts, invF.grp)]);
+    if (invF.val !== 'any') active.push(['val', optName(VALUE_BANDS.map(function (b) { return [b[0], b[1]]; }), invF.val)]);
+    var reset = { car: 'all', grp: 'all', val: 'any' };
+    var tags = active.length ? h('div', { class: 'invtags' }, active.map(function (a) { return btn(a[1] + ' ✕', function () { invF[a[0]] = reset[a[0]]; A.click(); UI.refresh(); }, 'chip on small'); }),
+      active.length > 1 ? btn('Clear all', function () { invF.car = 'all'; invF.grp = 'all'; invF.val = 'any'; A.click(); UI.refresh(); }, 'chip small') : null) : null;
+    var toggle = btn((invF.open ? '◀ Hide filters' : '☰ Filters') + (active.length && !invF.open ? ' (' + active.length + ')' : ''), function () { invF.open = !invF.open; A.click(); UI.refresh(); }, 'small' + (active.length ? ' blue' : ''));
+    var filters = !invF.open ? null : h('div', { class: 'invfilters' },
       chipRow('FITS', carOpts, 'car'), chipRow('TYPE', grpOpts, 'grp'), chipRow('VALUE', VALUE_BANDS.map(function (b) { return [b[0], b[1]]; }), 'val'),
-      chipRow('SORT', [['hi', 'Value ▼'], ['lo', 'Value ▲'], ['new', 'Newest']], 'sort'));
+      chipRow('SORT', [['hi', 'Most $'], ['lo', 'Least $'], ['new', 'Newest']], 'sort'));
     var bar = h('div', { class: 'invbar' },
-      h('div', { class: 'grow' }, h('span', { class: 'pix small' }, shown.length + ' of ' + all.length + ' parts'), ' ', h('span', { class: 'good' }, 'worth ' + DR.money(total)),
-        filtered ? btn('Clear filters', function () { invF.car = 'all'; invF.grp = 'all'; invF.val = 'any'; A.click(); UI.refresh(); }, 'small') : null),
+      toggle,
+      h('div', { class: 'grow' }, h('span', { class: 'pix small' }, (filtered ? shown.length + ' of ' + all.length : all.length) + (all.length === 1 ? ' part' : ' parts')), ' ', h('span', { class: 'good' }, 'worth ' + DR.money(total))),
       shown.length ? btn('Sell all shown ' + DR.money(total), function () {
         UI.confirm('Sell ' + shown.length + ' part' + (shown.length > 1 ? 's' : '') + ' for ' + DR.money(total) + '? You can buy them back until your next race.', function () {
           G.sellParts(shown.map(function (r) { return r.it.uid; })); A.cash(); UI.toast('Sold for ' + DR.money(total)); UI.refresh();
@@ -799,6 +810,6 @@
           btn('Buy back ' + DR.money(s.v), function () { if (G.buyBack(s.item.uid)) { A.cash(); UI.refresh(); } else UI.toast('Not enough cash'); }, 'small' + (G.canAfford(s.v) ? '' : ' disabled')));
       })) : null;
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'inv'),
-      h('div', { class: 'content invwrap' }, filters, h('div', { class: 'invmain' }, bar, list, soldBox)));
+      h('div', { class: 'content invwrap' }, filters, h('div', { class: 'invmain' }, bar, tags, list, soldBox)));
   };
 })();

@@ -74,16 +74,16 @@
   UI.RaceMenu = function (tab) {
     memory();
     tab = tab || UI.raceTab || 'career';
+    if (tab === 'street') tab = 'map';
     UI.raceTab = tab;
     remember();
     var inst = G.car();
     var rail = h('div', { class: 'srail' },
       railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }),
-      railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
-      railItem('u_street', 2, 'Street $', tab === 'street', function () { UI.show(UI.RaceMenu, 'street'); }),
+      railItem('u_map', 2, 'Street Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
       railItem('u_test', 2, 'Test & Tune', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }));
-    var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'street' ? streetView(inst) : testView(inst);
-    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, DR.CARS[inst.carId].name + ' • ' + bestText(inst))),
+    var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : testView(inst);
+    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, bestText(inst))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
   };
 
@@ -99,23 +99,15 @@
     return next;
   }
 
-  // the city map: tap a place to see what races are there
+  // the street map: the city's street-race spots. Tap one to see who is
+  // there and what they race for; more spots open up with the career.
   var selPlace = null, cityView = null;
+  function spotOpen(p) { return G.careerState().stage >= p.stage; }
   function mapView(inst) {
-    var c = G.careerState();
-    pickStage(c); remember();
-    G.checkContracts().forEach(function (m) { UI.toast(m); });
-    var st = DR.STAGES[selStage], next = nextEvent(st), pins = {};
-    st.all.forEach(function (ev) {
-      if (!G.eventVisible(ev) || G.eventWon(ev)) return;
-      var p = DR.cityPlaceOf(ev.type), pin = pins[p.id] || (pins[p.id] = { n: 0 });
-      pin.n++;
-      if (ev === next) pin.next = true;
-      if (ev.type === 'boss') pin.boss = true;
-    });
-    pins.highway = { street: true };
-    if (!selPlace) selPlace = next ? DR.cityPlaceOf(next.type).id : 'strip';
-    var place = DR.CITY.filter(function (p) { return p.id === selPlace; })[0] || DR.CITY[0];
+    var pins = {};
+    DR.CITY.forEach(function (p) { pins[p.id] = spotOpen(p) ? { street: true } : {}; });
+    if (!selPlace || !DR.CITY.some(function (p) { return p.id === selPlace; })) selPlace = DR.CITY[0].id;
+    var place = DR.CITY.filter(function (p) { return p.id === selPlace; })[0];
     var cv = h('canvas', { class: 'citycv' }), t0 = Date.now(), last = -1, dirty = true;
     if (!cityView) cityView = DR.cityView();
     function redraw() { dirty = true; }
@@ -126,39 +118,24 @@
       requestAnimationFrame(frame);
     })();
     var ctl = DR.cityMapControl(cv, cityView, function (p) {
-      if (!p) return;
-      if (p.id === selPlace && p.go) return UI.show(UI[p.go]);
-      selPlace = p.id; A.click(); UI.refresh();
+      if (!p || p.id === selPlace) return;
+      selPlace = p.id; streetOpps = null; A.click(); UI.refresh();
     }, redraw);
-    var zoomBar = h('div', { class: 'cityzoom' },
-      btn('+', function () { ctl.zoomBy(1.5); }, 'small'), btn('−', function () { ctl.zoomBy(1 / 1.5); }, 'small'), btn('⤢', function () { ctl.reset(); }, 'small'));
-    var wins = G.stageWins(selStage);
+    var open = DR.CITY.filter(spotOpen).length;
     var legend = h('div', { class: 'gsmall dim citylegend' },
-      h('span', { class: 'lg y' }, 'races'), h('span', { class: 'lg r' }, 'boss'), h('span', { class: 'lg g' }, 'street $'), h('span', {}, 'drag / pinch to zoom'),
-      h('span', {}, 'Stage ' + (selStage + 1) + ': ' + wins + ' / ' + st.events.length + ' won'));
-    var spBar = c.sponsor[selStage] ? null : h('div', { class: 'warnbox citysp' }, h('span', { class: 'grow' }, 'No sponsor for stage ' + (selStage + 1) + ' yet. Sponsors pay per win, and the boss only races sponsored drivers.'),
-      btn('Choose Sponsor', function () { sponsorPicker(selStage); }, 'small go'));
-    return h('div', {}, stageChips(), spBar,
-      h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, h('div', { class: 'cityframe' }, cv, zoomBar), legend), h('div', { class: 'cityside' }, placePanel(place, st, next, inst))));
+      h('span', { class: 'lg g' }, 'open'), h('span', { class: 'lg' }, 'opens later'), h('span', {}, open + ' / ' + DR.CITY.length + ' spots open'), h('span', {}, 'drag / pinch to zoom'));
+    return h('div', {},
+      h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, h('div', { class: 'cityframe' }, cv, zoomBar(ctl)), legend), h('div', { class: 'cityside' }, streetView(inst, place))));
   }
-  function placePanel(p, st, next, inst) {
-    var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, p.go ? 'VISIT' : 'RACE SPOT'), h('div', { class: 'pix acc' }, p.name), h('div', { class: 'dim' }, p.blurb)));
-    if (p.go) return h('div', {}, head, btn(p.go === 'Garage' ? 'Go Home' : 'Go to ' + p.name, function () { UI.show(UI[p.go]); }, 'go'));
-    if (p.street) return streetView(inst);
-    var grid = h('div', { class: 'egrid' }), n = 0;
-    // races still to win first, then the ones already won
-    st.all.filter(function (ev) { return G.eventVisible(ev) && DR.cityPlaceOf(ev.type) === p; })
-      .sort(function (a, b) { return G.eventWon(a) - G.eventWon(b); })
-      .forEach(function (ev) { n++; grid.appendChild(eventCard(ev, ev === next)); });
-    if (!n) grid = h('div', { class: 'dim cityempty' }, 'No races here in stage ' + (selStage + 1) + ' yet. Keep winning to open this spot up.');
-    return h('div', {}, head, grid, p.test ? h('div', { style: { marginTop: '8px' } }, btn('Test & Tune', function () { UI.show(UI.RaceMenu, 'test'); }, 'small')) : null);
+  function zoomBar(ctl) {
+    return h('div', { class: 'cityzoom' }, btn('+', function () { ctl.zoomBy(1.5); }, 'small'), btn('−', function () { ctl.zoomBy(1 / 1.5); }, 'small'), btn('⤢', function () { ctl.reset(); }, 'small'));
   }
 
   // The stage as a road (No Limits style): races in the order they open,
   // two stacked where you can pick either, side races branching off above,
   // and the boss at the end. Tap a stop to see it on the right.
   var selEv = null;
-  var NODE_GLYPH = { quarter: '1/4', eighth: '1/8', street: 'ST', knockout: 'KO', sponsor: '$', showcase: 'SHOW', boss: 'BOSS', 'class': 'SIDE' };
+  var NODE_GLYPH = { quarter: '1/4', eighth: '1/8', street: 'ST', knockout: 'KO', sponsor: 'SPON', showcase: 'INV', show: 'SHOW', boss: 'BOSS', 'class': 'SIDE' };
   function careerView() {
     var c = G.careerState();
     pickStage(c); remember();
@@ -180,7 +157,7 @@
     }
     var road = h('div', { class: 'road' }, cols.map(function (k, i) {
       return h('div', { class: 'rcol' + (k.boss ? ' boss' : '') + (k.main.length > 1 ? ' fork' : '') },
-        h('div', { class: 'rside' }, k.side.map(function (ev) { return h('div', { class: 'rbranch' }, node(ev)); })),
+        h('div', { class: 'rside' }, k.side.map(function (ev) { return h('div', { class: 'rbranch' + (ev.type === 'show' ? ' show' : '') }, node(ev)); })),
         h('div', { class: 'rmain' }, k.main.map(node)),
         h('div', { class: 'rwins gsmall dim' }, k.boss ? 'FINAL' : i ? i + ' win' + (i > 1 ? 's' : '') : 'START'));
     }));
@@ -202,7 +179,20 @@
       pr.lines.map(function (l) { return h('div', { class: 'gsmall ' + (l[2] ? 'good' : '') }, (l[2] ? '✔ ' : '• ') + l[0] + ': ' + l[1]); }));
   }
   function oppCanvas(oi) { return UI.lazyPreview('ecv', oi, { aspect: 0.42 }); }
+  function showCard(ev) {
+    var sh = DR.showById(ev.show), lock = G.eventLock(ev), won = G.eventWon(ev), issue = G.car() ? G.carIssue(G.car(), ev) : '';
+    return h('div', { class: 'ecard t-show' + (lock ? ' locked' : '') + (won ? ' won' : '') },
+      h('div', { class: 'ecvwrap' }, DR.showThumb(sh, G.car()), h('span', { class: 'etype' }, 'CAR SHOW'), won ? h('span', { class: 'ewon' }, 'WON') : null),
+      h('div', { class: 'acc ename' }, sh.name),
+      h('div', { class: 'dim gsmall' }, sh.where + (sh.night ? ' • night (neon counts)' : '')),
+      h('div', { class: 'gsmall acc' }, 'Side event • ' + DR.showGoal(ev).replace(' at the ' + sh.name, '')),
+      lock ? h('div', { class: 'warn gsmall' }, '🔒 ' + lock) : null,
+      !lock && issue ? h('div', { class: 'warn gsmall' }, '⚠ ' + issue) : null,
+      h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))), h('span', { class: 'dim gsmall' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free entry'),
+        btn('Enter', function () { if (lock || issue) return UI.toast(lock || issue); DR.enterShow(sh, ev); }, 'small ' + (lock || issue ? 'disabled' : 'go'))));
+  }
   function eventCard(ev, isNext) {
+    if (ev.type === 'show') return showCard(ev);
     var T = DR.EVENT_TYPES[ev.type], lock = G.eventLock(ev), won = G.eventWon(ev), o = ev.opps[0], oi = G.oppInst(o);
     var issue = G.car() ? G.carIssue(G.car(), ev) : '';
     var who = ev.opps.length > 1 ? ev.opps.map(function (x) { return x.name; }).join(' → ') : o.name;
@@ -234,29 +224,31 @@
     close = UI.modal([h('h2', {}, 'Stage ' + (si + 1) + ' sponsors'), h('p', { class: 'dim' }, 'You can only sign one per stage, so choose carefully.'), h('div', { class: 'col' }, rows), btn('Not yet', function () { close(); }, 'small')]);
   }
 
-  function streetView(inst) {
-    var mine = G.estimate(inst, DR.EIGHTH, 0.85);
-    if (!streetOpps) streetOpps = G.streetOpponents(mine.et);
-    var bets = [500, 1000, 2500, 5000, 10000, 25000, 50000];
+  function streetView(inst, p) {
+    var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET SPOT • ' + (p.dist === 'quarter' ? '1/4' : '1/8') + ' MILE • ' + Math.round(p.grip * 100) + '% GRIP'),
+      h('div', { class: 'pix acc' }, p.name), h('div', { class: 'dim' }, p.blurb)));
+    if (!spotOpen(p)) return h('div', {}, head, h('div', { class: 'warnbox' }, '🔒 Opens in stage ' + (p.stage + 1) + ' of the career.'));
+    var dist = p.dist === 'quarter' ? DR.QUARTER : DR.EIGHTH;
+    if (p.bets.indexOf(betSel) < 0) betSel = p.bets.filter(function (b) { return b <= G.state.money; }).pop() || p.bets[0];
+    if (!streetOpps) streetOpps = G.streetOpponents(G.estimate(inst, dist, p.grip).et, dist, p.grip);
     var grid = h('div', { class: 'egrid' });
     streetOpps.forEach(function (o) {
-      var oi = G.oppInst(o);
+      var oi = G.oppInst(o), oS = G.spec(oi);
       grid.appendChild(h('div', { class: 'ecard t-street' },
         h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, 'STREET')),
-        h('div', { class: 'acc ename' }, o.name), h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name),
-        h('div', { class: 'efoot' }, h('span', { class: 'price' }, 'Pot ' + DR.money(betSel * 2)),
+        h('div', { class: 'acc ename' }, o.name), h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name + ' • about ' + Math.round((oS.peakHp + oS.nosHp) / 25) * 25 + ' hp'),
+        h('div', { class: 'efoot' }, h('span', { class: 'price' }, 'Win ' + DR.money(betSel)),
           btn('Race', function () {
-            if (G.state.money < betSel) return UI.toast('You cannot cover that bet');
+            if (G.state.money < betSel) return UI.toast('You can\'t cover a ' + DR.money(betSel) + ' bet');
             var opp = o; streetOpps = null;
-            DR.Race.start({ mode: 'street', opp: opp, dist: DR.EIGHTH, theme: 'street', grip: 0.85, bet: betSel });
+            DR.Race.start({ mode: 'street', opp: opp, dist: dist, theme: 'street', grip: p.grip, bet: betSel });
           }, 'small red'))));
     });
-    return h('div', {},
-      h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET RACE'), h('div', { class: 'pix acc' }, '1/8 mile • night • no prep'),
-        h('div', { class: 'dim' }, 'Winner takes the pot. The street has less grip than the strip. Size them up and pick your fight.'))),
-      h('div', { class: 'schips' }, h('span', { class: 'pix small', style: { alignSelf: 'center' } }, 'BET'), bets.map(function (b) {
+    return h('div', {}, head,
+      h('div', { class: 'schips' }, h('span', { class: 'pix small', style: { alignSelf: 'center' } }, 'BET'), p.bets.map(function (b) {
         return chip(DR.money(b), b === betSel, function () { betSel = b; UI.refresh(); }, b > G.state.money ? 'disabled' : '');
       })),
+      h('div', { class: 'gsmall dim' }, 'Win and you take their ' + DR.money(betSel) + '; lose and they take yours.'),
       grid, h('div', { style: { marginTop: '8px' } }, btn('New Opponents', function () { streetOpps = null; UI.refresh(); }, 'small')));
   }
 
@@ -318,7 +310,7 @@
     var rail = h('div', { class: 'srail' }, Object.keys(TUNE_ICONS).map(function (g) {
       return railItem(TUNE_ICONS[g], 3, g, g === tuneGroup, function () { tuneGroup = g; UI.refresh(); });
     }));
-    var list = h('div', { class: 'col' });
+    var list = h('div', { class: 'col' }), lockedRows = [];
     var statBox = h('div', { class: 'tstats' }), statInner = h('div');
     var pv = h('canvas', { class: 'preview' }); DR.drawPreview(pv, inst, { aspect: 0.36 });
     statBox.appendChild(pv); statBox.appendChild(statInner);
@@ -338,7 +330,7 @@
     DR.TUNE_DEFS.forEach(function (def) {
       if (def.group !== tuneGroup) return;
       var unlocked = def.show(S);
-      if (!unlocked) { list.appendChild(h('div', { class: 'tune-row locked' }, h('div', { class: 'lab' }, h('span', {}, def.label), h('span', { class: 'tag r' }, '🔒 NEEDS PART')), h('div', { class: 'help' }, def.req))); return; }
+      if (!unlocked) { lockedRows.push(h('div', { class: 'tune-row locked' }, h('span', { class: 'lab' }, '🔒 ' + def.label), h('span', { class: 'help' }, def.req))); return; }
       if (def.key === 'gears') {
         var gg = h('div', { class: 'gear-grid' });
         S.tune.gears.forEach(function (g, gi) {
@@ -355,12 +347,13 @@
       row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F); knock limit ' + S.knock + ' psi.' : '')));
       list.appendChild(row);
     });
-    if (!list.children.length) list.appendChild(h('div', { class: 'dim' }, 'Nothing to adjust here yet.'));
+    if (!list.children.length) list.appendChild(h('div', { class: 'dim' }, lockedRows.length ? 'Nothing to adjust yet: every setting here needs a part first.' : 'Nothing to adjust here yet.'));
+    // settings that need a part sit at the bottom, one line each
+    if (lockedRows.length) list.appendChild(h('div', { class: 'tlocked' }, h('h3', {}, 'NEEDS A PART (' + lockedRows.length + ')'), lockedRows));
     recalc();
     statBox.appendChild(h('div', { class: 'row', style: { flexWrap: 'wrap', marginTop: '6px' } },
-      btn('Auto Shift', function () { inst.tune.shiftRpm = DR.suggestShift(G.spec(inst)); G.save(); UI.toast('Shift point set to ' + inst.tune.shiftRpm + ' rpm'); UI.refresh(); }, 'small'),
-      btn('Reset', function () { UI.confirm('Reset every tuning value to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }); }, 'small red'),
-      btn('Dyno', function () { UI.show(UI.Dyno); }, 'small'),
+      btn('Best Shift Point', function () { inst.tune.shiftRpm = DR.suggestShift(G.spec(inst)); G.save(); UI.toast('Shift point set to ' + inst.tune.shiftRpm + ' rpm'); UI.refresh(); }, 'small'),
+      btn('Reset Tune', function () { UI.confirm('Put every tuning setting back to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }, 'Reset'); }, 'small red'),
       btn('Test Run', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, back: 'tune' }); }, 'small go')));
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'tune'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain tunemain' }, h('div', { class: 'col grow' }, h('h2', {}, tuneGroup), list), statBox)));
@@ -426,7 +419,7 @@
       DR.pixText(ctx, 'RPM X1000', Math.round((L + R) / 2) - 18, B + 13, '#666');
     }
     var info = h('div', { class: 'tstats' },
-      h('div', { class: 'row', style: { marginBottom: '6px' } }, btn('▶ Run Dyno', run, 'go'), btn('Tune', function () { UI.show(UI.Tune); })),
+      h('div', { class: 'row', style: { marginBottom: '6px' } }, btn('▶ Run Dyno', run, 'go')),
       gst('PEAK HP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm + delta(dy.peakHp, prev && prev.peakHp), 'acc'), gst('PEAK TQ', Math.round(dy.peakTq) + ' lb-ft' + delta(dy.peakTq, prev && prev.peakTq)),
       prev ? h('div', { class: 'gsmall dim' }, 'Faded lines: your last pull before the changes.') : null,
       S.nosHp ? gst('W/ NITROUS', Math.round(dy.peakHp + S.nosHp) + ' hp', 'acc') : null,
@@ -557,7 +550,7 @@
         h('div', { class: 'gsmall dim' }, Math.round(S.peakHp + S.nosHp) + ' hp • ' + UI.kgLb(S.m) + ' • ' + (Math.round(stars * 100) / 100) + ' stars'),
         h('div', { class: 'gsmall' }, inst.best && inst.best.q ? 'Best 1/4: ' + inst.best.q.toFixed(3) + 's' : 'No timeslip yet'),
         h('div', { class: 'efoot' },
-          active ? h('span', { class: 'tag g' }, 'IN THE BAY') : btn('Drive', function () { G.state.active = inst.uid; G.save(); UI.show(UI.Garage); }, 'small go'),
+          active ? null : btn('Drive', function () { G.state.active = inst.uid; G.save(); UI.show(UI.Garage); }, 'small go'),
           modded(inst) ? btn('Strip parts', function () {
             UI.confirm('Take every aftermarket part off the ' + DR.CARS[inst.carId].name + '? They go to your inventory and the car goes back to factory spec.', function () {
               var n = G.stripCar(inst); A.click(); UI.toast(n + ' part' + (n === 1 ? '' : 's') + ' moved to your inventory'); UI.refresh();

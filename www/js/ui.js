@@ -326,8 +326,8 @@
   // ------------------------------------------------------------ HELP
   UI.Help = function (back) {
     function p(t) { return h('p', { style: { margin: '0 0 8px' } }, t); }
-    return h('div', { class: 'screen' }, top('HOW TO PLAY', function () { UI.show(back || UI.Garage); }),
-      h('div', { class: 'content' }, h('div', { class: 'panel', style: { maxWidth: '820px' } },
+    var panel, scr = h('div', { class: 'screen' }, top('HOW TO PLAY', function () { UI.show(back || UI.Garage); }),
+      h('div', { class: 'content' }, panel = h('div', { class: 'panel', style: { maxWidth: '820px' } },
         h('h2', {}, 'Racing'),
         p('1. Every race starts in the burnout box with the line lock on. Hold GAS to spin the rear tires and heat them (slicks need heat to grip - watch the tire temp meter), then hit STAGE to end the burnout and roll up to the line. Hit STAGE straight away to skip it and race on cold tires.'),
         p('2. Your opponent does their own burnout and stages when they are ready; the tree comes down once both cars are staged. Hold GAS to rev the engine and keep the RPM in the green launch zone (a 2-step holds it for you).'),
@@ -337,6 +337,8 @@
         p('5. Got nitrous? Tap NOS to spray. Big wheelies can flip the car - lift off the gas or install wheelie bars.'),
         p('6. The time slip comes up a couple of seconds after the finish. Tap WATCH to slide it away and see the cars coast down the shutdown. The back button (or Esc) always takes you back a screen.'),
         h('h2', {}, 'Career'),
+        p('Race opens on the career road: each stop is a race, in the order they open. Two stops stacked means either one. Side races branch off above the road and have entry rules; the boss waits at the end. Tap a stop to see it. The City Map tab shows the same races by where they happen (yellow races, red boss, green the Route 99 street-race meet). Drag to pan, pinch or use + and - to zoom.'),
+        p('The Street Map tab is the city\'s street-racing scene: bet races against locals at spots around town. Each spot has its own distance, grip and stakes, and more open up as you move up the career. Win and you take their bet; lose and they take yours.'),
         p('The career has six stages, from backroad beaters to Pro Mods. Each stage has a run of races (1/4 mile, 1/8 mile, night street races, three-round knockouts, sponsor races and night invitationals) and ends with a boss. Winning races reveals more races and unlocks parts. Beat the boss to open the next stage and new cars at the dealer.'),
         p('Class races are side races with a rule, like real heads-up classes: four cylinders only, all motor, street tires, 275 radials, small blocks and more. They pay well for a car built to the rule, but you never need them to move on.'),
         p('A quick launch pays: a career win with a reaction time of 0.05 s or better earns a 15% perfect-launch bonus, 0.15 s or better a 5% good-launch bonus.'),
@@ -345,9 +347,10 @@
         p('Style pays: every star of visual rating adds 3% to your career race winnings (+30% at 10 stars), and new star levels put you on magazine covers.'),
         p('Your visual rating (up to 10 stars) comes from Body Shop parts: bumpers, skirts, spoilers, hoods, roof scoops, rims, tint, neon, paint finishes and vinyls. Stars never block career races; only the sponsor who wants a car that looks the part asks for a rating.'),
         h('h2', {}, 'Car Shows & Covers'),
+        p('Each career stage also has a car show side event on the road: place high enough at that show to win it. You can enter from the road or from Shows in the garage.'),
         p('Park your car at a booth at a car show. Your rating, how rare and loud the build is, and the show itself decide how many people stop by. You earn a little per visitor, and the three most-visited cars take the podium and the prize money. Show judges get bored of the same build: change something up between entries. Each new star level also puts your car on the cover of Pixel Tuner, with a small bonus.'),
         h('h2', {}, 'Building'),
-        p('Spend your winnings in the Parts Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod, colour-coded grey, green, blue, purple and orange) and higher levels unlock as you win career races. Street races let you bet cash on the side.'),
+        p('Spend your winnings under Upgrade > Shop: engine swaps, turbos, superchargers, nitrous, gearboxes, suspension, tires and more. Parts come in levels (Street, Sport, Pro, Race, Pro Mod, colour-coded grey, green, blue, purple and orange) and higher levels unlock as you win career races.'),
         p('The garage is home: Upgrade (shop, packages, install, inventory, tune, dyno), Style (body kits, paint), Dealer, Shows and Race sit along the bottom. Use the arrows to switch cars; tap the car name for My Cars.'),
         p('Bought parts go into your inventory. Fit them under Upgrade > Install: the old part comes off and goes back to your inventory, so you can swap it back, move it to another car or sell it for half price. Engine parts are built for one engine; swapping engines takes its parts off with it. Upgrade > Inventory lists every spare part: filter by the car it fits, the kind of part and its value, sell one or everything shown, and buy back anything you sold until your next race. In My Cars you can strip a car of its parts, or strip it before you sell it.'),
         p('Watch the risk warnings: too much power for your weakest bottom-end part (pistons, rods, crank or block), boost past your fuel\'s knock limit, or more torque than the gearbox or axles can hold can break parts mid-race. Repairs cost money!'),
@@ -356,9 +359,8 @@
         p('Every body has a limit: past the power the stock shell takes, it twists on the launch and can crack. Subframe connectors, a roll bar or a cage let it take more; a tube chassis takes anything.'),
         p('Tech inspection at the strip works like the NHRA\'s: a car that runs quicker than 11.50 in the quarter needs a roll bar, quicker than 10.00 a roll cage, and open cars need the roll bar from 13.50. Street races have no tech.'),
         p('Racing costs a little: after every race against someone you pay for the fuel, tire wear and any nitrous you sprayed. More power, race fuel and slicks cost more per pass. It comes out automatically, never more than you have, and test passes are free.'),
-        p('Race opens on the career road: each stop is a race, in the order they open. Two stops stacked means either one. Side races branch off above the road and have entry rules; the boss waits at the end. Tap a stop to see it. The City Map tab shows the same races by where they happen (yellow races, red boss, green the Route 99 street-race meet). Drag to pan, pinch or use + and - to zoom.'),
         p('Drag the garage, dealer, body shop or paint shop view to look around the car up close (pinch or scroll to zoom, double-tap to reset).'),
-        p('In a hurry? Parts Shop > Packages sells Budget, Street, Pro and Extreme kits for each group (or the whole car) at 10% off. They fit a matched set of parts sized to your car and skip anything you already have that is as good.'),
+        p('In a hurry? Upgrade > Packages sells Budget, Street, Pro and Extreme kits for each group (or the whole car) at 10% off. They fit a matched set of parts sized to your car and skip anything you already have that is as good.'),
         p('Builds are only as strong as their weakest part. The shop marks the parts holding you back with a red "!": maxed-out injectors or pump, an ignition that misfires under boost, valve springs that float, axles that will snap.'),
         h('h2', {}, 'Tuning'),
         p('Grip comes from tire compound, tire pressure (each tire has an ideal psi), tire temperature and weight transfer. Ladder bars / 4-links, springs and shocks change how hard the car hits the tires. Gearing, launch RPM, boost, and throttle management decide whether you hook or go up in smoke.'),
@@ -367,5 +369,9 @@
         h('h2', {}, 'Engine sounds'),
         p('Every engine is voiced by recordings of real cars, played the way Need for Speed Underground 2 and most racing games do it: a ladder of seamless loops, one every 10% of rpm, each holding the engine steady at one rpm, with separate pulling and coasting sounds. The two loops either side of your rpm play together, tuned to the exact rpm. Your exhaust parts change its tone; turbos, blowers, the rev limiter and backfires are added on top. Recordings from Wikimedia Commons (CC BY 3.0) and the Internet Archive (CC BY 4.0):'),
         h('div', { class: 'gsmall dim credits' }, Object.keys(DR.ENG_BANKS || {}).reduce(function (a, k) { return a.concat(DR.ENG_BANKS[k].credit.split('; ')); }, []).concat(DR.ENG_POPS ? DR.ENG_POPS.credit.split('; ') : []).map(function (c) { return h('div', {}, c); })))));
+    // jump straight to a topic
+    var heads = [].slice.call(panel.querySelectorAll('h2'));
+    panel.insertBefore(h('div', { class: 'schips helpjump' }, heads.map(function (hd) { return btn(hd.textContent, function () { hd.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 'chip'); })), panel.firstChild);
+    return scr;
   };
 })();

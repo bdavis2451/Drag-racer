@@ -466,8 +466,9 @@
     return etCache[key];
   };
 
-  // Street race: opponents near the player's estimated 1/8-mile time.
-  G.streetOpponents = function (playerET) {
+  // Street race: opponents near the player's estimated time at this spot.
+  G.streetOpponents = function (playerET, dist, grip) {
+    dist = dist || DR.EIGHTH; grip = grip || 0.85;
     // every career rival is a possible street opponent (they cover the
     // whole ladder, a step apart)
     var pool = [];
@@ -475,7 +476,7 @@
     if (!pool.length) DR.RIVALS.forEach(function (band) { band.forEach(function (o) { pool.push(o); }); });
     var names = ['Spike', 'Rico', 'Jade', 'Duke', 'Sasha', 'Moose', 'Ziggy', 'Nova', 'Blaze', 'Cruz', 'Vega', 'Slim'];
     var scored = pool.map(function (o) {
-      var est = G.estimate(G.oppInst(o), DR.EIGHTH, 0.85);
+      var est = G.estimate(G.oppInst(o), dist, grip);
       return { o: o, et: est.et };
     }).filter(function (x) { return x.et < 90; });
     scored.sort(function (a, b) { return Math.abs(a.et - playerET) - Math.abs(b.et - playerET); });
