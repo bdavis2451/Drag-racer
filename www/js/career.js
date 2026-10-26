@@ -261,7 +261,7 @@
 
   // ---------------------------------------------------------------- state
   G.careerDefaults = function () {
-    return { stage: 0, won: {}, sponsor: {}, perf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF }, vis: {}, cars: { hachi: 1 }, bestStars: 0 };
+    return { stage: 0, won: {}, sponsor: {}, perf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF }, vis: {}, cars: { hachi: 1 }, bestStars: 0, freeCars: 0, carTokens: 1 };
   };
   function C() { if (!G.state.career || G.state.career.perf == null) G.state.career = G.careerDefaults(); return G.state.career; }
   G.careerState = C;
@@ -368,9 +368,6 @@
     var c = C();
     if (c.sponsor[si]) return false;
     c.sponsor[si] = { id: offer.id, sign: offer.sign, perWin: offer.perWin, bonus: offer.bonus, contract: offer.contract, spon: 0, street: 0, paid: false };
-    // like Underground 2: every sponsor opens a garage slot and pays for a
-    // car (picked at the dealer; an unclaimed one carries over)
-    c.freeCars = (c.freeCars || 0) + 1;
     G.earn(offer.sign); G.save();
     return true;
   };
@@ -379,6 +376,11 @@
   // a price that grows stage by stage, never the Pro race cars.
   DR.SPONSOR_CAR_CAP = [9000, 15000, 32000, 60000, 110000, 150000];
   G.freeCars = function () { return C().freeCars || 0; };
+  // A fulfilled contract pays its bonus and, like Underground 2, opens a
+  // garage slot with a car on the sponsor (picked at the dealer; an
+  // unclaimed one carries over).
+  function fulfil(sp) { sp.paid = true; C().freeCars = (C().freeCars || 0) + 1; }
+  G.contractsDone = function () { var c = C(), n = 0; for (var k in c.sponsor) if (c.sponsor[k].paid) n++; return n; };
   G.sponsorCarOk = function (carId) {
     var car = DR.CARS[carId];
     return car.cat !== 'Pro' && G.carUnlocked(carId) && car.price <= DR.SPONSOR_CAR_CAP[Math.min(C().stage, DR.SPONSOR_CAR_CAP.length - 1)];
@@ -461,7 +463,8 @@
   G.syncUnlocks = function () {
     var c = C();
     // saves from before sponsor cars: one owed per sponsor not yet used on a car
-    if (c.freeCars == null) c.freeCars = Math.max(0, Object.keys(c.sponsor || {}).length - Math.max(0, (G.state.cars || []).length - 1));
+    // saves from before free cars came with fulfilled contracts (not signing)
+    if (!c.carTokens) { c.carTokens = 1; c.freeCars = Math.max(0, G.contractsDone() - Math.max(0, (G.state.cars || []).length - 1)); }
     Object.keys(c.perf).forEach(function (k) { c.perf[k] = Math.max(c.perf[k] || 1, DR.BASE_PERF); });
     DR.STAGES.forEach(function (st) { st.all.forEach(function (ev) { if (c.won[ev.id]) ev.unlocks.forEach(apply); }); });
   };
@@ -526,8 +529,8 @@
       var spName = DR.sponsorById(sp.id).name;
       cash += sp.perWin; lines.push(spName + ' win bonus: ' + DR.money(sp.perWin)); out.money.push([spName, sp.perWin]);
       if (!sp.paid && G.contractProgress(ev.stage).done) {
-        sp.paid = true; cash += sp.bonus; lines.push('CONTRACT FULFILLED! Bonus ' + DR.money(sp.bonus) + (ev.type === 'boss' ? '' : '. The boss will race you now.'));
-        out.money.push(['Contract bonus', sp.bonus]); out.contract = ev.type === 'boss' ? 'Contract fulfilled!' : 'Contract fulfilled: the boss will race you now.';
+        fulfil(sp); cash += sp.bonus; lines.push('CONTRACT FULFILLED! Bonus ' + DR.money(sp.bonus) + ' and a free car' + (ev.type === 'boss' ? '' : '. The boss will race you now.'));
+        out.money.push(['Contract bonus', sp.bonus]); out.contract = ev.type === 'boss' ? 'Contract fulfilled: a free car is waiting at the dealer!' : 'Contract fulfilled: a free car is waiting at the dealer, and the boss will race you now.';
       }
     }
     G.save();
@@ -539,7 +542,7 @@
     var c = C(), msgs = [];
     for (var si in c.sponsor) {
       var sp = c.sponsor[si];
-      if (!sp.paid && G.contractProgress(+si).done) { sp.paid = true; G.earn(sp.bonus); msgs.push(DR.sponsorById(sp.id).name + ' contract fulfilled! Bonus ' + DR.money(sp.bonus)); }
+      if (!sp.paid && G.contractProgress(+si).done) { fulfil(sp); G.earn(sp.bonus); msgs.push(DR.sponsorById(sp.id).name + ' contract fulfilled! Bonus ' + DR.money(sp.bonus) + ' and a free car at the dealer'); }
     }
     if (msgs.length) G.save();
     return msgs;

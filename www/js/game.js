@@ -147,7 +147,8 @@
   // ---------------------------------------------------------------- cars
   // Garage slots (Underground 2 style): one to start, and every sponsor you
   // sign opens another. A save that already holds more keeps them all.
-  G.carSlots = function () { var c = G.state.career || {}; return 1 + Object.keys(c.sponsor || {}).length; };
+  // one slot to start, one more for every sponsor contract fulfilled
+  G.carSlots = function () { var c = G.state.career || {}, n = 0; for (var k in c.sponsor || {}) if (c.sponsor[k].paid) n++; return 1 + n; };
   G.slotFree = function () { return G.state.cars.length < G.carSlots(); };
   G.buyCar = function (carId) {
     var p = DR.CARS[carId].price;
