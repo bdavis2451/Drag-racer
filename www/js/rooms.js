@@ -84,8 +84,21 @@
     bike(x, Math.round(W * 0.42), Math.round(wt + (fl - wt) * 0.6), '#7a7090');
     // wall TV
     var tx = Math.round(W * 0.5), tw = Math.round(W * 0.1), ty = Math.round(wt + (fl - wt) * 0.24);
-    r(tx - 2, ty - 2, tw + 4, Math.round(tw * 0.56) + 4, '#2a2c33'); r(tx, ty, tw, Math.round(tw * 0.56), '#0b0c10');
-    x.fillStyle = 'rgba(255,255,255,0.06)'; x.beginPath(); x.moveTo(tx + tw * 0.5, ty); x.lineTo(tx + tw, ty); x.lineTo(tx + tw, ty + tw * 0.3); x.fill();
+    var th = Math.round(tw * 0.56);
+    r(tx - 2, ty - 2, tw + 4, th + 4, '#2a2c33');
+    // it's on: a drag race on TV (sky, grandstand, the strip and the tree)
+    var tg = x.createLinearGradient(0, ty, 0, ty + th);
+    tg.addColorStop(0, '#2f5fa8'); tg.addColorStop(0.55, '#8fc1ee'); tg.addColorStop(0.56, '#3e7a3c'); tg.addColorStop(1, '#2c5a2c');
+    x.fillStyle = tg; x.fillRect(tx, ty, tw, th);
+    r(tx + 2, Math.round(ty + th * 0.36), Math.round(tw * 0.55), Math.round(th * 0.2), '#6b7380');
+    for (k = 0; k < 3; k++) r(tx + 2, Math.round(ty + th * 0.4 + k * th * 0.05), Math.round(tw * 0.55), 1, '#8a93a2');
+    var sy0 = Math.round(ty + th * 0.62);
+    r(tx, sy0, tw, th - (sy0 - ty), '#3a3d44'); r(tx, sy0 + Math.round((th - (sy0 - ty)) * 0.5), tw, 1, '#e8e8e8');
+    var tl = Math.round(tx + tw * 0.78);
+    r(tl, Math.round(ty + th * 0.3), 2, Math.round(th * 0.34), '#222');
+    ['#ffcc00', '#ffcc00', '#2bd45a'].forEach(function (c, n) { r(tl - 2, Math.round(ty + th * 0.32 + n * 3), 2, 2, c); r(tl + 2, Math.round(ty + th * 0.32 + n * 3), 2, 2, c); });
+    r(Math.round(tx + tw * 0.18), sy0 + 1, 8, 3, '#d23a3a'); r(Math.round(tx + tw * 0.3), sy0 + Math.round((th - (sy0 - ty)) * 0.5) + 2, 8, 3, '#e8e8e8');
+    x.fillStyle = 'rgba(255,255,255,0.10)'; x.beginPath(); x.moveTo(tx + tw * 0.5, ty); x.lineTo(tx + tw, ty); x.lineTo(tx + tw, ty + tw * 0.3); x.fill();
     // neon sign
     if (!garageBg.noSign) {
       var sign = 'PIXEL', sgx = Math.round(W * 0.66 - DR.pixTextW(sign, 2) / 2), sgy = Math.round(wt + (fl - wt) * 0.1);
