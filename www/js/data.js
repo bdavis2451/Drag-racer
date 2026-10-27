@@ -115,9 +115,20 @@ DR.TRANS = {
   tx4a:     { name: '4-Speed Automatic Transaxle', type: 'auto', ratios: [2.92, 1.57, 1.00, 0.71],   shift: 0.28, maxTq: 450,  eff: 0.82, price: 1800, mount: 'T' },
   txdct:    { name: '6-Speed DSG Transaxle',     type: 'dct',    ratios: [3.46, 2.05, 1.30, 0.90, 0.91, 0.76], shift: 0.10, maxTq: 700, eff: 0.88, price: 9000, mount: 'T' },
   txseq:    { name: '6-Speed Sequential Transaxle', type: 'seq', ratios: [2.92, 2.05, 1.58, 1.26, 1.04, 0.88], shift: 0.08, maxTq: 1200, eff: 0.90, price: 15000, adj: true, mount: 'T' },
+  // what the fastest cars really run (maxTq ~ the builders' hp ratings):
+  // converter automatics for turbo/blown Pro Mod and Radial vs Tire (ATI
+  // SuperGlide 4 past 2500 hp, Max Duty Outlaw TH400 3500 hp), clutchless
+  // 5-speeds (Liberty, G-Force) for Pro Stock and nitrous cars, a clutched
+  // dog box for heavy sportsman cars, and big sequentials for the 2000 hp
+  // import builds
+  pg_pm:    { name: 'Pro Mod Powerglide (Billet Case)', type: 'auto', ratios: [1.65, 1.00],              shift: 0.15, maxTq: 3900, eff: 0.88, price: 8500 },
+  a3_pm:    { name: 'Pro Mod 3-Speed TH400 (Billet)', type: 'auto',   ratios: [1.86, 1.31, 1.00],        shift: 0.16, maxTq: 4300, eff: 0.86, price: 9500 },
+  dog4:     { name: 'Clutched 4-Speed Dog Box',  type: 'manual', ratios: [2.48, 1.75, 1.33, 1.00],       shift: 0.14, maxTq: 2300, eff: 0.90, price: 9000 },
+  seq6_hd:  { name: 'Heavy-Duty 6-Speed Sequential', type: 'seq', ratios: [2.66, 1.86, 1.43, 1.17, 1.00, 0.86], shift: 0.06, maxTq: 2400, eff: 0.90, price: 22000, adj: true },
+  cl5:      { name: 'Clutchless 5-Speed (Pro Stock)', type: 'seq', ratios: [2.60, 1.90, 1.50, 1.22, 1.00], shift: 0.03, maxTq: 3200, eff: 0.92, price: 26000, adj: true },
   lenco5:   { name: 'Lenco 5-Speed Air-Shift',   type: 'seq',    ratios: [2.39, 1.69, 1.31, 1.12, 1.00], shift: 0.04, maxTq: 4500, eff: 0.91, price: 30000, adj: true }
 };
-DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'a4', 'a6', 'a8', 'a3_400', 'pg2', 'dct7', 'seq6', 'lenco5',
+DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'dog4', 'a4', 'a6', 'a8', 'a3_400', 'pg2', 'pg_pm', 'a3_pm', 'dct7', 'seq6', 'seq6_hd', 'cl5', 'lenco5',
   'tx5', 'tx5_hd', 'tx6', 'tx6_hd', 'tx4a', 'txdct', 'txseq'];
 
 // ---------------------------------------------------------------------------

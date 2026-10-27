@@ -164,9 +164,9 @@
     opt('inj2', '1000cc Injectors', 800, { tune: 'hard', fuel: 1000 }, 'Feeds 1000 hp on gasoline.'),
     opt('inj3', '1700cc Injectors', 1500, { tune: 'hard', fuel: 1800 }, 'Feeds 1800 hp on gasoline.'),
     opt('inj4', '2400cc Injectors', 3000, { tune: 'hard', lvl: 4, fuel: 2800 }, 'Feeds 2800 hp on gasoline.'),
-    opt('inj5', 'Twin Injectors per Cylinder', 6000, { tune: 'hard', lvl: 5, fuel: 5000 }, 'Feeds 5000 hp on gasoline, about 3100 on methanol.'),
+    opt('inj5', 'Twin Injectors per Cylinder', 6000, { tune: 'hard', lvl: 5, fuel: 5000 }, 'Feeds 5000 hp on gasoline, about 2750 on methanol.'),
     // what ~3000 hp+ methanol engines run: 16 race injectors of 325-500 lb/hr
-    opt('inj6', 'Twin 500 lb/hr Race Injectors', 9500, { tune: 'hard', lvl: 5, fuel: 9000 }, 'Two huge race injectors per cylinder, the kind 3000+ hp methanol Pro Mods run. Feeds 9000 hp on gasoline, about 5600 on methanol.')
+    opt('inj6', 'Twin 500 lb/hr Race Injectors', 9500, { tune: 'hard', lvl: 5, fuel: 9000 }, 'Two huge race injectors per cylinder, the kind 3000+ hp methanol Pro Mods run. Feeds 9000 hp on gasoline, about 4950 on methanol.')
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
@@ -174,14 +174,14 @@
     opt('fp1', '255 lph In-Tank Pump', 300, { fuel: 650 }, 'Feeds 650 hp on gasoline.'),
     opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100 }, 'Feeds 1100 hp on gasoline.'),
     opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800 }, 'Feeds 1800 hp on gasoline.'),
-    opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'About 12 gallons a minute. Feeds 5000 hp on gasoline, about 3100 on methanol.'),
-    opt('fp5', 'Big Belt-Driven Pump (20 GPM)', 7500, { lvl: 5, fuel: 8500 }, 'About 20 gallons a minute, the size alcohol-burning Pro Mods run. Feeds 8500 hp on gasoline, about 5300 on methanol.')
+    opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'About 12 gallons a minute. Feeds 5000 hp on gasoline, about 2750 on methanol.'),
+    opt('fp5', 'Big Belt-Driven Pump (20 GPM)', 7500, { lvl: 5, fuel: 8500 }, 'About 20 gallons a minute, the size alcohol-burning Pro Mods run. Feeds 8500 hp on gasoline, about 4700 on methanol.')
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
     opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Knocks past 17 psi with a cool, intercooled charge, far sooner with a hot one.'),
     opt('e85', 'E85 Ethanol', 800, { tune: 'hard', knock: 30, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, 30 psi safe with a cool charge, and it cools a hot one 15 C. Needs 33% more fuel flow.'),
     opt('race', 'Race Gas 116', 1200, { knock: 34, fmul: 1.03, ff: 1 }, '+3% power, 34 psi safe with a cool charge.'),
-    opt('meth', 'Methanol', 2500, { tune: 'hard', knock: 50, fmul: 1.06, ff: 0.62, cool: 35 }, '+6% power, 50 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs 60% more fuel flow.')
+    opt('meth', 'Methanol', 2500, { tune: 'hard', knock: 50, fmul: 1.06, ff: 0.55, cool: 35 }, '+6% power, 50 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs about 80% more fuel flow than gasoline: injectors and pumps feed only ~55% of their gasoline rating.')
   ]};
   // spark: extra psi of boost (and nitrous) the ignition can light before it
   // starts to misfire (stock ignition gives out a few psi past factory boost)
@@ -474,7 +474,7 @@
   DR.transFits = function (inst, id) { return (DR.TRANS[id].mount || 'L') === DR.transMount(inst); };
   // the nearest box of the other kind (rear-drive box -> transaxle and back)
   var TX_EQUIV = { m5_light: 'tx5', m5_t5_4: 'tx5', m5_t5_v6: 'tx5', m5_t5_v8: 'tx5', m5_hd: 'tx5_hd', m4_cl: 'tx5_hd', m6: 'tx6', m6_hd: 'tx6_hd',
-    a4: 'tx4a', a6: 'tx4a', a4_hd: 'tx4a', a6_hd: 'tx4a', m6_tr: 'tx6_hd', a8: 'tx4a', a3_400: 'tx4a', pg2: 'tx4a', a2_pg: 'tx4a', dct6: 'txdct', dct7: 'txdct', seq6: 'txseq', lenco5: 'txseq',
+    a4: 'tx4a', a6: 'tx4a', a4_hd: 'tx4a', a6_hd: 'tx4a', m6_tr: 'tx6_hd', a8: 'tx4a', a3_400: 'tx4a', pg2: 'tx4a', a2_pg: 'tx4a', dct6: 'txdct', dct7: 'txdct', seq6: 'txseq', lenco5: 'txseq', pg_pm: 'tx4a', a3_pm: 'tx4a', dog4: 'tx6_hd', seq6_hd: 'txseq', cl5: 'txseq',
     tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6', tx6_hd: 'm6_hd', tx4a: 'a4', txdct: 'dct7', txseq: 'seq6' };
   DR.transEquiv = function (id) { return TX_EQUIV[id] || id; };
   // a build (an opponent's, an old save's) with a gearbox that can't fit
