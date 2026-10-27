@@ -204,6 +204,7 @@
     return {};
   }
 
+  RaceScreen.noMusic = true;   // the engines are the soundtrack
   function RaceScreen(cfg) {
     var settings = G.state.settings, testDrive = !!cfg.inst;
     var inst = cfg.inst || G.car(), S = G.spec(inst);

@@ -812,3 +812,11 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .trklbl { position: absolute; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; font-family: 'Press Start 2P', monospace; font-size: 7px; color: #fff; background: rgba(10,11,14,.78); padding: 2px 4px 1px; box-shadow: 0 0 0 1px #000; }
 .trklbl b { color: var(--accent); font-weight: normal; }
 @media (max-height: 420px) { .trklbl { font-size: 6px; padding: 1px 3px; } }
+
+/* ---- menu music toggle */
+.musbtn { flex: none; width: 30px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--accent); background: #1d1f26; border: 0; box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #3b3f4c; font-family: inherit; }
+.musbtn { position: relative; }
+.musbtn.off { color: #6b6f7d; }
+.titlemus { position: absolute; top: 10px; right: 12px; z-index: 3; }
+.musbtn.off::after { content: ''; position: absolute; left: 6px; right: 6px; top: 50%; height: 2px; background: #ff4a3a; transform: rotate(-35deg); }
+.musbtn:active { transform: translateY(1px); }

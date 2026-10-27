@@ -30,7 +30,7 @@
   UI.h = h;
   function btn(label, onclick, cls, attrs) {
     var b = h('button', Object.assign({ class: 'btn ' + (cls || '') }, attrs || {}), label);
-    b.addEventListener('click', function (e) { A.init(); A.resume(); A.click(); onclick && onclick(e); });
+    b.addEventListener('click', function (e) { A.init(); A.resume(); A.click(); onclick && onclick(e); if (DR.Music) DR.Music.update(); });
     return b;
   }
   UI.btn = btn;
@@ -117,6 +117,7 @@
     UI.app.innerHTML = '';
     UI.app.appendChild(fn(arg));
     UI.cur = { fn: fn, arg: arg };
+    if (DR.Music) DR.Music.screen(fn);
     UI.app.querySelectorAll('input[type=range]').forEach(rangeFill);
     if (scrolls) { scrollRestore(scrolls); requestAnimationFrame(function () { scrollRestore(scrolls); showSelected(true); }); }
     else requestAnimationFrame(function () { showSelected(false); });
@@ -197,11 +198,23 @@
   };
 
   UI.top = function (t, b, x) { return top(t, b, x); };
+  // ♪ in every header: menu music on/off in one tap
+  function musicBtn() {
+    if (!DR.Music) return null;
+    var b = h('button', { class: 'musbtn', title: 'Menu music on/off', 'aria-label': 'Menu music on/off' });
+    // a pixel eighth note
+    b.innerHTML = '<svg viewBox="0 0 12 14" width="15" height="17" shape-rendering="crispEdges" fill="currentColor"><rect x="5" y="1" width="2" height="9"/><rect x="7" y="1" width="2" height="1"/><rect x="8" y="2" width="2" height="1"/><rect x="9" y="3" width="2" height="2"/><rect x="2" y="9" width="4" height="4"/><rect x="1" y="10" width="1" height="2"/><rect x="6" y="10" width="1" height="2"/></svg>';
+    function show() { var on = DR.Music.on(); b.classList.toggle('off', !on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+    b.addEventListener('click', function (e) { e.stopPropagation(); DR.Music.toggle(); show(); UI.toast(DR.Music.on() ? 'Menu music on' : 'Menu music off'); });
+    show();
+    return b;
+  }
+  UI.musicBtn = musicBtn;
   function top(title, back, extra) {
     return h('div', { class: 'top' },
       back ? btn('◀', back, 'back') : null,
       h('h1', {}, title),
-      h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)), extra || null);
+      musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)), extra || null);
   }
   // The garage's two work areas share one header: back to the garage, a row
   // of tabs, the money. Upgrade = everything that makes the car quicker,
@@ -229,7 +242,7 @@
     return h('div', { class: 'top sectop' },
       btn('◀', function () { if (onLeave) onLeave(); UI.show(UI.Garage); }, 'back'),
       h('h1', { class: 'sectitle' }, section === 'upgrade' ? 'UPGRADE' : 'STYLE'), tabs,
-      h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
+      musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
   };
   // open a section on the tab it was last left on
   UI.openSection = function (section) {
@@ -296,16 +309,17 @@
     var s = G.state.settings;
     function toggle(label, key, a, b, la, lb, help) {
       return h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, label), help ? h('div', { class: 'dim', style: { fontSize: '16px' } }, help) : null),
-        btn(la, function () { s[key] = a; G.save(); if (key === 'sound') A.setOn(a); UI.refresh(); }, 'small ' + (s[key] === a ? 'primary' : '')),
-        btn(lb, function () { s[key] = b; G.save(); if (key === 'sound') A.setOn(b); UI.refresh(); }, 'small ' + (s[key] === b ? 'primary' : '')));
+        btn(la, function () { s[key] = a; G.save(); if (key === 'sound') A.setOn(a); if (DR.Music) DR.Music.update(); UI.refresh(); }, 'small ' + (s[key] === a ? 'primary' : '')),
+        btn(lb, function () { s[key] = b; G.save(); if (key === 'sound') A.setOn(b); if (DR.Music) DR.Music.update(); UI.refresh(); }, 'small ' + (s[key] === b ? 'primary' : '')));
     }
     return h('div', { class: 'screen' }, top('SETTINGS', function () { UI.show(back || UI.Garage); }),
       h('div', { class: 'content' }, h('div', { class: 'list' },
         toggle('Sound', 'sound', true, false, 'On', 'Off'),
+        toggle('Menu music', 'music', true, false, 'On', 'Off', 'Chiptune music on the menus; it stops for races. The ♪ at the top of every screen turns it on and off too.'),
         (function () {
           var val = h('span', { class: 'acc' }, Math.round(s.volume * 100) + '%');
           var r = h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s.volume, style: { width: '180px' } });
-          r.addEventListener('input', function () { s.volume = parseFloat(r.value); A.setVolume(s.volume); val.textContent = Math.round(s.volume * 100) + '%'; });
+          r.addEventListener('input', function () { s.volume = parseFloat(r.value); A.setVolume(s.volume); if (DR.Music) DR.Music.setVolume(); val.textContent = Math.round(s.volume * 100) + '%'; });
           r.addEventListener('change', function () { G.save(); A.init(); A.resume(); A.beep(660, 0.08); });
           return h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Volume')), val, r);
         })(),

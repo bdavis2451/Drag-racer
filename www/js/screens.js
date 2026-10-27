@@ -18,7 +18,7 @@
     var demo = { carId: 'fox', engine: 'v8_86b', parts: { fi: 'sc_1471', wheeliebar: 'wb1', aero: 'a2', rtires: 'sl_33' }, vis: { neon: '#ff2bd6', rims: 'drag', vinyl: 3 }, color: '#e31b6d', stripe: '#ffffff', rim: '#d0d0d0' };
     if (s.started && G.car()) demo = G.car();
     var cv = DR.roomCanvas(demo, { theme: 'garage', zoom: 2.6, sign: false });
-    return h('div', { class: 'screen title2' }, cv,
+    return h('div', { class: 'screen title2' }, cv, h('div', { class: 'titlemus' }, UI.musicBtn()),
       h('div', { class: 'tpanel' },
         h('div', { class: 'logo' }, 'PIXEL DRAG'),
         h('div', { class: 'tag2' }, 'BUILD • TUNE • LAUNCH'),
@@ -450,6 +450,7 @@
       if (A.wkPending) { A.whenReady(run); return; }
       if (A.banksReady && !A.banksReady([S.eng])) { if (!run.wait) { run.wait = true; A.whenBanks([S.eng], function () { run.wait = false; run(); }); } return; }
       voice = A.engine(S.eng, 0.8, A.buildOf(S));
+      if (DR.Music) DR.Music.duck(true);
       var t0 = performance.now(), ang = 0, last = t0;
       sweep.p = 0;
       (function tick() {
@@ -465,7 +466,7 @@
           A.update(voice, S.idle, 0, 0, 0, S.fiType); rpmEl.textContent = 'PEAK ' + Math.round(dy.peakHp) + ' HP';
           var t1 = performance.now();
           (function coast() { var k = (performance.now() - t1) / 1500; ang += 0.4 * (1 - k); drawRoom(ang, false); if (k < 1) idleRaf = requestAnimationFrame(coast); })();
-          setTimeout(function () { A.stopAll(); voice = null; }, 900);
+          setTimeout(function () { A.stopAll(); voice = null; if (DR.Music) DR.Music.duck(false); }, 900);
         }
       })();
     }

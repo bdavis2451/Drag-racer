@@ -11,7 +11,7 @@
     return {
       v: 5, money: 4000, cars: [], active: null, uid: 1,
       career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [], inv: [],
-      settings: { sound: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, autoRepair: false, volume: 1 },
+      settings: { sound: true, music: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, autoRepair: false, volume: 1 },
       started: false
     };
   };
