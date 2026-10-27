@@ -218,7 +218,12 @@
     }
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
     if (item.cat === 'engine') { var fit = DR.swapFit(inst, item.id); if (fit.block) return fit.block; }
-    if (item.cat === 'trans' && item.id && !DR.transFits(inst, item.id)) return DR.transMount(inst) === 'T' ? 'A rear-drive gearbox: this car takes a transaxle' : 'A transaxle only fits a front-drive (sideways engine) car';
+    if (item.cat === 'trans' && item.id && !DR.transFits(inst, item.id)) return DR.transMount(inst) === 'T' ? 'A rear-drive gearbox: this car takes a transaxle' : 'A transaxle only fits a car with a sideways engine and its factory driveline';
+    if (item.cat === 'layout') {
+      if (!DR.partOptions('layout', inst).some(function (o) { return o.id === item.id; })) return 'Does not fit this car';
+      var opt = DR.getOption('layout', inst, item.id);
+      if (opt.tv && DR.ENGINES[inst.engine].mount === 'L') return 'The ' + DR.ENGINES[inst.engine].name + ' sits lengthways: it needs the lengthways conversion';
+    }
     return '';
   };
   G.invFor = function (cat) { return G.state.inv.filter(function (it) { return it.cat === cat; }); };
@@ -321,7 +326,7 @@
   // Why a part can't come off right now ('' if it can).
   G.removeIssue = function (inst, cat) {
     var car = DR.CARS[inst.carId];
-    if (cat === 'layout' && car.drive === 'FWD' && DR.ENGINES[inst.engine].mount === 'L') return 'The ' + DR.ENGINES[inst.engine].name + ' needs the conversion. Swap the engine out first.';
+    if (cat === 'layout' && car.drive === 'FWD' && DR.ENGINES[inst.engine].mount === 'L') return 'The ' + DR.ENGINES[inst.engine].name + ' needs the lengthways conversion. Swap the engine out first.';
     return '';
   };
   // The factory part that goes back in when an aftermarket one comes off:

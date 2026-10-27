@@ -346,9 +346,13 @@
     var chassis = (car.m - stockEng.w) * (1 - wt.wr);
     var chassisFront = (car.m * car.f - stockEng.w * share) * (1 - wt.wr);
     var fiW = (fiId !== 'none' && DR.FI[fiId].price) ? DR.FI[fiId].w : 0;
-    var extraRear = (tire.m - stockTire.m) + wheels.wm + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batt.bat + Math.min(0, batt.batkg);
-    var extraFront = ftires.fm + (S.drive === 'AWD' && car.drive !== 'AWD' ? 60 : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batt.bat + Math.max(0, batt.batkg);
-    var extraMid = (S.drive === 'AWD' && car.drive !== 'AWD' ? 30 : 0) + chas.kg;
+    // an AWD conversion's weight (kg front, middle, rear): a lengthways
+    // one adds a transfer case and front diff up front; a transverse one a
+    // small transfer unit up front and a rear diff, halfshafts and subframe
+    var awdAdd = S.drive === 'AWD' && car.drive !== 'AWD' ? (layout.tv ? [20, 15, 40] : [60, 30, 0]) : null;
+    var extraRear = (tire.m - stockTire.m) + wheels.wm + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batt.bat + Math.min(0, batt.batkg) + (awdAdd ? awdAdd[2] : 0);
+    var extraFront = ftires.fm + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batt.bat + Math.max(0, batt.batkg);
+    var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
     S.f = clamp(front / S.m, 0.2, 0.72);

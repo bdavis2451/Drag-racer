@@ -298,9 +298,24 @@
   ]};
   C.layout = { name: 'Drivetrain Layout', options: [
     opt('stock', 'Factory Layout', 0, {}),
-    opt('rwd', 'RWD Conversion', 9000, { layout: 'RWD' }, 'Rear-wheel drive: weight transfer works for you. A front-drive car gets a lengthways driveline and a rear-drive gearbox.'),
-    opt('awd', 'AWD Conversion', 16000, { layout: 'AWD' }, 'All four wheels drive. +90 kg and some power loss. A front-drive car gets a lengthways driveline and a rear-drive gearbox.')
+    // lw: a sideways-engined car is rebuilt with a lengthways driveline
+    // (rear-drive gearbox, tunnel, driveshaft)
+    opt('rwd', 'RWD Conversion', 9000, { layout: 'RWD', lw: true }, 'Rear-wheel drive: weight transfer works for you. A front-drive car gets a lengthways driveline and a rear-drive gearbox.'),
+    // tv: AWD that keeps the sideways engine and its transaxle, like a Golf
+    // R or an Evo: a transfer unit on the gearbox, a propshaft, and a rear
+    // diff in a new rear subframe. Front-drive cars with sideways engines only.
+    opt('awdt', 'Transverse AWD Conversion', 9500, { layout: 'AWD', tv: true, lvl: 4 }, 'All four wheels drive and the sideways engine stays: a transfer unit on the transaxle drives a propshaft to a rear diff in a new rear subframe, like a Golf R or an Evo. +75 kg, most of it at the back, and some power loss. Sideways engines (and either-way ones) still bolt in; a lengthways engine needs the lengthways conversion.'),
+    opt('awd', 'AWD Conversion', 16000, { layout: 'AWD', lw: true }, 'All four wheels drive. +90 kg and some power loss. A front-drive car gets a lengthways driveline and a rear-drive gearbox.')
   ]};
+  // front-drivers with a factory AWD sibling to take the transverse AWD
+  // parts from (rear diff, transfer unit, propshaft): a bolt-in kit job.
+  // Anything else gets fabricated rear diff mounts and a custom propshaft.
+  DR.AWD_DONOR = {
+    ronin: 'Civic Wagon / CR-V Real Time 4WD rear diff and AWD transaxle, on a bolt-in diff mount kit',
+    kaze: 'CR-V Real Time 4WD rear diff and AWD transaxle, on a bolt-in diff mount kit',
+    volta: 'R32 4Motion (same platform): Haldex rear diff, transfer unit and rear subframe',
+    pip: 'Suzuki Swift 4WD (same platform): transfer unit, propshaft and rear axle'
+  };
   // sk: spring rate multiplier. low: fixed drop (m). adjS: ride height and
   // spring rates adjustable within ride [lo, hi] (m) and rate [lo, hi] (x).
   C.springs = { name: 'Springs', options: [
@@ -424,12 +439,12 @@
   DR.swapFit = function (inst, engId) {
     var car = DR.CARS[inst.carId], e = DR.ENGINES[engId], out = { install: 0, lines: [], block: '' };
     if (engId === car.engine) return out;
-    var lay = inst.parts && inst.parts.layout, carMount = car.mount === 'T' && lay && lay !== 'stock' ? 'L' : car.mount;
+    var carMount = DR.converted(inst) ? 'L' : car.mount;
     function add(what, $) { out.lines.push([what, $]); out.install += $; }
     add('Labour, mounts & wiring harness', 550 + 250 * e.size);
     if (e.mount !== 'B' && e.mount !== carMount) {
       if (e.mount === 'T') add('Rear-drive adapter: bellhousing, custom mounts, driveshaft', 2500);
-      else if (car.drive === 'FWD') out.block = 'A longitudinal engine needs a RWD or AWD conversion first (Drivetrain)';
+      else if (car.drive === 'FWD') out.block = 'A longitudinal engine needs a RWD or lengthways AWD conversion first (Drivetrain)';
       else add('Longitudinal conversion: transfer case & tunnel', 8000);
     }
     var over = e.size - car.bay;
@@ -449,8 +464,9 @@
 
   // Which gearboxes fit: a transverse car on its factory layout takes a
   // transaxle (T); anything rear- or all-wheel drive from a lengthways
-  // driveline, including a converted car, takes a rear-drive box (L).
-  DR.converted = function (inst) { var l = inst.parts && inst.parts.layout; return !!l && l !== 'stock'; };
+  // driveline, including a car converted to one, takes a rear-drive box
+  // (L). A transverse AWD conversion keeps the transaxle.
+  DR.converted = function (inst) { var l = inst.parts && inst.parts.layout; return !!l && l !== 'stock' && !!(C.layout.options.filter(function (o) { return o.id === l; })[0] || {}).lw; };
   DR.transMount = function (inst) { return DR.CARS[inst.carId].mount === 'T' && !DR.converted(inst) ? 'T' : 'L'; };
   DR.transFits = function (inst, id) { return (DR.TRANS[id].mount || 'L') === DR.transMount(inst); };
   // the nearest box of the other kind (rear-drive box -> transaxle and back)
@@ -523,8 +539,14 @@
       return C.diff.options.map(function (o) { return Object.assign({}, o, { price: o.id === car.diff ? 0 : o.price, name: o.name + (o.id === car.diff ? ' (Factory)' : '') }); });
     }
     if (cat === 'layout') {
-      return C.layout.options.filter(function (o) { return o.id === 'stock' || o.layout !== car.drive; })
-        .map(function (o) { return o.id === 'stock' ? Object.assign({}, o, { name: 'Factory ' + car.drive }) : o; });
+      var tvCar = car.mount === 'T' && car.drive === 'FWD', donor = DR.AWD_DONOR[inst.carId];
+      return C.layout.options.filter(function (o) { return o.id === 'stock' || (o.layout !== car.drive && (!o.tv || tvCar)); })
+        .map(function (o) {
+          if (o.id === 'stock') return Object.assign({}, o, { name: 'Factory ' + car.drive });
+          if (o.tv) return Object.assign({}, o, donor ? { desc: o.desc + ' Parts from the ' + donor + '.' } : { price: 14000, desc: o.desc + ' There was never an AWD version of this car, so the rear diff mounts, propshaft and subframe are fabricated.' });
+          if (o.id === 'awd' && tvCar) return Object.assign({}, o, { name: 'Lengthways AWD Conversion' });
+          return o;
+        });
     }
     var c = C[cat], mul = c.engineScaled ? DR.enginePriceMul(inst.engine || car.engine) : 1;
     var eng = DR.ENGINES[inst.engine || car.engine], rot = eng.rotary && ROTARY[cat];
