@@ -25,6 +25,7 @@
     { id: 'raceway', name: 'Pixel Raceway', x: 332, y: 32, icon: 'flag', circuit: 'pixel', stage: 0, blurb: 'The purpose-built circuit up on the hill north of the bay: kerbs, gravel traps and a long main straight.' },
     { id: 'c_airfield', name: 'Airfield Circuit', x: 466, y: 180, icon: 'flag', circuit: 'airfield', stage: 0, blurb: 'After dark the old airfield turns into a circuit: down the runway, a cone hairpin onto the taxiway and back round the hangars.' },
     { id: 'c_highway', name: 'Route 99 Loop', x: 376, y: 178, icon: 'flag', circuit: 'highway', stage: 0, blurb: 'The freeway ring at night: flat-out sweepers, a tight off-ramp and two downtown blocks back to the on-ramp.' },
+    { id: 'c_downtown', name: 'Downtown Grand Prix', x: 330, y: 158, icon: 'flag', circuit: 'downtown', stage: 0, blurb: 'The city streets closed off for a night: square corners between the towers, neon signs and a long avenue down by the docks.' },
     { id: 'c_canyon', name: 'Canyon Run', x: 146, y: 50, icon: 'flag', circuit: 'canyon', stage: 0, blurb: 'The two-lane back road up into the hills: switchbacks, guard rails and a fast valley straight.' }
   ];
   // ---------------------------------------------------------------- geography

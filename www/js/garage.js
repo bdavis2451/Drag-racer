@@ -365,6 +365,11 @@
       h('span', { class: 'acc' }, 'Stage ' + (c.stage + 1) + ': ' + st.name),
       h('span', {}, G.stageWins(c.stage) + '/' + st.events.length + ' wins'),
       h('span', { class: sp ? '' : 'warn' }, sp ? DR.sponsorById(sp.id).name : 'No sponsor yet'));
+    // the race team at a glance: how many cars are out racing
+    var live = DR.Team ? DR.Team.active().length : 0;
+    var teamChip = DR.Team && DR.Team.state().drivers.length ? h('div', { class: 'gstatus gteam', onclick: function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); } },
+      h('span', { class: 'acc' }, 'Race Team'), h('span', {}, DR.Team.state().drivers.length + ' driver' + (DR.Team.state().drivers.length > 1 ? 's' : '')),
+      h('span', { class: live ? 'good' : 'dim' }, live ? live + ' racing now' : 'all in the pits')) : null;
     function bbtn(label, icon, fn, cls, badge) {
       return btn([iconEl(icon, 1, '', 26, 'gico'), h('span', {}, label), badge ? h('span', { class: badge === 'NEW' || badge === 'FREE' ? 'newdot' : 'badge' }, String(badge)) : null], fn, 'gbb ' + (cls || ''));
     }
@@ -391,7 +396,7 @@
       cars.length > 1 ? btn('▶', function () { cycle(1); }, 'arrow') : null);
     return h('div', { class: 'screen' }, UI.top('GARAGE', function () { UI.show(UI.Title); }, h('div', { class: 'row', style: { gap: '6px' } },
         btn('?', function () { UI.show(UI.Help, UI.Garage); }, 'small back', { title: 'How to play', 'aria-label': 'How to play' }), btn(h('span', { class: 'gearic', html: '<svg viewBox="0 0 16 16" width="14" height="14" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v2h2v1h1v1h1v2h2v4h-2v2h-1v1h-1v1H9v2H7v-2H5v-1H4v-1H3v-2H1V6h2V4h1V3h1V2h2zm0 5v1H6v4h1v1h2v-1h1V6H9V5z"/></svg>' }), function () { UI.show(UI.Settings, UI.Garage); }, 'small back', { title: 'Settings', 'aria-label': 'Settings' }))),
-      h('div', { class: 'gwrap hub' }, cv, status, side, sel, dmg), bar);
+      h('div', { class: 'gwrap hub' }, cv, h('div', { class: 'gstatuses' }, status, teamChip), side, sel, dmg), bar);
   };
 
   // ---------------------------------------------------------------- PARTS SHOP

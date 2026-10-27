@@ -6,13 +6,45 @@
 // ===========================================================================
 (function () {
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, A = DR.Audio, h = UI.h, btn = UI.btn;
-  var TRACK = 'pixel';   // the test lap's track (Race > Circuit > Test Lap)
+  var TRACK = 'pixel';   // the test lap's track (Race > Race Team > Test Lap)
   var CW = 600, CH = 330, PAD = 34;   // map canvas (pixels, drawn pixelated)
   var VIS = 1.5;         // the track's drawn width vs its real 12 m: readable at this scale
   var STATE_COL = { 1: '#4cd964', 2: '#ffcc00', 3: '#ff4a3a' };
   var play = null;      // the lap on screen: { uid, sig, lap, T, t0, speed, done }
   var speedSel = 4, probe = -1;
   var baseCache = {};   // the drawn track, per track
+
+  // ---------------------------------------------------------------- sound
+  // Your car's engine follows it round the lap (the same engine sound as
+  // the drag strip): revs from its speed and gear, on and off the throttle.
+  var eng = null;
+  function engineStart(S) {
+    if (!A || !A.engine || !G.state.settings.sound) return;
+    A.init(); A.resume();
+    if (eng && eng.S === S) return;
+    engineStop();
+    var me = eng = { S: S, voice: null };
+    (function go() {
+      if (eng !== me || me.voice) return;
+      if (A.wkPending) return A.whenReady(go);
+      if (A.banksReady && !A.banksReady([S.eng])) return A.whenBanks([S.eng], go);
+      try { me.voice = A.engine(S.eng, 0.55, A.buildOf(S)); } catch (e) { me.voice = null; }
+      if (DR.Music) DR.Music.duck(true);
+    })();
+  }
+  // v (m/s), gear (0-based), state 1 throttle / 2 at the limit / 3 braking
+  function engineAt(v, g, st, boost) {
+    if (!eng || !eng.voice) return;
+    var S = eng.S, rpm = Math.max(S.idle, Math.min(S.red, v / S.r * S.ratios[Math.min(g, S.ratios.length - 1)] * S.fd * 60 / (2 * Math.PI)));
+    A.update(eng.voice, rpm, st === 1 ? 1 : st === 2 ? 0.55 : 0.05, boost || 0, 0, S.fiType);
+  }
+  function engineStop() {
+    if (!eng) return;
+    eng = null;
+    try { A.stopAll(); } catch (e) { /* nothing playing */ }
+    if (DR.Music) DR.Music.duck(false);
+  }
+  UI.circuitEngineStop = engineStop;
 
   function kmh() { return G.state.settings.units === 'kmh'; }
   function spd(ms) { return Math.round(ms * (kmh() ? 3.6 : 2.23694)); }
@@ -154,7 +186,8 @@
   var STREET = {
     airfield: { ground: '#141a1f', ground2: '#18202a', road: '#2a2e36', edge: '#c9ccd2', line: '#e8e8e8', cones: true },
     highway: { ground: '#0c0f17', ground2: '#121726', road: '#30343c', edge: '#8a8f99', line: '#d8d8d8', lights: true, city: true },
-    canyon: { ground: '#10170f', ground2: '#162013', road: '#2b2b2b', edge: '#d9d9d9', line: '#e3b23c', rails: true, forest: true }
+    canyon: { ground: '#10170f', ground2: '#162013', road: '#2b2b2b', edge: '#d9d9d9', line: '#e3b23c', rails: true, forest: true },
+    downtown: { ground: '#0a0c13', ground2: '#10131d', road: '#2e3037', edge: '#a3a8b2', line: '#d8d8d8', lights: true, city: true, dense: true, neon: true }
   };
   function drawStreet(track, th) {
     var cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
@@ -184,10 +217,13 @@
       // city blocks with lit windows, kept off the road
       for (i = 0; i < 260; i++) {
         var bx = Math.floor(r() * CW), by = Math.floor(r() * CH), bw = 6 + Math.floor(r() * 14), bh = 5 + Math.floor(r() * 12);
-        if (near(bx + bw / 2, by + bh / 2, W * sc + 12 + Math.max(bw, bh) / 2)) continue;
+        if (near(bx + bw / 2, by + bh / 2, W * sc + (th.dense ? 4 : 12) + Math.max(bw, bh) / 2)) continue;
         c.fillStyle = '#070910'; c.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
         c.fillStyle = r() < 0.5 ? '#1a1f2e' : '#20263a'; c.fillRect(bx, by, bw, bh);
         for (var wy = by + 1; wy < by + bh - 1; wy += 2) for (var wx = bx + 1; wx < bx + bw - 1; wx += 2) if (r() < 0.22) { c.fillStyle = r() < 0.7 ? '#ffd27a' : '#9fd8ff'; c.fillRect(wx, wy, 1, 1); }
+        // neon signs on the street fronts
+        if (th.neon && r() < 0.35) { var nc = ['#ff2bd6', '#2bf0ff', '#ffe02b', '#7cff4a'][Math.floor(r() * 4)], ng = c.createRadialGradient(bx + bw / 2, by + bh, 0, bx + bw / 2, by + bh, 8);
+          ng.addColorStop(0, nc + '66'); ng.addColorStop(1, nc + '00'); c.fillStyle = ng; c.fillRect(bx + bw / 2 - 8, by + bh - 8, 16, 16); c.fillStyle = nc; c.fillRect(bx + 1, by + bh - 2, Math.max(2, bw - 2), 1); }
       }
     }
     if (th.forest) {
@@ -211,6 +247,11 @@
       if (th.cones && Math.abs(kc) > 0.006 && i % 4 === 0) { [W + 0.5, -(W + 0.5)].forEach(function (off) { var q = P(i, off); c.fillStyle = '#000'; c.fillRect(Math.round(q[0]) - 1, Math.round(q[1]) - 1, 3, 3); c.fillStyle = '#ff7a1a'; c.fillRect(Math.round(q[0]), Math.round(q[1]) - 1, 1, 2); c.fillStyle = '#fff'; c.fillRect(Math.round(q[0]), Math.round(q[1]), 1, 1); }); }
       if (th.rails && Math.abs(kc) > 0.008) { var q3 = P(i, side * (W + 1.2)); c.fillStyle = (i >> 1) % 2 ? '#b9bec6' : '#7d838d'; c.fillRect(Math.round(q3[0]), Math.round(q3[1]), 2, 1); }
       if (th.lights && i % 14 === 0) { var q4 = P(i, (i % 28 ? 1 : -1) * (W + 2)); var gr = c.createRadialGradient(q4[0], q4[1], 0, q4[0], q4[1], 9); gr.addColorStop(0, 'rgba(255,170,70,0.35)'); gr.addColorStop(1, 'rgba(255,170,70,0)'); c.fillStyle = gr; c.fillRect(q4[0] - 9, q4[1] - 9, 18, 18); c.fillStyle = '#ffcf7a'; c.fillRect(Math.round(q4[0]), Math.round(q4[1]), 1, 1); }
+    }
+    if (th.dense) {
+      // zebra crossings at the downtown corners
+      for (i = 0; i < n; i += 3) { if (Math.abs(curvAt(track, i)) < 0.012 || i % 30) continue;
+        for (var zw = -W + 1; zw < W; zw += 2) { var zq = P((i + 8) % n, zw); c.fillStyle = 'rgba(235,235,235,0.55)'; c.fillRect(Math.round(zq[0]), Math.round(zq[1]), 1, 2); } }
     }
     if (track.theme === 'airfield') {
       // runway lights along the straight's edges
@@ -511,6 +552,8 @@
     function finish() {
       if (!play || play.done) return;
       play.done = true;
+      engineStop();
+      if (A.beep) { A.beep(660, 0.12); setTimeout(function () { A.beep(990, 0.25); }, 140); }
       play.prev = best;   // compare the corners to the best before this lap
       play.pb = saveLap(inst, lap);
       if (play.pb) A.click && A.click();
@@ -520,7 +563,7 @@
       if (play.pb && play.prev) UI.toast('New best lap: ' + fmtLap(lap.time) + ' (' + fmtD(lap.time - play.prev.t) + ')');
     }
     function frame() {
-      if (!play || !play.lap || play.done || !cv.isConnected) return;
+      if (!play || !play.lap || play.done || !cv.isConnected) { if (!cv.isConnected) engineStop(); return; }
       var t = (Date.now() - play.t0) / 1000 * play.speed;
       if (t >= lap.time) { finish(); return; }
       play.fi = idxAt(play.T, t);
@@ -529,6 +572,8 @@
       for (var k = 0; k < lap.splits.length - 1; k++) { acc += lap.splits[k]; if (t >= acc) sd = k + 1; }
       if (sd !== play.secDone) { play.secDone = sd; renderSide(); }
       hudFor(play.fi); drawMap(cv, track, inst, play.fi);
+      var ei = Math.min(lap.v.length - 1, Math.floor(play.fi));
+      if (play.speed === 1) engineAt(lap.v[ei], lap.gear[ei], lap.state[ei], lap.boost[ei]);
       requestAnimationFrame(frame);
     }
     function start() {
@@ -540,6 +585,7 @@
         probeTxt.textContent = 'Tap the trace to look at any point of the lap.';
         renderSide(); renderCorners(); renderControls(); renderTeleHead(); redrawAll();
         if (speedSel === 0) { finish(); return; }
+        if (speedSel === 1) engineStart(S);
         requestAnimationFrame(frame);
       }, 40);
     }
@@ -553,7 +599,7 @@
       [[1, '1x'], [4, '4x'], [0, 'Instant']].forEach(function (o) {
         controls.appendChild(btn(o[1], function () {
           speedSel = o[0];
-          if (play && !play.done && o[0]) { var t = (Date.now() - play.t0) / 1000 * play.speed; play.speed = o[0]; play.t0 = Date.now() - t / o[0] * 1000; }
+          if (play && !play.done && o[0]) { var t = (Date.now() - play.t0) / 1000 * play.speed; play.speed = o[0]; play.t0 = Date.now() - t / o[0] * 1000; if (o[0] === 1) engineStart(S); else engineStop(); }
           else if (play && !play.done) finish();
           renderControls();
         }, 'chip' + (speedSel === o[0] ? ' on' : '')));
@@ -597,6 +643,7 @@
   UI.circuitTab = UI.circuitTab || 'races';
   UI.circuitView = function (inst) {
     var tab = UI.circuitTab;
+    UI.cleanup = engineStop;   // leaving the screen silences the engine
     if (UI.circuitTestTrack) { if (UI.circuitTestTrack !== TRACK) { TRACK = UI.circuitTestTrack; play = null; probe = -1; } UI.circuitTestTrack = null; }
     var chips = h('div', { class: 'schips trktabs' },
       [['races', 'Races'], ['team', 'Team'], ['test', 'Test Lap']].map(function (t) {
@@ -708,6 +755,7 @@
       });
       out.push(h('div', { class: 'plvl secthead' }, 'LIVE NOW'), lg);
     }
+    out.push(seriesCard());
     // the venue: the circuit or one of the night street circuits
     var tid = DR.TRACKS[UI.circuitTrack] ? UI.circuitTrack : 'pixel', ven = T.venue(tid), trk = DR.TRACKS[tid];
     var thumb = h('canvas', { class: 'venthumb', width: CW, height: CH });
@@ -725,7 +773,7 @@
           h('div', { class: 'gsmall dim' }, cls.floor ? 'Ideal lap ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car, no limits')), won ? h('span', { class: 'etype good' }, '✔ ' + won) : null),
         h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LAPS'), h('span', { class: 'v' }, String(T.lapsAt(cls, tid)))),
         h('div', { class: 'gst' }, h('span', { class: 'k' }, 'ENTRY'), h('span', { class: 'v' }, DR.money(cls.fee) + ' + wage')),
-        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'WIN'), h('span', { class: 'v acc' }, DR.money(cls.prize[0]))),
+        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'WIN'), h('span', { class: 'v acc' }, DR.money(T.prize(cls, 1, tid)) + (T.isNight(tid) ? ' ☾' : ''))),
         unl.length ? h('div', { class: 'gsmall eunl' }, '🔓 First win: ' + unl.join(' + ')) : null,
         h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, 'Field of 6 • ~' + Math.max(1, Math.round(cls.laps * (cls.floor || cls.pace) / T.SPEED / 60)) + ' min'),
           btn('Enter', function () { entryModal(cls, tid); }, 'small go'))));
@@ -742,8 +790,44 @@
     return h('div', {}, out);
   }
 
+  // the Night Series: start a season, or its table and next round
+  var seriesCls = 'D';
+  function seriesCard() {
+    var T = TM(), se = T.series(), out = [h('div', { class: 'plvl secthead' }, '☾ NIGHT SERIES • street circuit championship')];
+    if (!se || se.done) {
+      var last = null;
+      if (se && se.done) { var tb = T.seriesTable(); last = h('div', { class: 'gsmall acc' }, 'Last season: P' + se.pos + ' in the ' + T.classById(se.cls).name + (se.prize ? ', +' + DR.money(se.prize) : '') + ' • champion ' + tb[0].name + ' (' + tb[0].pts + ' pts)' + (tb[1] ? ', then ' + tb[1].name + ' ' + tb[1].pts + ', ' + (tb[2] ? tb[2].name + ' ' + tb[2].pts : '') : '')); }
+      out.push(h('div', { class: 'trkcard' },
+        h('div', {}, 'Four night rounds: Bayview Airfield, Route 99, Canyon Run and the Downtown Grand Prix. One car and one driver all season against the same five rivals; points 25-18-15-12-10-8 every round, and a title prize for the top three (3x the class win for the champion).'), last,
+        h('div', { class: 'schips' }, T.CLASSES.map(function (c) { return btn(c.id + ' • ' + c.name, function () { seriesCls = c.id; UI.refresh(); }, 'chip' + (seriesCls === c.id ? ' on' : '')); })),
+        h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, 'Each round: entry + wage as usual, night prizes +25%'),
+          btn('Start a season', function () { entryModal(T.classById(seriesCls), T.SERIES[0], true); }, 'small go'))));
+      return h('div', {}, out);
+    }
+    var cls = T.classById(se.cls), live = T.active().filter(function (r) { return r.series != null; })[0], d = T.driver(se.drv);
+    var car = G.state.cars.filter(function (c) { return c.uid === se.car; })[0];
+    var table = T.seriesTable();
+    out.push(h('div', { class: 'trkcard' },
+      h('div', { class: 'drow' }, h('span', { class: 'clbadge' }, cls.id), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, cls.name + ' Night Series'),
+        h('div', { class: 'gsmall dim' }, (d ? d.name : '?') + ' • ' + (car ? DR.CARS[car.carId].name : '?') + ' • round ' + Math.min(se.round + 1, T.SERIES.length) + ' of ' + T.SERIES.length + ': ' + DR.TRACKS[T.SERIES[Math.min(se.round, T.SERIES.length - 1)]].name))),
+      h('table', { class: 'trktab' }, h('tr', {}, h('th', {}, 'P'), h('th', {}, 'Driver'), T.SERIES.map(function (tid, k) { return h('th', { class: 'num' }, 'R' + (k + 1)); }), h('th', { class: 'num' }, 'Pts')),
+        table.map(function (row, i) {
+          return h('tr', { class: row.you ? 'me' : '' }, h('td', { class: 'acc' }, String(i + 1)), h('td', {}, h('span', { class: 'dot', style: { background: row.col } }), row.name, h('div', { class: 'gsmall dim' }, row.team)),
+            T.SERIES.map(function (tid, k) { var res = se.res[k]; if (!res) return h('td', { class: 'num dim' }, '—'); var p = res.indexOf(row.you ? 'you' : row.name) + 1; return h('td', { class: 'num' + (p === 1 ? ' acc' : '') }, p ? 'P' + p : '—'); }),
+            h('td', { class: 'num acc' }, String(row.pts)));
+        })),
+      h('div', { class: 'efoot' },
+        btn('Retire', function () { UI.confirm('Retire from this season? Points so far are lost.', function () { var w = T.quitSeries(); if (w) UI.toast(w); UI.refresh(); }, 'Retire'); }, 'small red'),
+        live ? btn('Watch round ' + (se.round + 1), function () { UI.watchRace = live.id; UI.refresh(); }, 'small go') :
+          btn('Run round ' + (se.round + 1) + ': ' + DR.TRACKS[T.SERIES[se.round]].name, function (e) {
+            var b = e.currentTarget; b.classList.add('busy'); b.textContent = 'Qualifying…';
+            setTimeout(function () { var res = T.nextRound(); if (!res.race) { UI.toast(res.msg); UI.refresh(); return; } UI.watchRace = res.race.id; UI.refresh(); }, 30);
+          }, 'small go'))));
+    return h('div', {}, out);
+  }
+
   // pick a car and a driver for a class
-  function entryModal(cls, tid) {
+  function entryModal(cls, tid, series) {
     var T = TM(), s = T.state(), selCar = null, selDrv = null, close;
     var carBox = h('div', { class: 'col entlist' }), drvBox = h('div', { class: 'col entlist' }), sum = h('div', { class: 'entsum' }), go;
     var free = s.drivers.filter(function (d) { return !T.driverBusy(d.id); });
@@ -771,19 +855,20 @@
       var d = T.driver(selDrv), cost = cls.fee + (d ? d.wage : 0);
       sum.innerHTML = '';
       sum.appendChild(h('div', {}, 'Entry ' + DR.money(cls.fee) + ' + wage ' + DR.money(d ? d.wage : 0) + ' = ', h('b', { class: 'acc' }, DR.money(cost))));
-      sum.appendChild(h('div', { class: 'gsmall dim' }, 'Prizes: ' + cls.prize.filter(Boolean).map(function (p, i) { return 'P' + (i + 1) + ' ' + DR.money(p); }).join(' • ')));
+      sum.appendChild(h('div', { class: 'gsmall dim' }, 'Prizes: ' + cls.prize.filter(Boolean).map(function (p, i) { return 'P' + (i + 1) + ' ' + DR.money(T.prize(cls, i + 1, tid)); }).join(' • ') + (T.isNight(tid) ? ' (night race +25%)' : '')));
+      if (series) sum.appendChild(h('div', { class: 'gsmall acc' }, 'Season: the same car and driver for all four rounds (Airfield, Route 99, Canyon, Downtown). Points 25-18-15-12-10-8; the champion wins ' + DR.money(Math.round(cls.prize[0] * T.TITLE[0] / 50) * 50) + '.'));
     }
     go = btn('Send to the track', function () {
       if (!selCar) return UI.toast('No car can enter this class');
       go.classList.add('busy'); go.textContent = 'Qualifying…';
       setTimeout(function () {
-        var res = T.enter(cls.id, selCar, selDrv, tid);
+        var res = series ? T.startSeries(cls.id, selCar, selDrv) : T.enter(cls.id, selCar, selDrv, tid);
         if (!res.race) { go.classList.remove('busy'); go.textContent = 'Send to the track'; return UI.toast(res.msg); }
         close(); UI.watchRace = res.race.id; A.cash && A.cash(); UI.refresh();
       }, 30);
     }, 'primary');
     // ideal laps take a moment the first time: draw after the modal shows
-    close = UI.modal([h('h2', {}, cls.name + ' • ' + DR.TRACKS[tid].name), h('div', { class: 'gsmall dim' }, (cls.floor ? 'Cars whose ideal lap at Pixel Raceway is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + T.lapsAt(cls, tid) + ' laps • 6 cars'),
+    close = UI.modal([h('h2', {}, series ? cls.name + ' • Night Series' : cls.name + ' • ' + DR.TRACKS[tid].name), h('div', { class: 'gsmall dim' }, (cls.floor ? 'Cars whose ideal lap at Pixel Raceway is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + T.lapsAt(cls, tid) + ' laps • 6 cars'),
       h('div', { class: 'plvl' }, 'CAR'), carBox, h('div', { class: 'plvl' }, 'DRIVER'), drvBox, sum,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Cancel', function () { close(); }), go)]);
     carBox.appendChild(h('div', { class: 'dim' }, 'Working out lap times…'));
@@ -799,6 +884,13 @@
       var t = r.done ? r.end : T.clock(r), c = cv.getContext('2d');
       c.imageSmoothingEnabled = false; c.drawImage(base.cv, 0, 0);
       var rows = T.standings(r, t);
+      // your car's engine, while it's racing (silent at 16x: too fast to follow)
+      var mine = rows.filter(function (x) { return x.e.you; })[0], car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0];
+      if (mine && r.snd && car && !mine.w.done && !r.done && !r.ff && cv.isConnected) {
+        if (!eng) engineStart(G.spec(car));
+        var si = Math.min(r.snd.v.length - 1, Math.floor(mine.w.frac * r.snd.v.length));
+        engineAt(r.snd.v[si], r.snd.g[si], r.snd.s[si], r.snd.b[si]);
+      } else if (eng) engineStop();
       rows.slice().reverse().forEach(function (x) {
         if (x.w.done) return;
         var fi = (x.w.frac * n) % n;
@@ -832,7 +924,7 @@
             h('td', { class: 'num' }, gap), h('td', { class: 'num dim' }, (x.w.lap > 1 || x.w.done) && x.e.best < 1e8 ? T.fmtLap(x.e.best) : '—'));
         })));
       if (allDone) {
-        var pos = st.rows.indexOf(me) + 1, prize = cls.prize[pos - 1] || 0, hist = T.state().history[0];
+        var pos = st.rows.indexOf(me) + 1, prize = T.prize(cls, pos, r.track), hist = T.state().history[0];
         table.appendChild(h('div', { class: 'resline' }, h('span', { class: pos === 1 ? 'acc pix' : 'pix' }, 'P' + pos), ' ', (d ? d.name : 'Your driver'),
           prize ? h('span', { class: 'good' }, ' +' + DR.money(prize)) : null,
           hist && hist.grew && Object.keys(hist.grew).length ? h('div', { class: 'gsmall' }, 'Learned: ' + Object.keys(hist.grew).map(function (k) { return SKILLS.filter(function (s2) { return s2[0] === k; })[0][1] + ' +' + hist.grew[k]; }).join(', ')) : null,
@@ -841,10 +933,11 @@
       }
     }
     (function loop() {
-      if (!cv.isConnected && lastTab) return;
+      if (!cv.isConnected && lastTab) { engineStop(); return; }
       var st = draw(), now = Date.now();
       if (now - lastTab > 300) { lastTab = now; renderTable(st); if (!r.done && T.clock(r) >= r.end) DR.Team.report(); }
-      if (!r.done || !cv.isConnected) requestAnimationFrame(loop);
+      if (!r.done) requestAnimationFrame(loop);   // (stops itself once the screen is gone)
+      else engineStop();
     })();
     return h('div', {}, head, h('div', { class: 'trktop' }, h('div', { class: 'trkmapcol' }, h('div', { class: 'trkframe' }, cv, cornerLabels(track))), h('div', { class: 'trkside wide' }, table)));
   }

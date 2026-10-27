@@ -79,10 +79,10 @@
     remember();
     var inst = G.car();
     var rail = h('div', { class: 'srail' },
-      railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }),
-      railItem('u_map', 2, 'Street Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
-      railItem('u_circuit', 2, 'Circuit', tab === 'circuit', function () { UI.show(UI.RaceMenu, 'circuit'); }),
-      railItem('u_test', 2, 'Test & Tune', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }));
+      railItem('u_career', 2, 'Drag Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }),
+      railItem('u_test', 2, 'Drag Test', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }),
+      railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
+      railItem('u_circuit', 2, 'Race Team', tab === 'circuit', function () { UI.show(UI.RaceMenu, 'circuit'); }));
     var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'circuit' ? UI.circuitView(inst) : testView(inst);
     return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, tab === 'circuit' ? UI.circuitBest(inst) : bestText(inst))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
@@ -299,7 +299,7 @@
         h('div', { class: 'efoot' }, h('span', { class: 'gsmall acc' }, r[4] ? 'Best ' + r[4].toFixed(3) + 's' : 'No runs yet'),
           btn('Run', function () { DR.Race.start(r[3]); }, 'small go'))));
     });
-    return h('div', {}, h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'TEST & TUNE'), h('div', { class: 'pix acc' }, 'Solo passes'),
+    return h('div', {}, h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'DRAG TEST & TUNE'), h('div', { class: 'pix acc' }, 'Solo passes'),
       h('div', { class: 'dim' }, 'No money on the line - dial in your tune. Your best times are saved.'))), grid);
   }
 

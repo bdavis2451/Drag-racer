@@ -24,7 +24,8 @@
     { id: 'pixel', blurb: 'The purpose-built circuit: kerbs, gravel traps, a long main straight. Daytime racing.' },
     { id: 'airfield', blurb: 'Night race at the old airfield: flat out down the runway, a cone hairpin onto the taxiway, round the hangars. Power counts.' },
     { id: 'highway', blurb: 'Route 99 after dark: flat-out freeway sweepers, a tight off-ramp and two city blocks. The fastest, longest lap.' },
-    { id: 'canyon', blurb: 'The back road into the hills: narrow, twisty, guard rails and switchbacks. Light, nimble cars shine.' }
+    { id: 'canyon', blurb: 'The back road into the hills: narrow, twisty, guard rails and switchbacks. Light, nimble cars shine.' },
+    { id: 'downtown', blurb: 'Closed-off city streets at night: square corners between the towers, neon, a long avenue by the docks. Braking and traction win here.' }
   ];
   T.venue = function (id) { return T.VENUES.filter(function (v) { return v.id === id; })[0] || T.VENUES[0]; };
   // laps scaled so a race is about as long on every track
@@ -186,7 +187,9 @@
   // Every lap of every car, worked out up front. Overtaking: a quicker car
   // that catches the one ahead gets by if its pace advantage that lap is
   // big enough (luck helps); otherwise it's stuck behind for the lap.
-  T.enter = function (clsId, uid, drvId, tid) {
+  // opts: { field: a fixed AI field (a championship's), series: round no. }
+  T.enter = function (clsId, uid, drvId, tid, opts) {
+    opts = opts || {};
     tid = DR.TRACKS[tid] ? tid : T.TRACK;
     var cls = T.classById(clsId), inst = G.state.cars.filter(function (c) { return c.uid === uid; })[0], d = T.driver(drvId), s = st();
     if (!cls || !inst || !d) return { msg: 'Pick a car and a driver' };
@@ -204,8 +207,11 @@
     var Tt = [0], n = you.v.length, ds = tr.len / n;
     for (var i = 0; i < n; i++) Tt.push(Tt[i] + 2 * ds / (you.v[i] + you.v[(i + 1) % n]));
     var prof = []; for (i = 0; i <= n; i += 4) prof.push(+(Tt[i] / Tt[n]).toFixed(4));
+    // the sound of your car round the lap: speed, gear, pedal, boost
+    var snd = { v: [], g: [], s: [], b: [] };
+    for (i = 0; i < n; i += 4) { snd.v.push(+you.v[i].toFixed(1)); snd.g.push(you.gear[i]); snd.s.push(you.state[i]); snd.b.push(+you.boost[i].toFixed(1)); }
     var field = [{ name: d.name, team: 'Your team', car: inst.carId, col: inst.color || d.col, base: you.time, f: f, you: true, drv: d.id }];
-    aiField(cls, 5).forEach(function (o) {
+    (opts.field || aiField(cls, 5)).forEach(function (o) {
       var of = T.factors(o.d);
       // their pace here: the same car's stock lap here vs on the reference track
       var k2 = stockT[o.car] && stock0[o.car] ? stockT[o.car] / stock0[o.car] : tr.len / DR.TRACKS[T.TRACK].len;
@@ -238,9 +244,9 @@
     }
     var end = Math.max.apply(null, order.map(function (e) { return e.cum[e.cum.length - 1]; }));
     G.pay(cost);
-    var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost,
+    var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series,
       field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err }; }),
-      ideal: ideal, base: you.time };
+      ideal: ideal, base: you.time, snd: snd };
     s.races.push(r);
     if (s.fast) T.setFast(r, true); else G.save();
     return { race: r };
@@ -272,7 +278,7 @@
     s.races.forEach(function (r) {
       if (r.done || T.clock(r) < r.end) return;
       r.done = true;
-      var cls = T.classById(r.cls), you = r.field.filter(function (e) { return e.you; })[0], pos = r.field.indexOf(you) + 1, prize = cls.prize[pos - 1] || 0;
+      var cls = T.classById(r.cls), you = r.field.filter(function (e) { return e.you; })[0], pos = r.field.indexOf(you) + 1, prize = T.prize(cls, pos, r.track);
       var d = T.driver(r.drv), car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0];
       if (prize) G.earn(prize);
       var grew = d ? learn(d, pos, r) : null;
@@ -284,7 +290,8 @@
       if (s.done - s.boardAt >= T.REFRESH_EVERY) { s.board = makeBoard(); s.boardAt = s.done; }
       s.history.unshift({ cls: cls.id, track: r.track || T.TRACK, pos: pos, prize: prize, drv: d ? d.name : '?', car: car ? car.carId : you.car, at: Date.now(), best: you.best, grew: grew, unl: unl });
       s.history = s.history.slice(0, 20);
-      msgs.push({ text: line, race: r, pos: pos, prize: prize, grew: grew, unl: unl });
+      var sm = r.series != null ? seriesRound(r) : null;
+      msgs.push({ text: line + (sm ? ' • ' + sm : ''), race: r, pos: pos, prize: prize, grew: grew, unl: unl });
     });
     // keep just the last few finished races around to look at
     var fin = s.races.filter(function (r) { return r.done; });
@@ -292,6 +299,59 @@
     if (msgs.length) G.save();
     return msgs;
   };
+  // night street circuits pay a bonus on every prize
+  T.NIGHT_BONUS = 1.25;
+  T.isNight = function (tid) { return !!(DR.TRACKS[tid] && DR.TRACKS[tid].theme); };
+  T.prize = function (cls, pos, tid) { var p = cls.prize[pos - 1] || 0; return T.isNight(tid) ? Math.round(p * T.NIGHT_BONUS / 50) * 50 : p; };
+
+  // ---------------------------------------------------------------- Night Series
+  // A championship across the four street circuits: one car and driver for
+  // the season against the same five AI rivals, points every round, a title
+  // prize at the end. Each round is entered when you're ready (the car can
+  // be worked on between rounds, but must stay in its class).
+  T.SERIES = ['airfield', 'highway', 'canyon', 'downtown'];
+  T.POINTS = [25, 18, 15, 12, 10, 8];
+  T.TITLE = [3, 1.5, 0.75];    // title prize: x the class's win prize
+  T.series = function () { return st().series || null; };
+  T.startSeries = function (clsId, uid, drvId) {
+    var s = st(), cls = T.classById(clsId);
+    if (s.series && !s.series.done) return { msg: 'A Night Series is already running' };
+    var field = aiField(cls, 5);
+    s.series = { cls: clsId, car: uid, drv: drvId, round: 0, field: field, pts: { you: 0 }, res: [], done: false };
+    field.forEach(function (o) { s.series.pts[o.name] = 0; });
+    var res = T.nextRound();
+    if (!res.race) { s.series = null; G.save(); }
+    return res;
+  };
+  T.nextRound = function () {
+    var s = st(), se = s.series;
+    if (!se || se.done) return { msg: 'No season running' };
+    if (T.active().some(function (r) { return r.series != null; })) return { msg: 'This round is still running' };
+    return T.enter(se.cls, se.car, se.drv, T.SERIES[se.round], { field: se.field, series: se.round });
+  };
+  T.quitSeries = function () { var s = st(); if (s.series && !T.active().some(function (r) { return r.series != null; })) { s.series = null; G.save(); return ''; } return 'Wait for this round to finish'; };
+  // the season table: [{ name, team, pts, you }], leader first
+  T.seriesTable = function () {
+    var se = T.series(); if (!se) return [];
+    var d = T.driver(se.drv), rows = [{ name: d ? d.name : 'Your driver', team: 'Your team', pts: se.pts.you, you: true, col: '#ffcc00' }];
+    se.field.forEach(function (o) { rows.push({ name: o.name, team: o.team, pts: se.pts[o.name] || 0, col: o.col, car: o.car }); });
+    return rows.sort(function (a, b) { return b.pts - a.pts || (a.you ? -1 : 1); });
+  };
+  function seriesRound(r) {
+    var se = st().series; if (!se || se.done || r.series !== se.round) return '';
+    r.field.forEach(function (e, i) { var k = e.you ? 'you' : e.name; se.pts[k] = (se.pts[k] || 0) + (T.POINTS[i] || 0); });
+    se.res.push(r.field.map(function (e) { return e.you ? 'you' : e.name; }));
+    se.round++;
+    if (se.round < T.SERIES.length) return 'Night Series: round ' + se.round + ' of ' + T.SERIES.length + ' done';
+    se.done = true;
+    var table = T.seriesTable(), pos = table.findIndex(function (x) { return x.you; }) + 1, cls = T.classById(se.cls);
+    var prize = T.TITLE[pos - 1] ? Math.round(cls.prize[0] * T.TITLE[pos - 1] / 50) * 50 : 0;
+    if (prize) G.earn(prize);
+    se.pos = pos; se.prize = prize;
+    var s = st(); s.titles = s.titles || {}; if (pos === 1) s.titles[se.cls] = (s.titles[se.cls] || 0) + 1;
+    return 'NIGHT SERIES FINAL: P' + pos + ' in the championship' + (prize ? ', title prize +' + DR.money(prize) : '');
+  }
+
   // skills grow toward the driver's potential; racing at the front teaches more
   function learn(d, pos, r) {
     var ageK = d.age < 25 ? 1.3 : d.age < 31 ? 1 : d.age < 37 ? 0.6 : 0.3, posK = pos <= 3 ? 1.25 : 1;
@@ -350,7 +410,7 @@
     var el = origGarage.apply(this, arguments), inst = G.car();
     if (inst && T.carAway(inst.uid)) {
       var r = T.raceFor(inst.uid);
-      el.appendChild(h('div', { class: 'awaybanner', onclick: function () { UI.circuitTab = 'races'; UI.watchRace = r.id; UI.show(UI.RaceMenu, 'circuit'); } },
+      (el.querySelector('.gstatuses') || el).appendChild(h('div', { class: 'awaybanner', onclick: function () { UI.circuitTab = 'races'; UI.watchRace = r.id; UI.show(UI.RaceMenu, 'circuit'); } },
         h('span', { class: 'acc' }, 'AT THE TRACK'), h('span', {}, T.awayText(inst.uid)), h('span', { class: 'dim' }, 'Tap to watch ▸')));
     }
     return el;
@@ -379,6 +439,7 @@
   function report() {
     if (!G.state || !G.state.team) return;
     var msgs = T.tick();
+    if (msgs.some(function (m) { return m.prize; }) && DR.Audio && DR.Audio.cash) { DR.Audio.init(); DR.Audio.cash(); }
     msgs.forEach(function (m, i) {
       setTimeout(function () { UI.toast('🏁 ' + m.text + (m.unl.length ? ' • UNLOCKED: ' + m.unl.join(' • ') : '')); }, i * 2600);
     });

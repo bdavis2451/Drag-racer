@@ -116,7 +116,7 @@
         h('div', { class: 'gsmall dim' }, sh.where + ' • about ' + sh.crowd + ' visitors • ' + DR.money(sh.pay) + '/visitor'),
         h('div', { class: 'gsmall' }, 'Prizes ' + sh.prizes.map(DR.money).join(' / ')),
         h('div', { class: 'gsmall' }, '🥇' + st.places[0] + '  🥈' + st.places[1] + '  🥉' + st.places[2] + (st.best ? '  • best crowd ' + st.best : '')),
-        goal ? h('div', { class: 'gsmall eunl' }, '🏁 Career: ' + DR.showGoal(goal).replace(' at the ' + sh.name, '') + ' for ' + DR.money(G.eventReward(goal))) : null,
+        goal ? h('div', { class: 'gsmall eunl' }, '🏁 Drag career: ' + DR.showGoal(goal).replace(' at the ' + sh.name, '') + ' for ' + DR.money(G.eventReward(goal))) : null,
         bored ? h('div', { class: 'warn gsmall' }, 'The regulars have seen this build. Change it up for a bigger crowd.') : null,
         !ok ? h('div', { class: 'warn gsmall' }, '🔒 Needs a ' + sh.minStars + '-star car') : null,
         h('div', { class: 'efoot' }, h('span', { class: 'efee' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free entry'),

@@ -864,3 +864,7 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .venthumb { width: 150px; height: auto; aspect-ratio: 600 / 330; image-rendering: pixelated; flex: none; box-shadow: 0 0 0 2px #000; }
 @media (max-width: 700px) { .venthumb { width: 110px; } }
 .citylegend .lg.c::before { background: #a860ff; }
+.gwrap.hub .gstatuses { position: absolute; left: 8px; top: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: calc(100% - 250px); z-index: 2; }
+.gwrap.hub .gstatuses .gstatus { position: static; max-width: none; }
+.gwrap.hub .gstatus.gteam { box-shadow: var(--edge), inset 0 0 0 3px #4a3a6e; }
+.gstatuses .awaybanner { position: static; max-width: 340px; }
