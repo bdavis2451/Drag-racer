@@ -20,7 +20,12 @@
     { id: 'downtown', name: 'Downtown Lights', x: 300, y: 134, icon: 'tower', blurb: 'Stoplight to stoplight between the towers. Cold asphalt, low grip, small money.', dist: 'eighth', grip: 0.85, bets: [250, 500, 1000, 2500, 5000], stage: 0 },
     { id: 'highway', name: 'Route 99', x: 392, y: 118, icon: 'shield', blurb: 'The regulars meet at the on-ramp. Better road, bigger bets.', dist: 'eighth', grip: 0.88, bets: [1000, 2500, 5000, 10000, 25000], stage: 1 },
     { id: 'docks', name: 'Harbor Docks', x: 205, y: 163, icon: 'anchor', blurb: 'Dusty concrete between the container stacks. Hard to hook, serious money.', dist: 'eighth', grip: 0.8, bets: [2500, 5000, 10000, 25000, 50000], stage: 2 },
-    { id: 'runway', name: 'Airfield Runway', x: 442, y: 158, icon: 'plane', blurb: 'A full quarter mile on the old runway, for big-power cars and big bets.', dist: 'quarter', grip: 0.92, bets: [5000, 10000, 25000, 50000, 100000], stage: 3 }
+    { id: 'runway', name: 'Airfield Runway', x: 442, y: 158, icon: 'plane', blurb: 'A full quarter mile on the old runway, for big-power cars and big bets.', dist: 'quarter', grip: 0.92, bets: [5000, 10000, 25000, 50000, 100000], stage: 3 },
+    // circuit venues: where the team races (circuit: the track's id)
+    { id: 'raceway', name: 'Pixel Raceway', x: 332, y: 32, icon: 'flag', circuit: 'pixel', stage: 0, blurb: 'The purpose-built circuit up on the hill north of the bay: kerbs, gravel traps and a long main straight.' },
+    { id: 'c_airfield', name: 'Airfield Circuit', x: 466, y: 180, icon: 'flag', circuit: 'airfield', stage: 0, blurb: 'After dark the old airfield turns into a circuit: down the runway, a cone hairpin onto the taxiway and back round the hangars.' },
+    { id: 'c_highway', name: 'Route 99 Loop', x: 376, y: 178, icon: 'flag', circuit: 'highway', stage: 0, blurb: 'The freeway ring at night: flat-out sweepers, a tight off-ramp and two downtown blocks back to the on-ramp.' },
+    { id: 'c_canyon', name: 'Canyon Run', x: 146, y: 50, icon: 'flag', circuit: 'canyon', stage: 0, blurb: 'The two-lane back road up into the hills: switchbacks, guard rails and a fast valley straight.' }
   ];
   // ---------------------------------------------------------------- geography
   var MAINLAND = [[150, -8], [490, -8], [490, 200], [450, 207], [420, 196], [394, 202], [366, 194], [338, 197], [314, 188], [288, 190], [262, 180], [240, 174], [222, 164],
@@ -58,7 +63,7 @@
     [[212, 122], [218, 140], [212, 156], [198, 160]], [[230, 130], [214, 128], [196, 136]],
     [[292, 228], [262, 222], [232, 228], [204, 236], [184, 242]], [[322, 222], [336, 236], [352, 242]],
     [[434, 146], [440, 172], [462, 182]], [[184, 66], [170, 52], [160, 40]],
-    [[302, 72], [298, 56], [292, 40]], [[352, 76], [356, 60], [360, 46]]
+    [[302, 72], [298, 56], [292, 40], [290, 32]], [[352, 76], [356, 60], [360, 46]]
   ];
   // interchanges get a little cloverleaf
   var JUNCTIONS = [[256, 82], [228, 134], [306, 190], [388, 90], [404, 126], [352, 182], [234, 108], [332, 128]];
@@ -119,11 +124,13 @@
   function strokeLine(c, pts, w, closed) { c.lineWidth = w; c.beginPath(); curve(c, pts, closed); c.stroke(); }
 
   // ---------------------------------------------------------------- palette
+  // night: navy water, blue-grey hills, sodium-orange streets and glowing
+  // white-blue freeways, like the Underground 2 map after dark
   var P = {
-    deep: [12, 29, 37], sea: [17, 40, 50], sea2: [21, 48, 58], shal: [29, 63, 72], shal2: [41, 82, 90], foam: [74, 120, 124],
-    l0: [44, 50, 46], l1: [52, 59, 54], l2: [61, 69, 63], l3: [72, 81, 74], l4: [86, 96, 88], contour: [38, 43, 40], rim: [92, 104, 96],
-    c0: [21, 24, 23], c1: [27, 31, 29], roof: [36, 41, 38], roof2: [44, 50, 46],
-    st: [84, 92, 87], st2: [64, 71, 67], art: [140, 148, 143], hw: [238, 242, 238], hwE: [166, 174, 168], halo: [70, 78, 73],
+    deep: [7, 13, 28], sea: [10, 20, 40], sea2: [13, 26, 50], shal: [19, 38, 66], shal2: [30, 58, 92], foam: [64, 104, 148],
+    l0: [21, 25, 35], l1: [26, 31, 43], l2: [32, 38, 52], l3: [39, 46, 62], l4: [49, 57, 76], contour: [17, 20, 30], rim: [66, 92, 128],
+    c0: [11, 13, 21], c1: [15, 18, 28], roof: [29, 33, 47], roof2: [39, 44, 62],
+    st: [168, 116, 56], st2: [110, 80, 46], art: [236, 170, 84], hw: [214, 238, 255], hwE: [88, 150, 214], halo: [28, 54, 96],
     lane: [118, 126, 120], tar: [58, 62, 60], white: [226, 230, 226], red: [168, 52, 48], amber: [200, 150, 60], blue: [60, 98, 140], teal: [52, 112, 108]
   };
 
@@ -235,7 +242,11 @@
       var q = y * W + x;
       if (!isLand[q] || core[q] < 0.5 || streets[q] > 0.35) continue;
       var blk = N3(x / 3.1, y / 2.7);
-      if (blk > 0.55) put(x, y, streets[q - W] > 0.35 || streets[q - 1] > 0.35 ? P.roof2 : P.roof);
+      if (blk > 0.55) {
+        put(x, y, streets[q - W] > 0.35 || streets[q - 1] > 0.35 ? P.roof2 : P.roof);
+        // lit windows, a few per block
+        if (R() < 0.09) put(x, y, R() < 0.75 ? [255, 206, 120] : [150, 210, 255]);
+      }
     }
     // roads, back to front: streets, arterials, highway halo, edge and core
     for (i = 0; i < W * H; i++) {
@@ -282,6 +293,22 @@
     // a bridge deck where the highway crosses the water
     for (i = 0; i < W * H; i++) if (hwEdge[i] > 0.5 && !isLand[i] && (i % W) % 3 === 0) { x = i % W; y = (i / W) | 0; put(x, y + 2, P.c0); }
 
+    // Pixel Raceway on the hill north of the bay: the real track's outline
+    // in miniature, with its paddock and grandstand
+    var TR = DR.TRACKS && DR.TRACKS.pixel;
+    if (TR) {
+      var rx0 = 254, ry0 = 8, rw = 68, rh = 34, mnx = 1e9, mxx = -1e9, mny = 1e9, mxy = -1e9;
+      TR.cx.forEach(function (v, k) { mnx = Math.min(mnx, v); mxx = Math.max(mxx, v); mny = Math.min(mny, TR.cy[k]); mxy = Math.max(mxy, TR.cy[k]); });
+      var rs = Math.min((rw - 4) / (mxx - mnx), (rh - 4) / (mxy - mny));
+      for (y = ry0; y < ry0 + rh; y++) for (x = rx0; x < rx0 + rw; x++) put(x, y, bayer(x, y) < 0.5 ? [20, 40, 26] : [24, 46, 30]);
+      for (var k3 = 0; k3 < TR.cx.length; k3++) {
+        var tx = Math.round(rx0 + 2 + (TR.cx[k3] - mnx) * rs), ty = Math.round(ry0 + 2 + (mxy - TR.cy[k3]) * rs);
+        put(tx, ty, [150, 156, 166]); put(tx + 1, ty, [110, 116, 126]);
+      }
+      rect(rx0 + 6, ry0 + rh - 4, 22, 2, P.roof2); for (x = rx0 + 6; x < rx0 + 28; x += 2) put(x, ry0 + rh - 4, [[220, 60, 90], [255, 204, 0], [60, 160, 255]][x % 3]);
+      put(rx0 + 2 + Math.round((TR.cx[0] - mnx) * rs), ry0 + 2 + Math.round((mxy - TR.cy[0]) * rs), P.white);
+    }
+
     // ---- a soft dark vignette, dithered
     for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
       var v = Math.max(0, Math.hypot((x - W / 2) / (W * 0.62), (y - H / 2) / (H * 0.62)) - 0.62) * 2.2;
@@ -310,7 +337,7 @@
   // one marker: a rounded 13x13 badge with the icon, a point below, a count
   // bubble and (for the selected / next / boss places) animated extras.
   function drawMarker(c, sx, sy, s, p, info, on, T) {
-    var col = info.boss ? [214, 48, 48] : p.go ? [64, 140, 230] : info.street ? [52, 196, 104] : info.n ? [240, 190, 40] : [120, 128, 122];
+    var col = info.boss ? [214, 48, 48] : info.circuit ? [168, 96, 255] : p.go ? [64, 140, 230] : info.street ? [52, 196, 104] : info.n ? [240, 190, 40] : [120, 128, 122];
     var lit = col.map(function (v) { return Math.min(255, v + 60); }), dark = col.map(function (v) { return v * 0.55; });
     function rgb(a) { return 'rgb(' + (a[0] | 0) + ',' + (a[1] | 0) + ',' + (a[2] | 0) + ')'; }
     var bob = on ? Math.round(Math.sin(T * 6) * 1) : 0;
@@ -360,7 +387,7 @@
     return v;
   }
   DR.cityView = function () { return { z: 1, cx: W / 2, cy: H / 2 }; };
-  var DISTRICTS = [['DOWNTOWN', 300, 116], ['EASTSIDE', 440, 34], ['AIRFIELD', 444, 186], ['HARBOR', 196, 128], ['PIXEL ISLAND', 270, 252], ['CANYON', 140, 24], ['THE BAY', 296, 54]];
+  var DISTRICTS = [['RACEWAY', 288, 1], ['DOWNTOWN', 300, 116], ['EASTSIDE', 440, 34], ['AIRFIELD', 444, 186], ['HARBOR', 196, 128], ['PIXEL ISLAND', 270, 252], ['CANYON', 140, 24], ['THE BAY', 296, 54]];
 
   DR.drawCityMap = function (canvas, pins, sel, t, view) {
     if (!base) base = build();
@@ -370,7 +397,7 @@
     if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
     var c = canvas.getContext('2d'), k = cw / W * view.z;
     c.imageSmoothingEnabled = false;
-    c.fillStyle = '#0b1d24'; c.fillRect(0, 0, cw, ch);
+    c.fillStyle = '#070d1c'; c.fillRect(0, 0, cw, ch);
     c.drawImage(base, view.cx - W / 2 / view.z, view.cy - H / 2 / view.z, W / view.z, H / view.z, 0, 0, cw, ch);
     function toScreen(x, y) { return [(x - view.cx) * k + cw / 2, (y - view.cy) * k + ch / 2]; }
     var s = Math.max(2, Math.round(cw / 300)), T = t || 0;
@@ -383,6 +410,7 @@
     var hits = [], label = null;
     DR.CITY.forEach(function (p) {
       var q = toScreen(p.x, p.y), info = pins[p.id] || {};
+      q[1] = Math.max(q[1], 19 * s);   // keep a marker near the top edge on screen
       var hb = drawMarker(c, q[0], q[1], s, p, info, p.id === sel, T);
       hits.push({ p: p, x: hb.x, y: hb.y, r: hb.r });
       if (p.id === sel) label = { p: p, x: q[0], y: hb.y - 12 * s };

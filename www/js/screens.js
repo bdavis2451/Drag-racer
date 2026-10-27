@@ -106,7 +106,7 @@
   function spotOpen(p) { return G.careerState().stage >= p.stage; }
   function mapView(inst) {
     var pins = {};
-    DR.CITY.forEach(function (p) { pins[p.id] = spotOpen(p) ? { street: true } : {}; });
+    DR.CITY.forEach(function (p) { pins[p.id] = p.circuit ? { circuit: true } : spotOpen(p) ? { street: true } : {}; });
     if (!selPlace || !DR.CITY.some(function (p) { return p.id === selPlace; })) selPlace = DR.CITY[0].id;
     var place = DR.CITY.filter(function (p) { return p.id === selPlace; })[0];
     var cv = h('canvas', { class: 'citycv' }), t0 = Date.now(), last = -1, dirty = true;
@@ -122,11 +122,11 @@
       if (!p || p.id === selPlace) return;
       selPlace = p.id; streetOpps = null; A.click(); UI.refresh();
     }, redraw);
-    var open = DR.CITY.filter(spotOpen).length;
+    var spots = DR.CITY.filter(function (p) { return !p.circuit; }), open = spots.filter(spotOpen).length;
     var legend = h('div', { class: 'gsmall dim citylegend' },
-      h('span', { class: 'lg g' }, 'open'), h('span', { class: 'lg' }, 'opens later'), h('span', {}, open + ' / ' + DR.CITY.length + ' spots open'), h('span', {}, 'drag / pinch to zoom'));
+      h('span', { class: 'lg g' }, 'street race'), h('span', { class: 'lg c' }, 'circuit'), h('span', { class: 'lg' }, 'opens later'), h('span', {}, open + ' / ' + spots.length + ' spots open'), h('span', {}, 'drag / pinch to zoom'));
     return h('div', {},
-      h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, h('div', { class: 'cityframe' }, cv, zoomBar(ctl)), legend), h('div', { class: 'cityside' }, streetView(inst, place))));
+      h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, h('div', { class: 'cityframe' }, cv, zoomBar(ctl)), legend), h('div', { class: 'cityside' }, place.circuit ? circuitSpot(place) : streetView(inst, place))));
   }
   function zoomBar(ctl) {
     return h('div', { class: 'cityzoom' }, btn('+', function () { ctl.zoomBy(1.5); }, 'small'), btn('−', function () { ctl.zoomBy(1 / 1.5); }, 'small'), btn('⤢', function () { ctl.reset(); }, 'small'));
@@ -225,6 +225,18 @@
     close = UI.modal([h('h2', {}, 'Stage ' + (si + 1) + ' sponsors'), h('p', { class: 'dim' }, 'You can only sign one per stage, so choose carefully.'), h('div', { class: 'col' }, rows), btn('Not yet', function () { close(); }, 'small')]);
   }
 
+  // a circuit venue on the map: what races there, and the way in
+  function circuitSpot(p) {
+    var t = DR.TRACKS[p.circuit], T = DR.Team, live = T.active().filter(function (r) { return (r.track || 'pixel') === p.circuit; });
+    var thumb = h('canvas', { class: 'ecv', width: 600, height: 330 });
+    UI.later(function () { if (UI.circuitThumb) UI.circuitThumb(thumb, t); });
+    return h('div', {}, h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'CIRCUIT • ' + (t.len / 1000).toFixed(2) + ' KM • ' + t.corners.length + ' CORNERS' + (t.theme ? ' • NIGHT' : '')),
+      h('div', { class: 'pix acc' }, t.name), h('div', { class: 'dim' }, p.blurb))),
+      h('div', { class: 'ecard' }, h('div', { class: 'ecvwrap' }, thumb),
+        h('div', { class: 'gsmall dim' }, live.length ? live.length + ' of your cars racing here now' : 'Team races: your hired drivers in your cars, against five AI teams. Five classes, from Club Cup to Unlimited GP.'),
+        h('div', { class: 'efoot' }, btn('Test lap', function () { UI.circuitTab = 'test'; UI.circuitTestTrack = p.circuit; UI.show(UI.RaceMenu, 'circuit'); }, 'small'),
+          btn('Race here', function () { UI.circuitTab = 'races'; UI.circuitTrack = p.circuit; UI.watchRace = null; UI.show(UI.RaceMenu, 'circuit'); }, 'small go'))));
+  }
   function streetView(inst, p) {
     var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET SPOT • ' + (p.dist === 'quarter' ? '1/4' : '1/8') + ' MILE • ' + Math.round(p.grip * 100) + '% GRIP'),
       h('div', { class: 'pix acc' }, p.name), h('div', { class: 'dim' }, p.blurb)));
@@ -341,6 +353,18 @@
         });
         list.appendChild(h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, def.label,
           inst.tune.gears ? h('button', { class: 'treset', title: 'Back to default', onclick: function () { delete inst.tune.gears; G.save(); UI.refresh(); } }, '↺') : null)), gg));
+        return;
+      }
+      if (def.key === 'gearBoost') {
+        var gb = h('div', { class: 'gear-grid' });
+        S.tune.gearBoost.forEach(function (b, gi) {
+          gb.appendChild(slider('Gear ' + (gi + 1), b, def.min(S), def.max(S), 0.5, 'psi', function (v) {
+            var arr = (inst.tune.gearBoost || S.tune.gearBoost).slice(); arr[gi] = v; inst.tune.gearBoost = arr; G.save(); recalc();
+          }, function (v) { return v >= S.tune.boost ? 'Full (' + S.tune.boost + ')' : v.toFixed(1) + ' psi'; }));
+        });
+        list.appendChild(h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, def.label,
+          inst.tune.gearBoost ? h('button', { class: 'treset', title: 'Back to default', onclick: function () { delete inst.tune.gearBoost; G.save(); UI.refresh(); } }, '↺') : null)), gb,
+          h('div', { class: 'help' }, def.help)));
         return;
       }
       var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; G.save(); recalc(); }, def.fmt || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),

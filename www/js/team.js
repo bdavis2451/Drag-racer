@@ -17,7 +17,18 @@
   var T = DR.Team = {};
   T.MAX = 4;
   T.SPEED = 4;              // race clock vs real time
-  T.TRACK = 'pixel';
+  T.TRACK = 'pixel';        // the reference track: classes go by the ideal lap here
+  // where the team races: the purpose-built circuit and three night street
+  // circuits, Underground style
+  T.VENUES = [
+    { id: 'pixel', blurb: 'The purpose-built circuit: kerbs, gravel traps, a long main straight. Daytime racing.' },
+    { id: 'airfield', blurb: 'Night race at the old airfield: flat out down the runway, a cone hairpin onto the taxiway, round the hangars. Power counts.' },
+    { id: 'highway', blurb: 'Route 99 after dark: flat-out freeway sweepers, a tight off-ramp and two city blocks. The fastest, longest lap.' },
+    { id: 'canyon', blurb: 'The back road into the hills: narrow, twisty, guard rails and switchbacks. Light, nimble cars shine.' }
+  ];
+  T.venue = function (id) { return T.VENUES.filter(function (v) { return v.id === id; })[0] || T.VENUES[0]; };
+  // laps scaled so a race is about as long on every track
+  T.lapsAt = function (cls, tid) { return Math.max(2, Math.round(cls.laps * DR.TRACKS.pixel.len / DR.TRACKS[tid].len)); };
   T.SCOUT_COST = 750;
   T.REFRESH_EVERY = 3;      // finished races between new faces on the board
 
@@ -107,12 +118,23 @@
   T.raceFor = function (uid) { return T.active().filter(function (r) { return r.car === uid; })[0] || null; };
   T.carAway = function (uid) { return !!T.raceFor(uid); };
   T.driverBusy = function (id) { return T.active().some(function (r) { return r.drv === id; }); };
-  T.clock = function (r) { return Math.max(0, (Date.now() - r.start) / 1000 * T.SPEED); };
-  T.left = function (r) { return Math.max(0, (r.end - T.clock(r)) / T.SPEED); };
+  // the race clock runs at 4x real time, or 4x faster again with the time
+  // multiplier on (switchable any time: the clock carries on from where it is)
+  T.rate = function (r) { return T.SPEED * (r.ff ? 4 : 1); };
+  T.clock = function (r) {
+    var now = Date.now();
+    return Math.max(0, r.anc ? r.anc.c + (now - r.anc.t) / 1000 * T.rate(r) : (now - r.start) / 1000 * T.SPEED);
+  };
+  T.left = function (r) { return Math.max(0, (r.end - T.clock(r)) / T.rate(r)); };
+  T.setFast = function (r, on) {
+    var c = T.clock(r);
+    r.ff = !!on; r.anc = { c: c, t: Date.now() };
+    st().fast = !!on; G.save();
+  };
   T.awayText = function (uid) {
     var r = T.raceFor(uid); if (!r) return '';
     var d = T.driver(r.drv), c = T.classById(r.cls);
-    return (d ? d.name : 'Your driver') + ' is racing it in the ' + c.name + ' at ' + DR.TRACKS[T.TRACK].name + ': back in ' + fmtLeft(T.left(r)) + '.';
+    return (d ? d.name : 'Your driver') + ' is racing it in the ' + c.name + ' at ' + DR.TRACKS[r.track || T.TRACK].name + ': back in ' + fmtLeft(T.left(r)) + '.';
   };
   function fmtLeft(s) { s = Math.ceil(s); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   T.fmtLeft = fmtLeft;
@@ -122,13 +144,14 @@
   // (sensitivity to cornering and braking), cached per build.
   var paceCache = {};
   function sig(inst) { return JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune]); }
-  T.idealLap = function (inst) {
-    var k = sig(inst);
-    if (!paceCache[k]) paceCache[k] = { ideal: DR.lapSim(inst, DR.TRACKS[T.TRACK]).time };
+  T.idealLap = function (inst, tid) {
+    tid = tid || T.TRACK;
+    var k = tid + sig(inst);
+    if (!paceCache[k]) paceCache[k] = { ideal: DR.lapSim(inst, DR.TRACKS[tid]).time };
     return paceCache[k].ideal;
   };
-  function sensitivity(inst, ideal) {
-    var tr = DR.TRACKS[T.TRACK], S = DR.buildSpec(inst);
+  function sensitivity(inst, ideal, tid) {
+    var tr = DR.TRACKS[tid], S = DR.buildSpec(inst);
     return { lat: (DR.lapSim(inst, tr, S, { lat: 0.95 }).time / ideal - 1) / 0.05, brk: (DR.lapSim(inst, tr, S, { brk: 0.9 }).time / ideal - 1) / 0.1 };
   }
   T.eligible = function (inst, cls) {
@@ -163,7 +186,8 @@
   // Every lap of every car, worked out up front. Overtaking: a quicker car
   // that catches the one ahead gets by if its pace advantage that lap is
   // big enough (luck helps); otherwise it's stuck behind for the lap.
-  T.enter = function (clsId, uid, drvId) {
+  T.enter = function (clsId, uid, drvId, tid) {
+    tid = DR.TRACKS[tid] ? tid : T.TRACK;
     var cls = T.classById(clsId), inst = G.state.cars.filter(function (c) { return c.uid === uid; })[0], d = T.driver(drvId), s = st();
     if (!cls || !inst || !d) return { msg: 'Pick a car and a driver' };
     if (inst.damage) return { msg: 'Repair the car first' };
@@ -172,7 +196,8 @@
     var why = T.eligible(inst, cls); if (why) return { msg: why };
     var cost = cls.fee + d.wage;
     if (!G.canAfford(cost)) return { msg: 'Entry and wages: ' + DR.money(cost) };
-    var tr = DR.TRACKS[T.TRACK], S = DR.buildSpec(inst), ideal = T.idealLap(inst), sens = sensitivity(inst, ideal);
+    var tr = DR.TRACKS[tid], S = DR.buildSpec(inst), ideal = T.idealLap(inst, tid), sens = sensitivity(inst, ideal, tid), laps = T.lapsAt(cls, tid);
+    var stock0 = DR.TRACKS[T.TRACK].stock || {}, stockT = tr.stock || stock0;
     var f = T.factors(d), you = DR.lapSim(inst, tr, S, { lat: f.lat, brk: f.brk });
     // the shape of a lap in time (fraction of the lap time at each point),
     // used to place every car on the map
@@ -182,14 +207,16 @@
     var field = [{ name: d.name, team: 'Your team', car: inst.carId, col: inst.color || d.col, base: you.time, f: f, you: true, drv: d.id }];
     aiField(cls, 5).forEach(function (o) {
       var of = T.factors(o.d);
-      field.push({ name: o.name, team: o.team, car: o.car, col: o.col, base: o.pace * (1 + sens.lat * (1 - of.lat) + sens.brk * (1 - of.brk)), f: of });
+      // their pace here: the same car's stock lap here vs on the reference track
+      var k2 = stockT[o.car] && stock0[o.car] ? stockT[o.car] / stock0[o.car] : tr.len / DR.TRACKS[T.TRACK].len;
+      field.push({ name: o.name, team: o.team, car: o.car, col: o.col, base: o.pace * k2 * (1 + sens.lat * (1 - of.lat) + sens.brk * (1 - of.brk)), f: of });
     });
     // qualifying: one flying lap each
     field.forEach(function (e) { e.q = e.base * (1 + gauss() * e.f.sd) + (Math.random() < e.f.err * 0.5 ? rnd(0.5, 2.5) : 0); });
     var order = field.slice().sort(function (a, b) { return a.q - b.q; });
     order.forEach(function (e, gi) { e.grid = gi + 1; e.cum = []; e.laps = []; e.best = 1e9; e.err = 0; });
     var prev = order.map(function (e) { return 0; });
-    for (var lap = 0; lap < cls.laps; lap++) {
+    for (var lap = 0; lap < laps; lap++) {
       var raw = order.map(function (e, k) {
         var lt = e.base * (1 + gauss() * e.f.sd);
         if (Math.random() < e.f.err) { lt += rnd(0.8, 3.5); e.err++; }
@@ -211,10 +238,11 @@
     }
     var end = Math.max.apply(null, order.map(function (e) { return e.cum[e.cum.length - 1]; }));
     G.pay(cost);
-    var r = { id: 'r' + (s.nid++), cls: cls.id, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: cls.laps, prof: prof, cost: cost,
+    var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost,
       field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err }; }),
       ideal: ideal, base: you.time };
-    s.races.push(r); G.save();
+    s.races.push(r);
+    if (s.fast) T.setFast(r, true); else G.save();
     return { race: r };
   };
 
@@ -248,13 +276,13 @@
       var d = T.driver(r.drv), car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0];
       if (prize) G.earn(prize);
       var grew = d ? learn(d, pos, r) : null;
-      var line = (d ? d.name : 'Your driver') + ' finished P' + pos + ' in the ' + cls.name + (car ? ' (' + DR.CARS[car.carId].name + ')' : '') + (prize ? ': +' + DR.money(prize) : '');
+      var line = (d ? d.name : 'Your driver') + ' finished P' + pos + ' in the ' + cls.name + ' at ' + DR.TRACKS[r.track || T.TRACK].name + (car ? ' (' + DR.CARS[car.carId].name + ')' : '') + (prize ? ': +' + DR.money(prize) : '');
       var unl = [];
       if (pos === 1 && !s.wins[cls.id]) unl = classUnlocks(cls);
       if (pos === 1) s.wins[cls.id] = (s.wins[cls.id] || 0) + 1;
       s.done++;
       if (s.done - s.boardAt >= T.REFRESH_EVERY) { s.board = makeBoard(); s.boardAt = s.done; }
-      s.history.unshift({ cls: cls.id, pos: pos, prize: prize, drv: d ? d.name : '?', car: car ? car.carId : you.car, at: Date.now(), best: you.best, grew: grew, unl: unl });
+      s.history.unshift({ cls: cls.id, track: r.track || T.TRACK, pos: pos, prize: prize, drv: d ? d.name : '?', car: car ? car.carId : you.car, at: Date.now(), best: you.best, grew: grew, unl: unl });
       s.history = s.history.slice(0, 20);
       msgs.push({ text: line, race: r, pos: pos, prize: prize, grew: grew, unl: unl });
     });

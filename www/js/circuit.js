@@ -138,7 +138,7 @@
     var ratio = S.ratios[gi] * S.fd, rpm = v / S.r * ratio * 60 / (2 * Math.PI);
     if (rpm > S.red + 1) return -1;
     rpm = Math.max(rpm, Math.min(S.red - 500, (S.tune && S.tune.launchRpm) || 3000));   // slipping the clutch below that
-    var b = S.fiType === 'none' ? 0 : Math.min(boost, DR.steadyBoost(S, rpm));
+    var b = S.fiType === 'none' ? 0 : Math.min(boost, DR.steadyBoost(S, rpm), S.gearBoost ? S.gearBoost[Math.min(gi, S.gearBoost.length - 1)] : 99);
     return DR.boostedTorque(S, rpm, b) * ratio * S.eff / S.r;
   }
   // The best gear at a speed (most force, under the limiter).

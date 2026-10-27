@@ -273,7 +273,7 @@
     // gate too small for the engine can't dump enough exhaust up top, so
     // boost creeps past the target at high rpm.
     var fiU = DR.FI[fiId], comp = S.maxBoost, oem = !fiU.price;
-    S.boostMin = 0; S.creep = 0;
+    S.boostMin = 0; S.creep = 0; S.ebc = false;
     S.boostWhy = { type: fiU.type, comp: comp, oem: oem };
     if (fiU.type === 'turbo') {
       S.lag *= gate.spoolK;
@@ -286,6 +286,8 @@
         else top = ctrl === 'mbc' ? spring * 2 : ctrl === 'ebc' ? comp : spring;
         S.maxBoost = Math.round(Math.min(comp, top) * 2) / 2;
         S.boostMin = Math.min(spring, S.maxBoost);
+        // an electronic controller (or a tuned factory ECU) can set boost per gear
+        S.ebc = ctrl === 'ebc' || (ctrl === 'ecu' && tuned);
         // creep: internal gates on a bolt-on turbo, worse on a big engine
         if (!oem) S.creep = Math.round((gate.creep || 0) * clamp((airDisp(e) * S.red / 1000 - 8) / 10, 0, 1) * 4 * 2) / 2;
         S.boostWhy.spring = S.boostMin; S.boostWhy.ctrl = ctrl; S.boostWhy.ctrlMax = Math.round(top * 2) / 2; S.boostWhy.creep = S.creep;
@@ -373,6 +375,9 @@
     S.tune = T;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
     S.boostTop = S.boostSet + (S.creep || 0);   // what it really sees up top
+    // boost by gear: a cap on the target in each gear (less in the low gears
+    // to stop wheelspin, the full target where the car can use it)
+    S.gearBoost = S.ebc && S.fiType === 'turbo' && Array.isArray(T.gearBoost) && T.gearBoost.some(function (b) { return b < S.boostSet; }) ? T.gearBoost : null;
     setSpool(S, true);
     // the charge at full boost, and the knock limit that leaves the fuel
     S.iat = chargeTemp(S, S.boostSet);
@@ -470,6 +475,7 @@
       gears: DR.boxRatios(S.transId, S.car),
       shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, DR.boxRatios(S.transId, S.car)))) / 100) * 100,
       revLimit: S.red,
+      gearBoost: DR.boxRatios(S.transId, S.car).map(function () { return S.maxBoost || 0; }),
       luGear: DR.boxRatios(S.transId, S.car).length,
       springF: 5, springR: 5, rideF: 0, rideR: 0, rollBal: 0,
       bumpF: 5, rebF: 5, bumpR: 5, rebR: 5, limitF: 0,
@@ -492,6 +498,9 @@
     { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost; },
       show: function (S) { return S.fiType !== 'none'; }, req: 'Requires a turbo or supercharger', group: 'Engine',
       help: 'More boost = more power, but watch the knock limit of your fuel and your internals.' },
+    { key: 'gearBoost', label: 'Boost by Gear', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost || 0; },
+      show: function (S) { return S.fiType === 'turbo' && S.ebc; }, req: 'Requires an electronic boost controller (or a tuned factory turbo ECU)', group: 'Engine',
+      help: 'A cap on boost in each gear, as electronic controllers do: run less in 1st and 2nd where the tires can\'t take it, the full target from where they can. Set to the target (or above) for no cap.' },
     { key: 'launchRpm', label: 'Launch RPM (2-Step)', unit: 'rpm', step: 100, min: function (S) { return S.idle + 600; }, max: function (S) { return S.red - 200; },
       show: function (S) { return S.twostep > 0; }, req: 'Requires a 2-step launch control', group: 'Engine',
       help: 'Engine RPM held on the line. Higher = harder launch & more boost, but more wheelspin.' },
@@ -575,6 +584,11 @@
     DR.TUNE_DEFS.forEach(function (def) {
       if (def.key === 'gears') {
         t.gears = t.gears.map(function (g) { return clamp(g, 0.5, 4.5); });
+        return;
+      }
+      if (def.key === 'gearBoost') {
+        if (!Array.isArray(t.gearBoost) || t.gearBoost.length !== d.gearBoost.length) t.gearBoost = d.gearBoost;
+        t.gearBoost = t.gearBoost.map(function (b) { return clamp(b, S.boostMin || 0, S.maxBoost || 0); });
         return;
       }
       t[def.key] = clamp(t[def.key], def.min(S), def.max(S));
@@ -885,13 +899,14 @@
     var thrB = this.thr;
     if (S.fiType === 'turbo') {
       var sf = clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1);
-      var target = (S.boostSet * sf + creepAt(S, rpm)) * thrB;
+      var bSet = S.gearBoost ? Math.min(S.boostSet, S.gearBoost[Math.min(this.gear, S.gearBoost.length - 1)]) : S.boostSet;
+      var target = (bSet * sf + creepAt(S, rpm)) * thrB;
       // revving with no load on it (clutch in, in neutral) a turbo makes next
       // to no boost: only a 2-step builds it on the line
       if (pre) target *= 0.1;
       if (pre && S.twostep && thrB > 0.5) {
         var build = clamp((S.tune.launchRpm - S.spoolLo * 0.5) / (S.spoolHi * 0.85 - S.spoolLo * 0.5), 0.15, 1);
-        target = Math.max(target, S.boostSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
+        target = Math.max(target, bSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
       }
       if (this.shifting && S.twostep === 2) target = Math.max(target, this.boost);
       // throttle shut for a shift: a blow-off valve keeps the turbo spinning

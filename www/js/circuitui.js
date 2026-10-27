@@ -6,7 +6,7 @@
 // ===========================================================================
 (function () {
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, A = DR.Audio, h = UI.h, btn = UI.btn;
-  var TRACK = 'pixel';
+  var TRACK = 'pixel';   // the test lap's track (Race > Circuit > Test Lap)
   var CW = 600, CH = 330, PAD = 34;   // map canvas (pixels, drawn pixelated)
   var VIS = 1.5;         // the track's drawn width vs its real 12 m: readable at this scale
   var STATE_COL = { 1: '#4cd964', 2: '#ffcc00', 3: '#ff4a3a' };
@@ -21,7 +21,7 @@
   function fmtD(d) { return (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(2); }
   function ord(g) { return g + (g === 1 ? 'st' : g === 2 ? 'nd' : g === 3 ? 'rd' : 'th'); }
   // what the lap depends on: a changed part or tune means a new lap
-  function sig(inst) { return JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune]); }
+  function sig(inst) { return JSON.stringify([TRACK, inst.carId, inst.engine, inst.parts, inst.tune]); }
 
   // ---------------------------------------------------------------- records
   // G.state.circuit.records[track][uid] = { t, sp: sector times, top (m/s),
@@ -67,6 +67,7 @@
   }
   function drawBase(track) {
     if (baseCache[track.id]) return baseCache[track.id];
+    if (track.theme && STREET[track.theme]) return (baseCache[track.id] = drawStreet(track, STREET[track.theme]));
     var cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
     var c = cv.getContext('2d'), gm = geom(track), sc = gm.sc, n = track.cx.length, i;
     var N = centreNormals(track), r = rng(7);
@@ -148,6 +149,90 @@
     baseCache[track.id] = { cv: cv, gm: gm };
     return baseCache[track.id];
   }
+  // ---------------------------------------------------------------- street circuits
+  // Underground-style night races: each theme draws its own surroundings.
+  var STREET = {
+    airfield: { ground: '#141a1f', ground2: '#18202a', road: '#2a2e36', edge: '#c9ccd2', line: '#e8e8e8', cones: true },
+    highway: { ground: '#0c0f17', ground2: '#121726', road: '#30343c', edge: '#8a8f99', line: '#d8d8d8', lights: true, city: true },
+    canyon: { ground: '#10170f', ground2: '#162013', road: '#2b2b2b', edge: '#d9d9d9', line: '#e3b23c', rails: true, forest: true }
+  };
+  function drawStreet(track, th) {
+    var cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+    var c = cv.getContext('2d'), gm = geom(track), sc = gm.sc, n = track.cx.length, i, j;
+    var N = centreNormals(track), r = rng(11), W = track.half * VIS;
+    function P(k, off) { return [gm.X(track.cx[k] + N.nx[k] * off), gm.Y(track.cy[k] + N.ny[k] * off)]; }
+    function near(x, y, m) { for (var q = 0; q < n; q += 3) if (Math.hypot(gm.X(track.cx[q]) - x, gm.Y(track.cy[q]) - y) < m) return true; return false; }
+    function path(off) { c.beginPath(); for (var q = 0; q <= n; q++) { var p = P(q % n, off); if (q) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); } c.closePath(); }
+    // night ground, dithered
+    c.fillStyle = th.ground; c.fillRect(0, 0, CW, CH);
+    for (i = 0; i < 3000; i++) { c.fillStyle = r() < 0.5 ? th.ground2 : 'rgba(0,0,0,0.25)'; c.fillRect(Math.floor(r() * CW), Math.floor(r() * CH), 2, 2); }
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    if (track.theme === 'airfield') {
+      // the apron: a big pale slab with dark grass strips, hangars and a tower
+      c.fillStyle = '#1d232b'; c.fillRect(0, 0, CW, CH);
+      for (i = 0; i < 2600; i++) { c.fillStyle = r() < 0.5 ? '#222934' : '#192029'; c.fillRect(Math.floor(r() * CW), Math.floor(r() * CH), 2, 1); }
+      for (i = 0; i < 9; i++) { var gx = r() * CW, gy = r() * CH; if (!near(gx, gy, 30)) { c.fillStyle = '#16231a'; c.fillRect(gx - 30, gy - 8, 60, 16); } }
+      [[0.12, 0.83], [0.24, 0.85], [0.36, 0.84]].forEach(function (hh) {
+        var x = hh[0] * CW, y = hh[1] * CH; if (near(x, y, 24)) return;
+        c.fillStyle = '#0a0d11'; c.fillRect(x - 22, y - 12, 44, 24); c.fillStyle = '#2a313b'; c.fillRect(x - 20, y - 10, 40, 20);
+        for (var k = 0; k < 6; k++) { c.fillStyle = '#3a4350'; c.fillRect(x - 18 + k * 7, y - 9, 3, 18); }
+        c.fillStyle = '#ffcf5a'; c.fillRect(x - 3, y + 9, 6, 2);
+      });
+      var tx = 0.5 * CW, ty = 0.86 * CH; if (!near(tx, ty, 20)) { c.fillStyle = '#0a0d11'; c.fillRect(tx - 5, ty - 14, 10, 18); c.fillStyle = '#4a5560'; c.fillRect(tx - 4, ty - 13, 8, 8); c.fillStyle = '#7fd0ff'; c.fillRect(tx - 3, ty - 12, 6, 3); c.fillStyle = '#ff4a3a'; c.fillRect(tx - 1, ty - 16, 2, 2); }
+    }
+    if (th.city) {
+      // city blocks with lit windows, kept off the road
+      for (i = 0; i < 260; i++) {
+        var bx = Math.floor(r() * CW), by = Math.floor(r() * CH), bw = 6 + Math.floor(r() * 14), bh = 5 + Math.floor(r() * 12);
+        if (near(bx + bw / 2, by + bh / 2, W * sc + 12 + Math.max(bw, bh) / 2)) continue;
+        c.fillStyle = '#070910'; c.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+        c.fillStyle = r() < 0.5 ? '#1a1f2e' : '#20263a'; c.fillRect(bx, by, bw, bh);
+        for (var wy = by + 1; wy < by + bh - 1; wy += 2) for (var wx = bx + 1; wx < bx + bw - 1; wx += 2) if (r() < 0.22) { c.fillStyle = r() < 0.7 ? '#ffd27a' : '#9fd8ff'; c.fillRect(wx, wy, 1, 1); }
+      }
+    }
+    if (th.forest) {
+      // hills: dark terrain, rock outcrops and pines
+      for (i = 0; i < 500; i++) { var fx = r() * CW, fy = r() * CH; if (near(fx, fy, W * sc + 6)) continue;
+        if (r() < 0.12) { c.fillStyle = '#2a2722'; c.fillRect(fx, fy, 4, 3); c.fillStyle = '#3a3630'; c.fillRect(fx, fy, 3, 1); continue; }
+        c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(fx - 2, fy + 2, 6, 2);
+        c.fillStyle = '#0b1a0c'; c.fillRect(fx - 2, fy - 3, 5, 6); c.fillStyle = '#132a14'; c.fillRect(fx - 1, fy - 4, 3, 6); c.fillStyle = '#1d3b1c'; c.fillRect(fx, fy - 4, 1, 2); }
+    }
+    // the road: verge / barrier, then asphalt
+    path(0); c.strokeStyle = th.edge; c.lineWidth = (2 * W + 2) * sc + 1; c.stroke();
+    path(0); c.strokeStyle = th.road; c.lineWidth = 2 * W * sc; c.stroke();
+    for (i = 0; i < n; i++) { var o = (r() - 0.5) * 2 * (W - 1), q2 = P(i, o); c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)'; c.fillRect(Math.round(q2[0]), Math.round(q2[1]), 1, 1); }
+    // centre line: dashed white (runway / highway lanes) or a double yellow (back road)
+    c.setLineDash(track.theme === 'canyon' ? [] : [3, 4]); path(0); c.strokeStyle = th.line; c.lineWidth = track.theme === 'canyon' ? 1 : 0.8; c.globalAlpha = 0.75; c.stroke(); c.globalAlpha = 1; c.setLineDash([]);
+    if (track.theme === 'highway') { [-W * 0.5, W * 0.5].forEach(function (off) { c.setLineDash([2, 5]); path(off); c.strokeStyle = 'rgba(220,220,220,0.45)'; c.lineWidth = 0.6; c.stroke(); }); c.setLineDash([]); }
+    // course dressing: cones at the airfield's corners, guard rails on the
+    // canyon's outside edges, street lights along the highway
+    for (i = 0; i < n; i += 2) {
+      var kc = curvAt(track, i), side = kc > 0 ? -1 : 1;
+      if (th.cones && Math.abs(kc) > 0.006 && i % 4 === 0) { [W + 0.5, -(W + 0.5)].forEach(function (off) { var q = P(i, off); c.fillStyle = '#000'; c.fillRect(Math.round(q[0]) - 1, Math.round(q[1]) - 1, 3, 3); c.fillStyle = '#ff7a1a'; c.fillRect(Math.round(q[0]), Math.round(q[1]) - 1, 1, 2); c.fillStyle = '#fff'; c.fillRect(Math.round(q[0]), Math.round(q[1]), 1, 1); }); }
+      if (th.rails && Math.abs(kc) > 0.008) { var q3 = P(i, side * (W + 1.2)); c.fillStyle = (i >> 1) % 2 ? '#b9bec6' : '#7d838d'; c.fillRect(Math.round(q3[0]), Math.round(q3[1]), 2, 1); }
+      if (th.lights && i % 14 === 0) { var q4 = P(i, (i % 28 ? 1 : -1) * (W + 2)); var gr = c.createRadialGradient(q4[0], q4[1], 0, q4[0], q4[1], 9); gr.addColorStop(0, 'rgba(255,170,70,0.35)'); gr.addColorStop(1, 'rgba(255,170,70,0)'); c.fillStyle = gr; c.fillRect(q4[0] - 9, q4[1] - 9, 18, 18); c.fillStyle = '#ffcf7a'; c.fillRect(Math.round(q4[0]), Math.round(q4[1]), 1, 1); }
+    }
+    if (track.theme === 'airfield') {
+      // runway lights along the straight's edges
+      for (i = 0; i < n; i += 6) { if (Math.abs(curvAt(track, i)) > 0.002) continue; [W + 1.5, -(W + 1.5)].forEach(function (off) { var q = P(i, off); c.fillStyle = '#fff3c4'; c.fillRect(Math.round(q[0]), Math.round(q[1]), 1, 1); }); }
+    }
+    // start/finish: a checkered band and a painted gantry
+    var s0 = nearestCentre(track, track.lx[0], track.ly[0]);
+    for (var qq = -3; qq <= 3; qq++) for (var w = -Math.round(W); w < Math.round(W); w += 2) {
+      var a2 = (s0 + qq + n) % n, pp = P(a2, w);
+      c.fillStyle = ((qq + 3) + (w / 2 | 0)) % 2 ? '#111' : '#fff'; c.fillRect(Math.round(pp[0]), Math.round(pp[1]), 2, 2);
+    }
+    var rl = track.lx.length;
+    (track.sectors || []).forEach(function (sx) {
+      var idx = Math.round(sx / track.len * rl) % rl, m = nearestCentre(track, track.lx[idx], track.ly[idx]);
+      for (var w2 = -W; w2 <= W; w2 += 1.5) { var q5 = P(m, w2); c.fillStyle = '#3aa0ff'; c.fillRect(Math.round(q5[0]), Math.round(q5[1]), 1, 1); }
+    });
+    // a cool night grade and a vignette
+    c.fillStyle = 'rgba(20,30,70,0.12)'; c.fillRect(0, 0, CW, CH);
+    var vg = c.createRadialGradient(CW / 2, CH / 2, CH * 0.4, CW / 2, CH / 2, CW * 0.65); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)'); c.fillStyle = vg; c.fillRect(0, 0, CW, CH);
+    return { cv: cv, gm: gm, night: true };
+  }
+
   // centreline curvature (for kerbs and gravel), from its normals' turn
   function curvAt(track, i) {
     var n = track.cx.length, a = (i - 2 + n) % n, b = (i + 2) % n;
@@ -221,6 +306,12 @@
   }
   // the car: a little top-down sprite, pointing along the line
   function drawCar(c, track, gm, fi, col) {
+    if (track.theme && STREET[track.theme]) {
+      // headlights on the night circuits
+      var n0 = track.lx.length, i0 = Math.floor(fi) % n0, j0 = (i0 + 6) % n0;
+      var hx = gm.X(track.lx[j0]), hy = gm.Y(track.ly[j0]), gr0 = c.createRadialGradient(hx, hy, 0, hx, hy, 10);
+      gr0.addColorStop(0, 'rgba(255,240,190,0.35)'); gr0.addColorStop(1, 'rgba(255,240,190,0)'); c.fillStyle = gr0; c.fillRect(hx - 10, hy - 10, 20, 20);
+    }
     var n = track.lx.length, i = Math.floor(fi) % n, f = fi - Math.floor(fi), j = (i + 1) % n;
     var x = track.lx[i] + (track.lx[j] - track.lx[i]) * f, y = track.ly[i] + (track.ly[j] - track.ly[i]) * f;
     var a = (i - 2 + n) % n, b = (i + 2) % n, ang = Math.atan2(-(track.ly[b] - track.ly[a]), track.lx[b] - track.lx[a]);
@@ -506,6 +597,7 @@
   UI.circuitTab = UI.circuitTab || 'races';
   UI.circuitView = function (inst) {
     var tab = UI.circuitTab;
+    if (UI.circuitTestTrack) { if (UI.circuitTestTrack !== TRACK) { TRACK = UI.circuitTestTrack; play = null; probe = -1; } UI.circuitTestTrack = null; }
     var chips = h('div', { class: 'schips trktabs' },
       [['races', 'Races'], ['team', 'Team'], ['test', 'Test Lap']].map(function (t) {
         var n = t[0] === 'races' ? TM().active().length : t[0] === 'team' ? TM().state().drivers.length : 0;
@@ -513,6 +605,7 @@
       }));
     var body;
     if (tab === 'team') body = teamView();
+    else if (tab === 'test' && !(inst && TM().carAway(inst.uid))) body = h('div', {}, trackChips(TRACK, function (id) { TRACK = id; play = null; probe = -1; UI.refresh(); }), testLapView(inst));
     else if (tab === 'test') body = inst && TM().carAway(inst.uid) ? h('div', { class: 'trkcard' }, h('div', {}, TM().awayText(inst.uid)), h('div', { class: 'dim gsmall' }, 'Pick another car in My Cars to run a test lap.')) : testLapView(inst);
     else {
       var r = UI.watchRace && TM().state().races.filter(function (x) { return x.id === UI.watchRace; })[0];
@@ -520,6 +613,16 @@
     }
     return h('div', {}, chips, body);
   };
+
+  // a track's map as a postcard (the city map's venue cards)
+  UI.circuitThumb = function (cv, track) { cv.getContext('2d').drawImage(drawBase(track).cv, 0, 0); };
+  // pick one of the tracks
+  function trackChips(cur, onPick) {
+    return h('div', { class: 'schips trkpick' }, TM().VENUES.map(function (v) {
+      var t = DR.TRACKS[v.id];
+      return btn((t.theme ? '☾ ' : '') + t.name, function () { onPick(v.id); }, 'chip' + (cur === v.id ? ' on' : ''));
+    }));
+  }
 
   // ---------------------------------------------------------------- helmets
   function helmet(col, size) {
@@ -600,10 +703,19 @@
         lg.appendChild(h('div', { class: 'ecard livecard', onclick: function () { UI.watchRace = r.id; UI.refresh(); } },
           h('div', { class: 'drow' }, helmet(d ? d.col : '#888', 22), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, cls.name), h('div', { class: 'gsmall dim' }, (d ? d.name : '') + ' • ' + (car ? DR.CARS[car.carId].name : ''))), h('span', { class: 'ewon live' }, 'LIVE')),
           h('div', { class: 'gst' }, h('span', { class: 'k' }, 'P' + (rows.indexOf(me) + 1) + ' • LAP ' + Math.min(r.laps, me.w.lap + 1) + '/' + r.laps), h('span', { class: 'v' }, 'back in ' + T.fmtLeft(T.left(r)))),
-          btn('Watch', function () { UI.watchRace = r.id; UI.refresh(); }, 'small go')));
+          h('div', { class: 'efoot' }, btn('⏩ 4×' + (r.ff ? ' ON' : ''), function (e) { e.stopPropagation(); T.setFast(r, !r.ff); UI.refresh(); }, 'small chip' + (r.ff ? ' on' : '')),
+            btn('Watch', function () { UI.watchRace = r.id; UI.refresh(); }, 'small go'))));
       });
       out.push(h('div', { class: 'plvl secthead' }, 'LIVE NOW'), lg);
     }
+    // the venue: the circuit or one of the night street circuits
+    var tid = DR.TRACKS[UI.circuitTrack] ? UI.circuitTrack : 'pixel', ven = T.venue(tid), trk = DR.TRACKS[tid];
+    var thumb = h('canvas', { class: 'venthumb', width: CW, height: CH });
+    thumb.getContext('2d').drawImage(drawBase(trk).cv, 0, 0);
+    out.push(h('div', { class: 'plvl secthead' }, 'VENUE'), trackChips(tid, function (id) { UI.circuitTrack = id; UI.refresh(); }),
+      h('div', { class: 'trkcard venue' }, h('div', { class: 'venrow' }, thumb, h('div', { class: 'grow' }, h('div', { class: 'acc pix' }, trk.name),
+        h('div', { class: 'gsmall dim' }, (trk.len / 1000).toFixed(2) + ' km • ' + trk.corners.length + ' corners' + (trk.theme ? ' • night street circuit' : '')),
+        h('div', {}, ven.blurb)))));
     var grid = h('div', { class: 'egrid' });
     T.CLASSES.forEach(function (cls) {
       var won = s.wins[cls.id] || 0, unl = [];
@@ -611,27 +723,27 @@
       grid.appendChild(h('div', { class: 'ecard clcard' },
         h('div', { class: 'drow' }, h('span', { class: 'clbadge' }, cls.id), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, cls.name),
           h('div', { class: 'gsmall dim' }, cls.floor ? 'Ideal lap ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car, no limits')), won ? h('span', { class: 'etype good' }, '✔ ' + won) : null),
-        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LAPS'), h('span', { class: 'v' }, String(cls.laps))),
+        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LAPS'), h('span', { class: 'v' }, String(T.lapsAt(cls, tid)))),
         h('div', { class: 'gst' }, h('span', { class: 'k' }, 'ENTRY'), h('span', { class: 'v' }, DR.money(cls.fee) + ' + wage')),
         h('div', { class: 'gst' }, h('span', { class: 'k' }, 'WIN'), h('span', { class: 'v acc' }, DR.money(cls.prize[0]))),
         unl.length ? h('div', { class: 'gsmall eunl' }, '🔓 First win: ' + unl.join(' + ')) : null,
-        h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, 'Field of 6 • ~' + Math.round(cls.laps * (cls.floor || cls.pace) / T.SPEED / 60) + ' min'),
-          btn('Enter', function () { entryModal(cls); }, 'small go'))));
+        h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, 'Field of 6 • ~' + Math.max(1, Math.round(cls.laps * (cls.floor || cls.pace) / T.SPEED / 60)) + ' min'),
+          btn('Enter', function () { entryModal(cls, tid); }, 'small go'))));
     });
-    out.push(h('div', { class: 'plvl secthead' }, 'RACES • ' + DR.TRACKS[T.TRACK].name), grid);
+    out.push(h('div', { class: 'plvl secthead' }, 'RACES • ' + trk.name), grid);
     if (s.history.length) {
       out.push(h('div', { class: 'plvl secthead' }, 'RECENT RESULTS'));
       out.push(h('div', { class: 'trkcard' }, h('table', { class: 'trktab' }, s.history.slice(0, 6).map(function (x) {
-        return h('tr', {}, h('td', { class: x.pos === 1 ? 'acc' : '' }, 'P' + x.pos), h('td', {}, T.classById(x.cls).name), h('td', {}, x.drv), h('td', { class: 'dim' }, DR.CARS[x.car] ? DR.CARS[x.car].name : ''),
+        return h('tr', {}, h('td', { class: x.pos === 1 ? 'acc' : '' }, 'P' + x.pos), h('td', {}, T.classById(x.cls).name, h('div', { class: 'gsmall dim' }, DR.TRACKS[x.track || 'pixel'].name)), h('td', {}, x.drv), h('td', { class: 'dim' }, DR.CARS[x.car] ? DR.CARS[x.car].name : ''),
           h('td', { class: 'num' }, x.prize ? '+' + DR.money(x.prize) : '—'));
       }))));
     }
-    out.push(h('div', { class: 'gsmall dim trknote' }, 'Races run in real time at 4x speed. While a car is at the track it can\'t be drag raced, worked on, shown or sold. Circuit wins open parts and cars at the dealer, the same as drag racing does.'));
+    out.push(h('div', { class: 'gsmall dim trknote' }, 'Races run at 4x real time; ⏩ 4× time speeds a race up 4x more (16x), from the race card or while you watch. While a car is at the track it can\'t be drag raced, worked on, shown or sold. Circuit wins open parts and cars at the dealer, the same as drag racing does.'));
     return h('div', {}, out);
   }
 
   // pick a car and a driver for a class
-  function entryModal(cls) {
+  function entryModal(cls, tid) {
     var T = TM(), s = T.state(), selCar = null, selDrv = null, close;
     var carBox = h('div', { class: 'col entlist' }), drvBox = h('div', { class: 'col entlist' }), sum = h('div', { class: 'entsum' }), go;
     var free = s.drivers.filter(function (d) { return !T.driverBusy(d.id); });
@@ -648,7 +760,7 @@
         var why = status(inst), lap = T.idealLap(inst);
         if (!selCar && !why) selCar = inst.uid;
         carBox.appendChild(h('div', { class: 'entrow' + (selCar === inst.uid ? ' on' : '') + (why ? ' off' : ''), onclick: function () { if (why) return UI.toast(why === 'Too quick' ? T.eligible(inst, cls) : why); selCar = inst.uid; render(); } },
-          h('span', { class: 'grow' }, DR.CARS[inst.carId].name), h('span', { class: 'dim' }, 'ideal ' + T.fmtLap(lap)), why ? h('span', { class: 'bad' }, why) : null));
+          h('span', { class: 'grow' }, DR.CARS[inst.carId].name), h('span', { class: 'dim' }, 'rating ' + T.fmtLap(lap)), why ? h('span', { class: 'bad' }, why) : null));
       });
       free.forEach(function (d) { if (!selDrv) selDrv = d.id; });
       s.drivers.forEach(function (d) {
@@ -665,13 +777,13 @@
       if (!selCar) return UI.toast('No car can enter this class');
       go.classList.add('busy'); go.textContent = 'Qualifying…';
       setTimeout(function () {
-        var res = T.enter(cls.id, selCar, selDrv);
+        var res = T.enter(cls.id, selCar, selDrv, tid);
         if (!res.race) { go.classList.remove('busy'); go.textContent = 'Send to the track'; return UI.toast(res.msg); }
         close(); UI.watchRace = res.race.id; A.cash && A.cash(); UI.refresh();
       }, 30);
     }, 'primary');
     // ideal laps take a moment the first time: draw after the modal shows
-    close = UI.modal([h('h2', {}, cls.name), h('div', { class: 'gsmall dim' }, (cls.floor ? 'Cars whose ideal lap is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + cls.laps + ' laps • 6 cars'),
+    close = UI.modal([h('h2', {}, cls.name + ' • ' + DR.TRACKS[tid].name), h('div', { class: 'gsmall dim' }, (cls.floor ? 'Cars whose ideal lap at Pixel Raceway is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + T.lapsAt(cls, tid) + ' laps • 6 cars'),
       h('div', { class: 'plvl' }, 'CAR'), carBox, h('div', { class: 'plvl' }, 'DRIVER'), drvBox, sum,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Cancel', function () { close(); }), go)]);
     carBox.appendChild(h('div', { class: 'dim' }, 'Working out lap times…'));
@@ -680,7 +792,7 @@
 
   // ---------------------------------------------------------------- watch
   function watchView(r) {
-    var T = TM(), track = DR.TRACKS[T.TRACK], cls = T.classById(r.cls), d = T.driver(r.drv);
+    var T = TM(), track = DR.TRACKS[r.track || T.TRACK], cls = T.classById(r.cls), d = T.driver(r.drv);
     var cv = h('canvas', { class: 'trkcv', width: CW, height: CH }), table = h('div', { class: 'trkcard standings' }), head = h('div', { class: 'stagehead' });
     var base = drawBase(track), gm = base.gm, n = track.lx.length, lastTab = 0;
     function draw() {
@@ -705,6 +817,7 @@
       head.appendChild(h('div', { class: 'grow' }, h('div', { class: 'plvl' }, cls.name.toUpperCase() + ' • ' + track.name),
         h('div', { class: 'pix acc' }, allDone ? 'FINISHED' : 'LAP ' + Math.min(r.laps, lead.w.lap + 1) + ' / ' + r.laps),
         h('div', { class: 'dim gsmall' }, allDone ? 'Results are in.' : 'Race time ' + T.fmtLeft(st.t) + ' • back in ' + T.fmtLeft(T.left(r)))));
+      if (!allDone) head.appendChild(btn('⏩ 4× time' + (r.ff ? ' ON' : ''), function () { T.setFast(r, !r.ff); UI.refresh(); }, 'small chip' + (r.ff ? ' on' : '')));
       head.appendChild(btn('◀ Races', function () { UI.watchRace = null; UI.refresh(); }, 'small'));
       table.innerHTML = '';
       table.appendChild(h('table', { class: 'trktab' }, h('tr', {}, h('th', {}, 'P'), h('th', {}, 'Driver'), h('th', {}, 'Car'), h('th', {}, allDone ? 'Time' : 'Gap'), h('th', {}, 'Best')),
