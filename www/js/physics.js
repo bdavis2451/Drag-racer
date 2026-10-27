@@ -217,6 +217,7 @@
     var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crKnock = -3 * (pist.cr || 0);
     var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: fuel.cool || 0, knock: fuel.knock + (e.diesel ? 0 : crKnock) };
     var S = engineCore(e, mods, 1);
+    S.ai = ai;
     var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
     var untunedK = 1;
     if (!tuned && cams.tune === 'hard') untunedK *= 0.94;
@@ -475,7 +476,7 @@
       antiSquat: DR.getOption('rearsusp', inst).as,
       barDeg: 3,
       launchThr: 100, thrRamp: 0,
-      tcSlip: 0,
+      tcSlip: 0, tcGain: 5,
       nosDelay: 0.6, nosRamp: 0.5
     };
   };
@@ -502,7 +503,10 @@
       help: '0 = no throttle management.' },
     { key: 'tcSlip', label: 'Traction Control', unit: '% slip', step: 1, min: function () { return 0; }, max: function () { return 40; },
       show: function (S) { return S.ecu >= 3; }, req: 'Requires a Race ECU', group: 'Engine',
-      help: '0 = off. Cuts power when the drive tires spin past this slip.' },
+      help: '0 = off. The slip the drive tires are allowed: the ECU compares driveshaft speed with the car\'s speed and, when the tires spin past this, pulls ignition timing to take torque away, smoothly, with the throttle left wide open so the turbos stay lit. Past about 20 degrees of retard it starts dropping cylinders (a soft cut). Radials like 8-12%, slicks 10-15%.' },
+    { key: 'tcGain', label: 'Traction Control Response', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return S.ecu >= 3; }, req: 'Requires a Race ECU', group: 'Engine',
+      help: 'How hard and fast it pulls timing for each % of slip over the target. Low: soft and smooth, lets the tires spin a bit more. High: catches spin fast, but too high and it hunts (pulls too much, the car slows, it puts it back) and the car shakes.' },
     { key: 'shiftRpm', label: 'Shift Light / Auto-Shift RPM', unit: 'rpm', step: 100, min: function (S) { return S.idle + 1500; }, max: function (S) { return S.red; },
       show: function () { return true; }, group: 'Drivetrain', help: 'The shift light comes on here. Auto-shift also uses it.' },
     { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function () { return 2.2; }, max: function () { return 6.5; },
@@ -739,7 +743,7 @@
     this.crashed = false; this.blown = false; this.broke = false;
     this.failAt = opts.failAt || 0; this.failType = opts.failType || '';
     this.splits = {}; this.etStart = null; this.finished = false;
-    this.tcCut = 0; this.brake = 0;
+    this.tcCut = 0; this.tcI = 0; this.tcRed = 0; this.brake = 0;
     this.brakeLimited = false; this.creep = 0; this.creepV = 0;
     this.events = [];          // for visuals: 'shift', 'backfire', 'bar', 'land'
     var N0 = S.drive === 'FWD' ? S.m * G * S.f : S.drive === 'AWD' ? S.m * G : S.m * G * (1 - S.f);
@@ -827,11 +831,39 @@
       var lt = S.tune.launchThr / 100;
       thrIn = Math.min(thrIn, lt + (1 - lt) * this.t / S.tune.thrRamp);
     }
+    this.tcRed = 0;
     if (this.launched && S.ecu >= 3 && S.tune.tcSlip > 0) {
-      if (this.slip > S.tune.tcSlip / 100) this.tcCut = Math.min(1, this.tcCut + dt * 10);
-      else this.tcCut = Math.max(0, this.tcCut - dt * 5);
-      thrIn *= 1 - 0.75 * this.tcCut;
-    }
+      if (S.ai) {
+        // rivals' builds were set up on the old on/off throttle cut
+        if (this.slip > S.tune.tcSlip / 100) this.tcCut = Math.min(1, this.tcCut + dt * 10);
+        else this.tcCut = Math.max(0, this.tcCut - dt * 5);
+        thrIn *= 1 - 0.75 * this.tcCut;
+      } else {
+        // Modern drag traction management (Holley, FuelTech, MoTeC): driven
+        // speed against where it should be, and the answer is ignition
+        // timing, not throttle: retard comes in and out smoothly (a PI
+        // loop), up to ~20 degrees (~30% of the torque), then a soft cut
+        // drops cylinders for the rest. The throttle stays open, so boost
+        // holds.
+        var tgt = S.tune.tcSlip / 100, k = (S.tune.tcGain || 5) / 5;
+        // measured as speed, like a driveshaft sensor against the car's
+        // speed: the allowed spin is the target % of the car's speed, never
+        // less than that % of ~15 mph (a % of nearly nothing at the hit
+        // would read as huge spin)
+        var spinV = this.ww * S.r - this.v, allowV = tgt * Math.max(this.v, 7);
+        var over = (spinV - allowV) / allowV;
+        // timing retard answers the spin right now (up to ~20 degrees, ~30%
+        // of the torque); only spin that keeps going (the integral) adds the
+        // soft cut, so a short hit-spike the tires recover from by
+        // themselves doesn't drag the engine off boost
+        this.tcI = clamp((this.tcI || 0) + Math.min(over, 1.5) * dt * 1.5 * k, 0, 0.8);
+        var retard = clamp(over * 0.3 * k + Math.min(this.tcI, 0.3), 0, 0.3);
+        var want = retard + clamp(this.tcI - 0.3, 0, 0.5);
+        this.tcCut += clamp(want - this.tcCut, -dt * 6, dt * 8 * Math.sqrt(k));
+        this.tcCut = clamp(this.tcCut, 0, 0.8);
+        this.tcRed = this.tcCut;
+      }
+    } else this.tcCut = 0;
     var pre = !this.launched && !this.burnMode;     // sitting on the brakes / transbrake
     // An H-pattern shift: the driver is off the gas with the clutch in (an
     // engine left flat out on the limiter would dump the clutch in the next gear)
@@ -884,7 +916,9 @@
     var Te;
     if (dead) Te = -fric * 2;
     else if (firing) {
-      Te = boostedTorque(S, rpm, this.boost) * this.thr - fric * (1 - this.thr) + this.nosLvl * S.nosW / wE;
+      Te = boostedTorque(S, rpm, this.boost) * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW / wE * (1 - this.tcRed);
+      // a soft cut (TC past full retard) drops cylinders: heard as a crackle
+      if (this.tcRed > 0.3) this.cutT += dt * (this.tcRed - 0.3) / 0.5;
       var p = Te * wE;
       if (p / DR.HP > this.peakHp && this.launched) this.peakHp = p / DR.HP;
       if (Te > this.peakTqNm && this.launched) this.peakTqNm = Te;

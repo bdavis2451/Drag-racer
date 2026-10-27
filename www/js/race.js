@@ -96,7 +96,7 @@
     txt(c, km ? 'KM/H' : 'MPH', W - 22, 23, 'rgba(125,130,145,0.9)', 1);
     // ---- warning lights, bottom corners
     var lampsL = [['LCK', sim.burnMode, '#ffcc00'], ['TB', Sx.trType === 'auto' && Sx.tbrake && !sim.launched && phase !== 'pre' && phase !== 'burnout', '#ffcc00'], ['2ST', Sx.twostep && !sim.launched && sim.cut, '#ff8a2a']];
-    var lampsR = [['NOS', sim.nosOn, '#c89bff'], ['TC', sim.tcCut > 0.2, '#ff8a2a'], ['BRK', sim.brakeLimited, '#ff4040']];
+    var lampsR = [['NOS', sim.nosOn, '#c89bff'], ['TC', sim.tcCut > 0.05, '#ff8a2a'], ['BRK', sim.brakeLimited, '#ff4040']];
     function lamp(x, lp) {
       px(c, x, 33, 15, 7, lp[1] ? lp[2] : 'rgba(255,255,255,0.06)');
       txt(c, lp[0], x + 2, 34, lp[1] ? '#0b0c10' : 'rgba(205,210,220,0.28)', 1);

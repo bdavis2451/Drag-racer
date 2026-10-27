@@ -196,7 +196,7 @@
     opt('ecu0', 'Performance Chip', 350, { bw: 0.015, ecu: 0 }, 'An off-the-shelf plug-in chip: a little more timing and fuel for a stock engine. It is not a tune: it can\'t scale new injectors, boost, alcohol fuel or cams. Keeps the factory limiter.'),
     opt('ecu1', 'Street Tune Flash', 600, { bw: 0.03, ecu: 1, tune: true }, 'A custom flash of the factory ECU for your parts: injectors, boost, E85, cams. Better fuel and timing, and the rev limiter goes as far as your engine parts safely allow (up to +800 rpm).'),
     opt('ecu2', 'Standalone ECU', 2000, { bw: 0.05, ecu: 2, tune: true }, 'Tuned for your parts. Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
-    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3, tune: true }, 'Tuned for your parts. Adjustable rev limiter and traction control.')
+    opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3, tune: true }, 'Tuned for your parts. Adjustable rev limiter and modern drag traction management: it pulls ignition timing smoothly when the tires spin, throttle left wide open.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
     opt('stock', 'Stock Intercooling', 0, { ic: 0 }, 'Factory boosted engines come with a small intercooler (takes out 60% of the heat); a bolt-on kit has none, so the charge goes in hot.'),
