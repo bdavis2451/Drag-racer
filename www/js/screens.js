@@ -552,22 +552,24 @@
     var grid = h('div', { class: 'egrid' });
     G.state.cars.forEach(function (inst) {
       var S = DR.buildSpec(inst), active = inst.uid === G.state.active, stars = DR.starRating(inst);
+      var away = DR.Team && DR.Team.carAway(inst.uid);
       var cv = UI.lazyPreview('ecv', inst, { aspect: 0.42 });
       grid.appendChild(h('div', { class: 'ecard' + (active ? ' won' : '') },
-        h('div', { class: 'ecvwrap' }, cv, active ? h('span', { class: 'etype good' }, 'DRIVING') : null, inst.damage ? h('span', { class: 'ewon bad' }, 'BROKEN') : null),
+        h('div', { class: 'ecvwrap' }, cv, active ? h('span', { class: 'etype good' }, 'DRIVING') : null, away ? h('span', { class: 'ewon' }, 'AT THE TRACK') : null, inst.damage ? h('span', { class: 'ewon bad' }, 'BROKEN') : null),
         h('div', { class: 'acc ename' }, DR.CARS[inst.carId].name),
         h('div', { class: 'gsmall dim' }, Math.round(S.peakHp + S.nosHp) + ' hp • ' + UI.kgLb(S.m) + ' • ' + (Math.round(stars * 100) / 100) + ' stars'),
         h('div', { class: 'gsmall' }, inst.best && inst.best.q ? 'Best 1/4: ' + inst.best.q.toFixed(3) + 's' : 'No timeslip yet'),
         h('div', { class: 'efoot' },
           active ? null : btn('Drive', function () { G.state.active = inst.uid; G.save(); UI.show(UI.Garage); }, 'small go'),
-          modded(inst) ? btn('Strip parts', function () {
+          away ? h('span', { class: 'gsmall dim' }, DR.Team.awayText(inst.uid)) : null,
+          !away && modded(inst) ? btn('Strip parts', function () {
             var sc = G.stripCost(inst);
             if (sc && !G.canAfford(sc)) return UI.toast('Used factory parts to replace the ones you sold cost ' + DR.money(sc));
             UI.confirm('Take every aftermarket part off the ' + DR.CARS[inst.carId].name + '? They go to your inventory and its factory parts go back in' + (sc ? ' (used ones for those you sold: ' + DR.money(sc) + ')' : '') + '.', function () {
               var n = G.stripCar(inst); A.click(); UI.toast(n + ' part' + (n === 1 ? '' : 's') + ' moved to your inventory'); UI.refresh();
             }, 'Strip');
           }, 'small') : null,
-          G.state.cars.length > 1 ? btn('Sell ' + DR.money(G.carValue(inst)), function () { sellCarModal(inst); }, 'small red') : null)));
+          !away && G.state.cars.length > 1 ? btn('Sell ' + DR.money(G.carValue(inst)), function () { sellCarModal(inst); }, 'small red') : null)));
     });
     return h('div', { class: 'screen' }, UI.top('MY CARS', function () { UI.show(UI.Garage); }, btn('Dealer ▶', function () { UI.show(UI.Dealer); }, 'small')),
       h('div', { class: 'content' }, h('div', { class: 'tipline' }, 'Garage slots: ' + G.state.cars.length + ' / ' + G.carSlots() + '. Every sponsor contract you fulfil opens another slot and pays for a car.' + (G.freeCars() ? ' You have ' + G.freeCars() + ' free sponsor car' + (G.freeCars() > 1 ? 's' : '') + ' to pick at the dealer.' : '')), grid));

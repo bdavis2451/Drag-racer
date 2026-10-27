@@ -301,7 +301,7 @@
   }
 
   // ---------------------------------------------------------------- the view
-  UI.circuitView = function (inst) {
+  function testLapView(inst) {
     var track = DR.TRACKS[TRACK];
     if (!inst) return h('div', { class: 'dim' }, 'You need a car first.');
     var S = G.spec(inst), fig = DR.handlingFigures(inst, S), best = bestOf(inst), mySig = sig(inst);
@@ -483,7 +483,7 @@
         trace, probeTxt, cornerBox),
       board,
       h('div', { class: 'gsmall dim trknote' }, 'Laps are driven by the team\'s test driver: the ideal line, braking as late as the tires allow. Same parts and tune as the drag strip - except anti-roll bar balance, tires and brakes matter far more here. No money on the line.'));
-  };
+  }
 
   UI.circuitBest = function (inst) { var b = inst && bestOf(inst); return b ? 'Best lap ' + fmtLap(b.t) : 'No lap yet'; };
 
@@ -498,4 +498,242 @@
           h('td', { class: 'num' }, fmtLap(rec.t)), h('td', { class: 'num dim' }, spd(rec.top) + ' ' + spdU()));
       })));
   }
+
+  // ================================================================ TEAM RACING
+  // The Circuit tab: Races (enter your drivers, watch them live), Team
+  // (your drivers and the hiring board) and Test Lap (the ideal lap above).
+  var TM = function () { return DR.Team; };
+  UI.circuitTab = UI.circuitTab || 'races';
+  UI.circuitView = function (inst) {
+    var tab = UI.circuitTab;
+    var chips = h('div', { class: 'schips trktabs' },
+      [['races', 'Races'], ['team', 'Team'], ['test', 'Test Lap']].map(function (t) {
+        var n = t[0] === 'races' ? TM().active().length : t[0] === 'team' ? TM().state().drivers.length : 0;
+        return btn(t[1] + (n ? ' (' + n + ')' : ''), function () { UI.circuitTab = t[0]; if (t[0] !== 'races') UI.watchRace = null; UI.refresh(); }, 'chip' + (tab === t[0] ? ' on' : ''));
+      }));
+    var body;
+    if (tab === 'team') body = teamView();
+    else if (tab === 'test') body = inst && TM().carAway(inst.uid) ? h('div', { class: 'trkcard' }, h('div', {}, TM().awayText(inst.uid)), h('div', { class: 'dim gsmall' }, 'Pick another car in My Cars to run a test lap.')) : testLapView(inst);
+    else {
+      var r = UI.watchRace && TM().state().races.filter(function (x) { return x.id === UI.watchRace; })[0];
+      body = r ? watchView(r) : racesView();
+    }
+    return h('div', {}, chips, body);
+  };
+
+  // ---------------------------------------------------------------- helmets
+  function helmet(col, size) {
+    var cv = document.createElement('canvas'); cv.width = 12; cv.height = 12; cv.className = 'helmet';
+    cv.style.width = cv.style.height = (size || 24) + 'px';
+    var c = cv.getContext('2d');
+    c.fillStyle = '#000'; c.fillRect(2, 1, 8, 1); c.fillRect(1, 2, 10, 8); c.fillRect(2, 10, 9, 1);
+    c.fillStyle = col; c.fillRect(2, 2, 8, 8); c.fillRect(3, 1, 6, 1);
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(3, 2, 3, 1);
+    c.fillStyle = '#1a1d26'; c.fillRect(6, 4, 5, 3);
+    c.fillStyle = '#7fd0ff'; c.fillRect(7, 4, 3, 1);
+    c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(2, 8, 8, 2);
+    return cv;
+  }
+  var SKILLS = [['brk', 'Braking'], ['cor', 'Cornering'], ['con', 'Consistency']];
+  function bars(d) {
+    return h('div', { class: 'skbars' }, SKILLS.map(function (k) {
+      var v = Math.floor(d[k[0]]);
+      return h('div', { class: 'skrow' }, h('span', { class: 'k' }, k[1]),
+        h('span', { class: 'skbar' }, h('span', { class: 'pot', style: { width: d.pot + '%' } }), h('span', { class: 'val', style: { width: v + '%' } })),
+        h('span', { class: 'v' }, String(v)));
+    }));
+  }
+  function starsEl(n) { var s = ''; for (var i = 1; i <= 5; i++) s += n >= i ? '★' : n >= i - 0.5 ? '⯪' : '☆'; return h('span', { class: 'acc dstars', title: 'Potential' }, s); }
+  function driverCard(d, foot, status) {
+    return h('div', { class: 'ecard dcard' },
+      h('div', { class: 'drow' }, helmet(d.col, 28), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, d.name),
+        h('div', { class: 'gsmall dim' }, 'Age ' + d.age + ' • potential ', starsEl(TM().stars(d)))),
+        status || null),
+      bars(d),
+      h('div', { class: 'gsmall dim' }, d.races ? d.races + ' races • ' + d.wins + ' wins • ' + d.podiums + ' podiums' : 'No races yet', ' • ', h('span', { class: 'acc' }, DR.money(d.wage) + '/race')),
+      foot ? h('div', { class: 'efoot' }, foot) : null);
+  }
+
+  // ---------------------------------------------------------------- team
+  function teamView() {
+    var T = TM(), s = T.state();
+    var mine = h('div', { class: 'egrid dgrid' });
+    s.drivers.forEach(function (d) {
+      var busy = T.active().filter(function (r) { return r.drv === d.id; })[0];
+      mine.appendChild(driverCard(d,
+        busy ? btn('Watch', function () { UI.circuitTab = 'races'; UI.watchRace = busy.id; UI.refresh(); }, 'small') :
+          btn('Release', function () { UI.confirm('Release ' + d.name + '? They leave the team (no refund).', function () { var w = T.release(d.id); if (w) UI.toast(w); UI.refresh(); }, 'Release'); }, 'small red'),
+        busy ? h('span', { class: 'ewon' }, 'RACING') : h('span', { class: 'etype good' }, 'FREE')));
+    });
+    for (var i = s.drivers.length; i < T.MAX; i++) mine.appendChild(h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, 'Empty seat'), h('div', { class: 'gsmall dim' }, 'Hire a driver from the board below.')));
+    var board = h('div', { class: 'egrid dgrid' });
+    s.board.forEach(function (d, i) {
+      var full = s.drivers.length >= T.MAX;
+      board.appendChild(driverCard(d, btn('Hire ' + DR.money(d.fee), function () {
+        var w = T.hire(i); if (w) return UI.toast(w);
+        A.cash && A.cash(); UI.toast(d.name + ' joins the team!'); UI.refresh();
+      }, 'small ' + (full || !G.canAfford(d.fee) ? 'nofit' : 'go'))));
+    });
+    var left = T.racesToNewBoard();
+    return h('div', {},
+      h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'YOUR TEAM • ' + s.drivers.length + ' / ' + T.MAX + ' drivers'),
+        h('div', { class: 'dim' }, 'Drivers race your cars on the circuit. Braking and cornering decide how much of the car\'s limit they use; consistency how steady their laps are and how often they make a mistake. Skills grow as they race, up to their potential (★): young drivers have the most room to grow.'))),
+      mine,
+      h('div', { class: 'stagehead', style: { marginTop: '10px' } }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'HIRING BOARD'),
+        h('div', { class: 'dim' }, 'Signing fee up front, then a wage every race they run. New faces in ' + left + ' race' + (left === 1 ? '' : 's') + '.')),
+        btn('Scout now ' + DR.money(T.SCOUT_COST), function () { if (!T.scout()) return UI.toast('Scouting costs ' + DR.money(T.SCOUT_COST)); UI.refresh(); }, 'small')),
+      board);
+  }
+
+  // ---------------------------------------------------------------- races
+  function racesView() {
+    var T = TM(), s = T.state(), live = T.active();
+    var out = [];
+    if (!s.drivers.length) out.push(h('div', { class: 'trkcard callout' }, h('div', { class: 'acc pix' }, 'No drivers yet'),
+      h('div', {}, 'Circuit races are run by your hired drivers, in your cars. Hire one on the Team tab: rookies are cheap and learn fast.'),
+      btn('Go to Team', function () { UI.circuitTab = 'team'; UI.refresh(); }, 'small go')));
+    if (live.length) {
+      var lg = h('div', { class: 'egrid' });
+      live.forEach(function (r) {
+        var cls = T.classById(r.cls), d = T.driver(r.drv), t = T.clock(r), rows = T.standings(r, t), me = rows.filter(function (x) { return x.e.you; })[0];
+        var car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0];
+        lg.appendChild(h('div', { class: 'ecard livecard', onclick: function () { UI.watchRace = r.id; UI.refresh(); } },
+          h('div', { class: 'drow' }, helmet(d ? d.col : '#888', 22), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, cls.name), h('div', { class: 'gsmall dim' }, (d ? d.name : '') + ' • ' + (car ? DR.CARS[car.carId].name : ''))), h('span', { class: 'ewon live' }, 'LIVE')),
+          h('div', { class: 'gst' }, h('span', { class: 'k' }, 'P' + (rows.indexOf(me) + 1) + ' • LAP ' + Math.min(r.laps, me.w.lap + 1) + '/' + r.laps), h('span', { class: 'v' }, 'back in ' + T.fmtLeft(T.left(r)))),
+          btn('Watch', function () { UI.watchRace = r.id; UI.refresh(); }, 'small go')));
+      });
+      out.push(h('div', { class: 'plvl secthead' }, 'LIVE NOW'), lg);
+    }
+    var grid = h('div', { class: 'egrid' });
+    T.CLASSES.forEach(function (cls) {
+      var won = s.wins[cls.id] || 0, unl = [];
+      if (!won) { if (cls.perf) unl.push(DR.LEVEL_NAMES[cls.perf] + ' parts'); var n = (cls.stages || []).reduce(function (a, si) { return a + DR.carsAtStage(si).filter(function (id) { return !G.careerState().cars[id]; }).length; }, 0); if (n) unl.push(n + ' cars'); }
+      grid.appendChild(h('div', { class: 'ecard clcard' },
+        h('div', { class: 'drow' }, h('span', { class: 'clbadge' }, cls.id), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, cls.name),
+          h('div', { class: 'gsmall dim' }, cls.floor ? 'Ideal lap ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car, no limits')), won ? h('span', { class: 'etype good' }, '✔ ' + won) : null),
+        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LAPS'), h('span', { class: 'v' }, String(cls.laps))),
+        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'ENTRY'), h('span', { class: 'v' }, DR.money(cls.fee) + ' + wage')),
+        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'WIN'), h('span', { class: 'v acc' }, DR.money(cls.prize[0]))),
+        unl.length ? h('div', { class: 'gsmall eunl' }, '🔓 First win: ' + unl.join(' + ')) : null,
+        h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, 'Field of 6 • ~' + Math.round(cls.laps * (cls.floor || cls.pace) / T.SPEED / 60) + ' min'),
+          btn('Enter', function () { entryModal(cls); }, 'small go'))));
+    });
+    out.push(h('div', { class: 'plvl secthead' }, 'RACES • ' + DR.TRACKS[T.TRACK].name), grid);
+    if (s.history.length) {
+      out.push(h('div', { class: 'plvl secthead' }, 'RECENT RESULTS'));
+      out.push(h('div', { class: 'trkcard' }, h('table', { class: 'trktab' }, s.history.slice(0, 6).map(function (x) {
+        return h('tr', {}, h('td', { class: x.pos === 1 ? 'acc' : '' }, 'P' + x.pos), h('td', {}, T.classById(x.cls).name), h('td', {}, x.drv), h('td', { class: 'dim' }, DR.CARS[x.car] ? DR.CARS[x.car].name : ''),
+          h('td', { class: 'num' }, x.prize ? '+' + DR.money(x.prize) : '—'));
+      }))));
+    }
+    out.push(h('div', { class: 'gsmall dim trknote' }, 'Races run in real time at 4x speed. While a car is at the track it can\'t be drag raced, worked on, shown or sold. Circuit wins open parts and cars at the dealer, the same as drag racing does.'));
+    return h('div', {}, out);
+  }
+
+  // pick a car and a driver for a class
+  function entryModal(cls) {
+    var T = TM(), s = T.state(), selCar = null, selDrv = null, close;
+    var carBox = h('div', { class: 'col entlist' }), drvBox = h('div', { class: 'col entlist' }), sum = h('div', { class: 'entsum' }), go;
+    var free = s.drivers.filter(function (d) { return !T.driverBusy(d.id); });
+    if (!s.drivers.length) return UI.toast('Hire a driver first (Team tab)');
+    if (!free.length) return UI.toast('All your drivers are racing');
+    function status(inst) {
+      if (T.carAway(inst.uid)) return 'At the track';
+      if (inst.damage) return 'Broken';
+      return T.eligible(inst, cls) ? 'Too quick' : '';
+    }
+    function render() {
+      carBox.innerHTML = ''; drvBox.innerHTML = '';
+      G.state.cars.forEach(function (inst) {
+        var why = status(inst), lap = T.idealLap(inst);
+        if (!selCar && !why) selCar = inst.uid;
+        carBox.appendChild(h('div', { class: 'entrow' + (selCar === inst.uid ? ' on' : '') + (why ? ' off' : ''), onclick: function () { if (why) return UI.toast(why === 'Too quick' ? T.eligible(inst, cls) : why); selCar = inst.uid; render(); } },
+          h('span', { class: 'grow' }, DR.CARS[inst.carId].name), h('span', { class: 'dim' }, 'ideal ' + T.fmtLap(lap)), why ? h('span', { class: 'bad' }, why) : null));
+      });
+      free.forEach(function (d) { if (!selDrv) selDrv = d.id; });
+      s.drivers.forEach(function (d) {
+        var busy = T.driverBusy(d.id);
+        drvBox.appendChild(h('div', { class: 'entrow' + (selDrv === d.id ? ' on' : '') + (busy ? ' off' : ''), onclick: function () { if (busy) return UI.toast(d.name + ' is racing'); selDrv = d.id; render(); } },
+          helmet(d.col, 18), h('span', { class: 'grow' }, d.name), h('span', { class: 'dim' }, 'B' + Math.floor(d.brk) + ' C' + Math.floor(d.cor) + ' K' + Math.floor(d.con)), h('span', { class: 'acc' }, DR.money(d.wage))));
+      });
+      var d = T.driver(selDrv), cost = cls.fee + (d ? d.wage : 0);
+      sum.innerHTML = '';
+      sum.appendChild(h('div', {}, 'Entry ' + DR.money(cls.fee) + ' + wage ' + DR.money(d ? d.wage : 0) + ' = ', h('b', { class: 'acc' }, DR.money(cost))));
+      sum.appendChild(h('div', { class: 'gsmall dim' }, 'Prizes: ' + cls.prize.filter(Boolean).map(function (p, i) { return 'P' + (i + 1) + ' ' + DR.money(p); }).join(' • ')));
+    }
+    go = btn('Send to the track', function () {
+      if (!selCar) return UI.toast('No car can enter this class');
+      go.classList.add('busy'); go.textContent = 'Qualifying…';
+      setTimeout(function () {
+        var res = T.enter(cls.id, selCar, selDrv);
+        if (!res.race) { go.classList.remove('busy'); go.textContent = 'Send to the track'; return UI.toast(res.msg); }
+        close(); UI.watchRace = res.race.id; A.cash && A.cash(); UI.refresh();
+      }, 30);
+    }, 'primary');
+    // ideal laps take a moment the first time: draw after the modal shows
+    close = UI.modal([h('h2', {}, cls.name), h('div', { class: 'gsmall dim' }, (cls.floor ? 'Cars whose ideal lap is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + cls.laps + ' laps • 6 cars'),
+      h('div', { class: 'plvl' }, 'CAR'), carBox, h('div', { class: 'plvl' }, 'DRIVER'), drvBox, sum,
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Cancel', function () { close(); }), go)]);
+    carBox.appendChild(h('div', { class: 'dim' }, 'Working out lap times…'));
+    setTimeout(render, 30);
+  }
+
+  // ---------------------------------------------------------------- watch
+  function watchView(r) {
+    var T = TM(), track = DR.TRACKS[T.TRACK], cls = T.classById(r.cls), d = T.driver(r.drv);
+    var cv = h('canvas', { class: 'trkcv', width: CW, height: CH }), table = h('div', { class: 'trkcard standings' }), head = h('div', { class: 'stagehead' });
+    var base = drawBase(track), gm = base.gm, n = track.lx.length, lastTab = 0;
+    function draw() {
+      var t = r.done ? r.end : T.clock(r), c = cv.getContext('2d');
+      c.imageSmoothingEnabled = false; c.drawImage(base.cv, 0, 0);
+      var rows = T.standings(r, t);
+      rows.slice().reverse().forEach(function (x) {
+        if (x.w.done) return;
+        var fi = (x.w.frac * n) % n;
+        drawCar(c, track, gm, fi, x.e.col);
+        if (x.e.you) {
+          var i = Math.floor(fi), px = gm.X(track.lx[i]), py = gm.Y(track.ly[i]);
+          c.strokeStyle = '#ffcc00'; c.lineWidth = 1.5; c.beginPath(); c.arc(px, py, 9, 0, 7); c.stroke();
+        }
+      });
+      return { t: t, rows: rows };
+    }
+    function renderTable(st) {
+      var me = st.rows.filter(function (x) { return x.e.you; })[0], lead = st.rows[0];
+      var allDone = r.done || st.rows.every(function (x) { return x.w.done; });
+      head.innerHTML = '';
+      head.appendChild(h('div', { class: 'grow' }, h('div', { class: 'plvl' }, cls.name.toUpperCase() + ' • ' + track.name),
+        h('div', { class: 'pix acc' }, allDone ? 'FINISHED' : 'LAP ' + Math.min(r.laps, lead.w.lap + 1) + ' / ' + r.laps),
+        h('div', { class: 'dim gsmall' }, allDone ? 'Results are in.' : 'Race time ' + T.fmtLeft(st.t) + ' • back in ' + T.fmtLeft(T.left(r)))));
+      head.appendChild(btn('◀ Races', function () { UI.watchRace = null; UI.refresh(); }, 'small'));
+      table.innerHTML = '';
+      table.appendChild(h('table', { class: 'trktab' }, h('tr', {}, h('th', {}, 'P'), h('th', {}, 'Driver'), h('th', {}, 'Car'), h('th', {}, allDone ? 'Time' : 'Gap'), h('th', {}, 'Best')),
+        st.rows.map(function (x, i) {
+          var gap;
+          if (allDone || x.w.done) gap = i === 0 ? T.fmtLap(x.e.cum[x.e.cum.length - 1]) : '+' + (x.e.cum[x.e.cum.length - 1] - lead.e.cum[lead.e.cum.length - 1]).toFixed(2);
+          else if (i === 0) gap = 'Leader';
+          else { var lapsDown = Math.floor(lead.prog) - Math.floor(x.prog); gap = lapsDown >= 1 && lead.w.lap > x.w.lap ? '+' + lapsDown + ' lap' : '+' + Math.max(0, (lead.prog - x.prog) * (r.base)).toFixed(1); }
+          return h('tr', { class: x.e.you ? 'me' : '' }, h('td', { class: 'acc' }, String(i + 1)),
+            h('td', {}, h('span', { class: 'dot', style: { background: x.e.col } }), x.e.name, h('div', { class: 'gsmall dim' }, x.e.team)),
+            h('td', { class: 'dim' }, DR.CARS[x.e.car] ? DR.CARS[x.e.car].name : ''),
+            h('td', { class: 'num' }, gap), h('td', { class: 'num dim' }, (x.w.lap > 1 || x.w.done) && x.e.best < 1e8 ? T.fmtLap(x.e.best) : '—'));
+        })));
+      if (allDone) {
+        var pos = st.rows.indexOf(me) + 1, prize = cls.prize[pos - 1] || 0, hist = T.state().history[0];
+        table.appendChild(h('div', { class: 'resline' }, h('span', { class: pos === 1 ? 'acc pix' : 'pix' }, 'P' + pos), ' ', (d ? d.name : 'Your driver'),
+          prize ? h('span', { class: 'good' }, ' +' + DR.money(prize)) : null,
+          hist && hist.grew && Object.keys(hist.grew).length ? h('div', { class: 'gsmall' }, 'Learned: ' + Object.keys(hist.grew).map(function (k) { return SKILLS.filter(function (s2) { return s2[0] === k; })[0][1] + ' +' + hist.grew[k]; }).join(', ')) : null,
+          hist && hist.unl && hist.unl.length ? h('div', { class: 'gsmall acc' }, 'UNLOCKED: ' + hist.unl.join(' • ')) : null,
+          me.e.err ? h('div', { class: 'gsmall dim' }, me.e.err + ' mistake' + (me.e.err > 1 ? 's' : '') + ' (off line or a lock-up): consistency improves with racing') : null));
+      }
+    }
+    (function loop() {
+      if (!cv.isConnected && lastTab) return;
+      var st = draw(), now = Date.now();
+      if (now - lastTab > 300) { lastTab = now; renderTable(st); if (!r.done && T.clock(r) >= r.end) DR.Team.report(); }
+      if (!r.done || !cv.isConnected) requestAnimationFrame(loop);
+    })();
+    return h('div', {}, head, h('div', { class: 'trktop' }, h('div', { class: 'trkmapcol' }, h('div', { class: 'trkframe' }, cv, cornerLabels(track))), h('div', { class: 'trkside wide' }, table)));
+  }
 })();
+

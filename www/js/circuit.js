@@ -116,7 +116,7 @@
     // a = bias * (muF*Nf + muR*Nr) / m with Nf = mgf + DFf + m a h/L
     var Nf0 = H.m * G * H.f + down * H.claF, Nr0 = H.m * G * (1 - H.f) + down * (1 - H.claF);
     var a = H.bias * (muBF * Nf0 + muBR * Nr0) / H.m / (1 - H.bias * (H.h / H.L) * (muBF - muBR));
-    return Math.min(a, H.bcap * G + down / H.m * 0.5);
+    return Math.min(a, H.bcap * G + down / H.m * 0.5) * (H.brkK || 1);
   };
 
   // Skidpad (300 ft circle) and braking from 70 mph, as the magazines test.
@@ -154,11 +154,15 @@
   // track: { s: [] distance, k: [] curvature (1/m, signed), len, sectors: [s,..], corners: [{ name, s0, s1 }] }
   // Returns the lap: time, sector times, and per-point speed, gear, throttle/
   // brake/corner state and g's.
-  DR.lapSim = function (inst, track, S) {
+  // drv (optional): a driver short of the ideal, { lat, brk }: how much of
+  // the car's cornering and braking limit they use (1 = all of it)
+  DR.lapSim = function (inst, track, S, drv) {
     S = S || DR.buildSpec(inst);
     // on the circuit, not the skidpad (see DR.CIRCUIT_GRIP)
     var H = Object.assign({}, DR.handling(inst, S)), n = track.s.length, ds = track.len / n, i, k;
-    H.muF *= DR.CIRCUIT_GRIP; H.muR *= DR.CIRCUIT_GRIP; H.muX *= DR.CIRCUIT_GRIP;
+    var dl = drv && drv.lat || 1;
+    H.muF *= DR.CIRCUIT_GRIP * dl; H.muR *= DR.CIRCUIT_GRIP * dl; H.muX *= DR.CIRCUIT_GRIP * Math.sqrt(dl);
+    if (drv && drv.brk) H.brkK = drv.brk;
     var vmax = 110;
     // 1. cornering speed at every point (downforce makes it a fixed point)
     var vc = new Float64Array(n), lim = new Array(n);
