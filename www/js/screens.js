@@ -60,7 +60,7 @@
   function memory() {
     var m = UI.memory('screens');
     if (!m) return;
-    if (['map', 'career', 'street', 'test'].indexOf(m.raceTab) >= 0) UI.raceTab = m.raceTab;
+    if (['map', 'career', 'street', 'test', 'circuit'].indexOf(m.raceTab) >= 0) UI.raceTab = m.raceTab;
     if (m.selStage != null) { selStage = m.selStage; seenStage = m.seenStage; }
     if (TUNE_ICONS[m.tuneGroup]) tuneGroup = m.tuneGroup;
     if (DR.CAR_CATS.indexOf(m.dealerCat) >= 0) dealerCat = m.dealerCat;
@@ -81,9 +81,10 @@
     var rail = h('div', { class: 'srail' },
       railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }),
       railItem('u_map', 2, 'Street Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
+      railItem('u_circuit', 2, 'Circuit', tab === 'circuit', function () { UI.show(UI.RaceMenu, 'circuit'); }),
       railItem('u_test', 2, 'Test & Tune', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }));
-    var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : testView(inst);
-    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, bestText(inst))),
+    var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'circuit' ? UI.circuitView(inst) : testView(inst);
+    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, tab === 'circuit' ? UI.circuitBest(inst) : bestText(inst))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
   };
 

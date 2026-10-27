@@ -192,7 +192,16 @@
         disc(12, 12, 2, ac); break;
       case 'weight':
         r(3, 9, 18, 12, M3); r(3, 9, 18, 1, M2); r(8, 4, 8, 5, M4); r(10, 6, 4, 3, M3); DR.pixText(x, '-LB', 6, 13, ac, 1); break;
+      case 'sway':
+        // a U-shaped bar with its two drop links and bushings
+        r(3, 9, 18, 3, ac); r(3, 9, 18, 1, DR.shadeHex(ac, 0.3)); r(3, 9, 3, 10, ac); r(18, 9, 3, 10, ac);
+        r(2, 18, 5, 3, M3); r(17, 18, 5, 3, M3); r(8, 7, 3, 7, M2); r(13, 7, 3, 7, M2); r(8, 7, 3, 1, M1); r(13, 7, 3, 1, M1); break;
       // menu icons
+      case 'u_circuit':
+        // a little road course seen from above, with the start line
+        r(3, 4, 18, 3, '#9aa0aa'); r(3, 4, 3, 14, '#9aa0aa'); r(18, 4, 3, 9, '#9aa0aa'); r(11, 10, 10, 3, '#9aa0aa'); r(11, 10, 3, 9, '#9aa0aa'); r(3, 16, 11, 3, '#9aa0aa');
+        r(4, 5, 16, 1, '#5d636e'); r(4, 17, 9, 1, '#5d636e'); r(9, 4, 1, 3, '#ffffff'); r(10, 4, 1, 3, BK);
+        r(19, 11, 2, 2, '#d23a3a'); r(5, 8, 1, 2, '#ffffff'); r(5, 12, 1, 2, '#d23a3a'); break;
       case 'u_career':
         r(6, 3, 12, 2, '#ffd23d'); r(7, 5, 10, 6, '#ffcc00'); r(8, 11, 8, 2, '#e0a800'); r(10, 13, 4, 3, '#c99a00'); r(7, 16, 10, 2, '#8a6a10'); r(6, 18, 12, 3, '#5a4510');
         r(3, 5, 3, 1, '#ffcc00'); r(3, 5, 1, 4, '#ffcc00'); r(3, 8, 4, 1, '#ffcc00'); r(18, 5, 3, 1, '#ffcc00'); r(20, 5, 1, 4, '#ffcc00'); r(17, 8, 4, 1, '#ffcc00'); r(9, 6, 2, 4, '#fff2a0'); break;
@@ -318,8 +327,16 @@
         if (d) out.push(h('span', { class: d > 0 ? 'good' : 'bad' }, (v > 0 ? '+' : '') + v + lim[i][3]));
       }
     }
+    // circuit parts: cornering grip (skidpad g) and the 70-0 stop
+    if (out.length < 2 && HANDLING_CATS[cat] && DR.handlingFigures) {
+      var F0 = DR.handlingFigures(inst, S0), F1 = DR.handlingFigures(copy, S1);
+      var dg = Math.round((F1.skidpad - F0.skidpad) * 100) / 100, dft = Math.round(F1.brake70 - F0.brake70);
+      if (dg) out.push(h('span', { class: dg > 0 ? 'good' : 'bad' }, (dg > 0 ? '+' : '') + dg.toFixed(2) + 'g'));
+      if (dft && out.length < 2) out.push(h('span', { class: dft < 0 ? 'good' : 'bad' }, (dft > 0 ? '+' : '') + dft + 'ft stop'));
+    }
     return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'no change');
   }
+  var HANDLING_CATS = { springs: 1, shocks: 1, sway: 1, brakes: 1, ftires: 1, rtires: 1, aero: 1 };
   function deltaRow(a, b, unit, dec, lowerBetter) {
     var diff = b - a, cls = Math.abs(diff) < Math.pow(10, -(dec || 0)) / 2 ? 'dim' : ((diff < 0) === !!lowerBetter ? 'good' : 'bad');
     return h('span', { class: cls }, a.toFixed(dec || 0) + ' → ' + b.toFixed(dec || 0) + unit);

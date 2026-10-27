@@ -304,18 +304,26 @@
   // sk: spring rate multiplier. low: fixed drop (m). adjS: ride height and
   // spring rates adjustable within ride [lo, hi] (m) and rate [lo, hi] (x).
   C.springs = { name: 'Springs', options: [
-    opt('stock', 'Stock Springs', 0, { sk: 1, adjS: false }),
-    opt('sp1', 'Lowering Springs', 500, { sk: 1.25, adjS: false, low: 0.03 }, 'Drops the car 30 mm and stiffens it. Lower CG, less weight transfer, less travel.'),
-    opt('sp2', 'Adjustable Coilovers', 1800, { sk: 1, adjS: true, ride: [-0.06, 0.03], rate: [0.6, 1.5] }, 'Set ride height and spring rate at each end.'),
-    opt('sp3', 'Drag Coilovers', 2600, { sk: 0.9, adjS: true, ride: [-0.06, 0.07], rate: [0.35, 1.8] }, 'Wide ride-height and spring range built for launching.')
+    // hg: cornering grip on a circuit (body control and camber), x stock
+    opt('stock', 'Stock Springs', 0, { sk: 1, adjS: false, hg: 1 }),
+    opt('sp1', 'Lowering Springs', 500, { sk: 1.25, adjS: false, low: 0.03, hg: 1.02 }, 'Drops the car 30 mm and stiffens it. Lower CG, less weight transfer, less travel.'),
+    opt('sp2', 'Adjustable Coilovers', 1800, { sk: 1, adjS: true, ride: [-0.06, 0.03], rate: [0.6, 1.5], hg: 1.04 }, 'Set ride height and spring rate at each end. Good on a circuit too.'),
+    opt('sp3', 'Drag Coilovers', 2600, { sk: 0.9, adjS: true, ride: [-0.06, 0.07], rate: [0.35, 1.8], hg: 0.97 }, 'Wide ride-height and spring range built for launching. Too soft for a road course.')
   ]};
   // z: damping ratio. adjD: 1 = front rebound + rear bump adjustable, 2 = bump
   // and rebound at both ends. lim: front travel (extension) limiter.
   C.shocks = { name: 'Shocks', options: [
-    opt('stock', 'Stock Shocks', 0, { z: 0.42, adjD: 0 }),
-    opt('sh1', 'Sport Shocks', 700, { z: 0.50, adjD: 0 }),
-    opt('sh2', 'Adjustable Drag Shocks', 2500, { z: 0.45, adjD: 1, lim: true }, 'Adjust front rebound and rear bump, plus a front travel limiter.'),
-    opt('sh3', 'Double-Adjustable Race Shocks', 5000, { z: 0.45, adjD: 2, lim: true, pro: true }, 'Bump and rebound at both ends, plus a front travel limiter.')
+    opt('stock', 'Stock Shocks', 0, { z: 0.42, adjD: 0, hg: 1 }),
+    opt('sh1', 'Sport Shocks', 700, { z: 0.50, adjD: 0, hg: 1.02 }, 'Firmer damping: the car takes a set in corners sooner.'),
+    opt('sh2', 'Adjustable Drag Shocks', 2500, { z: 0.45, adjD: 1, lim: true, hg: 0.98 }, 'Adjust front rebound and rear bump, plus a front travel limiter. Tuned to let the car squat, not to corner.'),
+    opt('sh3', 'Double-Adjustable Race Shocks', 5000, { z: 0.45, adjD: 2, lim: true, pro: true, hg: 1.03 }, 'Bump and rebound at both ends, plus a front travel limiter. Works on a circuit too.')
+  ]};
+  // anti-roll bars: no use at the strip; on a circuit they hold the body
+  // flat (hg) and, adjustable, set the balance (rollBal in Tuning)
+  C.sway = { name: 'Anti-Roll Bars', options: [
+    opt('stock', 'Stock Anti-Roll Bars', 0, { hg: 1 }),
+    opt('sw1', 'Sport Anti-Roll Bars', 450, { hg: 1.02 }, 'Thicker bars: less body roll in corners. No effect at the drag strip.'),
+    opt('sw2', 'Adjustable Race Anti-Roll Bars', 1300, { lvl: 2, hg: 1.03, adjR: true }, 'Less body roll, and you set the front/rear balance in Tuning: stiffer front = more understeer, stiffer rear = more oversteer.')
   ]};
   C.rearsusp = { name: 'Rear Suspension', options: [
     opt('stock', 'Stock Rear Suspension', 0, { as: 0.35, adjA: false }),
@@ -342,9 +350,12 @@
     opt('wb1', 'Adjustable Wheelie Bars', 1500, { bar: 1 }, 'Stops big wheelies. Set the height in Tuning.')
   ]};
   C.aero = { name: 'Aero', options: [
+    // cla: downforce (lift coefficient x area, m^2); claF: share on the
+    // front axle (circuit balance; the drag sim puts it all on the rear)
     opt('stock', 'Stock Body', 0, { cla: 0, dcda: 0 }),
-    opt('a1', 'Rear Spoiler', 600, { cla: 0.25, dcda: 0.02 }, 'A little rear downforce at speed.'),
-    opt('a2', 'Big Rear Wing', 1400, { cla: 0.55, dcda: 0.05 }, 'More rear downforce, more drag.')
+    opt('a1', 'Rear Spoiler', 600, { cla: 0.25, dcda: 0.02, claF: 0 }, 'A little rear downforce at speed.'),
+    opt('a3', 'Front Splitter + Rear Wing', 2200, { lvl: 2, cla: 0.8, dcda: 0.06, claF: 0.4 }, 'Balanced downforce front and rear: built for a road course.'),
+    opt('a2', 'Big Rear Wing', 1400, { cla: 0.55, dcda: 0.05, claF: 0 }, 'More rear downforce, more drag. On a circuit, rear-only downforce pushes the car toward understeer.')
   ]};
   C.wheels = { name: 'Wheels', options: [
     opt('stock', 'Stock Wheels', 0, { wm: 0, bead: false }),
@@ -353,13 +364,20 @@
     opt('wh3', 'Beadlock Drag Wheels', 2600, { wm: -10, bead: true }, 'Lets you run very low tire pressure safely.')
   ]};
   C.brakes = { name: 'Brakes', options: [
-    opt('stock', 'Stock Brakes', 0, { bkg: 0 }),
-    opt('br1', 'Lightweight Drag Brakes', 900, { bkg: -10 }, '-10 kg of rotating mass.'),
-    opt('br2', 'Carbon Race Brakes', 3000, { bkg: -16 }, '-16 kg of rotating mass.')
+    // bcap: the most braking (g) the brakes can make (grip permitting);
+    // bias: how close the front/rear balance gets to ideal
+    opt('stock', 'Stock Brakes', 0, { bkg: 0, bcap: 1.3, bias: 0.95 }),
+    opt('br1', 'Lightweight Drag Brakes', 900, { bkg: -10, bcap: 0.8, bias: 0.93 }, '-10 kg of rotating mass. Small rotors made to stop once from the end of a strip: weak on a circuit.'),
+    opt('br3', 'Big Brake Kit', 1600, { lvl: 2, bkg: 4, bcap: 1.8, bias: 0.98 }, 'Big rotors and calipers with track pads and a better front/rear balance. +4 kg.'),
+    opt('br2', 'Carbon Race Brakes', 3000, { bkg: -16, bcap: 2.2, bias: 0.98 }, '-16 kg of rotating mass, and they stop hard lap after lap.')
   ]};
   C.ftires = { name: 'Front Tires', options: [
-    opt('stock', 'Stock Front Tires', 0, { fm: 0, roll: 1 }),
-    opt('ft1', 'Skinny Front Runners', 700, { fm: -14, roll: 0.75 }, 'Less weight & rolling resistance.')
+    // circuit: what the tires on the axle that isn't driven are. stock: the
+    // car's factory tire; skinny runners: barely any grip; match: the same
+    // tire as the drive tires (road tires only, not drag tires)
+    opt('stock', 'Stock Front Tires', 0, { fm: 0, roll: 1 }, 'The factory tires on the wheels that aren\'t driven.'),
+    opt('ft1', 'Skinny Front Runners', 700, { fm: -14, roll: 0.75, lat: 0.6 }, 'Less weight & rolling resistance. Almost no cornering or braking grip.'),
+    opt('ft2', 'Matching Tires All Round', 600, { fm: 0, roll: 1, match: true }, 'The wheels that aren\'t driven get the same road tire as the drive wheels (street, track or race slick). No use with drag tires.')
   ]};
   C.weight = { name: 'Weight Reduction', options: [
     opt('stock', 'Stock', 0, { wr: 0 }),
@@ -385,7 +403,7 @@
     { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu'] },
     { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'ic', 'wastegate', 'bov', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
     { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'rearend', 'layout'] },
-    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
+    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['rtires', 'wheels', 'ftires', 'brakes'] },
     { id: 'body',   name: 'Weight',        icon: 'weight',  cats: ['weight', 'battery'] }
   ];
@@ -592,7 +610,8 @@
   }
   function tireDesc(t) {
     var x = DR.TIRES[t];
-    return x.kind + '. Grip ' + x.mu.toFixed(2) + ', best at ' + x.optP + ' psi & ' + x.topt + '°C. ' + Math.round(x.r * 2 / 0.0254) + '" tall.';
+    return x.kind + '. Launch grip ' + x.mu.toFixed(2) + ', cornering grip ' + x.lat.toFixed(2) + ', best at ' + x.optP + ' psi & ' + x.topt + '°C. ' + Math.round(x.r * 2 / 0.0254) + '" tall.' +
+      (x.kind === 'Drag Radial' ? ' Soft sidewalls: weak in corners.' : x.kind === 'Slick' ? ' A drag slick: almost no cornering grip.' : x.kind === 'Track' ? ' A road-course tire: sticky in corners.' : x.kind === 'Race Slick' ? ' A road-race slick: the most cornering grip there is.' : '');
   }
 
   // Engine-related categories that get removed on an engine swap.

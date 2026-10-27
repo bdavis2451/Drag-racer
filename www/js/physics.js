@@ -87,6 +87,8 @@
     return S.boostSet * clamp(rpm / 1800, 0, 1);
   }
   DR.steadyBoost = steadyBoost;
+  DR.boostedTorque = boostedTorque;
+  DR.spoolAt = function (S, b) { return spoolAt(S, b); };
 
   // Peak of the NA torque curve's power for Tpk = 1 (calibration helper).
   function shapePeak(S) {
@@ -462,7 +464,7 @@
       gears: DR.boxRatios(S.transId, S.car),
       shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, DR.boxRatios(S.transId, S.car)))) / 100) * 100,
       revLimit: S.red,
-      springF: 5, springR: 5, rideF: 0, rideR: 0,
+      springF: 5, springR: 5, rideF: 0, rideR: 0, rollBal: 0,
       bumpF: 5, rebF: 5, bumpR: 5, rebR: 5, limitF: 0,
       antiSquat: DR.getOption('rearsusp', inst).as,
       barDeg: 3,
@@ -505,6 +507,9 @@
     { key: 'psi', label: 'Drive Tire Pressure', unit: 'psi', step: 0.5, min: function () { return 4; }, max: function () { return 45; },
       show: function () { return true; }, group: 'Tires',
       help: 'Each tire has an ideal pressure. A little below it adds grip; too low wrinkles the tire (beadlocks help).' },
+    { key: 'rollBal', label: 'Anti-Roll Bar Balance', unit: '', step: 1, min: function () { return -4; }, max: function () { return 4; },
+      show: function (S) { return DR.getOption('sway', { carId: S.carId, parts: S._parts }).adjR; }, req: 'Requires adjustable race anti-roll bars', group: 'Suspension',
+      help: 'Circuit only. Stiffer front (+) = more understeer: safe, pushes wide. Stiffer rear (-) = more oversteer. Fastest is close to neutral: see the balance on the Circuit screen.' },
     { key: 'rideF', label: 'Front Ride Height', unit: 'mm', step: 5, min: function (S) { return rideRange(S)[0]; }, max: function (S) { return rideRange(S)[1]; },
       show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
       help: 'Lower drops the CG and the drag but leaves less bump travel. Raise the front over the rear for rake.' },

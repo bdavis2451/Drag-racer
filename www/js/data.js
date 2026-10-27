@@ -131,19 +131,25 @@ DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'a4', 'a6', 'a8', 
 //  topt: ideal temp C    cold: grip lost when stone cold
 // ---------------------------------------------------------------------------
 DR.TIRES = {
-  st_195: { name: 'Economy 195/60R15',         kind: 'Street',     mu: 1.25, optP: 32, slip: 0.11, fall: 0.20, fk: 1.2, r: 0.300, m: 18, topt: 45, cold: 0.03, price: 300 },
-  st_225: { name: 'Sport 225/45R17',           kind: 'Street',     mu: 1.35, optP: 32, slip: 0.11, fall: 0.20, fk: 1.2, r: 0.317, m: 20, topt: 50, cold: 0.04, price: 500 },
-  st_255: { name: 'Performance 255/40R18',     kind: 'Street',     mu: 1.42, optP: 32, slip: 0.12, fall: 0.20, fk: 1.2, r: 0.330, m: 22, topt: 55, cold: 0.05, price: 800 },
-  st_305: { name: 'Performance 305/30R20',     kind: 'Street',     mu: 1.48, optP: 32, slip: 0.12, fall: 0.20, fk: 1.2, r: 0.346, m: 26, topt: 55, cold: 0.06, price: 1100 },
-  dr_245: { name: 'Budget Drag Radial 245/50R16', kind: 'Drag Radial',mu: 1.65, optP: 20, slip: 0.13, fall: 0.25, fk: 0.75, r: 0.317, m: 22, topt: 55, cold: 0.12, price: 650 },
-  dr_275: { name: 'Drag Radial 275/40R17',     kind: 'Drag Radial',mu: 1.85, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.330, m: 24, topt: 60, cold: 0.15, price: 900 },
-  dr_315: { name: 'Drag Radial 315/60R15',     kind: 'Drag Radial',mu: 2.10, optP: 17, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.345, m: 26, topt: 60, cold: 0.16, price: 1300, lvl: 3 },
-  ets_28: { name: 'ET Street Slick 28x10.5',   kind: 'Slick',      mu: 2.40, optP: 14, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.356, m: 24, topt: 70, cold: 0.24, price: 1600, lvl: 3 },
-  sl_31:  { name: 'Drag Slick 31x13',          kind: 'Slick',      mu: 2.80, optP: 11, slip: 0.17, fall: 0.30, fk: 1.0, r: 0.394, m: 28, topt: 75, cold: 0.28, price: 2600, lvl: 4 },
-  sl_33:  { name: 'Drag Slick 33x16',          kind: 'Slick',      mu: 3.20, optP: 9,  slip: 0.18, fall: 0.32, fk: 1.0, r: 0.419, m: 32, topt: 78, cold: 0.30, price: 4200, lvl: 4 },
-  sl_36:  { name: 'Pro Slick 36x17',           kind: 'Slick',      mu: 3.60, optP: 7,  slip: 0.19, fall: 0.32, fk: 1.0, r: 0.457, m: 38, topt: 80, cold: 0.32, price: 7500, lvl: 5 }
+  st_195: { name: 'Economy 195/60R15',         kind: 'Street',     lat: 0.84, mu: 1.25, optP: 32, slip: 0.11, fall: 0.20, fk: 1.2, r: 0.300, m: 18, topt: 45, cold: 0.03, price: 300 },
+  st_225: { name: 'Sport 225/45R17',           kind: 'Street',     lat: 0.90, mu: 1.35, optP: 32, slip: 0.11, fall: 0.20, fk: 1.2, r: 0.317, m: 20, topt: 50, cold: 0.04, price: 500 },
+  st_255: { name: 'Performance 255/40R18',     kind: 'Street',     lat: 1.00, mu: 1.42, optP: 32, slip: 0.12, fall: 0.20, fk: 1.2, r: 0.330, m: 22, topt: 55, cold: 0.05, price: 800 },
+  st_305: { name: 'Performance 305/30R20',     kind: 'Street',     lat: 1.06, mu: 1.48, optP: 32, slip: 0.12, fall: 0.20, fk: 1.2, r: 0.346, m: 26, topt: 55, cold: 0.06, price: 1100 },
+  dr_245: { name: 'Budget Drag Radial 245/50R16', kind: 'Drag Radial',lat: 0.82, mu: 1.65, optP: 20, slip: 0.13, fall: 0.25, fk: 0.75, r: 0.317, m: 22, topt: 55, cold: 0.12, price: 650 },
+  dr_275: { name: 'Drag Radial 275/40R17',     kind: 'Drag Radial',lat: 0.84, mu: 1.85, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.330, m: 24, topt: 60, cold: 0.15, price: 900 },
+  dr_315: { name: 'Drag Radial 315/60R15',     kind: 'Drag Radial',lat: 0.85, mu: 2.10, optP: 17, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.345, m: 26, topt: 60, cold: 0.16, price: 1300, lvl: 3 },
+  ets_28: { name: 'ET Street Slick 28x10.5',   kind: 'Slick',      lat: 0.76, mu: 2.40, optP: 14, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.356, m: 24, topt: 70, cold: 0.24, price: 1600, lvl: 3 },
+  sl_31:  { name: 'Drag Slick 31x13',          kind: 'Slick',      lat: 0.72, mu: 2.80, optP: 11, slip: 0.17, fall: 0.30, fk: 1.0, r: 0.394, m: 28, topt: 75, cold: 0.28, price: 2600, lvl: 4 },
+  sl_33:  { name: 'Drag Slick 33x16',          kind: 'Slick',      lat: 0.70, mu: 3.20, optP: 9,  slip: 0.18, fall: 0.32, fk: 1.0, r: 0.419, m: 32, topt: 78, cold: 0.30, price: 4200, lvl: 4 },
+  sl_36:  { name: 'Pro Slick 36x17',           kind: 'Slick',      lat: 0.66, mu: 3.60, optP: 7,  slip: 0.19, fall: 0.32, fk: 1.0, r: 0.457, m: 38, topt: 80, cold: 0.32, price: 7500, lvl: 5 },
+  // road-course tires: stiff sidewalls and sticky tread for corners. lat:
+  // peak cornering grip (mu) on a dry, unprepped circuit; mu: the drag
+  // launch grip on a prepped strip (as the drag tires)
+  tr_255: { name: 'Track Tire 255/40R17 (R-Compound)', kind: 'Track', lat: 1.10, mu: 1.55, optP: 30, slip: 0.10, fall: 0.22, fk: 1.1, r: 0.320, m: 21, topt: 70, cold: 0.12, price: 1200, lvl: 2 },
+  tr_315: { name: 'Track Tire 315/30R18 (R-Compound)', kind: 'Track', lat: 1.15, mu: 1.62, optP: 30, slip: 0.10, fall: 0.22, fk: 1.1, r: 0.335, m: 24, topt: 72, cold: 0.14, price: 1800, lvl: 3 },
+  rr_slk: { name: 'Road Race Slick 300/680R18',        kind: 'Race Slick', lat: 1.42, mu: 1.75, optP: 26, slip: 0.10, fall: 0.24, fk: 1.0, r: 0.340, m: 22, topt: 80, cold: 0.25, price: 3200, lvl: 4 },
 };
-DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'dr_245', 'dr_275', 'dr_315', 'ets_28', 'sl_31', 'sl_33', 'sl_36'];
+DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_245', 'dr_275', 'dr_315', 'ets_28', 'sl_31', 'sl_33', 'sl_36'];
 
 // ---------------------------------------------------------------------------
 // VEHICLES
@@ -151,6 +157,8 @@ DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'dr_245', 'dr_275', 'dr_
 //  f: front weight fraction   wb: wheelbase   len: length   h: CG height
 //  cda: drag area m^2   drive: RWD|FWD|AWD   ep: engine position
 //  diff: stock differential   col: default paint
+//  circuit only: cla/claF factory downforce (m^2, front share), tw track
+//  width (m), hc handling vs its era (see DR.carEra)
 //  trans / fd / gears: the factory box, final drive and its own ratios
 //  (used while the factory box is fitted; a swapped box brings its own)
 //  name: real make/model for now (to be de-branded later); alias: the
@@ -177,7 +185,7 @@ DR.CARS = {
   cobaltss: { name: 'Chevrolet Cobalt SS', alias: 'Cobra SS Compact', real: '2008-10 Chevrolet Cobalt SS Turbocharged coupe',     cat: 'Compact', body: 'coupe',    price: 10000, m: 1440, f: 0.62, wb: 2.62, len: 4.6, h: 0.52, cda: 0.64, drive: 'FWD', ep: 'front', engine: 'i4_20t', trans: 'm5_hd',    fd: 3.94, gears: [3.38, 1.76, 1.18, 0.89, 0.71], tire: 'st_225', diff: 'lsd',  col: '#f0a020' },
   beetle:   { name: 'Volkswagen Beetle', alias: 'Bug Classic', real: '1967-77 Volkswagen Beetle (Type 1)',          cat: 'Classic', body: 'beetle',   price: 2500,  m: 900,  f: 0.40, wb: 2.40, len: 4.1, h: 0.55, cda: 0.80, drive: 'RWD', ep: 'rear',  engine: 'f4_16',  trans: 'm4_cl',    fd: 4.375, gears: [3.8, 2.06, 1.26, 0.89], tire: 'st_195', diff: 'open', col: '#7ec8e3' },
   // ---- JDM -------------------------------------------------------------------
-  mira:     { name: 'Mazda MX-5 Miata', alias: 'Mira Roadster', real: '1989-97 Mazda MX-5 Miata (NA)',        cat: 'JDM',     body: 'roadster', price: 7500,  m: 1020, f: 0.51, wb: 2.27, len: 3.9, h: 0.46, cda: 0.58, drive: 'RWD', ep: 'front', engine: 'i4_16',  trans: 'm5_light', fd: 4.3, gears: [3.136, 1.888, 1.33, 1, 0.814], tire: 'st_195', diff: 'lsd',  col: '#c81e1e' },
+  mira:     { name: 'Mazda MX-5 Miata', alias: 'Mira Roadster', real: '1989-97 Mazda MX-5 Miata (NA)',        cat: 'JDM',     body: 'roadster', price: 7500,  m: 1020, f: 0.51, wb: 2.27, len: 3.9, h: 0.46, cda: 0.58, drive: 'RWD', ep: 'front', engine: 'i4_16',  trans: 'm5_light', fd: 4.3, gears: [3.136, 1.888, 1.33, 1, 0.814], tire: 'st_195', diff: 'lsd',  hc: 1.03, col: '#c81e1e' },
   silvia:   { name: 'Nissan Silvia S14', alias: 'Sylph S14', real: '1995-98 Nissan Silvia / 240SX coupe (S14)',            cat: 'JDM',     body: 'coupe',    price: 12000, m: 1330, f: 0.56, wb: 2.53, len: 4.5, h: 0.50, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i4_20t', trans: 'm5_light', fd: 4.083, gears: [3.321, 1.902, 1.308, 1, 0.759], tire: 'st_225', diff: 'lsd',  col: '#9aa8b4' },
   s2k:      { name: 'Honda S2000', alias: 'Ess-2K Roadster', real: '1999-03 Honda S2000 (AP1)',      cat: 'JDM',     body: 'roadster', price: 21000, m: 1355, f: 0.50, wb: 2.40, len: 4.1, h: 0.46, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'i4_20hi',trans: 'm6',       fd: 4.1, gears: [3.133, 2.045, 1.481, 1.161, 0.97, 0.81], tire: 'st_225', diff: 'lsd',  col: '#ffcc00' },
   rx7:      { name: 'Mazda RX-7 FD', alias: 'Rotor-7 FD', real: '1992-02 Mazda RX-7 (FD3S)',           cat: 'JDM',     body: 'sports',   price: 30000, m: 1350, f: 0.50, wb: 2.43, len: 4.3, h: 0.45, cda: 0.58, drive: 'RWD', ep: 'front', engine: 'rot_13t',trans: 'm5_light', fd: 4.1, gears: [3.483, 2.015, 1.391, 1, 0.762], tire: 'st_255', diff: 'lsd',  col: '#d01818' },
@@ -189,7 +197,7 @@ DR.CARS = {
   // ---- Euro ------------------------------------------------------------------
   m3:       { name: 'BMW M3 E46', alias: 'Bayern M3 E46', real: '2001-06 BMW M3 coupe (E46)',        cat: 'Euro',    body: 'coupe',    price: 20000, m: 1630, f: 0.51, wb: 2.73, len: 4.5, h: 0.49, cda: 0.66, drive: 'RWD', ep: 'front', engine: 'i6_32',  trans: 'm6',       fd: 3.62, gears: [4.23, 2.53, 1.67, 1.23, 1, 0.83], tire: 'st_255', diff: 'lsd',  col: '#2c4c8c' },
   p911:     { name: 'Porsche 911 Turbo', alias: 'Stuttgart 9T Turbo', real: '2007-12 Porsche 911 Turbo coupe (997)',   cat: 'Euro',    body: 'sports',   price: 140000,m: 1640, f: 0.39, wb: 2.45, len: 4.5, h: 0.47, cda: 0.62, drive: 'AWD', ep: 'rear',  engine: 'f6_38tt',trans: 'dct7',     fd: 3.44, gears: [3.91, 2.29, 1.58, 1.18, 0.94, 0.79, 0.62], tire: 'st_305', diff: 'lsd',  col: '#e0d6b8' },
-  lambo:    { name: 'Lamborghini Aventador SVJ', alias: 'Toro V12 Ultimo', real: '2018-22 Lamborghini Aventador SVJ',      cat: 'Euro',    body: 'supercar', price: 380000,m: 1830, f: 0.43, wb: 2.70, len: 4.8, h: 0.44, cda: 0.65, drive: 'AWD', ep: 'mid',   engine: 'v12_65', trans: 'dct7',     fd: 3.20, tire: 'st_305', diff: 'lsd',  col: '#7cd320' },
+  lambo:    { name: 'Lamborghini Aventador SVJ', alias: 'Toro V12 Ultimo', real: '2018-22 Lamborghini Aventador SVJ',      cat: 'Euro',    body: 'supercar', price: 380000,m: 1830, f: 0.43, wb: 2.70, len: 4.8, h: 0.44, cda: 0.65, drive: 'AWD', ep: 'mid',   engine: 'v12_65', trans: 'dct7',     fd: 3.20, tire: 'st_305', diff: 'lsd',  cla: 0.9, claF: 0.4, col: '#7cd320' },
   // ---- Classic muscle -------------------------------------------------------
   nova:     { name: 'Chevrolet Nova SS \'68', alias: 'Nova-Star \'68', real: '1968-72 Chevrolet Nova SS coupe',       cat: 'Classic', body: 'muscle',   price: 16000, m: 1500, f: 0.55, wb: 2.82, len: 4.8, h: 0.54, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'sbc350',  trans: 'a4',       fd: 3.08, tire: 'st_225', diff: 'open', col: '#2e7d4f' },
   chevelle: { name: 'Chevrolet Chevelle SS \'70', alias: 'Chevalier SS \'70', real: '1970 Chevrolet Chevelle SS 454 coupe',    cat: 'Classic', body: 'muscle',   price: 38000, m: 1800, f: 0.56, wb: 2.84, len: 5.0, h: 0.55, cda: 0.85, drive: 'RWD', ep: 'front', engine: 'bb_74',  trans: 'm4_cl',    fd: 3.55, gears: [2.2, 1.64, 1.28, 1], tire: 'st_225', diff: 'lsd',  col: '#151515' },
@@ -206,7 +214,7 @@ DR.CARS = {
   vette5:   { name: 'Chevrolet Corvette C5', alias: 'Corsa C5', real: '1997-04 Chevrolet Corvette coupe (C5)',             cat: 'Muscle',  body: 'sports',   price: 21000, m: 1555, f: 0.51, wb: 2.65, len: 4.6, h: 0.47, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_57',  trans: 'm6',       fd: 3.42, gears: [2.66, 1.78, 1.3, 1, 0.74, 0.5], tire: 'st_255', diff: 'lsd',  col: '#ffd200' },
   z06:      { name: 'Chevrolet Corvette Z06', alias: 'Corsa Z06', real: '2006-13 Chevrolet Corvette Z06 (C6)',            cat: 'Muscle',  body: 'sports',   price: 60000, m: 1500, f: 0.51, wb: 2.69, len: 4.5, h: 0.47, cda: 0.62, drive: 'RWD', ep: 'front', engine: 'v8_70',  trans: 'm6',       fd: 3.42, gears: [2.66, 1.78, 1.3, 1, 0.74, 0.5], tire: 'st_305', diff: 'lsd',  col: '#e6e6e6' },
   hellcat:  { name: 'Dodge Challenger Hellcat', alias: 'Hellhound SRT', real: '2015-23 Dodge Challenger SRT Hellcat',        cat: 'Muscle',  body: 'modern',   price: 68000, m: 2100, f: 0.56, wb: 2.95, len: 5.0, h: 0.54, cda: 0.80, drive: 'RWD', ep: 'front', engine: 'v8_62sc',trans: 'a8',       fd: 2.62, tire: 'st_305', diff: 'lsd',  col: '#4b1a6e' },
-  viper:    { name: 'Dodge Viper ACR', alias: 'Serpent ACR', real: '2016-17 Dodge Viper ACR (VX)',          cat: 'Muscle',  body: 'supercar', price: 110000,m: 1610, f: 0.50, wb: 2.51, len: 4.5, h: 0.45, cda: 0.66, drive: 'RWD', ep: 'front', engine: 'v10_84', trans: 'm6_tr',       fd: 3.55, gears: [2.26, 1.58, 1.19, 1, 0.77, 0.63], tire: 'st_305', diff: 'lsd',  col: '#c8102e' },
+  viper:    { name: 'Dodge Viper ACR', alias: 'Serpent ACR', real: '2016-17 Dodge Viper ACR (VX)',          cat: 'Muscle',  body: 'supercar', price: 110000,m: 1610, f: 0.50, wb: 2.51, len: 4.5, h: 0.45, cda: 0.66, drive: 'RWD', ep: 'front', engine: 'v10_84', trans: 'm6_tr',       fd: 3.55, gears: [2.26, 1.58, 1.19, 1, 0.77, 0.63], tire: 'st_305', diff: 'lsd',  cla: 2.0, claF: 0.45, col: '#c8102e' },
   // ---- Trucks -----------------------------------------------------------------
   hauler:   { name: 'Chevrolet C1500', alias: 'Workhorse 1500', real: '1988-98 Chevrolet C1500 regular cab (GMT400)',       cat: 'Truck',   body: 'truck',    price: 9000,  m: 2150, f: 0.57, wb: 3.58, len: 5.8, h: 0.68, cda: 1.15, drive: 'RWD', ep: 'front', engine: 'v8_57tbi',  trans: 'a4',       fd: 3.42, tire: 'st_255', diff: 'open', col: '#2b4d2b' },
   lightning:{ name: 'Ford F-150 Lightning', alias: 'Lightning SVX', real: '1999-04 Ford F-150 SVT Lightning',        cat: 'Truck',   body: 'truck',    price: 26000, m: 2200, f: 0.57, wb: 3.06, len: 5.3, h: 0.65, cda: 1.05, drive: 'RWD', ep: 'front', engine: 'v8_46sc',trans: 'a4_hd',       fd: 3.55, gears: [2.71, 1.54, 1, 0.71], tire: 'st_305', diff: 'lsd',  col: '#d4d4d4' },

@@ -419,7 +419,7 @@
   // sprayed. Paid automatically after every race against someone (never on
   // solo or test passes), and never more than you have.
   var FUEL_COST = { stock: 1, e85: 1.15, race: 1.8, meth: 1.5 };
-  var TIRE_COST = { Street: 0.5, 'Drag Radial': 1, Slick: 1.4 };
+  var TIRE_COST = { Street: 0.5, Track: 0.9, 'Race Slick': 1.2, 'Drag Radial': 1, Slick: 1.4 };
   DR.runCost = function (S, nosT) {
     var k = 0.0006, fuel = k * Math.pow(S.peakHp, 1.8) * (FUEL_COST[S.fuelId] || 1);
     var tires = k * Math.pow(S.peakHp + S.nosHp, 1.8) * (TIRE_COST[S.tire.kind] || 1) * (S.tire.price > 5000 ? 1.3 : 1);
