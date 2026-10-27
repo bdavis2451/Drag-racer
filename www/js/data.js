@@ -92,9 +92,9 @@ DR.TRANS = {
   m4_cl:    { name: '4-Speed Close Ratio',       type: 'manual', ratios: [2.32, 1.69, 1.29, 1.00],       shift: 0.40, maxTq: 900,  eff: 0.87, price: 2200 },
   m6:       { name: '6-Speed Manual',            type: 'manual', ratios: [2.66, 1.78, 1.30, 1.00, 0.80, 0.63], shift: 0.33, maxTq: 750,  eff: 0.86, price: 3500 },
   m6_hd:    { name: '6-Speed Manual (Built)',    type: 'manual', ratios: [2.97, 2.07, 1.43, 1.00, 0.84, 0.56], shift: 0.30, maxTq: 1300, eff: 0.86, price: 6000 },
-  a4:       { name: '4-Speed Automatic',         type: 'auto',   ratios: [3.06, 1.63, 1.00, 0.70],       shift: 0.28, maxTq: 550,  eff: 0.83, price: 1800 },
-  a6:       { name: '6-Speed Automatic',         type: 'auto',   ratios: [4.03, 2.36, 1.53, 1.15, 0.85, 0.67], shift: 0.22, maxTq: 800,  eff: 0.84, price: 4000 },
-  a8:       { name: '8-Speed Automatic',         type: 'auto',   ratios: [4.71, 3.14, 2.10, 1.67, 1.29, 1.00, 0.84, 0.67], shift: 0.14, maxTq: 1100, eff: 0.85, price: 7000 },
+  a4:       { name: '4-Speed Automatic',         type: 'auto',   ratios: [3.06, 1.63, 1.00, 0.70],       shift: 0.28, maxTq: 550,  eff: 0.83, price: 1800, lu: true },
+  a6:       { name: '6-Speed Automatic',         type: 'auto',   ratios: [4.03, 2.36, 1.53, 1.15, 0.85, 0.67], shift: 0.22, maxTq: 800,  eff: 0.84, price: 4000, lu: true },
+  a8:       { name: '8-Speed Automatic',         type: 'auto',   ratios: [4.71, 3.14, 2.10, 1.67, 1.29, 1.00, 0.84, 0.67], shift: 0.14, maxTq: 1100, eff: 0.85, price: 7000, lu: true },
   a3_400:   { name: '3-Speed Turbo 400 (Built)', type: 'auto',   ratios: [2.48, 1.48, 1.00],             shift: 0.20, maxTq: 2000, eff: 0.85, price: 3500 },
   pg2:      { name: 'Powerglide 2-Speed',        type: 'auto',   ratios: [1.76, 1.00],                   shift: 0.18, maxTq: 2600, eff: 0.87, price: 4500 },
   a2_pg:    { name: '2-Speed Powerglide',        type: 'auto',   ratios: [1.82, 1.00],                   shift: 0.30, maxTq: 450,  eff: 0.82, price: 900 },
@@ -103,8 +103,8 @@ DR.TRANS = {
   seq6:     { name: '6-Speed Sequential',        type: 'seq',    ratios: [2.90, 2.00, 1.50, 1.20, 1.00, 0.86], shift: 0.08, maxTq: 1500, eff: 0.90, price: 14000, adj: true },
   // heavy-duty factory boxes for the cars that make the most torque stock
   m6_tr:    { name: '6-Speed Manual (TR6060)',   type: 'manual', ratios: [2.26, 1.58, 1.19, 1.00, 0.77, 0.63], shift: 0.33, maxTq: 950,  eff: 0.86, price: 4500 },
-  a4_hd:    { name: '4-Speed Automatic HD (4R100)', type: 'auto', ratios: [2.71, 1.54, 1.00, 0.71],    shift: 0.28, maxTq: 900,  eff: 0.83, price: 2800 },
-  a6_hd:    { name: '6-Speed Automatic HD (68RFE)', type: 'auto', ratios: [3.23, 1.84, 1.41, 1.00, 0.82, 0.63], shift: 0.24, maxTq: 1600, eff: 0.83, price: 6000 },
+  a4_hd:    { name: '4-Speed Automatic HD (4R100)', type: 'auto', ratios: [2.71, 1.54, 1.00, 0.71],    shift: 0.28, maxTq: 900,  eff: 0.83, price: 2800, lu: true },
+  a6_hd:    { name: '6-Speed Automatic HD (68RFE)', type: 'auto', ratios: [3.23, 1.84, 1.41, 1.00, 0.82, 0.63], shift: 0.24, maxTq: 1600, eff: 0.83, price: 6000, lu: true },
   // Transaxles: gearbox and differential in one case, for an engine that
   // sits sideways (front-drive, and AWD cars built from them). Smaller
   // gears and a diff in the case: they hold less than a rear-drive box.
@@ -112,17 +112,19 @@ DR.TRANS = {
   tx5_hd:   { name: 'HD 5-Speed Transaxle',      type: 'manual', ratios: [3.38, 1.76, 1.18, 0.89, 0.71], shift: 0.37, maxTq: 600,  eff: 0.86, price: 2500, mount: 'T' },
   tx6:      { name: '6-Speed Manual Transaxle',  type: 'manual', ratios: [3.36, 2.09, 1.47, 1.10, 0.89, 0.73], shift: 0.35, maxTq: 550, eff: 0.86, price: 3500, mount: 'T' },
   tx6_hd:   { name: '6-Speed Transaxle (Built, Straight-Cut)', type: 'manual', ratios: [2.92, 2.05, 1.52, 1.17, 0.94, 0.78], shift: 0.30, maxTq: 1000, eff: 0.86, price: 6500, mount: 'T' },
-  tx4a:     { name: '4-Speed Automatic Transaxle', type: 'auto', ratios: [2.92, 1.57, 1.00, 0.71],   shift: 0.28, maxTq: 450,  eff: 0.82, price: 1800, mount: 'T' },
+  tx4a:     { name: '4-Speed Automatic Transaxle', type: 'auto', ratios: [2.92, 1.57, 1.00, 0.71],   shift: 0.28, maxTq: 450,  eff: 0.82, price: 1800, lu: true, mount: 'T' },
   txdct:    { name: '6-Speed DSG Transaxle',     type: 'dct',    ratios: [3.46, 2.05, 1.30, 0.90, 0.91, 0.76], shift: 0.10, maxTq: 700, eff: 0.88, price: 9000, mount: 'T' },
   txseq:    { name: '6-Speed Sequential Transaxle', type: 'seq', ratios: [2.92, 2.05, 1.58, 1.26, 1.04, 0.88], shift: 0.08, maxTq: 1200, eff: 0.90, price: 15000, adj: true, mount: 'T' },
+  // lu: has the hydraulic circuit for a lockup converter (electronic factory
+  // automatics and the billet race boxes; a plain Powerglide or TH400 doesn't)
   // what the fastest cars really run (maxTq ~ the builders' hp ratings):
   // converter automatics for turbo/blown Pro Mod and Radial vs Tire (ATI
   // SuperGlide 4 past 2500 hp, Max Duty Outlaw TH400 3500 hp), clutchless
   // 5-speeds (Liberty, G-Force) for Pro Stock and nitrous cars, a clutched
   // dog box for heavy sportsman cars, and big sequentials for the 2000 hp
   // import builds
-  pg_pm:    { name: 'Pro Mod Powerglide (Billet Case)', type: 'auto', ratios: [1.65, 1.00],              shift: 0.15, maxTq: 3900, eff: 0.88, price: 8500 },
-  a3_pm:    { name: 'Pro Mod 3-Speed TH400 (Billet)', type: 'auto',   ratios: [1.86, 1.31, 1.00],        shift: 0.16, maxTq: 4300, eff: 0.86, price: 9500 },
+  pg_pm:    { name: 'Pro Mod Powerglide (Billet Case)', type: 'auto', ratios: [1.65, 1.00],              shift: 0.15, maxTq: 3900, eff: 0.88, price: 8500, lu: true },
+  a3_pm:    { name: 'Pro Mod 3-Speed TH400 (Billet)', type: 'auto',   ratios: [1.86, 1.31, 1.00],        shift: 0.16, maxTq: 4300, eff: 0.86, price: 9500, lu: true },
   dog4:     { name: 'Clutched 4-Speed Dog Box',  type: 'manual', ratios: [2.48, 1.75, 1.33, 1.00],       shift: 0.14, maxTq: 2300, eff: 0.90, price: 9000 },
   seq6_hd:  { name: 'Heavy-Duty 6-Speed Sequential', type: 'seq', ratios: [2.66, 1.86, 1.43, 1.17, 1.00, 0.86], shift: 0.06, maxTq: 2400, eff: 0.90, price: 22000, adj: true },
   cl5:      { name: 'Clutchless 5-Speed (Pro Stock)', type: 'seq', ratios: [2.60, 1.90, 1.50, 1.22, 1.00], shift: 0.03, maxTq: 3200, eff: 0.92, price: 26000, adj: true },

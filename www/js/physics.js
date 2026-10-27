@@ -321,6 +321,7 @@
     S.eff = tr.eff * (S.drive === 'AWD' ? 0.95 : S.drive === 'FWD' ? 1.03 : 1);   // FWD: no right-angle drive in the diff
     if (tr.type === 'auto') {
       S.stall = conv.stall; S.TR = conv.tr;
+      S.lockup = !!conv.lockup && !!tr.lu;   // a lockup converter in a box that can work it
     } else {
       var stockTqNm = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.3;
       S.clCap = clutch.cap || Math.max(420, stockTqNm * 1.4);
@@ -468,6 +469,7 @@
       gears: DR.boxRatios(S.transId, S.car),
       shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, DR.boxRatios(S.transId, S.car)))) / 100) * 100,
       revLimit: S.red,
+      luGear: DR.boxRatios(S.transId, S.car).length,
       springF: 5, springR: 5, rideF: 0, rideR: 0, rollBal: 0,
       bumpF: 5, rebF: 5, bumpR: 5, rebR: 5, limitF: 0,
       antiSquat: DR.getOption('rearsusp', inst).as,
@@ -505,6 +507,9 @@
       show: function () { return true; }, group: 'Drivetrain', help: 'The shift light comes on here. Auto-shift also uses it.' },
     { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function () { return 2.2; }, max: function () { return 6.5; },
       show: function () { return true; }, group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed.' },
+    { key: 'luGear', label: 'Converter Lockup From Gear', unit: '', step: 1, min: function () { return 1; }, max: function (S) { return (S.ratios || DR.boxRatios(S.transId, S.car)).length; },
+      show: function (S) { return !!S.lockup; }, req: 'Requires a lockup converter', group: 'Drivetrain', fmt: function (v) { return ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][v - 1] + ' gear on'; },
+      help: 'The lockup clutch takes out the converter\'s slip from this gear on (applied just after the shift). Locking in high gear is what most racers do; lock in a lower gear for a few more mph, but lock in 1st and the engine loses the converter\'s torque multiplication and falls off the boost.' },
     { key: 'gears', label: 'Gear Ratios', unit: '', step: 0.01, min: function () { return 0.5; }, max: function () { return 4.5; },
       show: function (S) { return !!DR.TRANS[S.transId].adj; }, req: 'Requires a sequential race gearbox', group: 'Drivetrain',
       help: 'Each gear individually.' },
@@ -725,7 +730,7 @@
     this.wheelie = false; this.th = 0; this.dth = 0; this.unload = 0; this.onBar = false;
     this.tireT = opts.tireT != null ? opts.tireT : 28;
     this.nosOn = false; this.nosLvl = 0; this.nosT = 0;
-    this.shifting = false; this.shiftT = 0; this.sinceShift = 9;
+    this.shifting = false; this.shiftT = 0; this.sinceShift = 9; this.lu = 0;
     this.slip = 0; this.F = 0;
     this.peakHp = 0; this.peakTqNm = 0;
     this.crashed = false; this.blown = false; this.broke = false;
@@ -998,19 +1003,45 @@
       var wT = this.ww * Gr;
       var SR = this.we > 1 ? wT / this.we : 1;
       // coupling: 1 at stall, falling to 0 as the turbine catches the engine
-      var P = 12, sp = Math.pow(Math.min(Math.max(SR, 0), 1.2), P - 1);
+      var P = CONV_P, sp = Math.pow(Math.min(Math.max(SR, 0), 1.2), P - 1);
       var cs = SR < 1 ? 1 - sp * SR : -Math.min(1, sp * SR - 1);
       var cap2 = Math.pow(this.we / K2, 2);
       var Timp2 = cap2 * cs;
       var TR = SR < 0.85 ? S.TR - (S.TR - 1) * Math.max(SR, 0) / 0.85 : 1;
       var Ttur = Timp2 * TR * shiftScale;
+      // lockup clutch: applied (over ~0.15 s) a moment after the shift into
+      // the lockup gear, released for every shift; it drags the engine down
+      // to the turbine's speed and then holds them together
+      var luOn = S.lockup && this.launched && !this.shifting && this.sinceShift > 0.12 && this.gear + 1 >= ((S.tune && S.tune.luGear) || S.ratios.length);
+      this.lu = luOn ? Math.min(1, this.lu + dt / 0.15) : 0;
+      if (this.lu >= 1 && Math.abs(this.we - wT) < Math.max(2, 0.004 * this.we)) {
+        // locked: engine, gearbox and wheels turn as one
+        var Jl = S.Ie * Gr * Gr + S.Iw;
+        tf = this.tireForce(this.ww, N, mu);
+        this.ww = Math.max(0, this.ww + dt * (Te * Gr * eta - tf.F * r) / (Jl + dt * r * Math.max(tf.dF, 0)));
+        this.we = this.ww * Gr;
+        tf = this.tireForce(this.ww, N, mu);
+        Fx = tf.F;
+        this.luLocked = true;
+      } else {
+      this.luLocked = false;
+      var Tlu = 0;
       // the converter is a stiff coupling, so both sides are integrated
       // semi-implicitly using its local slope
       var dcs = SR < 1.2 ? P * sp : 0;                         // -d(cs)/d(SR)
       var kE = Math.max(0, cap2 * (2 * cs + dcs * SR) / Math.max(this.we, 1));
       this.we += dt * (Te - Timp2) / (S.Ie + dt * kE);
+      // the lockup clutch while it slips: friction torque up to its clamp,
+      // pulling the engine toward the turbine (never past it); what it takes
+      // off the engine's spin goes to the wheels
+      if (this.lu > 0) {
+        var gap = this.we - wT, capLU = this.lu * 2.2 * S.peakTq / 0.7376;
+        var dwl = Math.min(Math.abs(gap), dt * capLU / S.Ie);
+        this.we -= Math.sign(gap) * dwl;
+        Tlu = Math.sign(gap) * dwl * S.Ie / dt;
+      }
       tf = this.tireForce(this.ww, N, mu);
-      var Tw = Ttur * Gr * eta;
+      var Tw = (Ttur + Tlu) * Gr * eta;
       var kW = cap2 * dcs * TR * shiftScale * Gr * Gr * eta / Math.max(this.we, 1);
       // the foot brake takes a moment to release; a transbrake lets go instantly
       if (!S.tbrake && this.launched && this.t < 0.18) Tw -= S.brakeHold * (1 - this.t / 0.18);
@@ -1018,6 +1049,7 @@
       if (this.ww < 0) this.ww = 0;
       tf = this.tireForce(this.ww, N, mu);
       Fx = tf.F;
+      }
     } else {
       // Clutch: manual / sequential / dual-clutch
       if (this.shifting && S.trType === 'manual') this.cl = 0;
@@ -1129,6 +1161,11 @@
     }
   };
 
+  // How fast the converter's grip falls away as the turbine catches the
+  // engine (capacity ~ 1 - SR^P): sized so an unlocked converter slips like
+  // real ones at the top end, ~3% for a tight street converter and ~7% for a
+  // 4000-5000 stall race converter (racers' and converter builders' figures)
+  var CONV_P = 6;
   Sim.prototype.convK = function () {
     var S = this.S;
     if (!S._K) {

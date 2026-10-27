@@ -265,7 +265,10 @@
     opt('stock', 'Stock Converter (2200 stall)', 0, { stall: 2200, tr: 1.9 }, 'Tight street converter. Soft launches, little wheelspin.'),
     opt('tcl', 'Low Stall Converter (2800)', 800, { stall: 2800, tr: 1.95 }, 'A little more RPM on the hit. Good for mild builds and street tires.'),
     opt('tcm', 'Medium Stall Converter (3800)', 1500, { stall: 3800, tr: 2.05 }, 'Gets the engine into its powerband before the car moves. Needs more grip.'),
-    opt('tch', 'High Stall Converter (5000)', 2600, { stall: 5000, tr: 2.15 }, 'Flashes high on the hit and spools big turbos. For big power and slicks.')
+    opt('tch', 'High Stall Converter (5000)', 2600, { stall: 5000, tr: 2.15 }, 'Flashes high on the hit and spools big turbos. For big power and slicks.'),
+    // a clutch inside the converter locks engine to gearbox once the car is
+    // moving: no slip, so more mph; the gear it locks in is set in Tuning
+    opt('tclu', 'Lockup Race Converter (5000)', 4500, { lvl: 5, stall: 5000, tr: 2.15, lockup: true }, 'Flashes like a high stall on the hit, then a clutch inside it locks the engine to the gearbox from the gear you pick in Tuning: no converter slip, more mph. Lock too early and you lose the converter\'s torque multiplication and can shake the tires; most Pro Mod racers lock in high gear. Needs a lockup-capable automatic: a Pro Mod Powerglide or TH400, or a factory electronic automatic.')
   ]};
   C.transbrake = { name: 'Transbrake', needsConverter: true, options: [
     opt('stock', 'None (Foot Brake)', 0, { tbrake: false }, 'The foot brake can only hold so much torque, so you have to ease into the throttle on the line, and the launch is softer.'),

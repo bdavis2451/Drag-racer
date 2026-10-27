@@ -219,6 +219,7 @@
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
     if (item.cat === 'engine') { var fit = DR.swapFit(inst, item.id); if (fit.block) return fit.block; }
     if (item.cat === 'trans' && item.id && !DR.transFits(inst, item.id)) return DR.transMount(inst) === 'T' ? 'A rear-drive gearbox: this car takes a transaxle' : 'A transaxle only fits a car with a sideways engine and its factory driveline';
+    if (item.cat === 'converter' && DR.getOption('converter', inst, item.id).lockup && !DR.TRANS[DR.partId('trans', inst)].lu) return 'Needs a lockup-capable automatic (Pro Mod Powerglide/TH400 or a factory electronic one)';
     if (item.cat === 'layout') {
       if (!DR.partOptions('layout', inst).some(function (o) { return o.id === item.id; })) return 'Does not fit this car';
       var opt = DR.getOption('layout', inst, item.id);
