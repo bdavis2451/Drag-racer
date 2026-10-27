@@ -509,7 +509,7 @@
       show: function () { return true; }, group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed.' },
     { key: 'luGear', label: 'Converter Lockup From Gear', unit: '', step: 1, min: function () { return 1; }, max: function (S) { return (S.ratios || DR.boxRatios(S.transId, S.car)).length; },
       show: function (S) { return !!S.lockup; }, req: 'Requires a lockup converter', group: 'Drivetrain', fmt: function (v) { return ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][v - 1] + ' gear on'; },
-      help: 'The lockup clutch takes out the converter\'s slip from this gear on (applied just after the shift). Locking in high gear is what most racers do; lock in a lower gear for a few more mph, but lock in 1st and the engine loses the converter\'s torque multiplication and falls off the boost.' },
+      help: 'The lockup clutch takes out the converter\'s slip from this gear on (applied just after each shift; in 1st, once the gearbox is turning near the converter\'s stall speed). Locking earlier gains mph, but the engine drops revs when it locks: with a tight converter or a big turbo that can pull it off boost. Try it and watch your timeslip.' },
     { key: 'gears', label: 'Gear Ratios', unit: '', step: 0.01, min: function () { return 0.5; }, max: function () { return 4.5; },
       show: function (S) { return !!DR.TRANS[S.transId].adj; }, req: 'Requires a sequential race gearbox', group: 'Drivetrain',
       help: 'Each gear individually.' },
@@ -601,6 +601,9 @@
     if (r.trans > 0.005) out.trans = 'Too much torque';
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     if (S.clCap && tqNm > S.clCap) out.clutch = 'Slipping';
+    // a converter that can't flash to where the turbo makes boost: the car
+    // leaves, the engine is dragged below boost and falls on its face
+    if (S.trType === 'auto' && S.fiType === 'turbo' && S.spoolHi && S.stall < S.spoolHi * 0.85) out.converter = 'Too tight for the turbo (boost at ' + Math.round(S.spoolHi / 100) * 100 + ' rpm)';
     return out;
   };
 
@@ -1012,7 +1015,11 @@
       // lockup clutch: applied (over ~0.15 s) a moment after the shift into
       // the lockup gear, released for every shift; it drags the engine down
       // to the turbine's speed and then holds them together
-      var luOn = S.lockup && this.launched && !this.shifting && this.sinceShift > 0.12 && this.gear + 1 >= ((S.tune && S.tune.luGear) || S.ratios.length);
+      // (and, like a real lockup controller, not until the gearbox is
+      // turning near the converter's stall: locked at the hit, the engine
+      // would be dragged down to the wheels' speed)
+      var luOn = S.lockup && this.launched && !this.shifting && this.sinceShift > 0.12 && this.gear + 1 >= ((S.tune && S.tune.luGear) || S.ratios.length) &&
+        (this.lu > 0 || wT >= 0.85 * S.stall * RPM2W);
       this.lu = luOn ? Math.min(1, this.lu + dt / 0.15) : 0;
       if (this.lu >= 1 && Math.abs(this.we - wT) < Math.max(2, 0.004 * this.we)) {
         // locked: engine, gearbox and wheels turn as one

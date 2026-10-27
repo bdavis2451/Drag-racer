@@ -266,9 +266,15 @@
     opt('tcl', 'Low Stall Converter (2800)', 800, { stall: 2800, tr: 1.95 }, 'A little more RPM on the hit. Good for mild builds and street tires.'),
     opt('tcm', 'Medium Stall Converter (3800)', 1500, { stall: 3800, tr: 2.05 }, 'Gets the engine into its powerband before the car moves. Needs more grip.'),
     opt('tch', 'High Stall Converter (5000)', 2600, { stall: 5000, tr: 2.15 }, 'Flashes high on the hit and spools big turbos. For big power and slicks.'),
+    // turbo Pro Mods flash their converters well past 6000 so the big
+    // turbos stay lit when the car leaves (a tight one drags the engine down
+    // below the turbo's boost rpm and the car falls on its face)
+    opt('tcp6', 'Pro Mod Converter (6000)', 3400, { lvl: 5, stall: 6000, tr: 2.2 }, 'Flashes to 6000 rpm: keeps big turbos spooled when the car leaves. On a small engine or a small turbo it just slips and wastes power.'),
+    opt('tcp7', 'Pro Mod Converter (7000)', 3800, { lvl: 5, stall: 7000, tr: 2.25 }, 'Flashes to 7000 rpm, for the biggest turbos (full boost near 7000 rpm). Needs an engine that revs and makes power up there.'),
     // a clutch inside the converter locks engine to gearbox once the car is
     // moving: no slip, so more mph; the gear it locks in is set in Tuning
-    opt('tclu', 'Lockup Race Converter (5000)', 4500, { lvl: 5, stall: 5000, tr: 2.15, lockup: true }, 'Flashes like a high stall on the hit, then a clutch inside it locks the engine to the gearbox from the gear you pick in Tuning: no converter slip, more mph. Lock too early and you lose the converter\'s torque multiplication and can shake the tires; most Pro Mod racers lock in high gear. Needs a lockup-capable automatic: a Pro Mod Powerglide or TH400, or a factory electronic automatic.')
+    opt('tclu', 'Lockup Race Converter (5000)', 4500, { lvl: 5, stall: 5000, tr: 2.15, lockup: true }, 'Flashes like a high stall on the hit, then a clutch inside it locks the engine to the gearbox from the gear you pick in Tuning: no converter slip, more mph. Lock too early and you lose the converter\'s torque multiplication and can shake the tires; most Pro Mod racers lock in high gear. Needs a lockup-capable automatic: a Pro Mod Powerglide or TH400, or a factory electronic automatic.'),
+    opt('tclu7', 'Lockup Pro Mod Converter (7000)', 5500, { lvl: 5, stall: 7000, tr: 2.25, lockup: true }, 'The big-turbo Pro Mod converter: flashes to 7000 rpm to keep the turbos lit, then locks up from the gear you pick in Tuning. Needs a lockup-capable automatic.')
   ]};
   C.transbrake = { name: 'Transbrake', needsConverter: true, options: [
     opt('stock', 'None (Foot Brake)', 0, { tbrake: false }, 'The foot brake can only hold so much torque, so you have to ease into the throttle on the line, and the launch is softer.'),
@@ -695,10 +701,13 @@
   // about 60% of the redline (a diesel or a low-revving big block bogs on a
   // converter made for a high-revving engine)
   function converterFor(maxId) { return function (inst) {
-    var red = DR.buildSpec(inst).red, opts = C.converter.options, pick = null;
+    var S = DR.buildSpec(inst), red = S.red, opts = C.converter.options, pick = null;
+    // a turbo wants it to flash to about where it makes boost
+    var want = S.fiType === 'turbo' ? (S.spoolHi || 0) * 0.9 : 0;
     for (var i = 1; i < opts.length; i++) {
-      if (opts[i].stall <= red * 0.62) pick = opts[i].id;
-      if (opts[i].id === maxId) break;
+      if (opts[i].lockup) continue;
+      if (opts[i].stall <= Math.max(red * 0.62, Math.min(want, red * 0.75))) pick = opts[i].id;
+      if (opts[i].id === maxId || (want && opts[i].stall >= want && pick === opts[i].id)) break;
     }
     return pick;
   }; }
@@ -777,7 +786,7 @@
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['rearend', axleFor(1)]],
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
       [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tch')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)],
         // a front-driver making real power is converted to drive the rear
         ['layout', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? 'rwd' : null; }]]],
     susp: [
