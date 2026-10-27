@@ -161,18 +161,21 @@
     opt('stock', 'Stock Injectors', 0, { fuel: 0 }),
     opt('inj0', '440cc Injectors', 250, { tune: 'hard', fuel: 420 }, 'Feeds 420 hp on gasoline.'),
     opt('inj1', '550cc Injectors', 400, { tune: 'hard', fuel: 600 }, 'Feeds 600 hp on gasoline.'),
-    opt('inj2', '1000cc Injectors', 800, { tune: 'hard', fuel: 1000 }, 'Feeds 1000 hp.'),
-    opt('inj3', '1700cc Injectors', 1500, { tune: 'hard', fuel: 1800 }, 'Feeds 1800 hp.'),
-    opt('inj4', '2400cc Injectors', 3000, { tune: 'hard', lvl: 4, fuel: 2800 }, 'Feeds 2800 hp.'),
-    opt('inj5', 'Twin Injectors per Cylinder', 6000, { tune: 'hard', lvl: 5, fuel: 5000 }, 'Feeds 5000 hp.')
+    opt('inj2', '1000cc Injectors', 800, { tune: 'hard', fuel: 1000 }, 'Feeds 1000 hp on gasoline.'),
+    opt('inj3', '1700cc Injectors', 1500, { tune: 'hard', fuel: 1800 }, 'Feeds 1800 hp on gasoline.'),
+    opt('inj4', '2400cc Injectors', 3000, { tune: 'hard', lvl: 4, fuel: 2800 }, 'Feeds 2800 hp on gasoline.'),
+    opt('inj5', 'Twin Injectors per Cylinder', 6000, { tune: 'hard', lvl: 5, fuel: 5000 }, 'Feeds 5000 hp on gasoline, about 3100 on methanol.'),
+    // what ~3000 hp+ methanol engines run: 16 race injectors of 325-500 lb/hr
+    opt('inj6', 'Twin 500 lb/hr Race Injectors', 9500, { tune: 'hard', lvl: 5, fuel: 9000 }, 'Two huge race injectors per cylinder, the kind 3000+ hp methanol Pro Mods run. Feeds 9000 hp on gasoline, about 5600 on methanol.')
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
     opt('fp0', '190 lph Pump + Rising-Rate Regulator', 180, { fuel: 430 }, 'Feeds 430 hp on gasoline.'),
     opt('fp1', '255 lph In-Tank Pump', 300, { fuel: 650 }, 'Feeds 650 hp on gasoline.'),
-    opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100 }, 'Feeds 1100 hp.'),
-    opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800 }, 'Feeds 1800 hp.'),
-    opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'Feeds 5000 hp.')
+    opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100 }, 'Feeds 1100 hp on gasoline.'),
+    opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800 }, 'Feeds 1800 hp on gasoline.'),
+    opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'About 12 gallons a minute. Feeds 5000 hp on gasoline, about 3100 on methanol.'),
+    opt('fp5', 'Big Belt-Driven Pump (20 GPM)', 7500, { lvl: 5, fuel: 8500 }, 'About 20 gallons a minute, the size alcohol-burning Pro Mods run. Feeds 8500 hp on gasoline, about 5300 on methanol.')
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
     opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Knocks past 17 psi with a cool, intercooled charge, far sooner with a hot one.'),
@@ -699,7 +702,7 @@
   function withParts(inst, p) { var c = JSON.parse(JSON.stringify(inst)); for (var k in p) c.parts[k] = p[k]; return c; }
   function fuelFor(cat, min) { return function (inst) {
     // power the engine would make with unlimited fuel, plus a margin
-    var S = DR.buildSpec(withParts(inst, { injectors: 'inj5', fuelpump: 'fp4', ecu: DR.getOption('ecu', inst).tune ? DR.partId('ecu', inst) : 'ecu1' }));
+    var S = DR.buildSpec(withParts(inst, { injectors: 'inj6', fuelpump: 'fp5', ecu: DR.getOption('ecu', inst).tune ? DR.partId('ecu', inst) : 'ecu1' }));
     // nitrous that takes its fuel from this part counts too (dry: injectors
     // and pump; wet: the pump)
     var spray = S.nosHp && (S.nosFuel === 'inj' || (S.nosFuel === 'pump' && cat === 'fuelpump')) ? S.nosHp : 0;
@@ -856,7 +859,7 @@
     function risky(fuelLater) {
       var c = copy;
       // the fuel system is added after the power parts: judge as if fed
-      if (fuelLater) { c = JSON.parse(JSON.stringify(copy)); c.parts.injectors = 'inj5'; c.parts.fuelpump = 'fp4'; if (!DR.getOption('ecu', c).tune) c.parts.ecu = 'ecu1'; }
+      if (fuelLater) { c = JSON.parse(JSON.stringify(copy)); c.parts.injectors = 'inj6'; c.parts.fuelpump = 'fp5'; if (!DR.getOption('ecu', c).tune) c.parts.ecu = 'ecu1'; }
       var r = DR.buildSpec(c).risk; return r.engine > 0 || r.trans > 0 || r.axle > 0;
     }
     // power packages turn the boost up to suit, within the fuel's knock
