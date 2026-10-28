@@ -428,6 +428,7 @@
     else if (fig.limit === 'rear') out.push('Oversteer: the rear lets go first. ' + (o('sway').adjR ? 'Move Anti-Roll Bar Balance toward the front (+) in Tuning.' : 'Adjustable anti-roll bars let you move the balance.'));
     var d = Math.abs(S.tune.psi - S.tire.optP) / S.tire.optP;
     if (d > 0.18) out.push('Tire pressure is ' + (S.tune.psi < S.tire.optP ? 'low' : 'high') + ' for corners (best near ' + S.tire.optP + ' psi): the drag launch setting costs grip here.');
+    if (S.peakHp + S.nosHp > S.coolHp * 1.05) out.push('Cooling: ' + Math.round(S.peakHp + S.nosHp) + ' hp is more than the radiator was built for (about ' + Math.round(S.coolHp) + '): it will run hot and lose pace over a long race. A bigger radiator and oil cooler fix it.');
     if (!out.length) out.push('A balanced build. More grip (tires, suspension, downforce) or power is what makes it faster now.');
     return out;
   }
@@ -929,7 +930,8 @@
           prize ? h('span', { class: 'good' }, ' +' + DR.money(prize)) : null,
           hist && hist.grew && Object.keys(hist.grew).length ? h('div', { class: 'gsmall' }, 'Learned: ' + Object.keys(hist.grew).map(function (k) { return SKILLS.filter(function (s2) { return s2[0] === k; })[0][1] + ' +' + hist.grew[k]; }).join(', ')) : null,
           hist && hist.unl && hist.unl.length ? h('div', { class: 'gsmall acc' }, 'UNLOCKED: ' + hist.unl.join(' • ')) : null,
-          me.e.err ? h('div', { class: 'gsmall dim' }, me.e.err + ' mistake' + (me.e.err > 1 ? 's' : '') + ' (off line or a lock-up): consistency improves with racing') : null));
+          me.e.err ? h('div', { class: 'gsmall dim' }, me.e.err + ' mistake' + (me.e.err > 1 ? 's' : '') + ' (off line or a lock-up): consistency improves with racing') : null,
+          me.e.hot ? h('div', { class: 'gsmall bad' }, 'Ran hot: lost ' + me.e.hot.toFixed(1) + ' s as the engine heat-soaked and the ECU pulled timing. A bigger radiator (Bolt-Ons: Radiator & Oil Cooler) fixes it.') : null));
       }
     }
     (function loop() {

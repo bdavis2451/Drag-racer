@@ -394,6 +394,7 @@
     // bcap: the most braking (g) the brakes can make (grip permitting);
     // bias: how close the front/rear balance gets to ideal
     opt('stock', 'Stock Brakes', 0, { bkg: 0, bcap: 1.3, bias: 0.95 }),
+    opt('br0', 'Performance Pads + Race Fluid', 250, { bkg: 0, bcap: 1.45, bias: 0.97 }, 'Track pads and high-temperature fluid on the stock calipers: more bite, a better front\/rear balance, much less fade lap after lap.'),
     opt('br1', 'Lightweight Drag Brakes', 900, { bkg: -10, bcap: 0.8, bias: 0.93 }, '-10 kg of rotating mass. Small rotors made to stop once from the end of a strip: weak on a circuit.'),
     opt('br3', 'Big Brake Kit', 1600, { lvl: 2, bkg: 4, bcap: 1.8, bias: 0.98 }, 'Big rotors and calipers with track pads and a better front/rear balance. +4 kg.'),
     opt('br2', 'Carbon Race Brakes', 3000, { bkg: -16, bcap: 2.2, bias: 0.98 }, '-16 kg of rotating mass, and they stop hard lap after lap.')
@@ -420,19 +421,74 @@
     opt('bt1', 'Trunk Battery Relocation', 250, { bat: 20, batkg: 3 }, 'Moves 20 kg to the back of the car, over the drive wheels.'),
     opt('bt2', 'Lightweight Race Battery (Trunk)', 650, { bat: 8, batkg: -12 }, '-12 kg, mounted in the trunk.')
   ]};
+  // ---- more of what real builds use
+  // Accessory drive: the water pump, alternator and power steering pump take
+  // a few percent of the crank's power (underdrive pulleys ~1%, an electric
+  // water pump on top ~1% more, deleting the lot ~3%)
+  C.pulleys = { name: 'Pulleys & Accessories', options: [
+    opt('stock', 'Stock Pulleys & Accessories', 0, { pk: 1, kg: 0 }),
+    opt('pu1', 'Underdrive Pulleys', 250, { pk: 1.01, kg: 0 }, 'A smaller crank pulley slows the water pump, alternator and power steering pump: about 1% more power at the wheels.'),
+    opt('pu2', 'Underdrive Pulleys + Electric Water Pump', 700, { lvl: 2, pk: 1.02, kg: -2 }, 'The water pump comes off the belt and runs on electricity: about 2% more power.'),
+    opt('pu3', 'Race Accessory Delete', 1400, { lvl: 3, pk: 1.03, kg: -14 }, 'A/C, power steering and the belt-driven alternator gone; electric water pump, race battery: about 3% more power and 14 kg lighter. Not a street car any more.')
+  ]};
+  // Cooling: the radiator is sized for the factory engine. Make far more
+  // power and it runs hot over a long circuit race, and the ECU pulls timing
+  // (drag passes are too short to notice). cap: extra hp it can cool.
+  C.cooling = { name: 'Radiator & Oil Cooler', options: [
+    opt('stock', 'Factory Radiator', 0, { cap: 0 }),
+    opt('co1', 'Aluminum Radiator + Electric Fans', 500, { cap: 250 }, 'A two-core aluminum radiator with electric fans: cools about 250 hp more than the factory one. Only matters in circuit races.'),
+    opt('co2', 'Race Radiator + Oil Cooler', 1100, { lvl: 2, cap: 600, kg: 3 }, 'A big three-core radiator and an engine oil cooler: about 600 hp more.'),
+    opt('co3', 'Endurance Cooling Package', 2200, { lvl: 3, cap: 1500, kg: 6 }, 'Radiator, oil, transmission and diff coolers, ducted: about 1500 hp more, lap after lap.')
+  ]};
+  // Head studs: factory head bolts stretch under high cylinder pressure and
+  // the head lifts off the gasket. psi: the boost it holds.
+  C.headstud = { name: 'Head Studs & Gasket', options: [
+    opt('stock', 'Factory Head Bolts', 0, { psi: 0 }),
+    opt('hs1', 'ARP Head Studs + MLS Gasket', 450, { psi: 40 }, 'Chromoly studs clamp the head harder than stretch-to-yield bolts, with a multi-layer steel gasket: good to about 40 psi.'),
+    opt('hs2', 'Studs + O-Ringed Block + Copper Gasket', 1800, { lvl: 3, psi: 75 }, 'Stainless O-rings in the deck bite into a copper gasket: the race way to seal big boost, to about 75 psi.')
+  ]};
+  // Water-methanol injection: a fine mist after the intercooler cools the
+  // charge as it evaporates and acts like more octane, so a pump-gas car can
+  // run more boost (needs the tune to use it)
+  C.wmi = { name: 'Water-Methanol Injection', needsFI: true, options: [
+    opt('stock', 'None', 0, { knock: 0, cool: 0 }),
+    opt('wm1', 'Water-Meth Injection Kit', 900, { knock: 2, cool: 18, kg: 6 }, 'A 50/50 water-methanol mist into the charge: about 18 C cooler and worth roughly 4 psi more before knock on pump gas. Little help on E85 or methanol, which already run cool.'),
+    opt('wm2', 'Progressive Dual-Nozzle Water-Meth', 1700, { lvl: 3, knock: 3, cool: 28, kg: 8 }, 'Two nozzles and a controller that matches the spray to boost: about 28 C cooler and 6 psi more before knock.')
+  ]};
+  // Engine and transmission mounts: soft rubber mounts let the engine roll
+  // and the driveline wind up on the hit; stiffer ones put it straight to
+  // the tires (racers report a few hundredths in the 60 ft)
+  C.mounts = { name: 'Engine & Trans Mounts', options: [
+    opt('stock', 'Factory Rubber Mounts', 0, { mk: 1 }),
+    opt('mm1', 'Polyurethane Mounts', 250, { mk: 1.015 }, 'Stiffer poly mounts: less engine roll and wind-up on the launch, a little more vibration.'),
+    opt('mm2', 'Solid Engine & Trans Mounts', 500, { lvl: 2, mk: 1.03 }, 'Solid mounts: the engine can\'t roll at all, every bit of the hit goes to the tires. Shakes the whole car at idle.')
+  ]};
+  // Wheel alignment: camber and toe for corners (circuit grip only)
+  C.align = { name: 'Alignment', options: [
+    opt('stock', 'Factory Alignment', 0, { hg: 1 }),
+    opt('al1', 'Performance Alignment', 150, { hg: 1.02 }, 'A little negative camber and less toe: the tires stay flatter in corners. About 2% more cornering grip on a circuit.'),
+    opt('al2', 'Camber Plates + Race Alignment', 700, { lvl: 2, hg: 1.04 }, 'Adjustable camber plates and a race alignment: about 4% more cornering grip. No help in a straight line.')
+  ]};
+  // Safety equipment: NHRA wants a parachute on cars over 150 mph
+  C.safety = { name: 'Safety Equipment', options: [
+    opt('stock', 'Factory Seats & Belts', 0, { kg: 0, chute: false }),
+    opt('sf1', 'Race Seat + 5-Point Harness', 600, { kg: -9, chute: false }, 'A light fixed-back race seat and harness: 9 kg lighter, and you stay put on the launch.'),
+    opt('sf2', 'Seat, Harness + Parachute', 1500, { lvl: 2, kg: -1, chute: true }, 'Adds a drag parachute: tech requires one on cars that trap over 150 mph.'),
+    opt('sf3', 'Full Safety: Chute, Fire System, Window Net', 2600, { lvl: 3, kg: 4, chute: true }, 'Parachute, on-board fire suppression, window net and a head-and-neck restraint: everything tech asks of a 150 mph car.')
+  ]};
   DR.PART_CATS = C;
 
   // Shop groups. unlock: which career unlock track the group's parts use.
   DR.PART_GROUPS = [
-    { id: 'engine', name: 'Bolt-Ons',      icon: 'intake',  cats: ['engine', 'airfilter', 'intake', 'throttle', 'headers', 'exhaust'] },
-    { id: 'top',    name: 'Top End',       icon: 'heads',   unlock: 'engine', cats: ['heads', 'cams', 'valvetrain'] },
+    { id: 'engine', name: 'Bolt-Ons',      icon: 'intake',  cats: ['engine', 'airfilter', 'intake', 'throttle', 'headers', 'exhaust', 'pulleys', 'cooling'] },
+    { id: 'top',    name: 'Top End',       icon: 'heads',   unlock: 'engine', cats: ['heads', 'cams', 'valvetrain', 'headstud'] },
     { id: 'bottom', name: 'Bottom End',    icon: 'pistons', unlock: 'engine', cats: ['pistons', 'rods', 'crank', 'block', 'oiling'] },
     { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu'] },
-    { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'ic', 'wastegate', 'bov', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
-    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'rearend', 'layout'] },
-    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
+    { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
+    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'rearend', 'mounts', 'layout'] },
+    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'align', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['rtires', 'wheels', 'ftires', 'brakes'] },
-    { id: 'body',   name: 'Weight',        icon: 'weight',  cats: ['weight', 'battery'] }
+    { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'safety'] }
   ];
   DR.UNLOCK_NAMES = { engine: 'Engine', power: 'Power adder', drive: 'Drivetrain', susp: 'Suspension', tires: 'Wheel & tire', body: 'Weight' };
   DR.CAT_NAMES = { engine: 'Engine Swap', fi: 'Turbo / Supercharger', trans: 'Transmission', rtires: 'Drive Tires' };
@@ -760,8 +816,8 @@
     engine: [
       [['airfilter', 'af2'], ['intake', 'i1'], ['throttle', 'tb1'], ['headers', 'h1']],
       [['airfilter', 'af2'], ['intake', 'i1'], ['throttle', 'tb1'], ['headers', 'h1'], ['exhaust', 'e1']],
-      [['airfilter', 'af2'], ['intake', 'i2'], ['throttle', 'tb2'], ['headers', 'h2'], ['exhaust', 'e2']],
-      [['airfilter', 'af3'], ['intake', 'i3'], ['throttle', 'tb3'], ['headers', 'h3'], ['exhaust', 'e3']]],
+      [['airfilter', 'af2'], ['intake', 'i2'], ['throttle', 'tb2'], ['headers', 'h2'], ['exhaust', 'e2'], ['pulleys', 'pu1']],
+      [['airfilter', 'af3'], ['intake', 'i3'], ['throttle', 'tb3'], ['headers', 'h3'], ['exhaust', 'e3'], ['pulleys', 'pu2']]],
     top: [
       [['cams', 'c1'], ['valvetrain', 'vt1']],
       [['heads', 'hd1'], ['cams', 'c1'], ['valvetrain', 'vt1']],
@@ -785,8 +841,8 @@
     drive: [
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['rearend', axleFor(1)]],
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)],
+      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)], ['mounts', 'mm1']],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)], ['mounts', 'mm2'],
         // a front-driver making real power is converted to drive the rear
         ['layout', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? 'rwd' : null; }]]],
     susp: [
@@ -802,8 +858,8 @@
     body: [
       [['weight', 'w0'], ['battery', 'bt1']],
       [['weight', 'w1'], ['battery', 'bt1']],
-      [['weight', 'w2'], ['battery', 'bt2']],
-      [['weight', 'w3'], ['battery', 'bt2']]]
+      [['weight', 'w2'], ['battery', 'bt2'], ['safety', 'sf1']],
+      [['weight', 'w3'], ['battery', 'bt2'], ['safety', 'sf2']]]
   };
   // boost a package leaves the car on, if it fits a turbo / blower
   DR.PKG_BOOST = [8, 10, 15, 20];

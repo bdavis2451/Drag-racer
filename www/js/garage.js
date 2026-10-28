@@ -192,6 +192,33 @@
         disc(12, 12, 2, ac); break;
       case 'weight':
         r(3, 9, 18, 12, M3); r(3, 9, 18, 1, M2); r(8, 4, 8, 5, M4); r(10, 6, 4, 3, M3); DR.pixText(x, '-LB', 6, 13, ac, 1); break;
+      case 'pulleys':
+        // a crank pulley and a smaller accessory pulley on one belt
+        ring(8, 14, 7, 5, M2); disc(8, 14, 3, ac); ring(18, 7, 4, 2, M2); disc(18, 7, 1, ac);
+        r(3, 8, 2, 7, BK); r(12, 3, 7, 2, BK); r(13, 18, 8, 2, BK); r(21, 8, 2, 9, BK); break;
+      case 'cooling':
+        // a radiator core with a fan behind it
+        r(3, 4, 18, 16, M3); r(4, 5, 16, 14, M2); for (k = 0; k < 8; k++) r(5 + k * 2, 5, 1, 14, M4);
+        r(4, 5, 16, 1, M1); r(9, 20, 6, 2, ac); r(2, 8, 2, 3, ac); break;
+      case 'headstud':
+        // three studs with their nuts
+        for (k = 0; k < 3; k++) { r(5 + k * 6, 6, 2, 15, M2); r(5 + k * 6, 6, 1, 15, M1); r(4 + k * 6, 4, 4, 3, ac); r(4 + k * 6, 4, 4, 1, DR.shadeHex(ac, 0.3)); }
+        r(2, 20, 20, 2, M3); break;
+      case 'wmi':
+        // a tank, a line and a spray nozzle misting
+        r(3, 6, 8, 14, '#d8e8f4'); r(3, 6, 8, 3, ac); r(4, 10, 6, 9, '#7fb8e0'); r(11, 12, 6, 2, M2); r(17, 10, 3, 6, M3);
+        r(21, 8, 1, 1, '#bfe4ff'); r(21, 12, 1, 1, '#bfe4ff'); r(22, 10, 1, 1, '#bfe4ff'); r(22, 14, 1, 1, '#bfe4ff'); break;
+      case 'mounts':
+        // a mount: two brackets with a solid puck between them
+        r(3, 4, 18, 4, M2); r(3, 4, 18, 1, M1); r(3, 16, 18, 4, M2); r(8, 8, 8, 8, ac); r(8, 8, 8, 2, DR.shadeHex(ac, 0.3));
+        r(5, 5, 2, 2, BK); r(17, 5, 2, 2, BK); r(5, 17, 2, 2, BK); r(17, 17, 2, 2, BK); break;
+      case 'align':
+        // a tilted wheel (negative camber) over a level line
+        r(2, 21, 20, 1, M3); for (k = 0; k < 14; k++) r(9 + Math.round(k * 0.25), 5 + k, 6, 1, k === 0 || k === 13 ? M1 : BK);
+        r(10, 9, 3, 6, ac); r(17, 4, 1, 16, ac); r(15, 4, 5, 1, ac); break;
+      case 'safety':
+        // a helmet with a visor
+        disc(12, 12, 9, ac); r(3, 12, 18, 9, ac); r(10, 9, 11, 5, BK); r(11, 10, 9, 2, '#7fd0ff'); r(3, 19, 18, 2, M3); r(5, 6, 4, 2, DR.shadeHex(ac, 0.3)); break;
       case 'sway':
         // a U-shaped bar with its two drop links and bushings
         r(3, 9, 18, 3, ac); r(3, 9, 18, 1, DR.shadeHex(ac, 0.3)); r(3, 9, 3, 10, ac); r(18, 9, 3, 10, ac);
@@ -317,6 +344,9 @@
       if (S1.partRpm[cat] != null && cat !== 'pistons' && cat !== 'rods' && cat !== 'crank') own.push(['own', S0.partRpm[cat], S1.partRpm[cat], 'rpm']);
       if (cat === 'injectors') own.push(['own', S0.fuelInj, S1.fuelInj, 'hp feeds']);
       if (cat === 'fuelpump') own.push(['own', S0.fuelPump, S1.fuelPump, 'hp feeds']);
+      if (cat === 'cooling') own.push(['own', S0.coolHp, S1.coolHp, 'hp cooled']);
+      if (cat === 'headstud') own.push(['own', Math.min(S0.headPsi, 99), Math.min(S1.headPsi, 99), 'psi head seal']);
+      if (cat === 'mounts') own.push(['own', (S0.mountK - 1) * 100, (S1.mountK - 1) * 100, '% launch grip']);
       var lim = own.concat([['safe', S0.safeHp, S1.safeHp, 'hp safe'], ['fuel', S0.fuelW / DR.HP, S1.fuelW / DR.HP, 'hp fuel'],
         ['rpm', S0.mech, S1.mech, 'rpm safe'], ['vt', S0.vtLimit, S1.vtLimit, 'rpm valves'], ['spark', S0.sparkPsi, S1.sparkPsi, 'psi spark'],
         ['boost', S0.maxBoost, S1.maxBoost, 'psi max'], ['axle', S0.axleTq, S1.axleTq, 'Nm axles'],
@@ -336,7 +366,7 @@
     }
     return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'no change');
   }
-  var HANDLING_CATS = { springs: 1, shocks: 1, sway: 1, brakes: 1, ftires: 1, rtires: 1, aero: 1 };
+  var HANDLING_CATS = { springs: 1, shocks: 1, sway: 1, align: 1, brakes: 1, ftires: 1, rtires: 1, aero: 1 };
   function deltaRow(a, b, unit, dec, lowerBetter) {
     var diff = b - a, cls = Math.abs(diff) < Math.pow(10, -(dec || 0)) / 2 ? 'dim' : ((diff < 0) === !!lowerBetter ? 'good' : 'bad');
     return h('span', { class: cls }, a.toFixed(dec || 0) + ' → ' + b.toFixed(dec || 0) + unit);

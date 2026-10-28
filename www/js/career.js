@@ -338,6 +338,9 @@
     var open = DR.CARS[inst.carId].body === 'roadster', need = 0, what = '', line = 0;
     DR.TECH.forEach(function (t) { if (!need && q < t[0]) { need = t[1]; what = t[2]; line = t[0]; } });
     if (!need && open && q < 13.5) { need = 1; what = 'a roll bar'; line = 13.5; }
+    // and a parachute over 150 mph (NHRA)
+    var trap = Math.max(G.estimate(inst).trap || 0, inst.best && inst.best.qt || 0);
+    if (S.tech >= need && trap >= 150 && !S.chute) return 'Tech: cars that trap over 150 mph need a parachute (Weight & Safety: Safety Equipment)';
     if (S.tech >= need) return '';
     return 'Tech: ' + (open && line === 13.5 ? 'open cars' : 'cars') + ' quicker than ' + line.toFixed(2) + ' need ' + what + ' (Suspension: Chassis)';
   };

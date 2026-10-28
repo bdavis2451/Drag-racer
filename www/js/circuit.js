@@ -54,7 +54,7 @@
   DR.handling = function (inst, S) {
     S = S || DR.buildSpec(inst);
     var car = S.car, o = function (cat) { return DR.getOption(cat, inst); };
-    var springs = o('springs'), shocks = o('shocks'), sway = o('sway'), brakes = o('brakes'), ft = o('ftires'), aero = o('aero');
+    var springs = o('springs'), shocks = o('shocks'), sway = o('sway'), brakes = o('brakes'), ft = o('ftires'), aero = o('aero'), align = o('align');
     var T = S.tune || {};
     // tire pressure: the drag tune's pressure, which off the optimum costs
     // grip both ways (low = rolling sidewalls, high = small contact patch)
@@ -66,7 +66,7 @@
     var other = ft.lat ? { lat: ft.lat, name: 'Skinny front runners', kind: 'Runner' } : ft.match && road[drive.kind] ? drive : factory;
     var front = S.drive === 'RWD' ? other : drive, rear = S.drive === 'FWD' ? other : drive;
     if (S.drive === 'AWD') { front = drive; rear = drive; }
-    var hg = (springs.hg || 1) * (shocks.hg || 1) * (sway.hg || 1) * era(car);
+    var hg = (springs.hg || 1) * (shocks.hg || 1) * (sway.hg || 1) * (align.hg || 1) * era(car);
     var muF = front.lat * hg * (front === drive ? pressK : 1);
     var muR = rear.lat * hg * (rear === drive ? pressK : 1);
     // driving off a corner: drive tires' straight-line grip on a circuit

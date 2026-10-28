@@ -697,6 +697,8 @@
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
       if (!testDrive && you.sim.finished && cfg.grip >= 1 && !redLight && (!inst.best[key] || you.sim.et < inst.best[key])) { inst.best[key] = you.sim.et; notes.unshift(['good', 'New personal best!']); }
+      // the quickest trap speed, for tech (parachute over 150 mph)
+      if (!testDrive && key === 'q' && you.sim.finished && !redLight) inst.best.qt = Math.max(inst.best.qt || 0, Math.round(you.sim.trap || 0));
       else if (you.sim.finished && prevBest) pbLine = 'Your best ' + (key === 'q' ? '1/4' : '1/8') + ': ' + prevBest.toFixed(3) + ' (' + '+' + (you.sim.et - prevBest).toFixed(3) + ')';
       // how close it was
       var margin = null;

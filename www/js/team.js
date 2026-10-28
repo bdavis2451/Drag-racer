@@ -210,7 +210,10 @@
     // the sound of your car round the lap: speed, gear, pedal, boost
     var snd = { v: [], g: [], s: [], b: [] };
     for (i = 0; i < n; i += 4) { snd.v.push(+you.v[i].toFixed(1)); snd.g.push(you.gear[i]); snd.s.push(you.state[i]); snd.b.push(+you.boost[i].toFixed(1)); }
-    var field = [{ name: d.name, team: 'Your team', car: inst.carId, col: inst.color || d.col, base: you.time, f: f, you: true, drv: d.id }];
+    // heat: a build making far more power than its radiator was sized for
+    // runs hot as the laps go by, and the ECU pulls timing (up to ~5%)
+    var heat = Math.max(0, Math.min(1.5, (S.peakHp + S.nosHp) / S.coolHp - 1));
+    var field = [{ name: d.name, team: 'Your team', car: inst.carId, col: inst.color || d.col, base: you.time, f: f, you: true, drv: d.id, heat: heat }];
     (opts.field || aiField(cls, 5)).forEach(function (o) {
       var of = T.factors(o.d);
       // their pace here: the same car's stock lap here vs on the reference track
@@ -227,6 +230,7 @@
         var lt = e.base * (1 + gauss() * e.f.sd);
         if (Math.random() < e.f.err) { lt += rnd(0.8, 3.5); e.err++; }
         if (lap === 0) lt += 3.0 + (e.grid - 1) * 0.25;   // standing start, from the grid
+        if (e.heat && lap >= 2) { var hl = e.base * Math.min(0.05, e.heat * 0.012 * (lap - 1)); lt += hl; e.hot = (e.hot || 0) + hl; }
         return { e: e, lt: lt, t: prev[k] + lt };
       });
       // resolve in running order: the car ahead is settled first
@@ -245,7 +249,7 @@
     var end = Math.max.apply(null, order.map(function (e) { return e.cum[e.cum.length - 1]; }));
     G.pay(cost);
     var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series,
-      field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err }; }),
+      field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err, hot: e.hot ? +e.hot.toFixed(1) : 0 }; }),
       ideal: ideal, base: you.time, snd: snd };
     s.races.push(r);
     if (s.fast) T.setFast(r, true); else G.save();

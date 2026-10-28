@@ -194,6 +194,7 @@
     var clutch = o('clutch'), conv = o('converter'), fly = o('flywheel'), shaft = o('driveshaft'), diff = o('diff');
     var layout = o('layout'), springs = o('springs'), shocks = o('shocks'), rs = o('rearsusp'), bar = o('wheeliebar');
     var aero = o('aero'), wheels = o('wheels'), ftires = o('ftires'), wt = o('weight');
+    var pul = o('pulleys'), coolP = o('cooling'), hstud = o('headstud'), wmi = o('wmi'), mounts = o('mounts'), safe = o('safety');
     var tireId = DR.partId('rtires', inst), tire = DR.TIRES[tireId], stockTire = DR.TIRES[car.tire];
     var fiId = DR.partId('fi', inst);
     var stockEng = DR.ENGINES[car.engine];
@@ -215,14 +216,17 @@
     var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
     // compression: high-comp pistons make more power but knock sooner
     var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crKnock = -3 * (pist.cr || 0);
-    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: fuel.cool || 0, knock: fuel.knock + (e.diesel ? 0 : crKnock) };
+    // water-meth: worth most on pump or race gas; alcohol fuels already run cool
+    var wmK = fuel.ff < 0.6 ? 0.15 : fuel.ff < 0.9 ? 0.4 : 1;
+    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: (fuel.cool || 0) + (wmi.cool || 0) * wmK,
+      knock: fuel.knock + (e.diesel ? 0 : crKnock) + Math.round((wmi.knock || 0) * wmK * 2) / 2 };
     var S = engineCore(e, mods, 1);
     S.ai = ai;
     var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
     var untunedK = 1;
     if (!tuned && cams.tune === 'hard') untunedK *= 0.94;
     if (!tuned && inj.tune) { untunedK *= 0.88; untuned.push(['injectors', 'Bigger injectors on the stock tune: it runs pig-rich']); }
-    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) * untunedK / shapePeak(S);
+    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) * (pul.pk || 1) * untunedK / shapePeak(S);
     S.breathing = B;
     S.carId = inst.carId; S.car = car; S.engId = engId; S.eng = e;
     S.name = car.name;
@@ -332,6 +336,13 @@
       S.slider = clutch.slide || null;   // [clamp share at the hit, seconds to full lock]
     }
     S.dgrip = diff.dgrip;
+    S.mountK = mounts.mk || 1;   // stiffer mounts: the hit goes to the tires
+    // the boost the head gasket holds: factory bolts to ~22 psi (a factory
+    // turbo engine a little past its own boost), studs and O-rings far more
+    S.headPsi = ai ? 999 : hstud.psi || (e.diesel ? 45 : Math.max(22, e.fi ? e.fi.boost + 8 : 0));
+    // cooling: the radiator is sized for the car's factory engine
+    S.coolHp = stockEng.hp * 1.6 + (coolP.cap || 0);
+    S.chute = !!safe.chute;
     // axles: the factory ones hold a margin over the factory engine
     var stockTq = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.25;
     S.axleTq = axle.axle || Math.max(500, stockTq * 1.8);
@@ -355,8 +366,8 @@
     // small transfer unit up front and a rear diff, halfshafts and subframe
     var awdAdd = S.drive === 'AWD' && car.drive !== 'AWD' ? (layout.tv ? [20, 15, 40] : [60, 30, 0]) : null;
     var extraRear = (tire.m - stockTire.m) + wheels.wm + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batt.bat + Math.min(0, batt.batkg) + (awdAdd ? awdAdd[2] : 0);
-    var extraFront = ftires.fm + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batt.bat + Math.max(0, batt.batkg);
-    var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg;
+    var extraFront = ftires.fm + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batt.bat + Math.max(0, batt.batkg) + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5;
+    var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
     S.f = clamp(front / S.m, 0.2, 0.72);
@@ -612,6 +623,8 @@
     if (S.untuned && S.untuned.length) out.ecu = 'Needs a tune';
     if ((S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
     if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.knock + 0.5) out.fueltype = 'Knocking at ' + (S.boostTop || S.boostSet) + ' psi';
+    if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.headPsi + 0.5) out.headstud = 'Head lifts past ' + S.headPsi + ' psi';
+    if (S.peakHp + S.nosHp > S.coolHp * 1.05) out.cooling = 'Runs hot in long races';
     if (S.creep) out.wastegate = 'Boost creeps +' + S.creep + ' psi';
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) out.ic = 'Charge is ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F)';
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) out.fi = 'Out of breath';
@@ -707,6 +720,7 @@
     if (S.creep && S.fiType !== 'none') r.notes.push('Boost creeps ' + S.creep + ' psi past the target up top: the internal wastegate can\'t dump enough exhaust (a ported or external gate fixes it)');
     if (bTop > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + bTop + ' psi - misfiring past ' + S.sparkPsi + ' psi');
     if (bTop > S.knock + 0.5) { r.engine += Math.min(0.6, (bTop - S.knock) * 0.05); r.notes.push('Boost is past the knock limit (' + S.knock + ' psi' + (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + ')'); }
+    if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)'); }
     if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
     // short of fuel it runs lean: it makes what the fuel allows (or the
@@ -992,7 +1006,7 @@
     this.Nr = Nr; this.Nf = Nf;
     var N = S.drive === 'FWD' ? Nf : S.drive === 'AWD' ? Nr + Nf : Nr;
     var loadSens = Math.pow(Math.max(N, 100) / this.N0, -0.08);
-    var mu = S.tire.mu * this.track * S.pf * this.tempFactor() * S.dgrip * loadSens;
+    var mu = S.tire.mu * this.track * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? S.mountK || 1 : 1);
     if (this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
     if (this.burnMode) mu *= 0.5;                  // water in the burnout box
     this.mu = mu;

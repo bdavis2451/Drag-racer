@@ -234,7 +234,7 @@
   // keep: not pump gas, an empty nitrous slot, the factory weight or layout,
   // or the block (studs, girdles and sleeves go on the same block); a
   // factory turbo's bits only when the engine came boosted.
-  var NO_PART = { weight: 1, layout: 1, fueltype: 1, launch: 1, nitrous: 1, nosctrl: 1, nosheat: 1, transbrake: 1, wheeliebar: 1, aero: 1, chassis: 1, block: 1 };
+  var NO_PART = { align: 1, wmi: 1, safety: 1, weight: 1, layout: 1, fueltype: 1, launch: 1, nitrous: 1, nosctrl: 1, nosheat: 1, transbrake: 1, wheeliebar: 1, aero: 1, chassis: 1, block: 1 };
   var FI_PARTS = { fi: 1, ic: 1, wastegate: 1, bov: 1 };
   G.stockIsPart = function (cat, inst) {
     if (cat === 'engine') return true;
