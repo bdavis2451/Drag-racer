@@ -1149,46 +1149,74 @@
     var broke = sim.blown ? 'engine' : sim.broke ? sim.brokeWhat || 'trans' : sim.crashed ? 'chassis' : null;
     return { et: sim.finished ? sim.et : 99, sixty: sim.splits['60ft'] ? sim.splits['60ft'].t : 9, tireE: sim.tireE + S.peakHp * 745.7 * 0.9, clutchE: sim.clutchE, broke: broke, S: S };
   }
-  // Runs the job: returns { tune, hits: [{label, et, sixty}], tireE, clutchE, broke, S }
-  DR.runTuner = function (inst, jobIds) {
+  // A tuning session, one hit at a time (so the car wears as it goes and
+  // the session can stop for fresh tires): step() makes the next hit and
+  // returns { label, et, sixty, broke, tireE, clutchE, S }, or null when
+  // the job is done. Coordinate search: each setting is stepped one way
+  // while the timeslip improves, then the other, keeping what's quicker.
+  // rebase: the next hit is a new baseline (after fresh tires).
+  DR.tunerSession = function (inst, jobIds) {
     var t = {}; for (var k in inst.tune) t[k] = inst.tune[k];
-    var d = DR.fullTune(inst, DR.buildSpec(inst)), hits = [], out = { tireE: 0, clutchE: 0, broke: null, hits: hits };
+    var d = DR.fullTune(inst, DR.buildSpec(inst)), S0 = DR.buildSpec(inst, t), keys = [];
+    DR.TUNER_JOBS.forEach(function (job) {
+      if (jobIds.indexOf(job.id) < 0 || !job.show(S0)) return;
+      job.keys.forEach(function (key, ki) { keys.push({ job: job, key: key, step: Array.isArray(job.step) ? job.step[ki] : job.step }); });
+    });
+    var ss = { t: t, hits: [], best: null, broke: null, done: false, rebase: true, ki: 0, dir: 1, n: 0, moved: false, tcTried: false };
     function val(key) { return t[key] != null ? t[key] : d[key]; }
     function run(label) {
       var h = tunerHit(inst, t);
-      out.tireE += h.tireE; out.clutchE += h.clutchE; out.S = h.S;
-      hits.push({ label: label, et: h.et, sixty: h.sixty, broke: h.broke });
-      if (h.broke) out.broke = h.broke;
-      return h.broke ? 99 : h.et;
+      h.label = label;
+      ss.hits.push({ label: label, et: h.et, sixty: h.sixty, broke: h.broke });
+      if (h.broke) { ss.broke = h.broke; ss.done = true; }
+      return h;
     }
-    var best = run('Baseline');
-    DR.TUNER_JOBS.forEach(function (job) {
-      if (out.broke || jobIds.indexOf(job.id) < 0) return;
-      var S = DR.buildSpec(inst, t);
-      if (!job.show(S)) return;
-      job.keys.forEach(function (key, ki) {
-        if (out.broke) return;
-        var step = Array.isArray(job.step) ? job.step[ki] : job.step;
-        var def = DR.TUNE_DEFS.filter(function (x) { return x.key === key; })[0];
-        var lo = def ? def.min(S) : -1e9, hi = def ? def.max(S) : 1e9;
-        if (key === 'tcSlip' && !val(key)) { t[key] = 10; var e0 = run('Traction control on (10%)'); if (e0 < best) best = e0; else delete t[key]; if (out.broke) return; }
-        [1, -1].some(function (dir) {
-          var moved = false;
-          for (var n = 0; n < 3 && !out.broke; n++) {
-            var was = val(key), next = Math.round(Math.max(lo, Math.min(hi, was + dir * step)) * 100) / 100;
-            if (next === was) break;
-            t[key] = next;
-            var e = run(job.name + ': ' + fmt(key, next));
-            if (e < best - 0.004) { best = e; moved = true; } else { t[key] = was; break; }
+    function advance() {
+      if (ss.dir === 1 && !ss.moved) { ss.dir = -1; ss.n = 0; }
+      else { ss.ki++; ss.dir = 1; ss.n = 0; ss.moved = false; ss.tcTried = false; }
+    }
+    ss.step = function () {
+      if (ss.done) return null;
+      if (ss.rebase) {
+        // after fresh parts the car has changed: a new baseline, and the
+        // search starts over (what was found on worn tires may not hold)
+        var again = ss.best != null;
+        var b = run(again ? 'New baseline (fresh parts)' : 'Baseline');
+        ss.best = b.broke ? 99 : b.et; ss.rebase = false;
+        if (again) { ss.ki = 0; ss.dir = 1; ss.n = 0; ss.moved = false; ss.tcTried = false; }
+        return b;
+      }
+      while (ss.ki < keys.length) {
+        var K = keys[ss.ki], S = DR.buildSpec(inst, t), def = DR.TUNE_DEFS.filter(function (x) { return x.key === K.key; })[0];
+        var lo = def ? def.min(S) : -1e9, hi = def ? def.max(S) : 1e9, h;
+        if (K.key === 'tcSlip' && !val('tcSlip') && !ss.tcTried) {
+          ss.tcTried = true; t.tcSlip = 10;
+          h = run('Traction control on (10%)');
+          if (!h.broke && h.et < ss.best) ss.best = h.et; else delete t.tcSlip;
+          return h;
+        }
+        if (ss.n < 3) {
+          var was = val(K.key), next = Math.round(Math.max(lo, Math.min(hi, was + ss.dir * K.step)) * 100) / 100;
+          if (next !== was) {
+            t[K.key] = next;
+            h = run(K.job.name + ': ' + fmt(K.key, next));
+            if (!h.broke && h.et < ss.best - 0.004) { ss.best = h.et; ss.moved = true; ss.n++; }
+            else { t[K.key] = was; advance(); }
+            return h;
           }
-          return moved;
-        });
-      });
-    });
-    out.tune = {};
-    DR.TUNER_JOBS.forEach(function (job) { job.keys.forEach(function (key) { if (t[key] != null && t[key] !== inst.tune[key]) out.tune[key] = t[key]; }); });
-    out.best = best;
-    return out;
+        }
+        advance();
+      }
+      ss.done = true;
+      return null;
+    };
+    // what the session found, against the car's tune
+    ss.changes = function () {
+      var out = {};
+      keys.forEach(function (K) { var was = inst.tune[K.key] != null ? inst.tune[K.key] : d[K.key]; if (t[K.key] != null && t[K.key] !== was) out[K.key] = t[K.key]; });
+      return out;
+    };
+    return ss;
   };
   function fmt(key, v) {
     if (key === 'launchRpm' || key === 'stall' || key === 'shiftRpm') return v + ' rpm';
