@@ -345,11 +345,8 @@
     var fee = item.cat === 'engine' ? DR.swapFit(inst, item.id).install : 0;
     if (fee && !G.canAfford(fee)) { inv.push(item); return { ok: false, msg: 'The install costs ' + DR.money(fee) }; }
     if (fee) G.pay(fee);
-    var had2step = item.cat === 'launch' && DR.partId('launch', inst) !== 'stock';
     setPart(inst, item.cat, item.id);
     inst.spent += item.price;
-    // a first 2-step comes set up: the launch rpm that works for this car
-    if (item.cat === 'launch' && !had2step) { var lt = DR.launchTune(inst); if (lt.launchRpm) inst.tune.launchRpm = lt.launchRpm; }
     G.save();
     return { ok: true, msg: 'Installed ' + G.partName(item) };
   };
@@ -386,8 +383,8 @@
   };
   // A quick upgrade package (DR.packagePlan): pay the package price, then
   // each part goes on the car (at its share of the discount) and anything
-  // it replaces goes to the shelf. Leaves the boost and launch setup where
-  // the package set them.
+  // it replaces goes to the shelf. Sets the boost the package was built
+  // around; the rest of the tune is the player's.
   G.buyPackage = function (inst, plan) {
     if (!plan.steps.length || !G.canAfford(plan.price)) return false;
     G.pay(plan.price);
@@ -398,9 +395,6 @@
       G.installPart(inst, item.uid);
     });
     if (plan.after.tune && plan.after.tune.boost != null) inst.tune.boost = plan.after.tune.boost;
-    // and comes with a launch setup that works with the new parts
-    var lt = DR.launchTune(inst);
-    for (var key in lt) inst.tune[key] = lt[key];
     G.save();
     return true;
   };

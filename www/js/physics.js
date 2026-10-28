@@ -336,9 +336,10 @@
     S.qc = ai || !!gset.qc;
     S.fdSet = Math.round(car.fd * (gset.fdk || 1) * 100) / 100;
     if (tr.type === 'auto') {
-      // (a converter can't flash past where the engine runs out of revs:
-      // one rated above the redline just slips at the limiter)
-      S.stallRated = conv.stall; S.stall = ai ? conv.stall : Math.min(conv.stall, S.red - 300); S.TR = conv.tr;
+      S.stall = conv.stall; S.TR = conv.tr;
+      // a bolt-together converter: its stall is set by the stator fitted
+      // (Tuning), from the stall it ships with
+      S.convAdj = !ai && !!conv.adj;
       S.lockup = !!conv.lockup && !!tr.lu;   // a lockup converter in a box that can work it
     } else {
       var stockTqNm = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.3;
@@ -398,6 +399,7 @@
 
     // ---- tune
     var T = DR.fullTune(inst, S, tuneOverride);
+    if (S.convAdj) { S.stall = T.stall; S.TR = convTR(T.stall); }
     S.tune = T;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
     S.boostTop = S.boostSet + (S.creep || 0);   // what it really sees up top
@@ -485,6 +487,11 @@
     return r.slice();
   };
 
+  // a converter's torque multiplication at stall: looser converters
+  // (bigger stall, smaller diameter) multiply a little more
+  function convTR(stall) { return Math.round(Math.min(2.3, Math.max(1.9, 1.9 + (stall - 2200) * 0.000075)) * 100) / 100; }
+  DR.convTR = convTR;
+
   // ---------------------------------------------------------------- tune
   DR.tuneDefaults = function (inst, S) {
     var tr = DR.TRANS[S.transId];
@@ -503,6 +510,7 @@
       revLimit: S.red,
       gearBoost: DR.boxRatios(S.transId, S.car).map(function () { return S.maxBoost || 0; }),
       luGear: DR.boxRatios(S.transId, S.car).length,
+      stall: S.stall || 0,
       springF: 5, springR: 5, rideF: 0, rideR: 0, rollBal: 0,
       bumpF: 5, rebF: 5, bumpR: 5, rebR: 5, limitF: 0,
       antiSquat: DR.getOption('rearsusp', inst).as,
@@ -546,6 +554,9 @@
       show: function () { return true; }, group: 'Drivetrain', help: 'The shift light comes on here. Auto-shift also uses it.' },
     { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function (S) { return S.qc || !S.fdSet ? 2.2 : S.fdSet; }, max: function (S) { return S.qc || !S.fdSet ? 6.5 : S.fdSet; },
       show: function (S) { return !!S.qc; }, req: 'Set by your gear set: a quick-change rear end (Drivetrain: Ring & Pinion) makes it adjustable', group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed. A quick-change rear: swap gear sets in minutes for each track.' },
+    { key: 'stall', label: 'Converter Stall', unit: 'rpm', step: 100, min: function () { return 3000; }, max: function () { return 7500; },
+      show: function (S) { return !!S.convAdj; }, req: 'Requires a bolt-together converter', group: 'Drivetrain',
+      help: 'The stall speed the converter flashes to on the hit, set by the stator you bolt into it. Higher gets a big turbo lit and the engine into its power, but slips more all the way down the track; lower couples tighter and carries more mph. A converter that wants more rpm than the engine can pull just slips at the limiter.' },
     { key: 'luGear', label: 'Converter Lockup From Gear', unit: '', step: 1, min: function () { return 1; }, max: function (S) { return (S.ratios || DR.boxRatios(S.transId, S.car)).length; },
       show: function (S) { return !!S.lockup; }, req: 'Requires a lockup converter', group: 'Drivetrain', fmt: function (v) { return ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][v - 1] + ' gear on'; },
       help: 'The lockup clutch takes out the converter\'s slip from this gear on (applied just after each shift; in 1st, once the gearbox is turning near the converter\'s stall speed). Locking earlier gains mph, but the engine drops revs when it locks: with a tight converter or a big turbo that can pull it off boost. Try it and watch your timeslip.' },
@@ -649,7 +660,7 @@
     if (S.clCap && tqNm > S.clCap) out.clutch = 'Slipping';
     // a converter that can't flash to where the turbo makes boost: the car
     // leaves, the engine is dragged below boost and falls on its face
-    if (S.trType === 'auto' && S.stallRated > S.stall) out.converter = 'Stall is past the redline: it flashes to ' + S.stall + ' rpm';
+    if (S.trType === 'auto' && S.stall > S.red - 200) out.converter = 'Stall (' + S.stall + ' rpm) is past what the engine revs to';
     else if (S.trType === 'auto' && S.fiType === 'turbo' && S.spoolHi && S.stall < S.spoolHi * 0.85) out.converter = 'Too tight for the turbo (boost at ' + Math.round(S.spoolHi / 100) * 100 + ' rpm)';
     else if (S.trType === 'auto' && S.stall > S.peakHpRpm) out.converter = 'Looser than this engine needs (power peaks at ' + Math.round(S.peakHpRpm / 100) * 100 + ' rpm): it slips power away';
     return out;
