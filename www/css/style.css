@@ -892,3 +892,20 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .lchip { font: inherit; font-size: 14px; padding: 1px 7px; background: transparent; border: 1px solid; cursor: pointer; opacity: .35; }
 .lchip.on { opacity: 1; background: rgba(255,255,255,.05); }
 .modal .panel { max-height: 94vh; overflow-y: auto; }
+.tinput { font: inherit; font-size: 16px; padding: 4px 8px; background: #0d0e12; color: #fff; border: 1px solid #3b3f4c; flex: 1; min-width: 0; }
+/* build sheet: a tech card */
+.buildsheet { background: #f2efe4; color: #23221e; padding: 12px 14px; max-width: 860px; margin: 0 auto; box-shadow: 0 0 0 2px #000, 4px 4px 0 rgba(0,0,0,.4); font-size: 16px; }
+.buildsheet .dim { color: #6d6a60; }
+.bshead { border-bottom: 2px solid #23221e; padding-bottom: 6px; margin-bottom: 8px; }
+.bshead .pix { color: #b8261f; }
+.bscols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .bscols { grid-template-columns: 1fr; } }
+.bss { margin-bottom: 8px; }
+.bst { font-family: 'Press Start 2P', monospace; font-size: 9px; color: #b8261f; border-bottom: 1px dashed #9b978a; margin-bottom: 3px; padding-bottom: 2px; }
+.bsl { display: flex; justify-content: space-between; gap: 10px; }
+.bsl .k, .bsm .k { color: #6d6a60; }
+.bsl .v { text-align: right; }
+.bsm { display: grid; grid-template-columns: 120px 1fr; gap: 8px; margin: 2px 0; }
+.bslink { cursor: pointer; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: 3px; }
+.rdrow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; font-size: 16px; }
+@media (max-width: 640px) { .rdrow { grid-template-columns: 1fr auto; } .rdrow .dim { display: none; } }

@@ -35,13 +35,39 @@
     },
     // A career event (round: knockout round, 0-based). Some strip events
     // run under the lights (the same ones every time).
-    careerEvent: function (ev, round) {
+    careerEvent: function (ev, round) { DR.Race.start(DR.Race.eventCfg(ev, round)); },
+    eventCfg: function (ev, round) {
       var T = DR.EVENT_TYPES[ev.type];
       round = round || 0;
       var nm = ev.opps[0].name || '', hsh = 0;
       for (var i = 0; i < nm.length; i++) hsh = (hsh * 31 + nm.charCodeAt(i)) % 997;
-      DR.Race.start({ mode: 'career', ev: ev, round: round, opp: ev.opps[round], dist: T.dist(), theme: T.theme, grip: T.grip, reward: G.eventReward(ev),
-        night: T.theme === 'street' || hsh % 3 === 0 });
+      return { mode: 'career', ev: ev, round: round, opp: ev.opps[round], dist: T.dist(), theme: T.theme, grip: T.grip, reward: G.eventReward(ev),
+        night: T.theme === 'street' || hsh % 3 === 0 };
+    },
+    // Race day: before you go to the lanes, the day's conditions, who you're
+    // up against (their car and the time they've posted), tech, and the
+    // state of your consumables.
+    raceDay: function (cfg, title) {
+      var inst = G.car(), S = G.spec(inst), cond = cfg.cond || (cfg.cond = DR.Race.cond(cfg)), close;
+      var opps = cfg.mode === 'career' ? cfg.ev.opps : [cfg.opp];
+      var dist = cfg.dist > DR.EIGHTH + 1 ? 'quarter' : 'eighth';
+      var entries = opps.map(function (o, i) {
+        var oi = G.oppInst(o), oS = G.spec(oi), est = G.estimate(oi, cfg.dist, (cfg.grip || 1) * DR.surfaceGrip(cond, oS.tire.kind) / (DR.Race.SURF_BASE[cond.surface] || 1));
+        return h('div', { class: 'rdrow' }, h('span', { class: 'acc' }, (opps.length > 1 ? 'R' + (i + 1) + ' ' : '') + o.name), h('span', { class: 'dim' }, DR.CARS[o.carId].name),
+          h('span', {}, 'posted ' + est.et.toFixed(2) + ' @ ' + Math.round(est.trap) + ' mph'));
+      });
+      var ws = G.wearList(inst), tech = cfg.mode === 'career' ? G.techIssue(inst, cfg.ev) : '';
+      var techLine = cfg.theme !== 'strip' ? 'No tech on the street' : tech ? tech : 'Passed' + (S.tech ? ' (' + ['', 'roll bar', 'roll cage'][Math.min(2, S.tech)] + ')' : '');
+      close = UI.modal([h('div', { class: 'pix acc' }, 'RACE DAY'),
+        h('div', { class: 'pix' }, title || (cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name : 'Street race')),
+        h('div', { class: 'dim' }, (dist === 'quarter' ? '1/4 mile' : '1/8 mile') + ' • ' + DR.condLabel(cond)),
+        h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'ENTRY LIST'), entries,
+        h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'TECH'), h('div', { class: tech ? 'bad' : '' }, techLine),
+        h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'YOUR CAR'),
+        h('div', { class: 'dim' }, ws.map(function (x) { return (x.cat === 'rtires' ? 'Tires ' : 'Clutch ') + Math.round(x.w * 100) + '% worn'; }).join(' • ') + ' • fuel about ' + DR.money(DR.runCost(S).total) + ' a pass'),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px', marginTop: '10px' } },
+          btn('Not yet', function () { close(); }),
+          btn('To the lanes', function () { if (tech) return UI.toast(tech); close(); DR.Race.start(cfg); }, 'primary' + (tech ? ' disabled' : '')))]);
     },
     // The surface and time of day for a race. Street spots and the strip
     // keep their old grip figures as a rating against their surface.

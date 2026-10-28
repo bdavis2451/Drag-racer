@@ -220,17 +220,17 @@
   // of tabs, the money. Upgrade = everything that makes the car quicker,
   // Style = everything that makes it look good.
   UI.SECTIONS = {
-    upgrade: [['shop', 'Shop', function () { UI.openShop(); }], ['pkg', 'Packages', function () { UI.openPackages(); }],
-      ['install', 'Install', function () { UI.show(UI.Parts); }], ['inv', 'Inventory', function () { UI.show(UI.Inventory); }],
-      ['tune', 'Tune', function () { UI.show(UI.Tune); }], ['dyno', 'Dyno', function () { UI.show(UI.Dyno); }], ['log', 'Logbook', function () { UI.show(UI.Logbook); }]],
+    upgrade: [['parts', 'Parts', function () { UI.openShop(); }], ['pkg', 'Packages', function () { UI.openPackages(); }],
+      ['inv', 'Shelf', function () { UI.show(UI.Inventory); }],
+      ['tune', 'Setup', function () { UI.show(UI.Tune); }], ['dyno', 'Dyno', function () { UI.show(UI.Dyno); }], ['log', 'Logbook', function () { UI.show(UI.Logbook); }]],
     style: [['body', 'Body Kits', function () { UI.show(UI.Body); }], ['paint', 'Paint', function () { UI.show(UI.Paint); }]]
   };
   UI.sectionTop = function (section, active, onLeave) {
     var inst = G.car();
     function badge(id) {
-      if (id === 'shop' && G.newPartsCount && G.newPartsCount()) return 'NEW';
+      if (id === 'parts' && G.newPartsCount && G.newPartsCount()) return 'NEW';
       if (id === 'body' && G.newVisCount && G.newVisCount()) return 'NEW';
-      if (id === 'install' && inst) { var n = G.state.inv.filter(function (it) { return !it.stock && !G.partFitIssue(it, inst); }).length; return n ? String(n) : ''; }
+      if (id === 'parts' && inst) { var n = G.state.inv.filter(function (it) { return !it.stock && !G.partFitIssue(it, inst); }).length; return n ? String(n) : ''; }
       if (id === 'inv') return G.state.inv.length ? String(G.state.inv.length) : '';
       return '';
     }

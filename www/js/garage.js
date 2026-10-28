@@ -370,7 +370,7 @@
       var lim = own.concat([['safe', S0.safeHp, S1.safeHp, 'hp safe'], ['fuel', S0.fuelW / DR.HP, S1.fuelW / DR.HP, 'hp fuel'],
         ['rpm', S0.mech, S1.mech, 'rpm safe'], ['vt', S0.vtLimit, S1.vtLimit, 'rpm valves'], ['spark', S0.sparkPsi, S1.sparkPsi, 'psi spark'],
         ['boost', S0.maxBoost, S1.maxBoost, 'psi max'], ['axle', S0.axleTq, S1.axleTq, 'Nm axles'],
-        ['risk', -DR.riskMax(S0.risk) * 100, -DR.riskMax(S1.risk) * 100, '% risk']]);
+        G.simMode() ? null : ['risk', -DR.riskMax(S0.risk) * 100, -DR.riskMax(S1.risk) * 100, '% risk']].filter(Boolean));
       for (var i = 0; i < lim.length && out.length < 2; i++) {
         var d = Math.round(lim[i][2] - lim[i][1]);
         var v = lim[i][0] === 'risk' ? -d : d;
@@ -433,13 +433,14 @@
     var stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };
     var side = h('div', { class: 'gside' },
+      h('div', { class: 'gst bslink', onclick: function () { UI.show(UI.BuildSheet); } }, h('span', { class: 'k' }, 'BUILD SHEET'), h('span', { class: 'v acc' }, '▸')),
       stat('POWER', Math.round(S.peakHp) + (S.nosHp ? '+' + S.nosHp : '') + ' hp', 'acc'),
       stat('WEIGHT', UI.kgLb(S.m)),
       stat('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
       stat('BEST 1/4', inst.best && inst.best.q ? inst.best.q.toFixed(3) + 's' : '—', 'acc'),
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
-      S.fiType !== 'none' && !S.diesel && S.iat > 75 ? h('div', { class: 'bad gsmall' }, '🌡 Hot intake: ' + Math.round(S.iat) + ' C at ' + S.boostSet + ' psi') : null,
-      DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null,
+      !G.simMode() && S.fiType !== 'none' && !S.diesel && S.iat > 75 ? h('div', { class: 'bad gsmall' }, '🌡 Hot intake: ' + Math.round(S.iat) + ' C at ' + S.boostSet + ' psi') : null,
+      !G.simMode() && DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null,
       UI.wearBox(inst));
     var sel = h('div', { class: 'gsel' },
       cars.length > 1 ? btn('◀', function () { cycle(-1); }, 'arrow') : null,
@@ -453,7 +454,7 @@
   // ---------------------------------------------------------------- PARTS SHOP
   var shopGroup = 'engine', shopCat = 'intake', partsGroup = 'engine';
   UI.openPackages = function () { if (shopGroup !== 'pkg') partsGroup = shopGroup; shopGroup = 'pkg'; UI.show(UI.Shop); };
-  UI.openShop = function () { if (shopGroup === 'pkg') shopGroup = partsGroup; UI.show(UI.Shop); };
+  UI.openShop = function () { if (shopGroup === 'pkg') shopGroup = partsGroup; UI.show(UI.Parts); };
   function groupById(id) { return DR.PART_GROUPS.filter(function (g) { return g.id === id; })[0]; }
   function firstCat(group, inst) { return group.cats.filter(function (c) { return DR.partApplies(c, inst) || ((c === 'clutch' || c === 'converter') && DR.partExists(c, inst)); })[0] || group.cats[0]; }
   // the last shop section, category, body-kit slot and install slot, kept
@@ -468,45 +469,39 @@
     }
   }
   function remember() { UI.remember({ shopGroup: shopGroup, shopCat: shopCat, bodySlot: bodySlot, bayCat: bayCat }); }
+  // Packages (the parts themselves are bought in the parts tree, UI.Parts)
   UI.Shop = function (jump) {
     var inst = G.car();
     memory();
     // jump only when arriving (a refresh replays the same argument)
     if (jump && !UI.refreshing) { shopCat = jump; DR.PART_GROUPS.forEach(function (g) { if (g.cats.indexOf(jump) >= 0) shopGroup = g.id; }); }
     remember();
-    var group = groupById(shopGroup), weak = G.simMode() ? {} : DR.bottlenecks(G.spec(inst));
-    if (group && group.cats.indexOf(shopCat) < 0) shopCat = firstCat(group, inst);
-    var rail = h('div', { class: 'srail' }, DR.PART_GROUPS.map(function (g) {
-      var hot = g.cats.some(function (c) { return weak[c]; });
-      return h('div', { class: 'srail-i' + (g.id === shopGroup ? ' on' : '') + (hot ? ' hot' : ''), onclick: function () { shopGroup = g.id; shopCat = firstCat(g, inst); UI.refresh(); } },
-        iconEl(g.icon || g.cats[0], 2, '', 26), h('span', {}, g.name), G.groupHasNew(g) && g.id !== shopGroup ? h('span', { class: 'newdot' }, 'NEW') : null);
-    }));
-    if (shopGroup === 'pkg') return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'pkg'),
-      h('div', { class: 'shopwrap' }, rail, packagesMain(inst)));
-    var chips = h('div', { class: 'schips' }, group.cats.filter(function (c) { return DR.partExists(c, inst); }).map(function (c) {
-      var fits = DR.partApplies(c, inst);
-      return btn((weak[c] ? '! ' : '') + DR.catName(c, inst), function () { shopCat = c; UI.refresh(); }, 'chip' + (c === shopCat ? ' on' : '') + (fits ? '' : ' nofit') + (weak[c] ? ' hot' : ''));
-    }));
-    var curId = DR.partId(shopCat, inst), tunedNow = G.spec(inst).tuned;
+    if (shopGroup === 'pkg') return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'pkg'), h('div', { class: 'shopwrap' }, packagesMain(inst)));
+    if (DR.PART_CATS[shopCat]) bayCat = shopCat;
+    return UI.Parts(jump);
+  };
+
+
+  // The parts for sale in a slot, as cards (tap one for the details, buy,
+  // fit). Factory parts aren't sold.
+  function catalogGrid(inst, cat) {
+    var curId = DR.partId(cat, inst), tunedNow = G.spec(inst).tuned;
     var grid = h('div', { class: 'pgrid' });
-    DR.partOptions(shopCat, inst).forEach(function (o) {
-      if (!o.price) return;                                  // stock / factory parts are not sold
-      var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(shopCat, o.id), locked = !G.partUnlocked(shopCat, lvl);
-      grid.appendChild(h('div', { class: 'pcard l' + lvl + (locked ? ' locked' : '') + (installed ? ' inst' : ''), onclick: function () { partModal(inst, shopCat, o.id); } },
-        h('div', { class: 'pic' }, iconEl(DR.iconCat(shopCat, inst), lvl, o.id, 48)),
+    DR.partOptions(cat, inst).forEach(function (o) {
+      if (!o.price) return;
+      var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(cat, o.id), locked = !G.partUnlocked(cat, lvl);
+      grid.appendChild(h('div', { class: 'pcard l' + lvl + (locked ? ' locked' : '') + (installed ? ' inst' : ''), onclick: function () { partModal(inst, cat, o.id); } },
+        h('div', { class: 'pic' }, iconEl(DR.iconCat(cat, inst), lvl, o.id, 48)),
         h('div', { class: 'plvl' }, DR.LEVEL_NAMES[lvl]),
         h('div', { class: 'pname' }, o.name),
         // what it does for this car, at a glance
-        !locked && !installed && DR.partApplies(shopCat, inst) ? gainLine(inst, shopCat, o.id) : null,
-        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(shopCat, lvl)) : h('span', { class: 'price' + (G.canAfford(o.price + (o.install || 0)) ? '' : ' bad') }, DR.money(o.price + (o.install || 0)) + (o.install ? ' fitted' : '')),
-          installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(shopCat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
+        !locked && !installed && DR.partApplies(cat, inst) ? gainLine(inst, cat, o.id) : null,
+        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl)) : h('span', { class: 'price' + (G.canAfford(o.price + (o.install || 0)) ? '' : ' bad') }, DR.money(o.price + (o.install || 0)) + (o.install ? ' fitted' : '')),
+          installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(cat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
-    if (group) G.markGroupSeen(group);
-    var note = weak[shopCat] && DR.partApplies(shopCat, inst) && !G.simMode() ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, 'Holding your build back: ' + weak[shopCat] + '.') : !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
-    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'shop'),
-      h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, storeHead(), chips, note, grid)));
-  };
+    return grid;
+  }
 
   // ---------------------------------------------------------------- PACKAGES
   // Quick upgrade kits (Street / Pro / Extreme per shop group, or the whole
@@ -539,7 +534,7 @@
     if (dhp) out.push(h('span', { class: dhp > 0 ? 'good' : 'bad' }, (dhp > 0 ? '+' : '') + dhp + 'hp'));
     if (dlb) out.push(h('span', { class: dlb < 0 ? 'good' : 'bad' }, (dlb > 0 ? '+' : '') + dlb + 'lb'));
     var rk = DR.riskMax(S1.risk);
-    if (rk > 0.005) out.push(h('span', { class: 'bad' }, '⚠' + Math.round(rk * 100) + '%'));
+    if (rk > 0.005 && !G.simMode()) out.push(h('span', { class: 'bad' }, '⚠' + Math.round(rk * 100) + '%'));
     return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'handling & grip');
   }
   function packagesMain(inst) {
@@ -742,6 +737,7 @@
 
   // ---------------------------------------------------------------- INSTALL BAY
   var bayCat = 'intake';
+  function slotHasNew(c, inst) { return DR.partOptions(c, inst).some(function (o) { return o.price && G.isNewPart(c, lvlOf(o)); }); }
   UI.Parts = function (jump) {
     var inst = G.car(), S = G.spec(inst), weak = G.simMode() ? {} : DR.bottlenecks(S);
     memory();
@@ -761,7 +757,7 @@
           iconEl(DR.iconCat(c, inst), stock ? 0 : lvlOf(opt), id, 28),
           h('div', { class: 'name' }, h('div', { class: 'pix small' }, DR.catName(c, inst)), h('div', { class: stock ? 'dim' : 'acc' }, opt.name),
             weak[c] && applies ? h('div', { class: 'bad', style: { fontSize: '14px' } }, '! ' + weak[c]) : null),
-          spare ? h('span', { class: 'badge' }, String(spare)) : null));
+          G.groupHasNew(g) && slotHasNew(c, inst) ? h('span', { class: 'newdot' }, 'NEW') : spare ? h('span', { class: 'badge' }, String(spare)) : null));
       });
     });
     // the selected slot
@@ -786,9 +782,9 @@
             else go();
           }, 'small red');
         })()),
-      h('h3', {}, 'IN YOUR INVENTORY'));
+      h('h3', {}, 'ON YOUR SHELF'));
     var items = G.invFor(bayCat);
-    if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat, inst).toLowerCase() + ' parts in your inventory.'));
+    if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat, inst).toLowerCase() + ' parts on your shelf.'));
     items.sort(function (a, b) { return (G.partFitIssue(a, inst) ? 1 : 0) - (G.partFitIssue(b, inst) ? 1 : 0) || b.price - a.price; }).forEach(function (it) {
       var why = G.partFitIssue(it, inst), lvl = lvlOf(G.itemOption(it) || { price: it.price, lvl: DR.partLevel(it.price) });
       right.appendChild(h('div', { class: 'item inv l' + lvl + (why ? ' locked' : '') },
@@ -804,14 +800,52 @@
           UI.confirm('Sell the ' + G.partName(it) + ' for ' + DR.money(G.partSellValue(it)) + '?', function () { G.sellPart(it.uid); A.cash(); UI.refresh(); }, 'Sell');
         }, 'small')));
     });
-    right.appendChild(btn('Shop for ' + DR.catName(bayCat, inst) + ' ▶', function () { UI.show(UI.Shop, bayCat); }, 'shop'));
-    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'install'),
+    // the catalog for the slot
+    right.appendChild(h('h3', {}, 'FOR SALE'));
+    if (!DR.partApplies(bayCat, inst)) right.appendChild(h('div', { class: 'warnbox' }, G.partFitIssue({ cat: bayCat, id: '' }, inst) + ' — you can still buy these for another car.'));
+    right.appendChild(catalogGrid(inst, bayCat));
+    var bg = DR.PART_GROUPS.filter(function (g) { return g.cats.indexOf(bayCat) >= 0; })[0];
+    if (bg) G.markGroupSeen(bg);
+    return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'parts'),
       h('div', { class: 'content' }, h('div', { class: 'split' },
         h('div', { class: 'left bay-left' }, cv,
           h('div', { class: 'row bay-quick' }, h('span', { class: 'acc' }, Math.round(S.peakHp + S.nosHp) + 'hp'), h('span', {}, UI.kgLb(S.m)), h('span', { class: 'good' }, inst.best && inst.best.q ? '1/4 ' + inst.best.q.toFixed(2) + 's' : 'no 1/4 yet')),
           UI.riskBox(S), list),
         h('div', { class: 'right' }, right))));
   };
+  // ---------------------------------------------------------------- BUILD SHEET
+  // The whole car on one page, like the spec card a racer tapes to the
+  // window at tech: what it is, what's in it, what it has run.
+  UI.BuildSheet = function () {
+    var inst = G.car(), S = G.spec(inst), car = DR.CARS[inst.carId], T = S.tune || {}, dy = inst.dyno;
+    function o(cat) { return DR.getOption(cat, inst).name; }
+    function line(k, v) { return v == null || v === '' ? null : h('div', { class: 'bsl' }, h('span', { class: 'k' }, k), h('span', { class: 'v' }, v)); }
+    function sect(title, rows) { rows = rows.filter(Boolean); return rows.length ? h('div', { class: 'bss' }, h('div', { class: 'bst' }, title), rows) : null; }
+    var tr = DR.TRANS[S.transId], auto = S.trType === 'auto';
+    var mods = [];
+    DR.PART_GROUPS.forEach(function (g) {
+      var list = g.cats.filter(function (c) { return c !== 'engine' && DR.partApplies(c, inst) && DR.partId(c, inst) !== DR.stockPart(c, inst); }).map(function (c) { return DR.catName(c, inst) + ': ' + o(c); });
+      if (list.length) mods.push(h('div', { class: 'bsm' }, h('span', { class: 'k' }, g.name), h('span', {}, list.join(' • '))));
+    });
+    var w = inst.wear || {}, best = inst.best || {};
+    var sheet = h('div', { class: 'buildsheet' },
+      h('div', { class: 'bshead' }, h('div', { class: 'pix' }, car.name.toUpperCase()), h('div', { class: 'dim' }, car.real || ''), h('div', {}, 'Owner: you • ' + ((inst.log || []).length) + ' passes logged')),
+      h('div', { class: 'bscols' },
+        h('div', {},
+          sect('POWERTRAIN', [line('Engine', DR.ENGINES[inst.engine].name), line('Power adder', S.fiType === 'none' ? 'Naturally aspirated' : o('fi') + (S.boostSet ? ', ' + S.boostSet + ' psi' : '')),
+            S.nosHp ? line('Nitrous', o('nitrous')) : null, line('Fuel', o('fueltype')), line('ECU', o('ecu')), line('Rev limiter', S.red + ' rpm'),
+            line('Last dyno', dy ? Math.round(dy.peakHp) + ' whp @ ' + dy.peakHpRpm + ', ' + Math.round(dy.peakTq) + ' lb-ft (SAE)' : 'none')]),
+          sect('DRIVETRAIN', [line('Transmission', tr.name), auto ? line('Converter', o('converter') + (S.convAdj ? ' (' + S.stall + ' stall)' : '')) : line('Clutch', o('clutch')),
+            auto && S.tbrake ? line('Transbrake', 'yes') : null, line('Final drive', S.fd.toFixed(2) + ':1' + (S.qc ? ' (quick-change)' : '')), line('Differential', o('diff')), line('Layout', S.drive)])),
+        h('div', {},
+          sect('CHASSIS', [line('Weight', UI.kgLb(S.m) + ', ' + Math.round(S.f * 100) + '% front'), line('Chassis', o('chassis')), line('Rear suspension', o('rearsusp')),
+            line('Shocks', o('shocks')), line('Wheelie bar', DR.partApplies('wheeliebar', inst) && DR.partId('wheeliebar', inst) !== 'stock' ? o('wheeliebar') : null), line('Safety', o('safety'))]),
+          sect('TIRES', [line('Drive tires', DR.TIRES[S.tireId].name + ' @ ' + (T.psi != null ? T.psi : S.tire.optP) + ' psi'), line('Wear', w.rtires ? Math.round(w.rtires.w * 100) + '% (' + w.rtires.n + ' passes)' : 'new'), line('Wheels', o('wheels'))]),
+          sect('TIMESLIPS', [line('Best 1/8', best.e ? best.e.toFixed(3) + ' s' : '—'), line('Best 1/4', best.q ? best.q.toFixed(3) + ' s' : '—'), line('Top trap', best.qt ? best.qt + ' mph' : '—')]))),
+      mods.length ? h('div', { class: 'bss' }, h('div', { class: 'bst' }, 'MODIFICATIONS'), mods) : h('div', { class: 'dim' }, 'Bone stock.'));
+    return h('div', { class: 'screen' }, UI.top('BUILD SHEET', function () { UI.show(UI.Garage); }), h('div', { class: 'content' }, sheet));
+  };
+
   // ---------------------------------------------------------------- INVENTORY
   // Every spare part you own, whatever car it came off. Filter by the car it
   // fits, the kind of part and what it's worth, then fit it or sell it.

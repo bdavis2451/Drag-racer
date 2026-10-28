@@ -208,7 +208,7 @@
       lock ? h('div', { class: 'warn gsmall' }, '🔒 ' + lock) : null,
       !lock && issue ? h('div', { class: 'warn gsmall' }, '⚠ ' + issue) : null,
       h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))), G.car() ? h('span', { class: 'dim gsmall' }, '−' + DR.money(DR.runCost(G.spec(G.car())).total) + ' run') : null,
-        btn('Race', function () { if (lock || issue) return UI.toast(lock || issue); DR.Race.careerEvent(ev, 0); }, 'erace ' + (lock || issue ? 'disabled' : 'red'))));
+        btn('Race', function () { if (lock || issue) return UI.toast(lock || issue); DR.Race.raceDay(DR.Race.eventCfg(ev, 0)); }, 'erace ' + (lock || issue ? 'disabled' : 'red'))));
   }
   function sponsorPicker(si) {
     var offers = G.sponsorOffers(si), close;
@@ -254,7 +254,7 @@
           btn('Race', function () {
             if (G.state.money < betSel) return UI.toast('You can\'t cover a ' + DR.money(betSel) + ' bet');
             var opp = o; streetOpps = null;
-            DR.Race.start({ mode: 'street', opp: opp, dist: dist, theme: 'street', grip: p.grip, bet: betSel });
+            DR.Race.raceDay({ mode: 'street', opp: opp, dist: dist, theme: 'street', grip: p.grip, bet: betSel }, p.name + ' • ' + DR.money(betSel) + ' bet');
           }, 'small red'))));
     });
     return h('div', {}, head,
@@ -381,12 +381,45 @@
     if (lockedRows.length) list.appendChild(h('div', { class: 'tlocked' }, h('h3', {}, 'NEEDS A PART (' + lockedRows.length + ')'), lockedRows));
     recalc();
     statBox.appendChild(h('div', { class: 'row', style: { flexWrap: 'wrap', marginTop: '6px' } },
+      btn('Setups', function () { setupsModal(inst); }, 'small'),
       btn('Hire a Tuner', function () { tunerModal(inst); }, 'small'),
       btn('Reset Tune', function () { UI.confirm('Put every tuning setting back to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }, 'Reset'); }, 'small red'),
       btn('Test Run', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, back: 'tune' }); }, 'small go')));
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'tune'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain tunemain' }, h('div', { class: 'col grow' }, h('h2', {}, tuneGroup), list), statBox)));
   };
+
+  // Setup sheets: named copies of the whole tune (a strip setup, a street
+  // setup, ...) to switch between in one tap.
+  function setupsModal(inst) {
+    var list = inst.setups || (inst.setups = []), close;
+    var name = h('input', { type: 'text', maxlength: 24, placeholder: 'Name this setup', class: 'tinput' });
+    function summary(t) {
+      var bits = [];
+      if (t.boost != null) bits.push(t.boost + ' psi');
+      if (t.launchRpm != null) bits.push('launch ' + t.launchRpm);
+      if (t.psi != null) bits.push(t.psi + ' psi tires');
+      if (t.fd != null) bits.push(t.fd.toFixed(2) + ' gear');
+      if (t.stall != null) bits.push(t.stall + ' stall');
+      return bits.join(' • ') || 'defaults';
+    }
+    close = UI.modal([h('div', { class: 'pix acc' }, 'SETUP SHEETS'),
+      h('div', { class: 'col', style: { gap: '4px', margin: '6px 0' } }, list.length ? list.map(function (st, i) {
+        return h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } },
+          h('div', { class: 'grow' }, h('div', {}, st.name), h('div', { class: 'dim gsmall' }, summary(st.tune))),
+          btn('Load', function () { inst.tune = JSON.parse(JSON.stringify(st.tune)); G.save(); close(); UI.toast('Loaded ' + st.name); UI.refresh(); }, 'small go'),
+          btn('✕', function () { list.splice(i, 1); G.save(); close(); setupsModal(inst); }, 'small red'));
+      }) : h('div', { class: 'dim' }, 'No saved setups for this car yet.')),
+      h('div', { class: 'row', style: { gap: '8px' } }, name,
+        btn('Save current', function () {
+          var n = (name.value || '').trim() || 'Setup ' + (list.length + 1);
+          var same = list.filter(function (x) { return x.name === n; })[0];
+          if (same) same.tune = JSON.parse(JSON.stringify(inst.tune));
+          else { if (list.length >= 10) return UI.toast('Ten setups is the most: delete one first'); list.push({ name: n, tune: JSON.parse(JSON.stringify(inst.tune)) }); }
+          G.save(); close(); UI.toast('Saved ' + n); setupsModal(inst);
+        }, 'small primary')),
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Close', function () { close(); }))]);
+  }
 
   // The tuner: pick what to dial in, see the rate, let them make their hits.
   function tunerModal(inst) {
