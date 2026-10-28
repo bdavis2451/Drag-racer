@@ -778,11 +778,47 @@
     return r;
   };
 
+  // ---------------------------------------------------------------- conditions
+  // The surface under the tires and the time of day. A prepped strip (rubber
+  // and traction compound) is what drag tires are made for: a slick on bare
+  // asphalt loses far more than a street tire does, which was built for it.
+  // Night: cooler, denser air (a little more power, a turbo's boost makes up
+  // most of the difference by day) and a colder track that grips less and
+  // pulls the heat out of the tires sooner.
+  DR.SURFACES = {
+    prep:   { name: 'Prepped strip', k: { Street: 1, 'Drag Radial': 1, Slick: 1, Track: 1, 'Race Slick': 1 } },
+    noprep: { name: 'No-prep', k: { Street: 0.96, 'Drag Radial': 0.84, Slick: 0.76, Track: 0.92, 'Race Slick': 0.85 } },
+    street: { name: 'Street', k: { Street: 0.9, 'Drag Radial': 0.8, Slick: 0.7, Track: 0.87, 'Race Slick': 0.8 } }
+  };
+  // { surface, night } -> full conditions (air and track temperature, C)
+  DR.conditions = function (surface, night) {
+    var c = { surface: DR.SURFACES[surface] ? surface : 'prep', night: !!night };
+    c.air = night ? 18 : 29; c.trackT = night ? 22 : 41;
+    return c;
+  };
+  DR.surfaceGrip = function (cond, tireKind) {
+    var k = (DR.SURFACES[cond.surface] || DR.SURFACES.prep).k[tireKind];
+    // a cold track grips less; a very hot one goes greasy
+    var tk = 1 - 0.003 * Math.max(0, 35 - cond.trackT) - 0.002 * Math.max(0, cond.trackT - 55);
+    return (k == null ? 1 : k) * tk;
+  };
+  // engine output against the 25 C the dyno figures are for
+  DR.airPower = function (cond, S) {
+    return Math.pow((DR.AMBIENT_C + 273.15) / (cond.air + 273.15), S.fiType === 'turbo' ? 0.25 : 0.5);
+  };
+  DR.condLabel = function (cond) {
+    var F = function (c) { return Math.round(c * 1.8 + 32); };
+    return (DR.SURFACES[cond.surface] || DR.SURFACES.prep).name + ' • ' + (cond.night ? 'Night' : 'Day') + ' • air ' + F(cond.air) + '°F, track ' + F(cond.trackT) + '°F';
+  };
+
   // ---------------------------------------------------------------- simulation
   function Sim(S, opts) {
     opts = opts || {};
     this.S = S;
-    this.track = opts.grip || 1.0;
+    this.cond = opts.cond || null;
+    this.track = (opts.grip || 1.0) * (this.cond ? DR.surfaceGrip(this.cond, S.tire.kind) : 1);
+    this.trackT = this.cond ? this.cond.trackT : 25;
+    this.airK = this.cond ? DR.airPower(this.cond, S) : 1;
     this.dist = opts.dist || DR.QUARTER;
     this.x = 0; this.v = 0; this.a = 0;
     this.we = S.idle * RPM2W; this.ww = 0;
@@ -830,10 +866,14 @@
     return { F: sg * mu * N * f, dF: mu * N * df * r / den, s: s };
   };
 
+  // A tire past its window goes greasy: a drag radial's soft compound has
+  // the narrowest window (tire makers: haze them and stage), a slick takes
+  // more heat, a street tire somewhere between.
+  var HOT = { 'Drag Radial': [15, 0.009], Street: [25, 0.006] };
   Sim.prototype.tempFactor = function () {
-    var t = this.S.tire, T = this.tireT;
+    var t = this.S.tire, T = this.tireT, hot = (this.cond && HOT[t.kind]) || [30, 0.005];
     if (T < t.topt) return 1 - t.cold * clamp((t.topt - T) / (t.topt - 20), 0, 1);
-    if (T > t.topt + 30) return Math.max(0.8, 1 - (T - t.topt - 30) * 0.005);
+    if (T > t.topt + hot[0]) return Math.max(0.72, 1 - (T - t.topt - hot[0]) * hot[1]);
     return 1;
   };
 
@@ -973,7 +1013,7 @@
     var Te;
     if (dead) Te = -fric * 2;
     else if (firing) {
-      Te = boostedTorque(S, rpm, this.boost) * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW / wE * (1 - this.tcRed);
+      Te = boostedTorque(S, rpm, this.boost) * this.airK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW / wE * (1 - this.tcRed);
       // a soft cut (TC past full retard) drops cylinders: heard as a crackle
       if (this.tcRed > 0.3) this.cutT += dt * (this.tcRed - 0.3) / 0.5;
       var p = Te * wE;
@@ -1035,7 +1075,7 @@
     var N = S.drive === 'FWD' ? Nf : S.drive === 'AWD' ? Nr + Nf : Nr;
     var loadSens = Math.pow(Math.max(N, 100) / this.N0, -0.08);
     var mu = S.tire.mu * this.track * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? S.mountK || 1 : 1);
-    if (this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
+    if (!this.cond && this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
     if (this.burnMode) mu *= 0.5;                  // water in the burnout box
     this.mu = mu;
 
@@ -1247,7 +1287,7 @@
         this.tireT += Math.abs(Fx) * this.ww * r * dt * 1.1e-4 * (30 / S.tire.m);
       }
     } else if (!this.launched) { this.slip = 0; this.a = 0; }
-    this.tireT -= (this.tireT - 25) * 0.006 * dt;
+    this.tireT -= (this.tireT - this.trackT) * 0.006 * dt;
 
     // -------- timing
     if (this.launched && this.etStart === null && this.x > 0.3) this.etStart = this.time;

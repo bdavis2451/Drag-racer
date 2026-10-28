@@ -11,7 +11,7 @@
     return {
       v: 5, money: 4000, cars: [], active: null, uid: 1,
       career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [], inv: [],
-      settings: { sound: true, music: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, autoRepair: false, volume: 1 },
+      settings: { sound: true, music: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, autoRepair: false, volume: 1, sim: true },
       started: false
     };
   };
@@ -150,6 +150,8 @@
     for (var i = 0; i < s.cars.length; i++) if (s.cars[i].uid === s.active) return s.cars[i];
     return s.cars[0] || null;
   };
+  // sim mode: the game shows the numbers and leaves the reading of them to you
+  G.simMode = function () { return G.state.settings.sim !== false; };
   G.spec = function (inst) { return DR.buildSpec(inst || G.car()); };
 
   G.canAfford = function (p) { return G.state.money >= p; };

@@ -192,7 +192,8 @@
 
   var THEMES = {
     strip: { night: false, ground: [92, 140, 58], asphalt: [62, 62, 68], line: '#ececec' },
-    street: { night: true, ground: [30, 40, 30], asphalt: [44, 44, 50], line: '#d8c050' }
+    street: { night: true, ground: [30, 40, 30], asphalt: [44, 44, 50], line: '#d8c050' },
+    stripnight: { night: true, ground: [26, 44, 28], asphalt: [50, 50, 58], line: '#e4e4e4' }
   };
 
   function mk(w, h, fn) {
@@ -305,7 +306,7 @@
       }
     });
 
-    if (!night) {
+    if (this.themeId === 'strip') {
       // ---- grandstand: roof, shaded upper rows, crowd, rail (y 226..300)
       this.stand = mk(1200, 76, function (c, w, h) {
         c.fillStyle = '#585e68'; c.fillRect(0, 0, w, 8);
@@ -439,13 +440,14 @@
 
   Scene.prototype.drawTrack = function (ctx, camX, time) {
     var T = this.theme, W = DR.VIEW_W, i, o = camX * PPM, x;
-    if (!T.night) {
-      // stadium light towers (behind the stands)
+    if (this.themeId === 'strip') {
+      // stadium light towers (behind the stands), lit at night
       for (i = -1; i < 4; i++) {
         x = Math.round(i * 300 - ((o * 0.7) % 300 + 300) % 300 + 120);
         ctx.fillStyle = '#6a707a'; ctx.fillRect(x, 120, 3, 110); ctx.fillStyle = '#9aa1ac'; ctx.fillRect(x, 120, 1, 110);
         ctx.fillStyle = '#3a3f47'; ctx.fillRect(x - 12, 108, 27, 14);
-        for (var lx = 0; lx < 4; lx++) for (var ly = 0; ly < 2; ly++) { ctx.fillStyle = '#e8ecf2'; ctx.fillRect(x - 10 + lx * 6, 110 + ly * 6, 5, 4); }
+        for (var lx = 0; lx < 4; lx++) for (var ly = 0; ly < 2; ly++) { ctx.fillStyle = T.night ? '#ffffff' : '#e8ecf2'; ctx.fillRect(x - 10 + lx * 6, 110 + ly * 6, 5, 4); }
+        if (T.night) this.glow.push({ flood: true, x: x + 1, y: 114 });
       }
       tileX(ctx, this.stand, o * 0.85, 226);
       tileX(ctx, this.wall, o, 288);
@@ -471,7 +473,7 @@
     if (padL + this.pad.width > 0 && padL < W) ctx.drawImage(this.pad, padL, 321);
     // lane divider
     ctx.fillStyle = T.line;
-    if (!T.night) ctx.fillRect(0, 358, W, 2);
+    if (this.themeId === 'strip') ctx.fillRect(0, 358, W, 2);
     else for (i = -1; i < W / 32 + 2; i++) ctx.fillRect(i * 32 - (o % 32), 358, 16, 2);
     // start line & staging beams
     if (startX > -40 && startX < W + 40) {
@@ -586,6 +588,14 @@
           ctx.fillStyle = cg;
           ctx.beginPath(); ctx.moveTo(g.x - 6, g.y); ctx.lineTo(g.x + 6, g.y); ctx.lineTo(g.x + 70, 404); ctx.lineTo(g.x - 70, 404); ctx.closePath(); ctx.fill();
           ctx.save(); ctx.translate(g.x, 365); ctx.scale(1, 0.28); radial(ctx, 0, 0, 120, [255, 190, 110], 0.28); ctx.restore();
+        } else if (g.flood) {
+          // track lighting: a hot bank of lamps washing the strip below
+          radial(ctx, g.x, g.y, 30, [235, 240, 255], 0.85);
+          var fg = ctx.createLinearGradient(0, g.y, 0, 404);
+          fg.addColorStop(0, 'rgba(220,228,255,0.16)'); fg.addColorStop(1, 'rgba(220,228,255,0.07)');
+          ctx.fillStyle = fg;
+          ctx.beginPath(); ctx.moveTo(g.x - 12, g.y); ctx.lineTo(g.x + 12, g.y); ctx.lineTo(g.x + 170, 404); ctx.lineTo(g.x - 120, 404); ctx.closePath(); ctx.fill();
+          ctx.save(); ctx.translate(g.x + 25, 362); ctx.scale(1, 0.25); radial(ctx, 0, 0, 170, [225, 232, 255], 0.22); ctx.restore();
         } else radial(ctx, g.x, g.y, g.r, g.c, g.a);
       });
       (lamps || []).forEach(function (L) {

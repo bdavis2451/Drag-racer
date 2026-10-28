@@ -15,6 +15,7 @@
     // cfg.inst: race a car you don't own (dealer test drive)
     start: function (cfg) {
       var inst = cfg.inst || G.car();
+      if (!cfg.cond) cfg.cond = DR.Race.cond(cfg);
       if (inst.damage) { UI.toast('Repair your car first!'); return; }
       if (loading) return;            // already on the way: a second tap does nothing
       // show that the tap landed before the (slow) race screen is built; the
@@ -32,12 +33,23 @@
         }
       }); });
     },
-    // A career event (round: knockout round, 0-based).
+    // A career event (round: knockout round, 0-based). Some strip events
+    // run under the lights (the same ones every time).
     careerEvent: function (ev, round) {
       var T = DR.EVENT_TYPES[ev.type];
       round = round || 0;
-      DR.Race.start({ mode: 'career', ev: ev, round: round, opp: ev.opps[round], dist: T.dist(), theme: T.theme, grip: T.grip, reward: G.eventReward(ev) });
-    }
+      var nm = ev.opps[0].name || '', hsh = 0;
+      for (var i = 0; i < nm.length; i++) hsh = (hsh * 31 + nm.charCodeAt(i)) % 997;
+      DR.Race.start({ mode: 'career', ev: ev, round: round, opp: ev.opps[round], dist: T.dist(), theme: T.theme, grip: T.grip, reward: G.eventReward(ev),
+        night: T.theme === 'street' || hsh % 3 === 0 });
+    },
+    // The surface and time of day for a race. Street spots and the strip
+    // keep their old grip figures as a rating against their surface.
+    cond: function (cfg) {
+      var surface = cfg.surface || (cfg.theme === 'street' ? ((cfg.grip || 0.85) >= 0.9 ? 'noprep' : 'street') : 'prep');
+      return DR.conditions(surface, cfg.night != null ? cfg.night : cfg.theme === 'street');
+    },
+    SURF_BASE: { prep: 1, noprep: 0.92, street: 0.85 }
   };
 
   // ---------------------------------------------------------------- dash
@@ -85,8 +97,8 @@
       for (var q = 0; q < fw; q += 2) px(c, 6 + q, y + 7, 1, 4, col);
     }
     var T = sim.tireT, tt = Sx.tire, tmax = Math.max(130, tt.topt + 50);
-    var tcol = T < tt.topt - 10 ? '#4da3ff' : T > tt.topt + 30 ? '#ff4d4d' : '#46e07a';
-    hbar(4, 'TIRE ' + Math.round(T), T / tmax, tcol, [(tt.topt - 10) / tmax, (tt.topt + 30) / tmax]);
+    var sm = G.simMode(), tcol = sm ? '#c8c8d0' : T < tt.topt - 10 ? '#4da3ff' : T > tt.topt + 30 ? '#ff4d4d' : '#46e07a';
+    hbar(4, 'TIRE ' + Math.round(T * 1.8 + 32), T / tmax, tcol, sm ? null : [(tt.topt - 10) / tmax, (tt.topt + 30) / tmax]);
     if (Sx.fiType !== 'none') hbar(18, 'BOOST ' + sim.boost.toFixed(0), sim.boost / Math.max(Sx.maxBoost, 5), '#ffcc33');
     // ---- right: speed
     var mph = sim.v * 2.23694, km = G.state.settings.units === 'kmh', sp = String(Math.round(km ? mph * 1.609 : mph));
@@ -218,7 +230,7 @@
       opp.burnTarget = OS.tire.topt + (Math.random() - 0.5) * 12;
     }
     var racers = opp ? [you, opp] : [you];
-    var scene = new DR.Scene(cfg.theme, cfg.dist);
+    var scene = new DR.Scene(cfg.theme === 'strip' && cfg.cond && cfg.cond.night ? 'stripnight' : cfg.theme, cfg.dist);
     var parts = new DR.Particles();
 
     // ---------------------------------------------------------------- DOM
@@ -308,6 +320,7 @@
     var vsLine = opp ? 'VS ' + opp.label : 'TEST & TUNE';
     infoEl.innerHTML = '';
     setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (cfg.ev.type === 'knockout' ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Hold GAS to do your burnout.' : 'Hold GAS to do your burnout.');
+    if (cfg.cond) subEl.textContent = DR.condLabel(cfg.cond) + ' • ' + subEl.textContent;
     if (estLine) subEl.textContent = estLine + subEl.textContent;
     var introSub = subEl.textContent;
 
@@ -342,7 +355,8 @@
     }
 
     function makeRacer(inst, S, lane, cfg, fail, label) {
-      var sim = new DR.Sim(S, { grip: cfg.grip, dist: cfg.dist, tireT: 30, failAt: fail.failAt, failType: fail.failType });
+      var cond = cfg.cond || DR.Race.cond(cfg);
+      var sim = new DR.Sim(S, { grip: (cfg.grip || 1) / DR.Race.SURF_BASE[cond.surface], cond: cond, dist: cfg.dist, tireT: cond.trackT + 4, failAt: fail.failAt, failType: fail.failType });
       return { inst: inst, S: S, sim: sim, lane: lane, label: label, spr: DR.carSprite(DR.carLook(inst)), off: BOX_X, wheelAng: 0, burn: 0, voice: null, burnT: 0,
         box: 'box', rollT: 0, waitT: 0.6 + Math.random() * 1.2 };
     }
@@ -406,9 +420,11 @@
         if (phase === 'burnout') {
           if (you.sim.burnMode) you.burn = burnAmt(you);
           else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.burn = thr * 0.5; }
-          // coach the burnout off the tire temperature
+          // coach the burnout off the tire temperature (sim mode: you judge
+          // it by the smoke and the time on the gas)
           var tT = you.sim.tireT, msg;
-          if (tT > tt + 25) msg = 'Too hot! Ease off the gas.';
+          if (G.simMode()) msg = thr > 0.05 ? 'Spinning...' : you.spun ? 'Hit STAGE when you\'re ready.' : introSub;
+          else if (tT > tt + 25) msg = 'Too hot! Ease off the gas.';
           else if (tT >= tt - 8) msg = thr > 0.05 ? 'Tires are in the window! Let off and hit STAGE.' : 'Tires are hot. Hit STAGE to pull up to the line.';
           else if (thr > 0.05) { msg = 'Spinning... keep it pinned.'; you.spun = true; }
           else if (!you.spun) msg = introSub;
@@ -731,7 +747,8 @@
       var slip = h('div', { class: 'slip' }, h('div', { class: 'panel row' },
         h('div', { class: 'grow paper' },
           h('div', { class: 'phead' }, h('div', { class: 'ptrack' }, cfg.theme === 'street' ? 'BACKSTREET 1/8' : 'PIXEL DRAGWAY'),
-            h('div', {}, (cfg.dist > DR.EIGHTH + 1 ? '1/4 MILE' : '1/8 MILE') + ' • ' + (them ? 'ELIMINATOR' : 'TEST & TUNE') + ' • RUN #' + (G.state.stats.races || 1))),
+            h('div', {}, (cfg.dist > DR.EIGHTH + 1 ? '1/4 MILE' : '1/8 MILE') + ' • ' + (them ? 'ELIMINATOR' : 'TEST & TUNE') + ' • RUN #' + (G.state.stats.races || 1)),
+            cfg.cond ? h('div', {}, DR.condLabel(cfg.cond).toUpperCase()) : null),
           tbl,
           h('div', { class: 'pfoot2' }, '* THANKS FOR RACING *'),
           win != null ? h('div', { class: 'stamp ' + (win ? 'w' : 'l') }, win ? 'WIN' : 'LOSS') : null),

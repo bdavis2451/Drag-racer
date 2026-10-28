@@ -238,7 +238,7 @@
           btn('Race here', function () { UI.circuitTab = 'races'; UI.circuitTrack = p.circuit; UI.watchRace = null; UI.show(UI.RaceMenu, 'circuit'); }, 'small go'))));
   }
   function streetView(inst, p) {
-    var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET SPOT • ' + (p.dist === 'quarter' ? '1/4' : '1/8') + ' MILE • ' + Math.round(p.grip * 100) + '% GRIP'),
+    var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET SPOT • ' + (p.dist === 'quarter' ? '1/4' : '1/8') + ' MILE • ' + (p.grip >= 0.9 ? 'NO-PREP' : 'STREET') + ' • NIGHT'),
       h('div', { class: 'pix acc' }, p.name), h('div', { class: 'dim' }, p.blurb)));
     if (!spotOpen(p)) return h('div', {}, head, h('div', { class: 'warnbox' }, '🔒 Opens in stage ' + (p.stage + 1) + ' of the career.'));
     var dist = p.dist === 'quarter' ? DR.QUARTER : DR.EIGHTH;
@@ -289,9 +289,11 @@
   }
   function testView(inst) {
     var runs = [
-      ['quarter', '1/4 Mile', 'Prepped strip, full grip.', { mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1 }, inst.best && inst.best.q],
-      ['eighth', '1/8 Mile', 'Half the track, all about the launch.', { mode: 'test', dist: DR.EIGHTH, theme: 'strip', grip: 1 }, inst.best && inst.best.e],
-      ['street', 'Street 1/8', 'Night, cold asphalt, 85% grip.', { mode: 'test', dist: DR.EIGHTH, theme: 'street', grip: 0.85 }, null]];
+      ['quarter', '1/4 Mile', 'Prepped strip, daytime.', { mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, night: false }, inst.best && inst.best.q],
+      ['quarter', '1/4 Mile Night', 'Prepped strip under the lights: cooler air, a colder track.', { mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, night: true }, null],
+      ['eighth', '1/8 Mile', 'Half the track, all about the launch.', { mode: 'test', dist: DR.EIGHTH, theme: 'strip', grip: 1, night: false }, inst.best && inst.best.e],
+      ['street', 'No-Prep 1/8', 'The old airfield at night: bare concrete, no traction compound.', { mode: 'test', dist: DR.EIGHTH, theme: 'street', grip: 0.92, surface: 'noprep', night: true }, null],
+      ['street', 'Street 1/8', 'A closed-off road at night: dusty asphalt.', { mode: 'test', dist: DR.EIGHTH, theme: 'street', grip: 0.85, surface: 'street', night: true }, null]];
     var grid = h('div', { class: 'egrid' });
     runs.forEach(function (r) {
       grid.appendChild(h('div', { class: 'ecard t-test' }, h('div', { class: 'ecvwrap' }, trackThumb(r[0])),

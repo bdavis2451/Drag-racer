@@ -327,6 +327,7 @@
         toggle('Christmas tree', 'proTree', false, true, 'Sportsman', 'Pro', 'Pro tree: all ambers flash at once, green 0.4s later.'),
         toggle('Speed units', 'units', 'mph', 'kmh', 'MPH', 'KM/H'),
         toggle('Gas pedal', 'pedal', 'hold', 'slide', 'Hold', 'Slide', 'Slide: how high you touch the pedal sets the throttle - feather it to stop wheelspin.'),
+        toggle('Sim mode', 'sim', true, false, 'On', 'Off', 'On: no coaching or plain-English diagnosis. The game gives you gauges, timeslips and numbers and leaves the reading of them to you. Off: hints in the shop, the tune screen and on the line.'),
         toggle('Auto-repair', 'autoRepair', false, true, 'Off', 'On', 'On: anything you break is fixed and paid for right after the race, when you have the cash.'),
         h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Unlock everything'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For testing: every stage, car, part level and body-kit tier, plus $5,000,000.')),
           btn('Unlock', function () {
