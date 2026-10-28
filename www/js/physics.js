@@ -565,7 +565,7 @@
       help: 'Each gear individually.' },
     { key: 'psi', label: 'Drive Tire Pressure', unit: 'psi', step: 0.5, min: function () { return 4; }, max: function () { return 45; },
       show: function () { return true; }, group: 'Tires',
-      help: 'Each tire has an ideal pressure. A little below it adds grip; too low wrinkles the tire (beadlocks help).' },
+      help: 'Each tire has an ideal pressure. A little below it adds grip; lower wrinkles the sidewall more, which on radials and slicks is what tire shake feeds on; too low and the tire spins on the rim (beadlocks help).' },
     { key: 'rollBal', label: 'Anti-Roll Bar Balance', unit: '', step: 1, min: function () { return -4; }, max: function () { return 4; },
       show: function (S) { return DR.getOption('sway', { carId: S.carId, parts: S._parts }).adjR; }, req: 'Requires adjustable race anti-roll bars', group: 'Suspension',
       help: 'Circuit only. Stiffer front (+) = more understeer: safe, pushes wide. Stiffer rear (-) = more oversteer. Fastest is close to neutral: see the balance on Race Team > Test Lap.' },
@@ -592,7 +592,7 @@
       help: 'Firmer hits the tires harder at the launch; softer is gentler on them.' },
     { key: 'rebR', label: 'Rear Rebound', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
       show: function (S) { return shk(S).adjD === 2; }, req: 'Requires double-adjustable shocks', group: 'Suspension',
-      help: 'How fast the rear extends again: firmer keeps it planted over bumps and through the shifts.' },
+      help: 'How fast the rear extends again: firmer keeps it planted over bumps and through the shifts, and damps out tire shake.' },
     { key: 'limitF', label: 'Front Travel Limiter', unit: 'mm', step: 5, min: function () { return 0; }, max: function () { return 110; },
       show: function (S) { return !!shk(S).lim; }, req: 'Requires adjustable drag shocks', group: 'Suspension',
       help: 'Caps how far the front can extend (0 = off). Less rise keeps the car flatter but the front tires lift sooner.' },
@@ -819,6 +819,16 @@
     this.track = (opts.grip || 1.0) * (this.cond ? DR.surfaceGrip(this.cond, S.tire.kind) : 1);
     this.trackT = this.cond ? this.cond.trackT : 25;
     this.airK = this.cond ? DR.airPower(this.cond, S) : 1;
+    // tire shake: how prone this run is (soft, low-pressure sidewalls on a
+    // sticky track shake; stiffer rear rebound settles it; and no two
+    // passes are quite the same)
+    this.shake = 0; this.shakePh = 0; this.shakeMax = 0;
+    if (this.cond && SHAKY[S.tire.kind]) {
+      var tn = S.tune || {}, optP = S.tire.optP, psi = tn.psi != null ? tn.psi : optP;
+      this.shakeK = clamp(1 + (optP - psi) / optP * 1.5, 0.6, 1.8) * ({ prep: 1, noprep: 0.6, street: 0.5 }[this.cond.surface] || 1) *
+        (opts.shakeRnd != null ? opts.shakeRnd : 1) * SHAKY[S.tire.kind];
+      this.shakeDamp = 1 + ((tn.rebR != null ? tn.rebR : 5) - 5) * 0.1;
+    }
     this.dist = opts.dist || DR.QUARTER;
     this.x = 0; this.v = 0; this.a = 0;
     this.we = S.idle * RPM2W; this.ww = 0;
@@ -869,6 +879,8 @@
   // A tire past its window goes greasy: a drag radial's soft compound has
   // the narrowest window (tire makers: haze them and stage), a slick takes
   // more heat, a street tire somewhere between.
+  // tires that shake (sidewalls built to wrinkle), and how readily
+  var SHAKY = { 'Drag Radial': 1, Slick: 0.8 };
   var HOT = { 'Drag Radial': [15, 0.009], Street: [25, 0.006] };
   Sim.prototype.tempFactor = function () {
     var t = this.S.tire, T = this.tireT, hot = (this.cond && HOT[t.kind]) || [30, 0.005];
@@ -1077,6 +1089,27 @@
     var mu = S.tire.mu * this.track * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? S.mountK || 1 : 1);
     if (!this.cond && this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
     if (this.burnMode) mu *= 0.5;                  // water in the burnout box
+    // Tire shake: a soft drag tire loaded right at its limit wraps up and
+    // lets go over and over (8-10 times a second): the car hops, grip comes
+    // and goes, and it only stops if the driver lifts (or the tire breaks
+    // loose and spins). Early in the run, in the low gears.
+    if (this.shakeK && this.launched && !this.finished && !this.wheelie) {
+      var util = this.mu > 0 && this.Nd > 0 ? Math.abs(this.F || 0) / (this.mu * this.Nd) : 0, near = this.slip / S.tslip;
+      var exc = this.gear <= 1 && this.t > 0.15 && this.t < 3.5 && near > 0.5 && near < 1.6 && this.thr > 0.6 ? Math.max(0, util - 0.72) * 14 * this.shakeK : 0;
+      var damp = this.thr < 0.4 ? 9 : 1.2 * this.shakeDamp;
+      this.shake = clamp(this.shake + dt * (exc * (0.08 + this.shake) - damp * this.shake), 0, 1);
+      this.shakePh += dt * 2 * Math.PI * 9;
+      if (this.shake > 0.02) mu *= 1 - 0.6 * this.shake * (0.5 + 0.5 * Math.sin(this.shakePh));
+      if (this.shake > this.shakeMax) this.shakeMax = this.shake;
+      if (this.shake > 0.5 && !this.shakeEv) { this.shakeEv = true; this.events.push('shake'); }
+      // pedalling it (a quick lift) unloads the tire and resets the chassis:
+      // back in, it is past the point where it was shaking
+      if (this.thr < 0.4 && this.shake > 0.2 && !this.pedalled) { this.pedalled = true; this.shakeK *= 0.55; }
+      // ridden out, a hard shake hammers the driveline until something gives
+      if (this.shake > 0.75) this.shakeHard = (this.shakeHard || 0) + dt;
+      if (this.shakeHard > 0.9 && !this.shakeRolled) { this.shakeRolled = true; if (!this.failAt && Math.random() < 0.35) { this.failAt = this.t; this.failType = 'axle'; } }
+    }
+    this.Nd = N;
     this.mu = mu;
 
     // -------- drivetrain
@@ -1373,6 +1406,8 @@
     if (over > 3 + (1 - this.skill) * 3) this.pedal = Math.max(Math.min(this.pedal, 0.45), this.pedal - dt * (1.5 + 3 * this.skill));
     else if (over < 2) this.pedal = Math.min(1, this.pedal + dt * (2 + 3 * this.skill));
     if (sim.wheelie && sim.th > 0.2 + 0.15 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.3);
+    // tire shake: a good driver pedals it the moment it starts
+    if (sim.shake > 0.3 + 0.4 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.25);
     // nose way up: right off the gas until it comes down
     if (sim.wheelie && sim.th > 0.4 + 0.1 * (1 - this.skill)) this.pedal = 0;
     inp.throttle = this.pedal;

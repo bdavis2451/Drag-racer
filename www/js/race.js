@@ -356,7 +356,7 @@
 
     function makeRacer(inst, S, lane, cfg, fail, label) {
       var cond = cfg.cond || DR.Race.cond(cfg);
-      var sim = new DR.Sim(S, { grip: (cfg.grip || 1) / DR.Race.SURF_BASE[cond.surface], cond: cond, dist: cfg.dist, tireT: cond.trackT + 4, failAt: fail.failAt, failType: fail.failType });
+      var sim = new DR.Sim(S, { grip: (cfg.grip || 1) / DR.Race.SURF_BASE[cond.surface], cond: cond, shakeRnd: 0.6 + Math.random() * 0.8, dist: cfg.dist, tireT: cond.trackT + 4, failAt: fail.failAt, failType: fail.failType });
       return { inst: inst, S: S, sim: sim, lane: lane, label: label, spr: DR.carSprite(DR.carLook(inst)), off: BOX_X, wheelAng: 0, burn: 0, voice: null, burnT: 0,
         box: 'box', rollT: 0, waitT: 0.6 + Math.random() * 1.2 };
     }
@@ -599,7 +599,7 @@
       r.wheelAng += spin * dt;
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
       DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode, fwd: r.S.drive === 'FWD',
-        susp: { z: (sim.z || 0) * SUSP_VIS, phi: (sim.phi || 0) * SUSP_VIS } });
+        susp: { z: (sim.z || 0) * SUSP_VIS + (sim.shake ? sim.shake * 0.02 * Math.sin(sim.shakePh) : 0), phi: (sim.phi || 0) * SUSP_VIS + (sim.shake ? sim.shake * 0.012 * Math.cos(sim.shakePh * 0.5) : 0) } });
       var lamp = DR.carLamps(spr, gx, gy, pitch);
       lamp.brake = sim.brake > 0.05; lamp.ground = gy; lamp.car = { spr: spr, gx: gx, gy: gy, pitch: pitch };
       // smoke from the drive tires
@@ -631,6 +631,7 @@
         ev.forEach(function (e) {
           if (e === 'shift' && r.S.fiType === 'turbo' && isYou) A.blowoff();
           if (e === 'backfire' && isYou && !(r.voice && r.voice.wk) && Math.random() < 0.3) A.pop();
+          if (e === 'shake' && isYou && !G.simMode()) note('TIRE SHAKE - PEDAL IT!');
           if (e === 'crash') { if (isYou) { A.boom(); note('YOU FLIPPED IT!'); } else note(r.label + ' FLIPPED!'); }
           if (e === 'blown') { A.boom(); if (isYou) note('ENGINE BLEW UP!'); else note(r.label + ' BLEW UP!'); }
           if (e === 'broke') { if (isYou) note(r.sim.brokeWhat === 'axle' ? 'SNAPPED AN AXLE!' : r.sim.brokeWhat === 'chassis' ? 'CHASSIS CRACKED!' : 'TRANSMISSION BROKE!'); else note(r.label + ' BROKE!'); }
