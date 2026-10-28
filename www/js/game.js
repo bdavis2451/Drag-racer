@@ -480,14 +480,15 @@
   // discs 60-170 hard launches (bigger clutches have more friction surface).
   G.WEAR_CATS = ['rtires', 'clutch'];
   var TIRE_LIFE = { Street: 0.8, 'Drag Radial': 0.67, Slick: 1.25, Track: 0.9, 'Race Slick': 0.8 };   // MJ per kg of tire
-  G.addWear = function (inst, S, sim) {
+  G.addWear = function (inst, S, sim, passes) {
     if (inst.ai) return;
+    passes = passes || 1;
     inst.wear = inst.wear || {};
     var t = inst.wear.rtires || (inst.wear.rtires = { w: 0, n: 0 });
-    t.w = Math.min(1, t.w + sim.tireE / (S.tire.m * (TIRE_LIFE[S.tire.kind] || 0.8) * 1e6)); t.n++;
+    t.w = Math.min(1, t.w + sim.tireE / (S.tire.m * (TIRE_LIFE[S.tire.kind] || 0.8) * 1e6)); t.n += passes;
     if (S.trType !== 'auto' && S.clCapNew) {
       var c = inst.wear.clutch || (inst.wear.clutch = { w: 0, n: 0 });
-      c.w = Math.min(1, c.w + sim.clutchE / (S.clCapNew * 0.02e6)); c.n++;
+      c.w = Math.min(1, c.w + sim.clutchE / (S.clCapNew * 0.02e6)); c.n += passes;
     }
   };
   // what fitting a fresh one costs: the same part, new
@@ -523,6 +524,30 @@
     });
     G.save();
     return true;
+  };
+
+  // ---------------------------------------------------------------- the tuner
+  // Hire a tuner for a session of test hits (DR.runTuner). You pay the
+  // tuner by the hit, the fuel and nitrous each hit burns, and the car takes
+  // the wear (and whatever it breaks). The settings the tuner found go
+  // into your tune.
+  G.tunerQuote = function (inst, jobIds) {
+    var S = G.spec(inst), jobs = DR.tunerJobs(inst).filter(function (j) { return jobIds.indexOf(j.id) >= 0; });
+    var maxHits = DR.tunerMaxHits(jobs), perHit = DR.tunerFee(S) + DR.runCost(S).total;
+    return { maxHits: maxHits, fee: DR.tunerFee(S), fuel: DR.runCost(S).total, perHit: perHit, max: maxHits * perHit };
+  };
+  G.hireTuner = function (inst, jobIds) {
+    var q = G.tunerQuote(inst, jobIds);
+    if (!G.canAfford(q.max)) return null;
+    var res = DR.runTuner(inst, jobIds), n = res.hits.length, S = G.spec(inst);
+    res.cost = { fee: q.fee * n, fuel: q.fuel * n };
+    res.cost.total = res.cost.fee + res.cost.fuel;
+    G.pay(res.cost.total);
+    G.addWear(inst, S, res, n);
+    for (var k in res.tune) inst.tune[k] = res.tune[k];
+    if (res.broke) inst.damage = res.broke === 'engine' ? { engine: true } : res.broke === 'axle' ? { axle: true } : res.broke === 'chassis' ? { chassis: true } : { trans: true };
+    G.save();
+    return res;
   };
 
   // ---------------------------------------------------------------- damage

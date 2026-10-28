@@ -381,11 +381,54 @@
     if (lockedRows.length) list.appendChild(h('div', { class: 'tlocked' }, h('h3', {}, 'NEEDS A PART (' + lockedRows.length + ')'), lockedRows));
     recalc();
     statBox.appendChild(h('div', { class: 'row', style: { flexWrap: 'wrap', marginTop: '6px' } },
+      btn('Hire a Tuner', function () { tunerModal(inst); }, 'small'),
       btn('Reset Tune', function () { UI.confirm('Put every tuning setting back to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }, 'Reset'); }, 'small red'),
       btn('Test Run', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, back: 'tune' }); }, 'small go')));
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'tune'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain tunemain' }, h('div', { class: 'col grow' }, h('h2', {}, tuneGroup), list), statBox)));
   };
+
+  // The tuner: pick what to dial in, see the rate, let them make their hits.
+  function tunerModal(inst) {
+    if (inst.damage) return UI.toast('Repair your car first!');
+    var jobs = DR.tunerJobs(inst), pick = {}, close;
+    jobs.forEach(function (j) { pick[j.id] = true; });
+    var quoteEl = h('div', { class: 'dim' }), goBtn;
+    function ids() { return jobs.filter(function (j) { return pick[j.id]; }).map(function (j) { return j.id; }); }
+    function quote() {
+      var q = G.tunerQuote(inst, ids());
+      quoteEl.textContent = DR.money(q.fee) + ' a hit + ' + DR.money(q.fuel) + ' fuel. A baseline hit, then up to ' + (q.maxHits - 1) + ' more: up to ' + DR.money(q.max) + '. Every hit wears your tires and clutch, and a car on the edge can break.';
+      goBtn.disabled = !ids().length || !G.canAfford(q.max);
+    }
+    goBtn = btn('Start', function () {
+      var chosen = ids(); close();
+      var wait = UI.modal([h('div', { class: 'pix acc' }, 'AT THE TRACK'), h('p', {}, 'The tuner is making passes...')]);
+      setTimeout(function () {
+        var res = G.hireTuner(inst, chosen); wait();
+        if (!res) return UI.toast('Not enough money');
+        A.cash();
+        var changes = Object.keys(res.tune).map(function (k) { var d = DR.TUNE_DEFS.filter(function (x) { return x.key === k; })[0]; return (d ? d.label : k) + ': ' + res.tune[k]; });
+        var done = UI.modal([h('div', { class: 'pix acc' }, 'TUNER\'S NOTES'),
+          h('div', { class: 'tunerlog' }, res.hits.map(function (x, i) {
+            return h('div', { class: 'row' }, h('span', { class: 'dim' }, '#' + (i + 1)), h('span', { class: 'grow' }, x.label), x.broke ? h('span', { class: 'bad' }, 'BROKE: ' + x.broke) : h('span', {}, x.sixty.toFixed(3) + ' / ' + (x.et < 90 ? x.et.toFixed(3) : 'DNF')));
+          })),
+          h('p', {}, changes.length ? 'Set: ' + changes.join(' • ') : 'Nothing beat your current settings.'),
+          res.broke ? h('p', { class: 'bad' }, 'The car broke on hit #' + res.hits.length + ' (' + res.broke + '). It needs a repair.') : null,
+          h('p', { class: 'dim' }, res.hits.length + ' hits: ' + DR.money(res.cost.fee) + ' tuner + ' + DR.money(res.cost.fuel) + ' fuel = ' + DR.money(res.cost.total)),
+          h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('OK', function () { done(); UI.refresh(); }, 'primary'))]);
+      }, 60);
+    }, 'primary');
+    close = UI.modal([h('div', { class: 'pix acc' }, 'HIRE A TUNER'),
+      h('p', { class: 'dim' }, 'Test hits on a prepped strip, one setting at a time; they keep what the timeslips say is quicker.'),
+      h('div', { class: 'col' }, jobs.map(function (j) {
+        var cb = h('input', { type: 'checkbox', checked: true });
+        cb.addEventListener('change', function () { pick[j.id] = cb.checked; quote(); });
+        return h('label', { class: 'row', style: { gap: '8px' } }, cb, h('span', {}, j.name));
+      })),
+      quoteEl,
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px', gap: '8px' } }, btn('Cancel', function () { close(); }), goBtn)]);
+    quote();
+  }
 
   // ---------------------------------------------------------------- DYNO
   // the last pull of each car, drawn faded behind a new one after changes

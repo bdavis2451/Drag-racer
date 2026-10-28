@@ -1109,6 +1109,87 @@
     }); }); });
     return (launchMemo[key] = out);
   };
+  // ---------------------------------------------------------------- the tuner
+  // A tuner dials a car in the way it's done at the track: test hits. Each
+  // hit is a real pass on a prepped strip (it wears the tires and clutch,
+  // burns fuel, and can break a car that's living on the edge), changing
+  // one setting at a time and keeping what the timeslip says is quicker.
+  // What there is to dial in depends on the parts.
+  DR.TUNER_JOBS = [
+    { id: 'launch', name: 'Launch RPM', keys: ['launchRpm'], step: 300, show: function (S) { return !!S.twostep; } },
+    { id: 'thr', name: 'Launch throttle & ramp', keys: ['launchThr', 'thrRamp'], step: [10, 0.3], show: function (S) { return S.ecu >= 2; } },
+    { id: 'tc', name: 'Traction control', keys: ['tcSlip'], step: 3, show: function (S) { return S.ecu >= 3; } },
+    { id: 'stall', name: 'Converter stall', keys: ['stall'], step: 300, show: function (S) { return !!S.convAdj; } },
+    { id: 'fd', name: 'Final drive', keys: ['fd'], step: 0.12, show: function (S) { return !!S.qc; } },
+    { id: 'shift', name: 'Shift points', keys: ['shiftRpm'], step: 200, show: function () { return true; } }
+  ];
+  DR.tunerFee = function (S) { return Math.round((150 + S.peakHp * 0.25) / 10) * 10; };
+  DR.tunerJobs = function (inst) { var S = DR.buildSpec(inst); return DR.TUNER_JOBS.filter(function (j) { return j.show(S); }); };
+  // the most hits a job can take (a baseline, then up to 3 each way per setting)
+  DR.tunerMaxHits = function (jobs) { return 1 + jobs.reduce(function (a, j) { return a + j.keys.length * 4 + (j.id === 'tc' ? 1 : 0); }, 0); };
+  // one test hit with tune t: { et, sixty, tireE, clutchE, broke }
+  function tunerHit(inst, t) {
+    var S = DR.buildSpec(inst, t), r = S.risk, fail = {};
+    if (Math.random() < r.engine) fail = { failAt: 0.6 + Math.random() * 6, failType: 'engine' };
+    else if (Math.random() < r.trans) fail = { failAt: 0.4 + Math.random() * 6, failType: 'trans' };
+    else if (Math.random() < (r.axle || 0)) fail = { failAt: 0.05 + Math.random() * 0.5, failType: 'axle' };
+    else if (Math.random() < (r.chassis || 0)) fail = { failAt: 0.05 + Math.random() * 0.4, failType: 'chassis' };
+    var sim = new DR.Sim(S, { cond: DR.conditions('prep', false), shakeRnd: 0.6 + Math.random() * 0.8, dist: DR.QUARTER, tireT: S.tire.topt, failAt: fail.failAt, failType: fail.failType });
+    var ai = new DR.AIDriver(0.95, Math.random); ai.react = 0; ai.launchAt = S.tune.launchRpm; ai.shiftErr = 0; ai.launchErr = 0;
+    var dt = 1 / 300, tG = -1.2;
+    while (!sim.finished && tG < 40 && !sim.blown && !sim.broke && !sim.crashed) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
+    var broke = sim.blown ? 'engine' : sim.broke ? sim.brokeWhat || 'trans' : sim.crashed ? 'chassis' : null;
+    return { et: sim.finished ? sim.et : 99, sixty: sim.splits['60ft'] ? sim.splits['60ft'].t : 9, tireE: sim.tireE + S.peakHp * 745.7 * 0.9, clutchE: sim.clutchE, broke: broke, S: S };
+  }
+  // Runs the job: returns { tune, hits: [{label, et, sixty}], tireE, clutchE, broke, S }
+  DR.runTuner = function (inst, jobIds) {
+    var t = {}; for (var k in inst.tune) t[k] = inst.tune[k];
+    var d = DR.fullTune(inst, DR.buildSpec(inst)), hits = [], out = { tireE: 0, clutchE: 0, broke: null, hits: hits };
+    function val(key) { return t[key] != null ? t[key] : d[key]; }
+    function run(label) {
+      var h = tunerHit(inst, t);
+      out.tireE += h.tireE; out.clutchE += h.clutchE; out.S = h.S;
+      hits.push({ label: label, et: h.et, sixty: h.sixty, broke: h.broke });
+      if (h.broke) out.broke = h.broke;
+      return h.broke ? 99 : h.et;
+    }
+    var best = run('Baseline');
+    DR.TUNER_JOBS.forEach(function (job) {
+      if (out.broke || jobIds.indexOf(job.id) < 0) return;
+      var S = DR.buildSpec(inst, t);
+      if (!job.show(S)) return;
+      job.keys.forEach(function (key, ki) {
+        if (out.broke) return;
+        var step = Array.isArray(job.step) ? job.step[ki] : job.step;
+        var def = DR.TUNE_DEFS.filter(function (x) { return x.key === key; })[0];
+        var lo = def ? def.min(S) : -1e9, hi = def ? def.max(S) : 1e9;
+        if (key === 'tcSlip' && !val(key)) { t[key] = 10; var e0 = run('Traction control on (10%)'); if (e0 < best) best = e0; else delete t[key]; if (out.broke) return; }
+        [1, -1].some(function (dir) {
+          var moved = false;
+          for (var n = 0; n < 3 && !out.broke; n++) {
+            var was = val(key), next = Math.round(Math.max(lo, Math.min(hi, was + dir * step)) * 100) / 100;
+            if (next === was) break;
+            t[key] = next;
+            var e = run(job.name + ': ' + fmt(key, next));
+            if (e < best - 0.004) { best = e; moved = true; } else { t[key] = was; break; }
+          }
+          return moved;
+        });
+      });
+    });
+    out.tune = {};
+    DR.TUNER_JOBS.forEach(function (job) { job.keys.forEach(function (key) { if (t[key] != null && t[key] !== inst.tune[key]) out.tune[key] = t[key]; }); });
+    out.best = best;
+    return out;
+  };
+  function fmt(key, v) {
+    if (key === 'launchRpm' || key === 'stall' || key === 'shiftRpm') return v + ' rpm';
+    if (key === 'launchThr' || key === 'tcSlip') return v + '%';
+    if (key === 'thrRamp') return v.toFixed(1) + ' s';
+    if (key === 'fd') return v.toFixed(2);
+    return String(v);
+  }
+
   // metres covered `secs` after the hit, driven like a player: gas held on
   // the line (eased against a foot brake), flat out, shifting at the tune's
   // shift point
