@@ -27,6 +27,7 @@
     if (s.v === 4) migrate4(s);
     for (var k in d) if (s[k] == null) s[k] = d[k];
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
+    try { retired(s); } catch (e) { /* keep what loaded */ }
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
     // older saves could put a rear-drive gearbox in a front-drive car: it
     // becomes the matching transaxle (and the other way around)
@@ -34,6 +35,30 @@
     G.state = s;
     if (G.syncUnlocks) try { G.syncUnlocks(); } catch (e) { /* keep what loaded */ }
   };
+  // Parts that changed under an old save: the alignment parts are gone
+  // (refunded in full), and the final drive is a gear set now - a car that
+  // was tuned off its factory ratio gets a free quick-change rear so it
+  // keeps its gearing.
+  var RETIRED = { align: { al1: 150, al2: 700 } };
+  function retired(s) {
+    var refund = 0;
+    (s.cars || []).forEach(function (c) {
+      var p = c.parts || {};
+      Object.keys(RETIRED).forEach(function (cat) { if (p[cat]) { refund += RETIRED[cat][p[cat]] || 0; delete p[cat]; } });
+      var car = DR.CARS[c.carId], fd = c.tune && c.tune.fd;
+      if (car && fd != null && !p.gears && Math.abs(fd - car.fd) > 0.03) p.gears = 'qc';
+      // turbo cars: the headers become a turbo manifold (free); the headers
+      // go back on the shelf
+      var fi = p.fi || (DR.ENGINES[c.engine || (car && car.engine)] || {}).fi && DR.ENGINES[c.engine || car.engine].fi.part;
+      if (p.headers && fi && DR.FI[fi] && DR.FI[fi].type === 'turbo' && !p.tmanifold) {
+        p.tmanifold = p.headers === 'h3' ? 'tm2' : 'tm1';
+        (s.inv = s.inv || []).push({ uid: (s.uid = (s.uid || 1000) + 1), cat: 'headers', id: p.headers, price: 0, eng: c.engine });
+        delete p.headers;
+      }
+    });
+    s.inv = (s.inv || []).filter(function (it) { if (it && RETIRED[it.cat]) { refund += it.price || RETIRED[it.cat][it.id] || 0; return false; } return true; });
+    if (refund) s.money = (s.money || 0) + refund;
+  }
   // A save is checked against today's catalog: cars, engines and parts the
   // game no longer has are dropped (one bad entry must not stop the garage
   // from opening), missing fields get defaults, and spare engine parts from
@@ -214,6 +239,7 @@
       if (item.cat === 'ic' || item.cat === 'launch') return 'Needs a turbo or supercharger';
       if (item.cat === 'wastegate' || item.cat === 'bov') return 'Needs a turbo';
       if (item.cat === 'nosctrl' || item.cat === 'nosheat') return 'Needs a nitrous kit';
+      if (item.cat === 'headers') return 'A turbo car takes a turbo manifold instead (Power Adders)';
       return 'Does not fit this car';
     }
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
@@ -319,8 +345,11 @@
     var fee = item.cat === 'engine' ? DR.swapFit(inst, item.id).install : 0;
     if (fee && !G.canAfford(fee)) { inv.push(item); return { ok: false, msg: 'The install costs ' + DR.money(fee) }; }
     if (fee) G.pay(fee);
+    var had2step = item.cat === 'launch' && DR.partId('launch', inst) !== 'stock';
     setPart(inst, item.cat, item.id);
     inst.spent += item.price;
+    // a first 2-step comes set up: the launch rpm that works for this car
+    if (item.cat === 'launch' && !had2step) { var lt = DR.launchTune(inst); if (lt.launchRpm) inst.tune.launchRpm = lt.launchRpm; }
     G.save();
     return { ok: true, msg: 'Installed ' + G.partName(item) };
   };

@@ -194,7 +194,8 @@
     var clutch = o('clutch'), conv = o('converter'), fly = o('flywheel'), shaft = o('driveshaft'), diff = o('diff');
     var layout = o('layout'), springs = o('springs'), shocks = o('shocks'), rs = o('rearsusp'), bar = o('wheeliebar');
     var aero = o('aero'), wheels = o('wheels'), ftires = o('ftires'), wt = o('weight');
-    var pul = o('pulleys'), coolP = o('cooling'), hstud = o('headstud'), wmi = o('wmi'), mounts = o('mounts'), safe = o('safety');
+    var tman = o('tmanifold'), dpipe = o('downpipe'), theat = o('theat');
+    var gset = o('gears'), pul = o('pulleys'), coolP = o('cooling'), hstud = o('headstud'), wmi = o('wmi'), mounts = o('mounts'), safe = o('safety');
     var tireId = DR.partId('rtires', inst), tire = DR.TIRES[tireId], stockTire = DR.TIRES[car.tire];
     var fiId = DR.partId('fi', inst);
     var stockEng = DR.ENGINES[car.engine];
@@ -210,7 +211,7 @@
     var ai = !!inst.ai, tuned = ai || !!ecu.tune, untuned = [];
     var camK = 1;
     if (!tuned && cams.tune) { camK = cams.tune === 'soft' ? 0.5 : 0; untuned.push(cams.tune === 'soft' ? ['cams', 'Stage 1 cams on the stock tune: about half the gain, rough idle'] : ['cams', 'The stock tune can\'t run these cams: it surges and loses power']); }
-    var B = clamp([air, intake, tb, exh, hdr, heads, ecu].reduce(function (a, p) { return a + (p.bw || 0); }, 0) + (cams.bw || 0) * camK, 0, 1);
+    var B = clamp([air, intake, tb, exh, hdr, tman, dpipe, heads, ecu].reduce(function (a, p) { return a + (p.bw || 0); }, 0) + (cams.bw || 0) * camK, 0, 1);
     var bg = e.bg || 1.3, bp = e.bp || e.pk + 1000;
     var pkB = e.pk + (bp - e.pk) * B;
     var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
@@ -218,7 +219,7 @@
     var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crKnock = -3 * (pist.cr || 0);
     // water-meth: worth most on pump or race gas; alcohol fuels already run cool
     var wmK = fuel.ff < 0.6 ? 0.15 : fuel.ff < 0.9 ? 0.4 : 1;
-    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: (fuel.cool || 0) + (wmi.cool || 0) * wmK,
+    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: (fuel.cool || 0) + (wmi.cool || 0) * wmK + (theat.cool || 0),
       knock: fuel.knock + (e.diesel ? 0 : crKnock) + Math.round((wmi.knock || 0) * wmK * 2) / 2 };
     var S = engineCore(e, mods, 1);
     S.ai = ai;
@@ -281,6 +282,10 @@
     S.boostWhy = { type: fiU.type, comp: comp, oem: oem };
     if (fiU.type === 'turbo') {
       S.lag *= gate.spoolK;
+      // the rest of the turbo system: a freer manifold and downpipe and
+      // shielding that keeps the heat for the turbine light it sooner
+      var sk = (tman.spoolK || 1) * (dpipe.spoolK || 1) * (theat.spoolK || 1);
+      S.lag *= sk; if (S.spool15) S.spool15 *= Math.sqrt(sk);
       if (ai) {
         if (fiU.price) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // rival builds: the old gate model
       } else {
@@ -325,9 +330,15 @@
     S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift * (DR.partApplies('shifter', inst) ? DR.getOption('shifter', inst).shiftK || 1 : 1); S.trMaxTq = tr.maxTq;
     S.tbrake = tr.type === 'auto' && !!DR.getOption('transbrake', inst).tbrake;
     S.drive = layout.layout || car.drive;
-    S.eff = tr.eff * (S.drive === 'AWD' ? 0.95 : S.drive === 'FWD' ? 1.03 : 1);   // FWD: no right-angle drive in the diff
+    S.eff = tr.eff * (S.drive === 'AWD' ? 0.95 : S.drive === 'FWD' ? 1.03 : 1) * (gset.eff || 1);   // FWD: no right-angle drive in the diff
+    // the final drive: a gear set (fixed), or a quick-change set in Tuning
+    // (rival builds come set up however they like)
+    S.qc = ai || !!gset.qc;
+    S.fdSet = Math.round(car.fd * (gset.fdk || 1) * 100) / 100;
     if (tr.type === 'auto') {
-      S.stall = conv.stall; S.TR = conv.tr;
+      // (a converter can't flash past where the engine runs out of revs:
+      // one rated above the redline just slips at the limiter)
+      S.stallRated = conv.stall; S.stall = ai ? conv.stall : Math.min(conv.stall, S.red - 300); S.TR = conv.tr;
       S.lockup = !!conv.lockup && !!tr.lu;   // a lockup converter in a box that can work it
     } else {
       var stockTqNm = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.3;
@@ -352,7 +363,7 @@
     S.r = tire.r;
     S.tslip = tire.slip; S.tfall = tire.fall; S.tfk = tire.fk || 1;
     S.bead = !!wheels.bead;
-    var wheelMass = 22 + wheels.wm + brakes.bkg * 0.5;
+    var wheelMass = 22 + (ai && wheels.aiWm != null ? wheels.aiWm : wheels.wm) + brakes.bkg * 0.5;
     var Iaxle = tire.m * tire.r * tire.r * 0.75 + wheelMass * Math.pow(tire.r * 0.55, 2) + 0.9 * shaft.shaft;
     S.Iw = Iaxle * (S.drive === 'AWD' ? 1.8 : 1);
 
@@ -365,8 +376,12 @@
     // one adds a transfer case and front diff up front; a transverse one a
     // small transfer unit up front and a rear diff, halfshafts and subframe
     var awdAdd = S.drive === 'AWD' && car.drive !== 'AWD' ? (layout.tv ? [20, 15, 40] : [60, 30, 0]) : null;
-    var extraRear = (tire.m - stockTire.m) + wheels.wm + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batt.bat + Math.min(0, batt.batkg) + (awdAdd ? awdAdd[2] : 0);
-    var extraFront = ftires.fm + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batt.bat + Math.max(0, batt.batkg) + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5;
+    // the battery: what leaves the nose and what lands in the trunk (rival
+    // builds keep the figures their times were set with)
+    var batAi = ai && batt.aiBat != null ? batt.aiBat : batt.bat;
+    var batBack = ai ? batAi + Math.min(0, batt.batkg) : batt.bat + batt.batkg, batFront = ai ? batAi - Math.max(0, batt.batkg) : batt.bat;
+    var extraRear = (tire.m - stockTire.m) + (ai && wheels.aiWm != null ? wheels.aiWm : wheels.wm) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0);
+    var extraFront = ftires.fm + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5;
     var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
@@ -482,7 +497,7 @@
       launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) :
         S.spool15 ? Math.min(S.red - 700, Math.max(S.tqRpm * 0.85, spoolAt(S, (inst.tune && inst.tune.boost) || fiDef) * 0.95)) : S.tqRpm * 0.85) / 100) * 100,
       psi: S.tire.optP,
-      fd: S.car.fd,
+      fd: S.fdSet || S.car.fd,
       gears: DR.boxRatios(S.transId, S.car),
       shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, DR.boxRatios(S.transId, S.car)))) / 100) * 100,
       revLimit: S.red,
@@ -529,8 +544,8 @@
       help: 'How hard and fast it pulls timing for each % of slip over the target. Low: soft and smooth, lets the tires spin a bit more. High: catches spin fast, but too high and it hunts (pulls too much, the car slows, it puts it back) and the car shakes.' },
     { key: 'shiftRpm', label: 'Shift Light / Auto-Shift RPM', unit: 'rpm', step: 100, min: function (S) { return S.idle + 1500; }, max: function (S) { return S.red; },
       show: function () { return true; }, group: 'Drivetrain', help: 'The shift light comes on here. Auto-shift also uses it.' },
-    { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function () { return 2.2; }, max: function () { return 6.5; },
-      show: function () { return true; }, group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed.' },
+    { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function (S) { return S.qc || !S.fdSet ? 2.2 : S.fdSet; }, max: function (S) { return S.qc || !S.fdSet ? 6.5 : S.fdSet; },
+      show: function (S) { return !!S.qc; }, req: 'Set by your gear set: a quick-change rear end (Drivetrain: Ring & Pinion) makes it adjustable', group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed. A quick-change rear: swap gear sets in minutes for each track.' },
     { key: 'luGear', label: 'Converter Lockup From Gear', unit: '', step: 1, min: function () { return 1; }, max: function (S) { return (S.ratios || DR.boxRatios(S.transId, S.car)).length; },
       show: function (S) { return !!S.lockup; }, req: 'Requires a lockup converter', group: 'Drivetrain', fmt: function (v) { return ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][v - 1] + ' gear on'; },
       help: 'The lockup clutch takes out the converter\'s slip from this gear on (applied just after each shift; in 1st, once the gearbox is turning near the converter\'s stall speed). Locking earlier gains mph, but the engine drops revs when it locks: with a tight converter or a big turbo that can pull it off boost. Try it and watch your timeslip.' },
@@ -634,7 +649,9 @@
     if (S.clCap && tqNm > S.clCap) out.clutch = 'Slipping';
     // a converter that can't flash to where the turbo makes boost: the car
     // leaves, the engine is dragged below boost and falls on its face
-    if (S.trType === 'auto' && S.fiType === 'turbo' && S.spoolHi && S.stall < S.spoolHi * 0.85) out.converter = 'Too tight for the turbo (boost at ' + Math.round(S.spoolHi / 100) * 100 + ' rpm)';
+    if (S.trType === 'auto' && S.stallRated > S.stall) out.converter = 'Stall is past the redline: it flashes to ' + S.stall + ' rpm';
+    else if (S.trType === 'auto' && S.fiType === 'turbo' && S.spoolHi && S.stall < S.spoolHi * 0.85) out.converter = 'Too tight for the turbo (boost at ' + Math.round(S.spoolHi / 100) * 100 + ' rpm)';
+    else if (S.trType === 'auto' && S.stall > S.peakHpRpm) out.converter = 'Looser than this engine needs (power peaks at ' + Math.round(S.peakHpRpm / 100) * 100 + ' rpm): it slips power away';
     return out;
   };
 
@@ -1146,6 +1163,14 @@
         held = Math.min(held, mu * N * r / (Gr * eta) * Math.max(0.5, 1.05 - spinOver * 0.5));
         cap = S.slipAssist * Math.min(cap, held) + (1 - S.slipAssist) * cap;
       }
+      // Base pressure: a racer sets a big multi-disc clutch's counterweights
+      // so it slips on the hit instead of bogging the engine (a dumped
+      // triple-disc would drag a turbo motor down off boost). The clamp
+      // holds the revs to about two-thirds of the launch rpm until it locks.
+      if (!S.ai && this.gear === 0 && this.launched && !this.firstLock && !this.shifting && !this.burnMode) {
+        var holdB = Math.max(S.idle * RPM2W * 1.3, Math.min(this.launchW * 0.65, S.peakHpRpm * 0.75 * RPM2W));
+        cap = Math.min(cap, Math.max(0, Math.max(Te, 0) * 1.05 + (this.we - holdB) * S.Ie * 60));
+      }
       if (dead) cap = this.broke ? 0 : cap;
       var done = false;
       if (this.locked) {
@@ -1263,7 +1288,7 @@
   DR.aiLaunchRpm = function (S) {
     if (S._aiLaunch) return S._aiLaunch;
     var best = S.tune.launchRpm, bestT = 1e9;
-    for (var rpm = S.idle + 900; rpm <= S.limit - 100; rpm += 400) {
+    for (var rpm = S.idle + 900; rpm <= S.limit - 100; rpm += S.ai ? 400 : 200) {
       var sim = new Sim(S, { grip: 1, dist: DR.QUARTER, tireT: S.tire.topt });
       var ai = new DR.AIDriver(1, function () { return 0.5; });
       ai.react = 0; ai.launchAt = rpm;

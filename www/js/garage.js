@@ -192,6 +192,20 @@
         disc(12, 12, 2, ac); break;
       case 'weight':
         r(3, 9, 18, 12, M3); r(3, 9, 18, 1, M2); r(8, 4, 8, 5, M4); r(10, 6, 4, 3, M3); DR.pixText(x, '-LB', 6, 13, ac, 1); break;
+      case 'tmanifold':
+        // four runners merging into a turbo flange
+        for (k = 0; k < 4; k++) { r(3 + k * 4, 3, 3, 9 + k, M2); r(3 + k * 4, 3, 1, 9 + k, M1); }
+        r(3, 14, 16, 4, M3); r(17, 12, 5, 8, ac); r(17, 12, 5, 2, DR.shadeHex(ac, 0.3)); break;
+      case 'downpipe':
+        // a turbine flange and a big bent pipe
+        r(3, 3, 8, 8, ac); r(3, 3, 8, 2, DR.shadeHex(ac, 0.3)); r(6, 11, 6, 6, M2); r(8, 15, 13, 6, M2); r(8, 15, 13, 1, M1); r(20, 14, 2, 8, M3); break;
+      case 'theat':
+        // a turbo wrapped in a woven blanket
+        disc(12, 12, 9, '#c9b27a'); for (k = 0; k < 6; k++) r(5 + k * 3, 5, 1, 14, '#9c8550'); disc(12, 12, 3, M3); r(10, 2, 4, 3, ac); break;
+      case 'gears':
+        // a ring gear with its pinion
+        ring(10, 12, 9, 6, M2); for (k = 0; k < 12; k++) { var ga = k * Math.PI / 6; r(Math.round(10 + Math.cos(ga) * 9), Math.round(12 + Math.sin(ga) * 9), 2, 2, M3); }
+        disc(10, 12, 3, ac); r(17, 10, 6, 5, ac); r(17, 10, 6, 1, DR.shadeHex(ac, 0.3)); break;
       case 'pulleys':
         // a crank pulley and a smaller accessory pulley on one belt
         ring(8, 14, 7, 5, M2); disc(8, 14, 3, ac); ring(18, 7, 4, 2, M2); disc(18, 7, 1, ac);
@@ -336,6 +350,8 @@
     }
     if (dhp) out.push(h('span', { class: dhp > 0 ? 'good' : 'bad' }, (dhp > 0 ? '+' : '') + dhp + 'hp'));
     if (dlb) out.push(h('span', { class: dlb < 0 ? 'good' : 'bad' }, (dlb > 0 ? '+' : '') + dlb + 'lb'));
+    // a gear set: its ratio (a quick-change: adjustable)
+    if (cat === 'gears') out.unshift(h('span', { class: 'acc' }, S1.qc ? 'adjustable' : S1.fdSet.toFixed(2) + ':1'));
     // then the limit the part moves: its own rating first (an upgrade that
     // isn't the weak link yet still shows what it holds)
     if (out.length < 2) {
@@ -366,7 +382,7 @@
     }
     return out.length ? h('span', { class: 'gain' }, out) : h('span', { class: 'gain dim' }, 'no change');
   }
-  var HANDLING_CATS = { springs: 1, shocks: 1, sway: 1, align: 1, brakes: 1, ftires: 1, rtires: 1, aero: 1 };
+  var HANDLING_CATS = { springs: 1, shocks: 1, sway: 1, brakes: 1, ftires: 1, rtires: 1, aero: 1 };
   function deltaRow(a, b, unit, dec, lowerBetter) {
     var diff = b - a, cls = Math.abs(diff) < Math.pow(10, -(dec || 0)) / 2 ? 'dim' : ((diff < 0) === !!lowerBetter ? 'good' : 'bad');
     return h('span', { class: cls }, a.toFixed(dec || 0) + ' → ' + b.toFixed(dec || 0) + unit);

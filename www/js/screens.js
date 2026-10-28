@@ -380,6 +380,13 @@
     recalc();
     statBox.appendChild(h('div', { class: 'row', style: { flexWrap: 'wrap', marginTop: '6px' } },
       btn('Best Shift Point', function () { inst.tune.shiftRpm = DR.suggestShift(G.spec(inst)); G.save(); UI.toast('Shift point set to ' + inst.tune.shiftRpm + ' rpm'); UI.refresh(); }, 'small'),
+      btn('Best Launch Setup', function () {
+        var lt = DR.launchTune(inst), n = 0;
+        for (var key in lt) { inst.tune[key] = lt[key]; n++; }
+        G.save();
+        UI.toast(n ? 'Launch set up: ' + [lt.launchRpm ? lt.launchRpm + ' rpm' : '', lt.launchThr ? lt.launchThr + '% throttle' : '', lt.tcSlip != null ? 'traction ' + (lt.tcSlip ? lt.tcSlip + '%' : 'off') : '', lt.fd ? lt.fd.toFixed(2) + ' gear' : ''].filter(Boolean).join(', ') : 'Nothing to set yet: needs a 2-step, a launch-control ECU or a quick-change rear');
+        UI.refresh();
+      }, 'small'),
       btn('Reset Tune', function () { UI.confirm('Put every tuning setting back to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }, 'Reset'); }, 'small red'),
       btn('Test Run', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, back: 'tune' }); }, 'small go')));
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'tune'),

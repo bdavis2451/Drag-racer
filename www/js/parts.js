@@ -78,11 +78,12 @@
     opt('tb2', 'Big-Bore Throttle Body', 450, { bw: 0.01 }, 'A bigger blade for big-cam and boosted builds.'),
     opt('tb3', 'Billet Race Throttle Body', 900, { bw: 0.02 }, 'Never the restriction.')
   ]};
-  C.headers = { name: 'Headers / Manifold', engineScaled: true, options: [
+  // (on a turbo car the turbo manifold takes the headers' place)
+  C.headers = { name: 'Headers', engineScaled: true, notTurbo: true, options: [
     opt('stock', 'Stock Manifolds', 0, { bw: 0 }),
     opt('h1', 'Shorty Headers', 500, { bw: 0.03 }, 'Better than cast manifolds.'),
     opt('h2', 'Long-Tube Headers', 1200, { bw: 0.07 }, 'Real gains through the mid-range and up top.'),
-    opt('h3', 'Race Headers / Tubular Manifold', 2400, { bw: 0.10 }, 'Big primaries for high rpm and big boost.')
+    opt('h3', 'Race Headers', 2400, { bw: 0.10 }, 'Big primaries and a merge collector, for high rpm.')
   ]};
   C.exhaust = { name: 'Exhaust', engineScaled: true, options: [
     opt('stock', 'Stock Exhaust', 0, { bw: 0 }),
@@ -388,7 +389,7 @@
     opt('stock', 'Stock Wheels', 0, { wm: 0, bead: false }),
     opt('wh1', 'Lightweight Wheels', 800, { wm: -8, bead: false }, '-8 kg of rotating mass.'),
     opt('wh2', 'Forged Wheels', 2000, { wm: -14, bead: false }, '-14 kg of rotating mass.'),
-    opt('wh3', 'Beadlock Drag Wheels', 2600, { wm: -10, bead: true }, 'Lets you run very low tire pressure safely.')
+    opt('wh3', 'Beadlock Drag Wheels', 2600, { wm: -16, aiWm: -10, bead: true }, '-16 kg of rotating mass, and the bead is locked to the rim: you can run very low tire pressure on slicks or radials (Tuning: Tire Pressure) without the tire spinning on the wheel.')
   ]};
   C.brakes = { name: 'Brakes', options: [
     // bcap: the most braking (g) the brakes can make (grip permitting);
@@ -418,8 +419,8 @@
   // bat: kg moved from the nose to the trunk; bkgW: kg saved
   C.battery = { name: 'Battery', options: [
     opt('stock', 'Stock Battery (Engine Bay)', 0, { bat: 0, batkg: 0 }),
-    opt('bt1', 'Trunk Battery Relocation', 250, { bat: 20, batkg: 3 }, 'Moves 20 kg to the back of the car, over the drive wheels.'),
-    opt('bt2', 'Lightweight Race Battery (Trunk)', 650, { bat: 8, batkg: -12 }, '-12 kg, mounted in the trunk.')
+    opt('bt1', 'Trunk Battery Relocation', 250, { bat: 20, batkg: 3 }, 'Moves the 20 kg battery to the back of the car, over the drive wheels (+3 kg of cable and box).'),
+    opt('bt2', 'Lightweight Race Battery (Trunk)', 650, { bat: 20, batkg: -12, aiBat: 8 }, 'A small race battery mounted in the trunk: 12 kg lighter, and its weight moves over the drive wheels.')
   ]};
   // ---- more of what real builds use
   // Accessory drive: the water pump, alternator and power steering pump take
@@ -463,11 +464,36 @@
     opt('mm1', 'Polyurethane Mounts', 250, { mk: 1.015 }, 'Stiffer poly mounts: less engine roll and wind-up on the launch, a little more vibration.'),
     opt('mm2', 'Solid Engine & Trans Mounts', 500, { lvl: 2, mk: 1.03 }, 'Solid mounts: the engine can\'t roll at all, every bit of the hit goes to the tires. Shakes the whole car at idle.')
   ]};
-  // Wheel alignment: camber and toe for corners (circuit grip only)
-  C.align = { name: 'Alignment', options: [
-    opt('stock', 'Factory Alignment', 0, { hg: 1 }),
-    opt('al1', 'Performance Alignment', 150, { hg: 1.02 }, 'A little negative camber and less toe: the tires stay flatter in corners. About 2% more cornering grip on a circuit.'),
-    opt('al2', 'Camber Plates + Race Alignment', 700, { lvl: 2, hg: 1.04 }, 'Adjustable camber plates and a race alignment: about 4% more cornering grip. No help in a straight line.')
+  // ---- the turbo system, part by part (a turbo kit is the turbo plus all
+  // of these; the kit's own are the 'stock' ones). spoolK: how much sooner
+  // the turbo lights (< 1 = sooner), bw: exhaust flow, cool: heat kept out
+  // of the intake charge (C).
+  C.tmanifold = { name: 'Turbo Manifold', needsTurbo: true, engineScaled: true, options: [
+    opt('stock', 'Kit Cast Log Manifold', 0, { bw: 0, spoolK: 1 }),
+    opt('tm1', 'Tubular Turbo Manifold', 900, { lvl: 2, bw: 0.05, spoolK: 0.95 }, 'Welded steel tubes instead of a cast log: better flow to the turbine, so it spools a bit sooner and makes more up top.'),
+    opt('tm2', 'Equal-Length Race Manifold', 2200, { lvl: 3, bw: 0.09, spoolK: 0.9 }, 'Equal-length runners and a big merge: every cylinder\'s pulse hits the turbine evenly. Quickest spool and the most flow.')
+  ]};
+  C.downpipe = { name: 'Downpipe', needsTurbo: true, options: [
+    opt('stock', 'Kit Downpipe (2.5 in)', 0, { bw: 0, spoolK: 1 }),
+    opt('dp1', '3 in Downpipe', 400, { bw: 0.03, spoolK: 0.97 }, 'Less back pressure after the turbine: it spools a little sooner and breathes better. The cheapest turbo upgrade there is.'),
+    opt('dp2', '4 in Race Downpipe', 900, { lvl: 2, bw: 0.05, spoolK: 0.95 }, 'A big straight downpipe (or a dump tube at the strip): as little back pressure as possible.')
+  ]};
+  C.theat = { name: 'Turbo Heat Management', needsTurbo: true, options: [
+    opt('stock', 'No Heat Shielding', 0, { spoolK: 1, cool: 0 }),
+    opt('th1', 'Turbo Blanket + Header Wrap', 300, { spoolK: 0.97, cool: 3 }, 'Keeps the heat in the exhaust (where it drives the turbine) and out of the engine bay: a little quicker spool and a cooler intake.'),
+    opt('th2', 'Ceramic-Coated Manifold + Blanket', 700, { lvl: 2, spoolK: 0.95, cool: 5 }, 'Ceramic coating inside and out plus a blanket: the most exhaust energy for the turbine, the least heat in the bay.')
+  ]};
+  // Ring & pinion: the final drive is a gear set in the axle (or transaxle).
+  // fdk: ratio vs the car's factory gears. A quick-change rear end swaps
+  // its gears in minutes, so the ratio is set in Tuning (racers carry a
+  // box of gear sets to the track); a little heavier and less efficient.
+  C.gears = { name: 'Ring & Pinion', options: [
+    opt('stock', 'Factory Gears', 0, { fdk: 1 }),
+    opt('rp0', 'Highway Gear Set (taller)', 600, { fdk: 0.88 }, 'About 12% taller than the factory gears: lower revs and a higher top speed in every gear, softer acceleration. For long straights and the freeway.'),
+    opt('rp1', 'Performance Gear Set', 600, { fdk: 1.12 }, 'About 12% steeper than the factory gears: quicker in every gear, a little less top speed.'),
+    opt('rp2', 'Drag Gear Set', 700, { lvl: 2, fdk: 1.25 }, 'About 25% steeper: hard acceleration for the strip, shorter gears all round.'),
+    opt('rp3', 'Steep Drag Gear Set', 750, { lvl: 3, fdk: 1.38 }, 'About 38% steeper: for big tires and big power, or a car that has to get off the line in a hurry.'),
+    opt('qc', 'Quick-Change Rear End', 4500, { lvl: 4, fdk: 1, qc: true, eff: 0.99, kg: 9 }, 'A race rear end with the gears in a quick-release cover: change the ratio in minutes, so it is set in Tuning (2.20 to 6.50). Racers bring a box of gear sets to the track. A little heavier and a hair less efficient.')
   ]};
   // Safety equipment: NHRA wants a parachute on cars over 150 mph
   C.safety = { name: 'Safety Equipment', options: [
@@ -484,9 +510,9 @@
     { id: 'top',    name: 'Top End',       icon: 'heads',   unlock: 'engine', cats: ['heads', 'cams', 'valvetrain', 'headstud'] },
     { id: 'bottom', name: 'Bottom End',    icon: 'pistons', unlock: 'engine', cats: ['pistons', 'rods', 'crank', 'block', 'oiling'] },
     { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu'] },
-    { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
-    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'rearend', 'mounts', 'layout'] },
-    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'align', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
+    { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'tmanifold', 'downpipe', 'theat', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
+    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
+    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['rtires', 'wheels', 'ftires', 'brakes'] },
     { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'safety'] }
   ];
@@ -606,6 +632,16 @@
     if (cat === 'diff') {
       return C.diff.options.map(function (o) { return Object.assign({}, o, { price: o.id === car.diff ? 0 : o.price, name: o.name + (o.id === car.diff ? ' (Factory)' : '') }); });
     }
+    if (cat === 'gears') {
+      var trA = DR.converted(inst) || DR.CARS[inst.carId].mount !== 'T';
+      return C.gears.options.map(function (o) {
+        var x = Object.assign({}, o);
+        if (o.qc) { if (!trA) { x.name = 'Race Transaxle Final Drive'; x.desc = 'A race final drive with quick-swap gears: the ratio is set in Tuning (2.20 to 6.50). A little heavier and a hair less efficient.'; } return x; }
+        var r = Math.round(car.fd * o.fdk * 100) / 100;
+        x.name = (o.id === 'stock' ? 'Factory Gears' : o.name) + ' (' + r.toFixed(2) + ')';
+        return x;
+      });
+    }
     if (cat === 'layout') {
       var tvCar = car.mount === 'T' && car.drive === 'FWD', donor = DR.AWD_DONOR[inst.carId];
       return C.layout.options.filter(function (o) { return o.id === 'stock' || (o.layout !== car.drive && (!o.tv || tvCar)); })
@@ -677,6 +713,7 @@
     if (c.needsTurbo) return DR.FI[DR.partId('fi', inst)].type === 'turbo';
     if (c.needsShifter) return tr.type === 'manual' || tr.type === 'auto';
     if (c.needsNos) return DR.partId('nitrous', inst) !== 'stock';
+    if (c.notTurbo) return !!inst.ai || DR.FI[DR.partId('fi', inst)].type !== 'turbo';
     return true;
   };
 
@@ -706,7 +743,7 @@
 
   // Engine-related categories that get removed on an engine swap.
   DR.ENGINE_BOUND = ['airfilter', 'intake', 'throttle', 'exhaust', 'headers', 'heads', 'cams', 'valvetrain',
-    'pistons', 'rods', 'crank', 'block', 'oiling', 'fi', 'ic', 'wastegate', 'bov'];
+    'pistons', 'rods', 'crank', 'block', 'oiling', 'fi', 'ic', 'wastegate', 'bov', 'tmanifold', 'headstud', 'pulleys'];
 
   // ---------------------------------------------------------------- packages
   // Quick upgrade packages (like Need for Speed: Underground 2's Street / Pro
@@ -782,6 +819,18 @@
     for (var i = Math.max(1, min); i < opts.length; i++) if (opts[i].fuel >= need) return opts[i].id;
     return opts[opts.length - 1].id;
   }; }
+  // the gear set that runs the quickest quarter with the rest of the build
+  function gearsFor(inst) {
+    var cur = DR.partId('gears', inst);
+    if (DR.getOption('gears', inst).qc) return null;
+    var best = null, bestEt = 1e9;
+    ['stock', 'rp1', 'rp2', 'rp3'].forEach(function (id) {
+      var c = withParts(inst, { gears: id }); delete c.tune.fd;
+      var et = DR.playerPass(DR.buildSpec(c), 60, true);
+      if (et < bestEt - 0.01) { bestEt = et; best = id; }
+    });
+    return best && best !== cur && best !== 'stock' ? best : null;
+  }
   function torqueNm(inst) { var S = DR.buildSpec(inst); return S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * Math.PI / 30) : 0); }
   function transFor(inst) {
     var tr = DR.TRANS[DR.partId('trans', inst)], need = torqueNm(inst) * 1.08;
@@ -835,14 +884,14 @@
       [['fueltype', 'e85'], ['ignition', 'ig3'], ['ecu', 'ecu3'], ['injectors', fuelFor('injectors', 4)], ['fuelpump', fuelFor('fuelpump', 4)]]],
     power: [
       [['fi', turboFor(1.3)], ['ic', 'ic0'], ['wastegate', 'ws2'], ['bov', 'bov1']],
-      [['fi', turboFor(1.5)], ['ic', 'ic1'], ['wastegate', 'wg1'], ['bov', 'bov1'], ['launch', 'l1']],
-      [['fi', turboFor(2.5)], ['ic', 'ic2'], ['wastegate', 'wg2'], ['bov', 'bov1'], ['launch', 'l1']],
-      [['fi', turboFor(4, true)], ['ic', 'ic3'], ['wastegate', 'wg2'], ['bov', 'bov2'], ['launch', 'l2']]],
+      [['fi', turboFor(1.5)], ['downpipe', 'dp1'], ['ic', 'ic1'], ['wastegate', 'wg1'], ['bov', 'bov1'], ['launch', 'l1']],
+      [['fi', turboFor(2.5)], ['tmanifold', 'tm1'], ['downpipe', 'dp1'], ['theat', 'th1'], ['ic', 'ic2'], ['wastegate', 'wg2'], ['bov', 'bov1'], ['launch', 'l1']],
+      [['fi', turboFor(4, true)], ['tmanifold', 'tm2'], ['downpipe', 'dp2'], ['theat', 'th2'], ['ic', 'ic3'], ['wastegate', 'wg2'], ['bov', 'bov2'], ['launch', 'l2']]],
     drive: [
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['rearend', axleFor(1)]],
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)], ['mounts', 'mm1']],
-      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)], ['mounts', 'mm2'],
+      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)], ['mounts', 'mm1'], ['gears', gearsFor]],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)], ['mounts', 'mm2'], ['gears', gearsFor],
         // a front-driver making real power is converted to drive the rear
         ['layout', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? 'rwd' : null; }]]],
     susp: [
@@ -1027,7 +1076,7 @@
     // it (a swapped gearbox brings its own ratios), whichever runs the
     // quicker quarter
     var car = DR.CARS[inst.carId], first0 = DR.boxRatios(car.trans, car)[0] * car.fd;
-    var fds = [S0.fd, first0 / S0.ratios[0], first0 / S0.ratios[0] * 1.1, first0 / S0.ratios[0] * 0.9].map(function (f) { return Math.round(clampN(f, 2.2, 6.5) * 100) / 100; });
+    var fds = !S0.qc ? [] : [S0.fd, first0 / S0.ratios[0], first0 / S0.ratios[0] * 1.1, first0 / S0.ratios[0] * 0.9].map(function (f) { return Math.round(clampN(f, 2.2, 6.5) * 100) / 100; });
     var bestFd = S0.fd, bestEt = 1e9;
     fds.forEach(function (f) {
       var t = {}; for (var k in inst.tune) t[k] = inst.tune[k]; t.fd = f;
