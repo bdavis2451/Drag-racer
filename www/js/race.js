@@ -419,7 +419,7 @@
         var tt = S.tire.topt, thr = playerThrottle();
         if (phase === 'burnout') {
           if (you.sim.burnMode) you.burn = burnAmt(you);
-          else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.burn = thr * 0.5; }
+          else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.sim.tireE += S.peakHp * 745.7 * 0.25 * thr * dt; you.burn = thr * 0.5; }
           // coach the burnout off the tire temperature (sim mode: you judge
           // it by the smoke and the time on the gas)
           var tT = you.sim.tireT, msg;
@@ -708,8 +708,10 @@
       if (moneyDelta) G.earn(moneyDelta);
       if (them && !testDrive && (cfg.mode === 'career' || cfg.mode === 'street')) {
         var rc = G.payRunCost(S, you.sim.nosT);
-        if (rc.paid) { money.push(['Fuel & tires' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }
+        if (rc.paid) { money.push(['Fuel' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }
       }
+      // every pass wears the tires and the clutch (a dealer test drive isn't yours)
+      if (!testDrive) G.addWear(inst, S, you.sim);
       if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; G.clearSold(); }
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
@@ -761,6 +763,7 @@
           h('div', { class: 'pix total ' + (moneyDelta >= 0 ? 'good' : 'bad') }, (moneyDelta > 0 ? '+' : '') + DR.money(moneyDelta)),
           money.length > 1 ? money.map(function (m) { return h('div', { class: 'mrow' }, h('span', {}, m[0]), h('span', { class: m[1] < 0 ? 'bad' : '' }, (m[1] > 0 ? '+' : '') + DR.money(m[1]))); }) : null) : null,
         unlockBox(unlocks),
+        !testDrive ? (function () { var wb = UI.wearBox(inst, function () { wb.parentNode.replaceChild(UI.wearBox(inst), wb); }); return wb; })() : null,
         notes.length ? h('div', { class: 'slipnote' }, notes.map(function (n, i) { return h('span', { class: n[0] }, (i ? ' • ' : '') + n[1]); })) : null,
         pbLine ? h('div', { class: 'slipnote dim' }, pbLine) : null,
         testDrive ? h('div', { class: 'col' },

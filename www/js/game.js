@@ -213,11 +213,11 @@
     return null;
   };
   G.partName = function (item) {
-    var base = partBaseName(item);
+    var base = partBaseName(item), used = item.wear > 0.005 ? ' (used, ' + Math.round(item.wear * 100) + '% worn)' : '';
     // a factory part says what it came off
-    if (item.stock && !G.isEngineBound(item.cat) && item.cat !== 'engine' && item.car && DR.CARS[item.car]) return base + ' (' + DR.CARS[item.car].name.replace(/ '\d+$/, '') + ')';
-    if (item.stock && G.isEngineBound(item.cat) && DR.ENGINES[item.eng]) return base + ' (' + DR.ENGINES[item.eng].name.replace(/ \(.*\)$/, '') + ')';
-    return base;
+    if (item.stock && !G.isEngineBound(item.cat) && item.cat !== 'engine' && item.car && DR.CARS[item.car]) return base + ' (' + DR.CARS[item.car].name.replace(/ '\d+$/, '') + ')' + used;
+    if (item.stock && G.isEngineBound(item.cat) && DR.ENGINES[item.eng]) return base + ' (' + DR.ENGINES[item.eng].name.replace(/ \(.*\)$/, '') + ')' + used;
+    return base + used;
   };
   function partBaseName(item) {
     if (item.cat === 'engine') return DR.ENGINES[item.id].name;
@@ -257,7 +257,7 @@
   };
   G.invFor = function (cat) { return G.state.inv.filter(function (it) { return it.cat === cat; }); };
   G.ownedCount = function (cat, id) { return G.state.inv.filter(function (it) { return it.cat === cat && it.id === id; }).length; };
-  G.partSellValue = function (item) { return item.stock ? item.val || 0 : Math.round((item.price || 0) * 0.5 / 10) * 10; };
+  G.partSellValue = function (item) { return Math.round((item.stock ? item.val || 0 : (item.price || 0) * 0.5) * (1 - 0.9 * (item.wear || 0)) / 10) * 10; };
   // Whether the factory "part" in a slot is a real part you can take off and
   // keep: not pump gas, an empty nitrous slot, the factory weight or layout,
   // or the block (studs, girdles and sleeves go on the same block); a
@@ -284,17 +284,25 @@
   function stash(inst, cat, keepStock) {
     var id = DR.partId(cat, inst);
     if (id === DR.stockPart(cat, inst)) {
-      if (keepStock || !G.stockIsPart(cat, inst)) return null;
+      if (keepStock || !G.stockIsPart(cat, inst)) { if (!keepStock && inst.wear) delete inst.wear[cat]; return null; }
       var st = { uid: G.state.uid++, cat: cat, id: id, price: 0, stock: true, val: G.stockValue(cat, inst, id), from: inst.uid };
       if (G.isEngineBound(cat)) st.eng = inst.engine; else if (id === 'stock') st.car = inst.carId;
+      wearOff(inst, cat, st);
       G.state.inv.push(st);
       return st;
     }
     var opt = DR.getOption(cat, inst, id);
     var item = { uid: G.state.uid++, cat: cat, id: id, price: opt.price || 0, eng: G.isEngineBound(cat) ? inst.engine : undefined, from: inst.uid };
+    wearOff(inst, cat, item);
     G.state.inv.push(item);
     inst.spent = Math.max(0, inst.spent - item.price);
     return item;
+  }
+  // a consumable coming off keeps its wear; the slot starts fresh
+  function wearOff(inst, cat, item) {
+    var w = inst.wear && inst.wear[cat];
+    if (w && w.w > 0.005 && item) { item.wear = Math.round(w.w * 1000) / 1000; item.passes = w.n; }
+    if (inst.wear) delete inst.wear[cat];
   }
   function clearTune(inst, cat, fiWas) {
     if (cat === 'engine') { delete inst.tune.boost; delete inst.tune.launchRpm; delete inst.tune.shiftRpm; delete inst.tune.revLimit; }
@@ -348,6 +356,7 @@
     if (fee && !G.canAfford(fee)) { inv.push(item); return { ok: false, msg: 'The install costs ' + DR.money(fee) }; }
     if (fee) G.pay(fee);
     setPart(inst, item.cat, item.id);
+    if (item.wear) { inst.wear = inst.wear || {}; inst.wear[item.cat] = { w: item.wear, n: item.passes || 0 }; }
     inst.spent += item.price;
     G.save();
     return { ok: true, msg: 'Installed ' + G.partName(item) };
@@ -445,18 +454,15 @@
   };
 
   // ---------------------------------------------------------------- running costs
-  // What a race pass burns: fuel by power and fuel type, tire wear by power
-  // and compound (slicks cost more per pass), and the nitrous actually
-  // sprayed. Paid automatically after every race against someone (never on
+  // What a race pass burns: fuel by power and fuel type, and the nitrous
+  // actually sprayed (the tires wear instead: see wear). Paid automatically after every race against someone (never on
   // solo or test passes), and never more than you have.
   var FUEL_COST = { stock: 1, e85: 1.15, race: 1.8, meth: 1.5 };
-  var TIRE_COST = { Street: 0.5, Track: 0.9, 'Race Slick': 1.2, 'Drag Radial': 1, Slick: 1.4 };
   DR.runCost = function (S, nosT) {
     var k = 0.0006, fuel = k * Math.pow(S.peakHp, 1.8) * (FUEL_COST[S.fuelId] || 1);
-    var tires = k * Math.pow(S.peakHp + S.nosHp, 1.8) * (TIRE_COST[S.tire.kind] || 1) * (S.tire.price > 5000 ? 1.3 : 1);
     var nos = S.nosHp ? S.nosRated * (nosT == null ? 6 : nosT) * 0.035 : 0;
-    var r = { fuel: Math.round(fuel), tires: Math.round(tires), nos: Math.round(nos) };
-    r.total = r.fuel + r.tires + r.nos;
+    var r = { fuel: Math.round(fuel), nos: Math.round(nos) };
+    r.total = r.fuel + r.nos;
     return r;
   };
   G.payRunCost = function (S, nosT) {
@@ -464,6 +470,59 @@
     c.paid = Math.min(c.total, Math.max(0, G.state.money));
     if (c.paid) G.pay(c.paid);
     return c;
+  };
+
+  // ---------------------------------------------------------------- wear
+  // Drive tires and clutch discs wear with the energy put through them:
+  // the burnout, wheelspin and the clutch slipping off the line. Lives
+  // from racers' figures: street tires take ~70 burnout-and-pass cycles,
+  // drag radials 40-70, slicks 30-50 (fewer the more power), a clutch's
+  // discs 60-170 hard launches (bigger clutches have more friction surface).
+  G.WEAR_CATS = ['rtires', 'clutch'];
+  var TIRE_LIFE = { Street: 0.8, 'Drag Radial': 0.67, Slick: 1.25, Track: 0.9, 'Race Slick': 0.8 };   // MJ per kg of tire
+  G.addWear = function (inst, S, sim) {
+    if (inst.ai) return;
+    inst.wear = inst.wear || {};
+    var t = inst.wear.rtires || (inst.wear.rtires = { w: 0, n: 0 });
+    t.w = Math.min(1, t.w + sim.tireE / (S.tire.m * (TIRE_LIFE[S.tire.kind] || 0.8) * 1e6)); t.n++;
+    if (S.trType !== 'auto' && S.clCapNew) {
+      var c = inst.wear.clutch || (inst.wear.clutch = { w: 0, n: 0 });
+      c.w = Math.min(1, c.w + sim.clutchE / (S.clCapNew * 0.02e6)); c.n++;
+    }
+  };
+  // what fitting a fresh one costs: the same part, new
+  G.servicePrice = function (inst, cat) {
+    var S = G.spec(inst);
+    if (cat === 'rtires') return DR.TIRES[S.tireId].price || 300;
+    var opt = DR.getOption(cat, inst);
+    return opt.price || (cat === 'clutch' ? 600 : 0);
+  };
+  // the consumables on a car: [{cat, name, w, n, price}]
+  G.wearList = function (inst) {
+    var S = G.spec(inst), out = [];
+    G.WEAR_CATS.forEach(function (cat) {
+      if (cat === 'clutch' && S.trType === 'auto') return;
+      var w = inst.wear && inst.wear[cat] || { w: 0, n: 0 };
+      out.push({ cat: cat, name: cat === 'rtires' ? DR.TIRES[S.tireId].name : DR.getOption('clutch', inst).name, w: w.w, n: w.n, price: G.servicePrice(inst, cat) });
+    });
+    return out;
+  };
+  // Fit fresh ones of the same parts; the worn ones go on the shelf, used.
+  G.service = function (inst, cats) {
+    var cost = cats.reduce(function (a, c) { return a + G.servicePrice(inst, c); }, 0);
+    if (!G.canAfford(cost)) return false;
+    G.pay(cost);
+    cats.forEach(function (cat) {
+      var id = DR.partId(cat, inst), stock = id === DR.stockPart(cat, inst);
+      var w = inst.wear && inst.wear[cat];
+      var item = { uid: G.state.uid++, cat: cat, id: id, price: stock ? 0 : DR.getOption(cat, inst, id).price || 0, from: inst.uid };
+      if (stock) { item.stock = true; item.val = G.stockValue(cat, inst, id); if (id === 'stock') item.car = inst.carId; }
+      if (w && w.w > 0.005) { item.wear = Math.round(w.w * 1000) / 1000; item.passes = w.n; }
+      G.state.inv.push(item);
+      if (inst.wear) delete inst.wear[cat];
+    });
+    G.save();
+    return true;
   };
 
   // ---------------------------------------------------------------- damage

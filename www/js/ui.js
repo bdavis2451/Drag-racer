@@ -304,6 +304,30 @@
       (sp ? ' • ' + DR.sponsorById(sp.id).name : ' • no sponsor'));
   }
 
+  // ------------------------------------------------------------ WEAR
+  // The car's consumables: how worn the drive tires and clutch are, and one
+  // button to fit fresh ones of the same parts (the worn ones go on the
+  // shelf). onDone: called after a service.
+  UI.wearBox = function (inst, onDone) {
+    var list = G.wearList(inst);
+    var due = list.filter(function (x) { return x.w >= 0.5; });
+    var box = h('div', { class: 'wearbox' }, list.map(function (x) {
+      var pct = Math.round(x.w * 100);
+      return h('div', { class: 'wrow' }, h('span', { class: 'dim' }, x.cat === 'rtires' ? 'Drive tires' : 'Clutch'),
+        h('span', { class: 'wbar' }, h('span', { class: x.w >= 0.75 ? 'bad' : x.w >= 0.5 ? 'warn' : '', style: { width: Math.max(2, pct) + '%' } })),
+        h('span', { class: x.w >= 0.75 ? 'bad' : '' }, pct + '% • ' + x.n + ' pass' + (x.n === 1 ? '' : 'es')));
+    }));
+    if (due.length) {
+      var cost = due.reduce(function (a, x) { return a + x.price; }, 0);
+      box.appendChild(btn('Fit fresh ' + due.map(function (x) { return x.cat === 'rtires' ? 'tires' : 'clutch'; }).join(' & ') + ' ' + DR.money(cost), function () {
+        if (!G.service(inst, due.map(function (x) { return x.cat; }))) return UI.toast('Not enough money');
+        A.cash(); UI.toast('Fresh parts fitted. The worn ones are on your shelf.');
+        if (onDone) onDone(); else UI.refresh();
+      }, 'small'));
+    }
+    return box;
+  };
+
   // ------------------------------------------------------------ SETTINGS
   UI.Settings = function (back) {
     var s = G.state.settings;

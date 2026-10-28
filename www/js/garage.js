@@ -435,7 +435,8 @@
       stat('BEST 1/4', inst.best && inst.best.q ? inst.best.q.toFixed(3) + 's' : '—', 'acc'),
       h('div', { class: 'gst' }, h('span', { class: 'k' }, 'LOOKS'), starMeter(stars)),
       S.fiType !== 'none' && !S.diesel && S.iat > 75 ? h('div', { class: 'bad gsmall' }, '🌡 Hot intake: ' + Math.round(S.iat) + ' C at ' + S.boostSet + ' psi') : null,
-      DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null);
+      DR.riskMax(S.risk) > 0.001 ? h('div', { class: 'bad gsmall' }, '⚠ ' + Math.round(DR.riskMax(S.risk) * 100) + '% failure risk') : null,
+      UI.wearBox(inst));
     var sel = h('div', { class: 'gsel' },
       cars.length > 1 ? btn('◀', function () { cycle(-1); }, 'arrow') : null,
       h('div', { class: 'gname', onclick: function () { UI.show(UI.Cars); } }, h('div', { class: 'pix acc' }, DR.CARS[inst.carId].name), h('div', { class: 'dim' }, (idx + 1) + ' / ' + cars.length + ' • My Cars ▸')),

@@ -361,6 +361,15 @@
 
     // ---- tires & rotating mass
     S.tireId = tireId; S.tire = tire;
+    // consumables: how worn the drive tires and the clutch are (players'
+    // cars only). A worn drag tire has been heat-cycled hard and lost grip;
+    // a worn clutch disc holds less.
+    var wr = !ai && inst.wear || {};
+    S.tireWear = wr.rtires ? wr.rtires.w : 0;
+    S.wearK = 1 - 0.2 * Math.pow(S.tireWear, 1.5);
+    S.clutchWear = wr.clutch ? wr.clutch.w : 0;
+    S.clCapNew = S.clCap;
+    if (S.clCap) S.clCap *= 1 - 0.35 * Math.pow(S.clutchWear, 1.5);
     S.r = tire.r;
     S.tslip = tire.slip; S.tfall = tire.fall; S.tfk = tire.fk || 1;
     S.bead = !!wheels.bead;
@@ -823,6 +832,7 @@
     // sticky track shake; stiffer rear rebound settles it; and no two
     // passes are quite the same)
     this.shake = 0; this.shakePh = 0; this.shakeMax = 0;
+    this.tireE = 0; this.clutchE = 0;          // energy put through the tires and the clutch (J), for wear
     if (this.cond && SHAKY[S.tire.kind]) {
       var tn = S.tune || {}, optP = S.tire.optP, psi = tn.psi != null ? tn.psi : optP;
       this.shakeK = clamp(1 + (optP - psi) / optP * 1.5, 0.6, 1.8) * ({ prep: 1, noprep: 0.6, street: 0.5 }[this.cond.surface] || 1) *
@@ -1086,7 +1096,7 @@
     this.Nr = Nr; this.Nf = Nf;
     var N = S.drive === 'FWD' ? Nf : S.drive === 'AWD' ? Nr + Nf : Nr;
     var loadSens = Math.pow(Math.max(N, 100) / this.N0, -0.08);
-    var mu = S.tire.mu * this.track * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? S.mountK || 1 : 1);
+    var mu = S.tire.mu * this.track * (S.wearK || 1) * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? S.mountK || 1 : 1);
     if (!this.cond && this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
     if (this.burnMode) mu *= 0.5;                  // water in the burnout box
     // Tire shake: a soft drag tire loaded right at its limit wraps up and
@@ -1270,6 +1280,7 @@
       if (!done) {
         var dw = this.we - this.ww * Gr;
         var Tc = Math.abs(dw) < 1e-6 ? 0 : (dw > 0 ? cap : -cap);
+        this.clutchE += Math.abs(Tc * dw) * dt;
         var weN = this.we + dt * (Te - Tc) / S.Ie;
         tf = this.tireForce(this.ww, N, mu);
         var wwN = this.ww + dt * (Tc * Gr * eta - tf.F * r) / (S.Iw + dt * r * Math.max(tf.dF, 0));
@@ -1312,12 +1323,14 @@
         this.F = Fx;
         var slipV = Math.max(0, this.ww * r - this.v);
         this.tireT += Math.abs(Fx) * slipV * dt * 3.5e-5 * (30 / S.tire.m);
+        this.tireE += Math.abs(Fx) * slipV * dt;
       }
     } else if (this.burnMode) {
       this.v = 0; this.a = 0; this.x = 0;
       if (tf) {
         this.slip = Math.max(0, tf.s); this.F = Fx;
         this.tireT += Math.abs(Fx) * this.ww * r * dt * 1.1e-4 * (30 / S.tire.m);
+        this.tireE += Math.abs(Fx) * this.ww * r * dt;
       }
     } else if (!this.launched) { this.slip = 0; this.a = 0; }
     this.tireT -= (this.tireT - this.trackT) * 0.006 * dt;
