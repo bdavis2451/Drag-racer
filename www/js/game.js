@@ -337,7 +337,7 @@
   }
 
   G.buyPart = function (cat, id) {
-    var inst = G.car(), opt = DR.getOption(cat, inst, id), price = opt.price || 0;
+    var inst = G.car(), opt = DR.getOption(cat, inst, id), price = G.partPrice ? G.partPrice(cat, opt) : opt.price || 0;
     if (!G.canAfford(price)) return null;
     G.pay(price);
     var item = { uid: G.state.uid++, cat: cat, id: id, price: price, eng: G.isEngineBound(cat) ? inst.engine : undefined };
@@ -467,6 +467,8 @@
   };
   G.payRunCost = function (S, nosT) {
     var c = DR.runCost(S, nosT);
+    // a fuel sponsor's discount
+    if (G.fuelDiscount && G.fuelDiscount()) { c.fuel = Math.round(c.fuel * (1 - G.fuelDiscount())); c.total = c.fuel + c.nos; }
     c.paid = Math.min(c.total, Math.max(0, G.state.money));
     if (c.paid) G.pay(c.paid);
     return c;
@@ -589,14 +591,30 @@
     var full = fullRepairCost(inst);
     return G.mercyRepair(inst) ? Math.min(full, Math.max(0, G.state.money)) : full;
   };
-  function fullRepairCost(inst) {
-    if (!inst.damage) return 0;
-    if (inst.damage.engine) return Math.round((DR.ENGINES[inst.engine].price * 0.35 + 800) / 50) * 50;
-    if (inst.damage.axle) return 600;
-    if (inst.damage.chassis) return Math.round(Math.min(6000, 900 + DR.CARS[inst.carId].price * 0.04) / 50) * 50;
-    if (inst.damage.trans) return Math.round((DR.TRANS[DR.partId('trans', inst)].price * 0.4 + 500) / 50) * 50;
-    return 0;
-  }
+  function fullRepairCost(inst) { return G.repairBill(inst).total; }
+  // The shop's bill after a breakage, line by line: the teardown, the parts
+  // the failure took out (your own parts, at their price) and the labour.
+  G.repairBill = function (inst) {
+    var d = inst.damage, L = [], e = DR.ENGINES[inst.engine], r5 = function (x) { return Math.round(x / 50) * 50; };
+    function partCost(cat, stockK) { var o = DR.getOption(cat, inst); return o.price ? o.price : r5(e.price * stockK); }
+    if (!d) return { lines: [], total: 0 };
+    if (d.engine) {
+      L.push(['Teardown & inspection', r5(300 + e.cyl * 40)]);
+      L.push(['Pistons & rings', r5(partCost('pistons', 0.06) * 0.8)]);
+      L.push(['Connecting rods', r5(partCost('rods', 0.05) * 0.7)]);
+      L.push(['Machine work (bore, hone, crank)', r5(250 + e.cyl * 35 + e.price * 0.05)]);
+      L.push(['Bearings, gaskets & assembly', r5(200 + e.price * 0.06)]);
+    } else if (d.trans) {
+      var tr = DR.TRANS[DR.partId('trans', inst)];
+      L.push(['Remove & refit', 300]); L.push(['Rebuild parts (gears, bands, clutches)', r5(tr.price * 0.3)]); L.push(['Rebuild labour', r5(150 + tr.price * 0.08)]);
+    } else if (d.axle) {
+      var ax = DR.getOption('rearend', inst);
+      L.push(['Axle shaft', ax.price ? r5(ax.price * 0.25) : 250]); L.push(['Bearings & seals', 120]); L.push(['Labour', 230]);
+    } else if (d.chassis) {
+      L.push(['Frame straightening', r5(600 + DR.CARS[inst.carId].price * 0.02)]); L.push(['Welding & bracing', r5(Math.min(3000, 300 + DR.CARS[inst.carId].price * 0.02))]);
+    }
+    return { lines: L, total: L.reduce(function (a, x) { return a + x[1]; }, 0) };
+  };
   G.repair = function (inst) {
     var c = G.repairCost(inst);
     if (!G.canAfford(c)) return false;
@@ -666,10 +684,12 @@
   };
   // Estimated ET for an opponent / car (cached per build).
   var etCache = {};
-  G.estimate = function (inst, dist, grip) {
-    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune, dist, grip || 1, !!inst.ai]);
+  // cond (optional): the day's conditions (DR.conditions), grip then rating
+  // the surface against its usual grip
+  G.estimate = function (inst, dist, grip, cond) {
+    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune, dist, grip || 1, !!inst.ai, cond || 0]);
     if (etCache[key]) return etCache[key];
-    var r = DR.simulate(DR.buildSpec(inst), { dist: dist || DR.QUARTER, grip: grip || 1 });
+    var r = DR.simulate(DR.buildSpec(inst), { dist: dist || DR.QUARTER, grip: grip || 1, cond: cond });
     etCache[key] = { et: r.et, trap: r.trap };
     return etCache[key];
   };

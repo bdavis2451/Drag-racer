@@ -1441,7 +1441,7 @@
   DR.simulate = function (S, opts) {
     opts = opts || {};
     var dist = opts.dist || DR.QUARTER;
-    var sim = new Sim(S, { grip: opts.grip || 1, dist: dist, tireT: opts.tireT != null ? opts.tireT : S.tire.topt });
+    var sim = new Sim(S, { grip: opts.grip || 1, cond: opts.cond, dist: dist, tireT: opts.tireT != null ? opts.tireT : S.tire.topt });
     var ai = new DR.AIDriver(opts.skill != null ? opts.skill : 1, function () { return 0.5; });
     ai.react = 0;
     var dt = 1 / 400, tG = -1.2, guard = 0;
