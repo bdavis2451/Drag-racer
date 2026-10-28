@@ -491,6 +491,37 @@
       c.w = Math.min(1, c.w + sim.clutchE / (S.clCapNew * 0.02e6)); c.n += passes;
     }
   };
+  // ---------------------------------------------------------------- heat
+  // Through the rounds of an elimination the engine and the nitrous bottle
+  // don't get back to where they started: ~25 minutes between rounds takes
+  // out about two-thirds of a pass's heat; a bottle without a heater drops
+  // pressure every time it's sprayed and only partly recovers.
+  var heat = null;
+  G.roundHeat = function (inst, cfg) {
+    if (!(cfg.mode === 'career' && cfg.ev && cfg.round > 0 && heat && heat.ev === cfg.ev && heat.uid === inst.uid)) heat = { ev: cfg.ev, uid: inst.uid, eng: 0, nosP: 1 };
+    return heat;
+  };
+  G.afterRound = function (inst, S, sim) {
+    if (!heat || heat.uid !== inst.uid) return;
+    var load = (S.peakHp + S.nosHp) / Math.max(1, S.coolHp);
+    var eng = heat.eng + 16 * Math.max(0.3, Math.min(2.2, load)) * Math.min(sim.et || 10, 15) / 10;
+    heat.eng = eng * 0.35;
+    if (S.nosHp && sim.nosT > 0.5) {
+      var heater = DR.getOption('nosheat', inst).nosk >= 1;
+      heat.nosP = Math.max(0.7, heat.nosP - (heater ? 0.015 : 0.07) * Math.min(1.5, sim.nosT / 5));
+      heat.nosP = Math.min(1, heat.nosP + (1 - heat.nosP) * (heater ? 0.8 : 0.3));
+    }
+  };
+
+  // circuit distance: a tire lasts so many km of hard laps (race slicks a
+  // race weekend or two, track tires a few, street tires a season)
+  var TIRE_KM = { Street: 900, Track: 500, 'Race Slick': 300, 'Drag Radial': 250, Slick: 120 };
+  G.addTireKm = function (inst, S, km) {
+    if (inst.ai) return;
+    inst.wear = inst.wear || {};
+    var t = inst.wear.rtires || (inst.wear.rtires = { w: 0, n: 0 });
+    t.w = Math.min(1, t.w + km / (TIRE_KM[S.tire.kind] || 500));
+  };
   // what fitting a fresh one costs: the same part, new
   G.servicePrice = function (inst, cat) {
     var S = G.spec(inst);

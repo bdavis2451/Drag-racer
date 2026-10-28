@@ -59,7 +59,8 @@
     // tire pressure: the drag tune's pressure, which off the optimum costs
     // grip both ways (low = rolling sidewalls, high = small contact patch)
     var d = (T.psi - S.tire.optP) / S.tire.optP;
-    var pressK = clamp(1 - 0.6 * d * d, 0.6, 1);
+    // (and worn drive tires grip less: see wear)
+    var pressK = clamp(1 - 0.6 * d * d, 0.6, 1) * (S.wearK || 1);
     var drive = S.tire, factory = DR.TIRES[car.tire];
     var road = { Street: 1, Track: 1, 'Race Slick': 1 };
     // the tires on the axle that isn't driven

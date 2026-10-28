@@ -828,6 +828,11 @@
     this.track = (opts.grip || 1.0) * (this.cond ? DR.surfaceGrip(this.cond, S.tire.kind) : 1);
     this.trackT = this.cond ? this.cond.trackT : 25;
     this.airK = this.cond ? DR.airPower(this.cond, S) : 1;
+    // between rounds: an engine still heat-soaked from the last pass (C over
+    // its normal running temperature; the ECU pulls timing past ~8 C) and a
+    // nitrous bottle that has lost pressure as it emptied and cooled
+    if (opts.engHeat) this.airK *= 1 - 0.003 * clamp(opts.engHeat - 8, 0, 20);
+    this.nosP = opts.nosP || 1;
     // tire shake: how prone this run is (soft, low-pressure sidewalls on a
     // sticky track shake; stiffer rear rebound settles it; and no two
     // passes are quite the same)
@@ -1035,7 +1040,7 @@
     var Te;
     if (dead) Te = -fric * 2;
     else if (firing) {
-      Te = boostedTorque(S, rpm, this.boost) * this.airK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW / wE * (1 - this.tcRed);
+      Te = boostedTorque(S, rpm, this.boost) * this.airK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
       // a soft cut (TC past full retard) drops cylinders: heard as a crackle
       if (this.tcRed > 0.3) this.cutT += dt * (this.tcRed - 0.3) / 0.5;
       var p = Te * wE;

@@ -162,6 +162,11 @@
   function fmtLap(t) { var m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2); }
   T.fmtLap = fmtLap;
 
+  // lap time lost to cold tires on lap 1, and per lap of wear (x lap no.),
+  // for a car of about 220 hp per tonne
+  var TIRE_COLD = { Street: 0.006, Track: 0.012, 'Race Slick': 0.02, 'Drag Radial': 0.01, Slick: 0.02 };
+  var TIRE_DEG = { Street: 0.0005, Track: 0.0008, 'Race Slick': 0.0011, 'Drag Radial': 0.0014, Slick: 0.0022 };
+
   // ---------------------------------------------------------------- the field
   var TEAMS = ['Apex Motorsport', 'Redline Racing', 'Kerbside', 'Slipstream', 'Late Apex', 'Grid Kings', 'Pit Lane Co.', 'Tarmac Union', 'Blue Flag', 'Chequered',
     'Night Shift', 'Torque Bros', 'Downforce', 'Heel & Toe', 'Hairpin Heroes'];
@@ -213,12 +218,16 @@
     // heat: a build making far more power than its radiator was sized for
     // runs hot as the laps go by, and the ECU pulls timing (up to ~5%)
     var heat = Math.max(0, Math.min(1.5, (S.peakHp + S.nosHp) / S.coolHp - 1));
-    var field = [{ name: d.name, team: 'Your team', car: inst.carId, col: inst.color || d.col, base: you.time, f: f, you: true, drv: d.id, heat: heat }];
+    // tires: cold for the first laps, then they go off a little every lap,
+    // faster the softer the compound and the more power through them
+    var kg = S.m / 1000, powK = clamp((S.peakHp + S.nosHp) / kg / 220, 0.6, 2.2);
+    var field = [{ name: d.name, team: 'Your team', car: inst.carId, col: inst.color || d.col, base: you.time, f: f, you: true, drv: d.id, heat: heat,
+      cold: TIRE_COLD[S.tire.kind] || 0.012, deg: (TIRE_DEG[S.tire.kind] || 0.0008) * powK }];
     (opts.field || aiField(cls, 5)).forEach(function (o) {
       var of = T.factors(o.d);
       // their pace here: the same car's stock lap here vs on the reference track
       var k2 = stockT[o.car] && stock0[o.car] ? stockT[o.car] / stock0[o.car] : tr.len / DR.TRACKS[T.TRACK].len;
-      field.push({ name: o.name, team: o.team, car: o.car, col: o.col, base: o.pace * k2 * (1 + sens.lat * (1 - of.lat) + sens.brk * (1 - of.brk)), f: of });
+      field.push({ name: o.name, team: o.team, car: o.car, col: o.col, base: o.pace * k2 * (1 + sens.lat * (1 - of.lat) + sens.brk * (1 - of.brk)), f: of, cold: TIRE_COLD.Track, deg: TIRE_DEG.Track });
     });
     // qualifying: one flying lap each
     field.forEach(function (e) { e.q = e.base * (1 + gauss() * e.f.sd) + (Math.random() < e.f.err * 0.5 ? rnd(0.5, 2.5) : 0); });
@@ -230,6 +239,9 @@
         var lt = e.base * (1 + gauss() * e.f.sd);
         if (Math.random() < e.f.err) { lt += rnd(0.8, 3.5); e.err++; }
         if (lap === 0) lt += 3.0 + (e.grid - 1) * 0.25;   // standing start, from the grid
+        // cold tires on the opening laps, worn ones later
+        if (lap < 2) lt += e.base * e.cold * (lap === 0 ? 1 : 0.35);
+        var tl = e.base * e.deg * lap; lt += tl; e.tires = (e.tires || 0) + tl;
         if (e.heat && lap >= 2) { var hl = e.base * Math.min(0.05, e.heat * 0.012 * (lap - 1)); lt += hl; e.hot = (e.hot || 0) + hl; }
         return { e: e, lt: lt, t: prev[k] + lt };
       });
@@ -249,9 +261,11 @@
     var end = Math.max.apply(null, order.map(function (e) { return e.cum[e.cum.length - 1]; }));
     G.pay(cost);
     var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series,
-      field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err, hot: e.hot ? +e.hot.toFixed(1) : 0 }; }),
+      field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err, hot: e.hot ? +e.hot.toFixed(1) : 0, tires: e.tires ? +e.tires.toFixed(1) : 0 }; }),
       ideal: ideal, base: you.time, snd: snd };
     s.races.push(r);
+    // the race distance comes off your car's tires
+    G.addTireKm(inst, S, laps * tr.len / 1000);
     if (s.fast) T.setFast(r, true); else G.save();
     return { race: r };
   };

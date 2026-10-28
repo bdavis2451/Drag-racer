@@ -221,7 +221,8 @@
     var settings = G.state.settings, testDrive = !!cfg.inst;
     var inst = cfg.inst || G.car(), S = G.spec(inst);
     var fail = rollFailure(S);
-    var you = makeRacer(inst, S, 0, cfg, fail, 'YOU');
+    var heat = testDrive ? { eng: 0, nosP: 1 } : G.roundHeat(inst, cfg);
+    var you = makeRacer(inst, S, 0, cfg, fail, 'YOU', heat);
     var opp = null, ai = null;
     if (cfg.opp) {
       var oi = G.oppInst(cfg.opp), OS = DR.buildSpec(oi);
@@ -320,7 +321,7 @@
     var vsLine = opp ? 'VS ' + opp.label : 'TEST & TUNE';
     infoEl.innerHTML = '';
     setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (cfg.ev.type === 'knockout' ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Hold GAS to do your burnout.' : 'Hold GAS to do your burnout.');
-    if (cfg.cond) subEl.textContent = DR.condLabel(cfg.cond) + ' • ' + subEl.textContent;
+    if (cfg.cond) subEl.textContent = DR.condLabel(cfg.cond) + (heat.eng > 1 ? ' • water ' + Math.round(195 + heat.eng * 1.8) + '°F' : '') + ' • ' + subEl.textContent;
     if (estLine) subEl.textContent = estLine + subEl.textContent;
     var introSub = subEl.textContent;
 
@@ -354,9 +355,10 @@
       if (k >= 1) { r.off = 0; r.box = 'staged'; tree.staged[r.lane] = true; if (r === you || !opp || opp.box !== 'staged') A.beep(880, 0.05); }
     }
 
-    function makeRacer(inst, S, lane, cfg, fail, label) {
+    function makeRacer(inst, S, lane, cfg, fail, label, heat) {
+      heat = heat || {};
       var cond = cfg.cond || DR.Race.cond(cfg);
-      var sim = new DR.Sim(S, { grip: (cfg.grip || 1) / DR.Race.SURF_BASE[cond.surface], cond: cond, shakeRnd: 0.6 + Math.random() * 0.8, dist: cfg.dist, tireT: cond.trackT + 4, failAt: fail.failAt, failType: fail.failType });
+      var sim = new DR.Sim(S, { grip: (cfg.grip || 1) / DR.Race.SURF_BASE[cond.surface], cond: cond, engHeat: heat.eng, nosP: heat.nosP, shakeRnd: 0.6 + Math.random() * 0.8, dist: cfg.dist, tireT: cond.trackT + 4, failAt: fail.failAt, failType: fail.failType });
       return { inst: inst, S: S, sim: sim, lane: lane, label: label, spr: DR.carSprite(DR.carLook(inst)), off: BOX_X, wheelAng: 0, burn: 0, voice: null, burnT: 0,
         box: 'box', rollT: 0, waitT: 0.6 + Math.random() * 1.2 };
     }
@@ -711,7 +713,7 @@
         if (rc.paid) { money.push(['Fuel' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }
       }
       // every pass wears the tires and the clutch (a dealer test drive isn't yours)
-      if (!testDrive) G.addWear(inst, S, you.sim);
+      if (!testDrive) { G.addWear(inst, S, you.sim); G.afterRound(inst, S, you.sim); }
       if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; G.clearSold(); }
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;

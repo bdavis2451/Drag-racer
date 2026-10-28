@@ -931,7 +931,8 @@
           hist && hist.grew && Object.keys(hist.grew).length ? h('div', { class: 'gsmall' }, 'Learned: ' + Object.keys(hist.grew).map(function (k) { return SKILLS.filter(function (s2) { return s2[0] === k; })[0][1] + ' +' + hist.grew[k]; }).join(', ')) : null,
           hist && hist.unl && hist.unl.length ? h('div', { class: 'gsmall acc' }, 'UNLOCKED: ' + hist.unl.join(' • ')) : null,
           me.e.err ? h('div', { class: 'gsmall dim' }, me.e.err + ' mistake' + (me.e.err > 1 ? 's' : '') + ' (off line or a lock-up): consistency improves with racing') : null,
-          me.e.hot ? h('div', { class: 'gsmall bad' }, 'Ran hot: lost ' + me.e.hot.toFixed(1) + ' s as the engine heat-soaked and the ECU pulled timing. A bigger radiator (Bolt-Ons: Radiator & Oil Cooler) fixes it.') : null));
+          me.e.hot ? h('div', { class: 'gsmall bad' }, 'Ran hot: lost ' + me.e.hot.toFixed(1) + ' s as the engine heat-soaked and the ECU pulled timing.' + (G.simMode() ? '' : ' A bigger radiator (Bolt-Ons: Radiator & Oil Cooler) fixes it.')) : null,
+          me.e.tires ? h('div', { class: 'gsmall dim' }, 'Tires went off: ' + me.e.tires.toFixed(1) + ' s over the race.') : null));
       }
     }
     (function loop() {
