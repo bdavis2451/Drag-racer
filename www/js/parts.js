@@ -192,6 +192,14 @@
     opt('ig2', 'CDI Ignition Box', 900, { spark: 20 }, 'Lights about 20 psi more boost and 300 hp more nitrous.'),
     opt('ig3', 'Race Ignition + Crank Trigger', 2500, { lvl: 4, spark: 60 }, 'Lights anything.')
   ]};
+  // data acquisition: records every pass (Upgrade > Logbook). It doesn't
+  // tell you what to change; it shows you what the car did.
+  C.logger = { name: 'Data Logger', options: [
+    opt('stock', 'No Data Logger', 0, { log: 0 }, 'Just the timeslip.'),
+    opt('dl1', 'Basic Data Logger', 500, { log: 1 }, 'Records engine rpm, speed and gear through every pass.'),
+    opt('dl2', 'Race Data Logger', 1500, { lvl: 2, log: 2 }, 'Adds driveshaft speed (so you can see wheelspin against the car\'s speed), boost and throttle.'),
+    opt('dl3', 'Pro Data Acquisition', 4000, { lvl: 3, log: 3 }, 'Adds a wideband air/fuel sensor, the timing the ECU pulled, g-force and rear shock travel.')
+  ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
     opt('stock', 'Stock ECU', 0, { bw: 0, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
     opt('ecu0', 'Performance Chip', 350, { bw: 0.015, ecu: 0 }, 'An off-the-shelf plug-in chip: a little more timing and fuel for a stock engine. It is not a tune: it can\'t scale new injectors, boost, alcohol fuel or cams. Keeps the factory limiter.'),
@@ -516,7 +524,7 @@
     { id: 'engine', name: 'Bolt-Ons',      icon: 'intake',  cats: ['engine', 'airfilter', 'intake', 'throttle', 'headers', 'exhaust', 'pulleys', 'cooling'] },
     { id: 'top',    name: 'Top End',       icon: 'heads',   unlock: 'engine', cats: ['heads', 'cams', 'valvetrain', 'headstud'] },
     { id: 'bottom', name: 'Bottom End',    icon: 'pistons', unlock: 'engine', cats: ['pistons', 'rods', 'crank', 'block', 'oiling'] },
-    { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu'] },
+    { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu', 'logger'] },
     { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'tmanifold', 'downpipe', 'theat', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
     { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
     { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },

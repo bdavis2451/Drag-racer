@@ -222,6 +222,10 @@
         // a tank, a line and a spray nozzle misting
         r(3, 6, 8, 14, '#d8e8f4'); r(3, 6, 8, 3, ac); r(4, 10, 6, 9, '#7fb8e0'); r(11, 12, 6, 2, M2); r(17, 10, 3, 6, M3);
         r(21, 8, 1, 1, '#bfe4ff'); r(21, 12, 1, 1, '#bfe4ff'); r(22, 10, 1, 1, '#bfe4ff'); r(22, 14, 1, 1, '#bfe4ff'); break;
+      case 'logger':
+        // a laptop showing a trace
+        r(3, 5, 18, 12, M4); r(4, 6, 16, 10, '#0d0e12'); r(1, 17, 22, 3, M2); r(1, 17, 22, 1, M1);
+        for (k = 0; k < 14; k++) r(5 + k, 13 - Math.round(Math.sin(k * 0.6) * 2 + k * 0.25), 1, 1, ac); break;
       case 'mounts':
         // a mount: two brackets with a solid puck between them
         r(3, 4, 18, 4, M2); r(3, 4, 18, 1, M1); r(3, 16, 18, 4, M2); r(8, 8, 8, 8, ac); r(8, 8, 8, 2, DR.shadeHex(ac, 0.3));
@@ -470,7 +474,7 @@
     // jump only when arriving (a refresh replays the same argument)
     if (jump && !UI.refreshing) { shopCat = jump; DR.PART_GROUPS.forEach(function (g) { if (g.cats.indexOf(jump) >= 0) shopGroup = g.id; }); }
     remember();
-    var group = groupById(shopGroup), weak = DR.bottlenecks(G.spec(inst));
+    var group = groupById(shopGroup), weak = G.simMode() ? {} : DR.bottlenecks(G.spec(inst));
     if (group && group.cats.indexOf(shopCat) < 0) shopCat = firstCat(group, inst);
     var rail = h('div', { class: 'srail' }, DR.PART_GROUPS.map(function (g) {
       var hot = g.cats.some(function (c) { return weak[c]; });
@@ -499,7 +503,7 @@
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
     if (group) G.markGroupSeen(group);
-    var note = weak[shopCat] && DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, 'Holding your build back: ' + weak[shopCat] + '.') : !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
+    var note = weak[shopCat] && DR.partApplies(shopCat, inst) && !G.simMode() ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, 'Holding your build back: ' + weak[shopCat] + '.') : !DR.partApplies(shopCat, inst) ? h('div', { class: 'warnbox', style: { marginBottom: '6px' } }, G.partFitIssue({ cat: shopCat, id: '' }, inst) + ' — you can still buy these for another car.') : null;
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'shop'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, storeHead(), chips, note, grid)));
   };
@@ -739,7 +743,7 @@
   // ---------------------------------------------------------------- INSTALL BAY
   var bayCat = 'intake';
   UI.Parts = function (jump) {
-    var inst = G.car(), S = G.spec(inst), weak = DR.bottlenecks(S);
+    var inst = G.car(), S = G.spec(inst), weak = G.simMode() ? {} : DR.bottlenecks(S);
     memory();
     if (jump && !UI.refreshing) bayCat = jump;
     remember();

@@ -222,7 +222,7 @@
   UI.SECTIONS = {
     upgrade: [['shop', 'Shop', function () { UI.openShop(); }], ['pkg', 'Packages', function () { UI.openPackages(); }],
       ['install', 'Install', function () { UI.show(UI.Parts); }], ['inv', 'Inventory', function () { UI.show(UI.Inventory); }],
-      ['tune', 'Tune', function () { UI.show(UI.Tune); }], ['dyno', 'Dyno', function () { UI.show(UI.Dyno); }]],
+      ['tune', 'Tune', function () { UI.show(UI.Tune); }], ['dyno', 'Dyno', function () { UI.show(UI.Dyno); }], ['log', 'Logbook', function () { UI.show(UI.Logbook); }]],
     style: [['body', 'Body Kits', function () { UI.show(UI.Body); }], ['paint', 'Paint', function () { UI.show(UI.Paint); }]]
   };
   UI.sectionTop = function (section, active, onLeave) {
@@ -265,7 +265,24 @@
     return g;
   }
 
+  // sim mode: no failure odds, no advice: what each part is rated for
+  // against what the build asks of it
+  function ratingsBox(S) {
+    var r = S.risk, hp = S.peakHp + S.nosHp, lbft = S.peakTq + (S.nosW ? S.nosW / (4000 * 2 * Math.PI / 60) * 0.7376 : 0), L = 0.7376;
+    var rows = [['Engine internals', S.safeHp, hp, ' hp'], ['Fuel system', S.fuelW / DR.HP, S.fuelDemand, ' hp'],
+      S.fiType !== 'none' && !S.diesel ? ['Knock limit', S.knock, S.boostSet, ' psi'] : null,
+      ['Rev limit (valvetrain/bottom end)', S.mech, S.red, ' rpm'],
+      ['Transmission', S.trMaxTq * L, lbft, ' lb-ft'],
+      S.clCap ? ['Clutch', S.clCap * L, lbft, ' lb-ft'] : null,
+      ['Axles (launch hit)', S.axleTq * L, (r.hit || 0) * L, ' lb-ft'],
+      S.shell < Infinity ? ['Body', S.shell, hp, ' hp'] : null];
+    return [h('div', { class: 'ratings' }, rows.filter(Boolean).map(function (x) {
+      var k = x[2] / Math.max(1, x[1]), cls = k > 1 ? 'bad' : k > 0.9 ? 'warn' : '';
+      return h('div', { class: 'rrow' }, h('span', { class: 'dim' }, x[0]), h('span', { class: cls }, Math.round(x[2]) + ' / ' + Math.round(x[1]) + x[3]));
+    }))];
+  }
   function riskBox(S) {
+    if (G.simMode()) return ratingsBox(S);
     var r = S.risk, out = [];
     if (r.engine > 0.001) out.push(h('div', { class: 'warnbox' }, 'Engine failure risk: ' + Math.round(r.engine * 100) + '% per run'));
     if (r.trans > 0.001) out.push(h('div', { class: 'warnbox' }, 'Transmission failure risk: ' + Math.round(r.trans * 100) + '% per run'));

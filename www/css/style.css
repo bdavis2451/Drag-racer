@@ -878,3 +878,17 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .wearbox .btn { margin-top: 3px; }
 .tunerlog { max-height: 180px; overflow-y: auto; font-size: 15px; margin: 6px 0; }
 .tunerlog .row { gap: 8px; }
+.ratings { display: flex; flex-direction: column; gap: 1px; font-size: 15px; margin-top: 4px; }
+.ratings .rrow { display: flex; justify-content: space-between; gap: 8px; }
+.ratings .warn { color: #ffb020; }
+/* logbook */
+.logwrap { overflow: auto; max-height: calc(100vh - 140px); }
+.logtbl { border-collapse: collapse; font-size: 15px; width: 100%; }
+.logtbl th { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--dim); text-align: left; padding: 4px 6px; position: sticky; top: 0; background: #14151a; }
+.logtbl td { padding: 3px 6px; border-top: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
+.logrow { cursor: pointer; }
+.logrow:hover { background: rgba(255,255,255,.05); }
+.loggraph { width: 100%; max-width: 560px; image-rendering: auto; touch-action: none; border: 1px solid #2a2d36; margin: 4px 0; }
+.lchip { font: inherit; font-size: 14px; padding: 1px 7px; background: transparent; border: 1px solid; cursor: pointer; opacity: .35; }
+.lchip.on { opacity: 1; background: rgba(255,255,255,.05); }
+.modal .panel { max-height: 94vh; overflow-y: auto; }

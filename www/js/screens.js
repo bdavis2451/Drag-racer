@@ -431,13 +431,28 @@
   }
 
   // ---------------------------------------------------------------- DYNO
-  // the last pull of each car, drawn faded behind a new one after changes
-  var lastPull = {};
+  // A chassis dyno pull: power and torque at the rollers (through the
+  // drivetrain), corrected to SAE J1349 standard air (77 F, 29.23 inHg dry)
+  // from the day's air in the dyno cell, with boost and the wideband's
+  // air/fuel against rpm. Each pull costs dyno time.
+  var STOICH = { stock: 14.7, race: 14.7, e85: 9.8, meth: 6.4 };
+  DR.dynoFee = function (S) { return Math.round((50 + (S.peakHp + S.nosHp) * 0.03) / 5) * 5; };
+  function dynoSheet(inst, S) {
+    var dy = DR.dyno(S), eff = S.eff, temp = Math.round(66 + Math.random() * 28), baro = Math.round((29 + Math.random() * 1.1) * 100) / 100;
+    var cf = 1.18 * (29.23 / baro) * Math.sqrt((temp + 460) / 537) - 0.18;
+    var lam = S.fiType !== 'none' ? 0.78 : 0.86, cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1, st = STOICH[S.fuelId] || 14.7;
+    var pts = dy.pts.map(function (p) {
+      var ld = p.hp / dy.peakHp;
+      return { rpm: p.rpm, hp: +(p.hp * eff).toFixed(1), tq: +(p.tq * eff).toFixed(1), boost: +p.boost.toFixed(1), afr: +(lam * (1 + (lean - 1) * ld * ld) * st).toFixed(2) };
+    });
+    var pk = pts.reduce(function (a, p) { return p.hp > a.hp ? p : a; }, pts[0]), pt = pts.reduce(function (a, p) { return p.tq > a.tq ? p : a; }, pts[0]);
+    return { key: JSON.stringify([inst.engine, inst.parts, inst.tune]), at: Date.now(), pts: pts, peakHp: pk.hp, peakHpRpm: pk.rpm, peakTq: pt.tq, nosHp: Math.round(S.nosHp * eff), red: S.red,
+      maxBoost: S.maxBoost, fi: S.fiType, cf: +cf.toFixed(3), temp: temp, baro: baro, afrPk: pk.afr, crank: Math.round(dy.peakHp) };
+  }
   UI.Dyno = function () {
-    var inst = G.car(), S = G.spec(inst), dy = DR.dyno(S);
-    var bkey = JSON.stringify([inst.engine, inst.parts, inst.tune]), prev = lastPull[inst.uid];
-    if (prev && prev.key === bkey) prev = null;
-    lastPull[inst.uid] = { key: bkey, pts: dy.pts, peakHp: dy.peakHp, peakTq: dy.peakTq, nosHp: S.nosHp };
+    var inst = G.car(), S = G.spec(inst), fee = DR.dynoFee(S);
+    var bkey = JSON.stringify([inst.engine, inst.parts, inst.tune]);
+    var dy = inst.dyno || null, prev = inst.dynoPrev || null, stale = dy && dy.key !== bkey;
     var spr = DR.carSprite(DR.carLook(inst));
     var room = DR.roomCanvas(inst, { theme: 'dyno', spr: spr, S: S, zoom: 2.2 }, 'dynoroom');
     var cv = h('canvas', { class: 'dynograph', width: 480, height: 200 });
@@ -446,17 +461,18 @@
       var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
       ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = '#0c0d10'; ctx.fillRect(0, 0, W, H);
+      if (!dy) { DR.pixText(ctx, 'NO PULLS YET', Math.round(W / 2) - 24, Math.round(H / 2) - 2, '#666'); return; }
       var L = 34, R = W - 30, T = 12, B = H - 22;
-      var maxHp = Math.max(100, (dy.peakHp + S.nosHp) * 1.12), maxTq = Math.max(100, dy.peakTq * 1.15 + (S.nosW ? S.nosHp * 5252 / 3000 : 0));
-      var maxV = Math.max(maxHp, maxTq), r0 = 1000, r1 = S.red + 200;
+      var maxHp = Math.max(100, (dy.peakHp + dy.nosHp) * 1.12), maxTq = Math.max(100, dy.peakTq * 1.15 + (dy.nosHp ? dy.nosHp * 5252 / 3000 : 0));
+      var maxV = Math.max(maxHp, maxTq), r0 = 1000, r1 = dy.red + 200;
       function X(r) { return L + (r - r0) / (r1 - r0) * (R - L); }
       function Y(v) { return B - v / maxV * (B - T); }
       ctx.fillStyle = '#1b1d24';
       for (var r = 1000; r <= r1; r += 1000) { ctx.fillRect(Math.round(X(r)), T, 1, B - T); DR.pixText(ctx, String(r / 1000), Math.round(X(r)) - 1, B + 6, '#666'); }
       var stepV = [25, 50, 100, 200, 250, 500, 1000].filter(function (st) { return maxV / st <= 6; })[0] || 1000;
       for (var v = 0; v <= maxV; v += stepV) { ctx.fillRect(L, Math.round(Y(v)), R - L, 1); DR.pixText(ctx, String(v), 2, Math.round(Y(v)) - 2, '#666'); }
-      ctx.fillStyle = 'rgba(255,48,48,.15)'; ctx.fillRect(Math.round(X(S.red)), T, R - Math.round(X(S.red)), B - T);
-      ctx.fillStyle = '#ff3030'; ctx.fillRect(Math.round(X(S.red)), T, 1, B - T);
+      ctx.fillStyle = 'rgba(255,48,48,.15)'; ctx.fillRect(Math.round(X(dy.red)), T, R - Math.round(X(dy.red)), B - T);
+      ctx.fillStyle = '#ff3030'; ctx.fillRect(Math.round(X(dy.red)), T, 1, B - T);
       var limit = r0 + (r1 - r0) * sweep.p;
       function line(key, col, addf) {
         ctx.fillStyle = col;
@@ -480,28 +496,38 @@
         });
         ctx.globalAlpha = 1;
       }
-      if (S.nosHp) line('hp', '#7a3ad6', function (p) { return p.rpm > 2200 ? S.nosHp : 0; });
+      if (dy.nosHp) line('hp', '#7a3ad6', function (p) { return p.rpm > 2200 ? dy.nosHp : 0; });
       line('tq', '#4da3ff'); line('hp', '#ffcc00');
-      if (S.fiType !== 'none') { ctx.fillStyle = '#46e07a'; dy.pts.forEach(function (p) { if (p.rpm <= limit) ctx.fillRect(Math.round(X(p.rpm)), Math.round(B - p.boost / Math.max(S.maxBoost, 1) * (B - T) * 0.5), 1, 1); }); }
+      if (dy.fi !== 'none') { ctx.fillStyle = '#46e07a'; dy.pts.forEach(function (p) { if (p.rpm <= limit) ctx.fillRect(Math.round(X(p.rpm)), Math.round(B - p.boost / Math.max(dy.maxBoost, 1) * (B - T) * 0.5), 1, 1); }); }
+      // air/fuel on its own scale (10-16:1 for gasoline), along the top
+      var st0 = dy.pts[0] ? dy.pts[0].afr / (dy.fi !== 'none' ? 0.78 : 0.86) : 14.7;
+      ctx.fillStyle = '#ff3d9a'; dy.pts.forEach(function (p) { if (p.rpm <= limit && p.rpm > 1500) ctx.fillRect(Math.round(X(p.rpm)), Math.round(T + (1 - (p.afr / st0 - 0.68) / 0.42) * (B - T) * 0.45), 1, 1); });
       if (sweep.p < 1) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(Math.round(X(limit)), T, 1, B - T); }
-      DR.pixText(ctx, 'HP', R + 6, T + 2, '#ffcc00'); DR.pixText(ctx, 'TQ', R + 6, T + 10, '#4da3ff');
-      if (S.fiType !== 'none') DR.pixText(ctx, 'PSI', R + 2, T + 18, '#46e07a');
-      if (S.nosHp) DR.pixText(ctx, 'N2O', R + 2, T + 26, '#9b4dff');
+      DR.pixText(ctx, 'WHP', R + 2, T + 2, '#ffcc00'); DR.pixText(ctx, 'WTQ', R + 2, T + 10, '#4da3ff');
+      if (dy.fi !== 'none') DR.pixText(ctx, 'PSI', R + 2, T + 18, '#46e07a');
+      DR.pixText(ctx, 'AFR', R + 2, T + 26, '#ff3d9a');
+      if (dy.nosHp) DR.pixText(ctx, 'N2O', R + 2, T + 34, '#9b4dff');
       DR.pixText(ctx, 'RPM X1000', Math.round((L + R) / 2) - 18, B + 13, '#666');
     }
     var info = h('div', { class: 'tstats' },
-      h('div', { class: 'row', style: { marginBottom: '6px' } }, btn('▶ Run Dyno', run, 'go')),
-      gst('PEAK HP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm + delta(dy.peakHp, prev && prev.peakHp), 'acc'), gst('PEAK TQ', Math.round(dy.peakTq) + ' lb-ft' + delta(dy.peakTq, prev && prev.peakTq)),
-      prev ? h('div', { class: 'gsmall dim' }, 'Faded lines: your last pull before the changes.') : null,
-      S.nosHp ? gst('W/ NITROUS', Math.round(dy.peakHp + S.nosHp) + ' hp', 'acc') : null,
+      h('div', { class: 'row', style: { marginBottom: '6px' } }, btn('▶ Pull ' + DR.money(fee), run, 'go')),
+      dy ? gst('PEAK WHP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm + delta(dy.peakHp, prev && prev.peakHp), 'acc') : h('div', { class: 'dim gsmall' }, 'No pulls on this car yet.'),
+      dy ? gst('PEAK WTQ', Math.round(dy.peakTq) + ' lb-ft' + delta(dy.peakTq, prev && prev.peakTq)) : null,
+      dy ? gst('SAE CF', dy.cf.toFixed(3) + ' • ' + dy.temp + '°F ' + dy.baro.toFixed(2) + ' inHg', '') : null,
+      dy ? gst('OBSERVED', Math.round(dy.peakHp / dy.cf) + ' whp uncorrected', '') : null,
+      dy ? gst('AFR @ PEAK', dy.afrPk.toFixed(1) + ':1', '') : null,
+      dy && !G.simMode() ? gst('CRANK (EST.)', dy.crank + ' hp', 'dim') : null,
+      stale ? h('div', { class: 'gsmall warn' }, 'The car has changed since this pull.') : null,
+      prev && dy ? h('div', { class: 'gsmall dim' }, 'Faded lines: the pull before.') : null,
+      dy && dy.nosHp ? gst('W/ NITROUS', Math.round(dy.peakHp + dy.nosHp) + ' whp', 'acc') : null,
       S.fiType !== 'none' ? gst('BOOST', S.boostSet.toFixed(1) + ' psi' + (S.creep ? ' (+' + S.creep + ' creep)' : '') + ' • range ' + (S.boostMin || 0) + '-' + S.maxBoost, S.creep ? 'acc' : '') : null,
       gst('LIMITER', S.red + ' rpm' + (S.ecu === 0 ? ' (stock)' : ''), S.red > S.mech ? 'bad' : ''),
       S.rotary ? null : gst('VALVETRAIN', S.vtLimit + ' rpm', S.red > S.vtLimit ? 'bad' : ''), gst(S.rotary ? 'ROTATING' : 'BOTTOM END', S.beLimit + ' rpm (' + DR.catName(S.beWeak, inst).toLowerCase() + ')', S.red > S.beLimit ? 'bad' : ''),
-      gst('SAFE POWER', Math.round(S.safeHp) + ' hp (' + DR.catName(S.safeWeak, inst).toLowerCase() + ')', (dy.peakHp + S.nosHp) > S.safeHp ? 'bad' : 'good'),
+      gst('SAFE POWER', Math.round(S.safeHp) + ' hp (' + DR.catName(S.safeWeak, inst).toLowerCase() + ')', (S.peakHp + S.nosHp) > S.safeHp && !G.simMode() ? 'bad' : ''),
       (function () {
         // what the injectors / pump feed against what the engine (and any shot) wants
         var fs = DR.fuelShort(S), lean = fs.ratio > 1.02;
-        return gst('FUEL', Math.round(fs.cap) + ' hp ' + (fs.by === 'injectors' ? 'injectors' : 'pump') + (S.stockFuel ? ' (stock)' : '') + ' • needs ' + Math.round(fs.need), lean ? 'bad' : fs.ratio > 0.9 ? 'acc' : 'good');
+        return gst('FUEL', Math.round(fs.cap) + ' hp ' + (fs.by === 'injectors' ? 'injectors' : 'pump') + (S.stockFuel ? ' (stock)' : '') + (G.simMode() ? '' : ' • needs ' + Math.round(fs.need)), G.simMode() ? '' : lean ? 'bad' : fs.ratio > 0.9 ? 'acc' : 'good');
       })(),
       S.untuned && S.untuned.length ? gst('TUNE', 'Untuned: ' + S.untuned.map(function (u) { return DR.catName(u[0], inst).toLowerCase(); }).join(', '), 'bad') : gst('TUNE', S.tuned ? 'Tuned' : 'Stock ECU', ''),
       S.fiType !== 'none' && !S.diesel ? gst('IGNITION', S.sparkPsi + ' psi', S.boostSet > S.sparkPsi ? 'bad' : '') : null,
@@ -515,6 +541,13 @@
     function run() {
       A.init(); A.resume();
       if (voice) return;
+      if (!run.paid) {
+        if (inst.damage) return UI.toast('Repair your car first!');
+        if (!G.canAfford(fee)) return UI.toast('A pull costs ' + DR.money(fee));
+        G.pay(fee); UI.updMoney(); run.paid = true;
+        if (dy) inst.dynoPrev = dy;
+        prev = inst.dynoPrev; dy = inst.dyno = dynoSheet(inst, S); G.save();
+      }
       if (A.wkPending) { A.whenReady(run); return; }
       if (A.banksReady && !A.banksReady([S.eng])) { if (!run.wait) { run.wait = true; A.whenBanks([S.eng], function () { run.wait = false; run(); }); } return; }
       voice = A.engine(S.eng, 0.8, A.buildOf(S));
@@ -531,7 +564,8 @@
         draw(); drawRoom(ang, true);
         if (t < 1) raf = requestAnimationFrame(tick);
         else {
-          A.update(voice, S.idle, 0, 0, 0, S.fiType); rpmEl.textContent = 'PEAK ' + Math.round(dy.peakHp) + ' HP';
+          A.update(voice, S.idle, 0, 0, 0, S.fiType); rpmEl.textContent = 'PEAK ' + Math.round(dy.peakHp) + ' WHP'; run.paid = false;
+          setTimeout(function () { if (UI.cur && UI.cur.fn === UI.Dyno) UI.refresh(); }, 1600);
           var t1 = performance.now();
           (function coast() { var k = (performance.now() - t1) / 1500; ang += 0.4 * (1 - k); drawRoom(ang, false); if (k < 1) idleRaf = requestAnimationFrame(coast); })();
           setTimeout(function () { A.stopAll(); voice = null; if (DR.Music) DR.Music.duck(false); }, 900);

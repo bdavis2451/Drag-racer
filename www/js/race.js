@@ -222,6 +222,8 @@
     var inst = cfg.inst || G.car(), S = G.spec(inst);
     var fail = rollFailure(S);
     var heat = testDrive ? { eng: 0, nosP: 1 } : G.roundHeat(inst, cfg);
+    // the data logger, if the car has one
+    var rec = testDrive ? null : DR.Logbook.recorder(inst, S);
     var you = makeRacer(inst, S, 0, cfg, fail, 'YOU', heat);
     var opp = null, ai = null;
     if (cfg.opp) {
@@ -506,6 +508,7 @@
           if (trig >= Sy.tune.shiftRpm) you.sim.shiftUp();
         }
         you.sim.step(sdt, { throttle: playerThrottle(), nos: input.nos });
+        if (rec) rec.sample(you.sim, clock);
         // opponent
         if (opp) {
           var inp = ai.input(opp.sim, tG, sdt);
@@ -713,7 +716,11 @@
         if (rc.paid) { money.push(['Fuel' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }
       }
       // every pass wears the tires and the clutch (a dealer test drive isn't yours)
-      if (!testDrive) { G.addWear(inst, S, you.sim); G.afterRound(inst, S, you.sim); }
+      if (!testDrive) {
+        DR.Logbook.add(inst, { mode: cfg.mode, what: cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (them ? ' vs ' + opp.label : '') : cfg.mode === 'street' ? 'Street vs ' + opp.label : 'Test & tune',
+          dist: cfg.dist, cond: cfg.cond, me: me, sim: you.sim, S: S, water: heat.eng, result: them ? (win ? 'W' : 'L') : '' }, rec);
+        G.addWear(inst, S, you.sim); G.afterRound(inst, S, you.sim);
+      }
       if (them && !testDrive) { G.state.stats.races++; if (win) G.state.stats.wins++; G.clearSold(); }
       // personal bests
       var key = cfg.dist > 300 ? 'q' : 'e', prevBest = inst.best[key], pbLine = null;
@@ -745,7 +752,6 @@
         row(sp[0] + (sp[0] === '1/8' || sp[0] === '1/4' ? ' ET' : ''), function (x) { var s = x.sim.splits[sp[0]]; return s ? s.t.toFixed(3) : '-'; });
         if (sp[0] === '1/8' || sp[0] === '1/4') row(sp[0] + ' speed', function (x) { var s = x.sim.splits[sp[0]]; return s ? UI.speed(s.mph) : '-'; });
       });
-      row('Peak power', function (x) { return Math.round(x.sim.peakHp) + ' hp'; });
       row('RT + ET', function (x) { return x.sim.crashed ? 'CRASHED' : x.sim.blown ? 'BLOWN' : x.sim.broke ? 'BROKE' : x.red ? 'RED LIGHT' : x.total < Infinity ? x.total.toFixed(3) : 'DNF'; });
 
       var back = cfg.back === 'tune' ? UI.Tune : null;
