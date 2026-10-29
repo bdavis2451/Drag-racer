@@ -150,10 +150,8 @@
   };
 
   // ---------------------------------------------------------------- pink slips
-  // A car won on a pink slip comes home with its build and gets its own spot
-  // in the garage; one lost goes with the winner.
-  G.carSlotsBase = G.carSlots;
-  G.carSlots = function () { return G.carSlotsBase() + ((G.state.career || {}).pinkSlots || 0); };
+  // A car won on a pink slip comes home with its build (into storage if
+  // there's no bay for it: home.js); one lost goes with the winner.
   G.awardCar = function (o) {
     var c = C(), inst = G.newInst(o.carId);
     inst.engine = o.engine || DR.CARS[o.carId].engine;

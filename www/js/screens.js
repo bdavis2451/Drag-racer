@@ -666,7 +666,7 @@
             gst('WEIGHT', UI.kgLb(S.m) + ' ' + Math.round(S.f * 100) + '%F'), gst('DRIVE', S.drive + ' • ' + S.ratios.length + '-spd'),
             gst('TIRES', S.tire.name),
             owned ? h('div', { class: 'gsmall acc' }, 'You own ' + owned) : null,
-            h('div', { class: 'gsmall dim' }, 'Garage slots: ' + G.state.cars.length + ' / ' + G.carSlots()),
+            h('div', { class: 'gsmall dim' }, 'Bays: ' + G.state.cars.length + ' / ' + G.carSlots() + ' (' + G.home().name + ')'),
             G.freeCars() ? h('div', { class: 'gsmall acc' }, G.freeCars() + ' free sponsor car' + (G.freeCars() > 1 ? 's' : '') + ' to claim' + (G.sponsorCarOk(id) ? '' : ' (not this one: up to ' + DR.money(DR.SPONSOR_CAR_CAP[Math.min(G.careerState().stage, DR.SPONSOR_CAR_CAP.length - 1)]) + ', no Pro cars)')) : null),
           h('div', { class: 'gsel' }, ids.length > 1 ? btn('◀', function () { cyc(-1); }, 'arrow') : null,
             h('div', { class: 'gname' }, h('div', { class: 'price big' }, DR.money(car.price)), h('div', { class: 'dim' }, (dealerIdx + 1) + ' / ' + ids.length + ' • ' + (!locked && G.freeCars() && G.sponsorCarOk(id) ? 'free with your sponsor' : dealerCat))),
@@ -678,7 +678,7 @@
             locked ? h('span', { class: 'tag' }, '🔒 ' + G.carUnlockWhere(id)) : G.freeCars() && G.slotFree() && G.sponsorCarOk(id) ? btn('Take free', function () {
               UI.confirm('Take the ' + car.name + ' as your free sponsor car?', function () { G.claimFreeCar(id); UI.toast('Your sponsor bought you the ' + car.name + '!'); UI.show(UI.Garage); }, 'Take it');
             }, 'go') : !G.slotFree() ? btn('Garage full', function () {
-              UI.toast('All ' + G.carSlots() + ' garage slots are taken. Fulfil a sponsor contract to open another, or sell a car.');
+              UI.toast('All ' + G.carSlots() + ' bays at ' + G.home().name + ' are taken. Move somewhere bigger (My Cars > Home) or sell a car.');
             }, 'disabled') : btn('Buy', function () {
               if (!G.canAfford(car.price)) return UI.toast('Not enough money');
               UI.confirm('Buy the ' + car.name + ' for ' + DR.money(car.price) + '?', function () { G.buyCar(id); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage); }, 'Buy');

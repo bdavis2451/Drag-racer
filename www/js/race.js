@@ -72,8 +72,8 @@
       // slip is yours to drive)
       var drivers = DR.Team ? DR.Team.dragDrivers() : [], youOnly = ev && (ev.type === 'boss' || ev.king), seat = null;
       if (drivers.length && !youOnly) {
-        seat = h('select', { class: 'tinput', style: { maxWidth: '220px' } }, [h('option', { value: '' }, 'You')].concat(drivers.map(function (d) { return h('option', { value: d.id }, d.name + ' (' + DR.money(d.wage) + ')'); })));
-        if (cfg.driver) seat.value = cfg.driver;
+        seat = h('select', { class: 'tinput', style: { maxWidth: '220px' } }, [h('option', { value: '' }, 'You')].concat(drivers.map(function (d) { var o = h('option', { value: d.id }, d.name + ' (' + DR.money(d.wage) + (G.canAfford(d.wage) ? ')' : ', can\'t pay)')); o.disabled = !G.canAfford(d.wage); return o; })));
+        if (cfg.driver && G.canAfford((DR.Team.staff(cfg.driver) || {}).wage || 0)) seat.value = cfg.driver;
         if (pinkCb) pinkCb.addEventListener('change', function () { if (pinkCb.checked) seat.value = ''; seat.disabled = pinkCb.checked; });
       }
       var techLine = cfg.theme !== 'strip' ? 'No tech on the street' : tech ? tech : 'Passed' + (S.tech ? ' (' + ['', 'roll bar', 'roll cage'][Math.min(2, S.tech)] + ')' : '');
@@ -847,6 +847,11 @@
       var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) ? G.careerState().sponsor[ev.stage] : null;
       if (spn && spn.stipend && !testDrive) { moneyDelta += spn.stipend; money.push([DR.sponsorById(spn.id).name + ' stipend', spn.stipend]); }
       if (moneyDelta) G.earn(moneyDelta);
+      // a race day is a week: rent, salaries and storage are due (after the purse is in)
+      if (cfg.mode === 'career' && !(cfg.round > 0) && !testDrive && G.raceDayDues) {
+        var dues = G.raceDayDues();
+        money = money.concat(dues.money); moneyDelta += dues.total; news = news.concat(dues.news);
+      }
       if (them && !testDrive && (cfg.mode === 'career' || cfg.mode === 'street')) {
         var rc = G.payRunCost(S, you.sim.nosT);
         if (rc.paid) { money.push(['Fuel' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }
