@@ -20,8 +20,8 @@
   TU.WORN = 0.75;          // stop for fresh tires / clutch past this
   TU.TRACK_FEE = 40;       // a test-and-tune pass
   TU.FREELANCE = {
-    local: { name: 'Local tuner', eng: 45, chs: 45, dat: 40, dyno: 450, day: 250, blurb: 'Knows his way around a laptop. Leaves some on the table.' },
-    pro: { name: 'Pro tuner', eng: 84, chs: 80, dat: 82, dyno: 950, day: 700, blurb: 'A name in the pits. Close on the first call, and knows a bad pass when he sees one.' }
+    local: { name: 'Local tuner', eng: 45, chs: 45, dat: 40, dyno: 450, day: 250, blurb: 'Knows their way around a laptop. Leaves some on the table.' },
+    pro: { name: 'Pro tuner', eng: 84, chs: 80, dat: 82, dyno: 950, day: 700, blurb: 'A name in the pits. Close on the first call, and knows a bad pass when they see one.' }
   };
   TU.JOBS = [
     { id: 'engine', name: 'Engine (dyno)', what: 'Boost, rev limiter, shift points' },
@@ -428,5 +428,140 @@
       h('p', { class: 'dim' }, ss.pulls.length + ' pulls, ' + ss.passes + ' passes: ' +
         [ss.cost.labor ? DR.money(ss.cost.labor) + ' tuner' : '', ss.cost.driver ? DR.money(ss.cost.driver) + ' driver' : '', ss.cost.dyno ? DR.money(ss.cost.dyno) + ' dyno time' : '', ss.cost.fuel ? DR.money(ss.cost.fuel) + ' fuel' : '', ss.cost.track ? DR.money(ss.cost.track) + ' track' : '', ss.cost.parts ? DR.money(ss.cost.parts) + ' parts' : ''].filter(Boolean).join(' + ') + ' = ' + DR.money(total)),
       h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('OK', function () { close(); UI.refresh(); }, 'primary'))]);
+  }
+
+  // ---------------------------------------------------------------- circuit
+  // A test day at Pixel Raceway: one of your circuit drivers runs short
+  // stints (3 flying laps) while the tuner works through the setup that a
+  // lap rewards: final drive, tire pressure, roll-bar balance, ride heights.
+  // The result is the car's circuit setup (inst.ctune), used for circuit
+  // races over its drag tune; it's what was found on the day, nothing more.
+  TU.CTRACK = 600;          // a test day at the circuit
+  TU.CLAPS = 3;             // laps a stint
+  TU.CKEYS = ['fd', 'psi', 'rollBal', 'rideF', 'rideR'];
+  function cgrid(k, S, cur) {
+    var d = def(k), lo = d.min(S), hi = d.max(S), st = d.step, out = [];
+    if (k === 'fd') { lo = Math.max(lo, cur - 0.6); hi = Math.min(hi, cur + 0.6); st = 0.15; }
+    else if (k === 'psi') { lo = Math.max(lo, cur - 6); hi = Math.min(hi, cur + 6); st = 2; }
+    else if (k === 'rideF' || k === 'rideR') st = Math.max(st, Math.round((hi - lo) / 6 / 5) * 5 || 5);
+    for (var v = lo; v <= hi + 1e-6; v += st) out.push(+v.toFixed(2));
+    if (out.indexOf(cur) < 0) out.push(cur);
+    return out.sort(function (a, b) { return a - b; });
+  }
+  TU.circuitSession = function (inst, who, drvId) {
+    var T = DR.Team, d = T.driver(drvId), f = T.factors(d), tr = DR.TRACKS[T.TRACK];
+    var base = T.circuitCar(inst), S0 = DR.buildSpec(base), full = DR.fullTune(base, S0), set = {};
+    TU.CKEYS.forEach(function (k) { var dd = def(k); if (dd && dd.show(S0)) set[k] = base.tune[k] != null ? base.tune[k] : full[k]; });
+    return { inst: inst, who: who, d: d, f: f, tr: tr, set: set, keys: Object.keys(set), ki: -1, log: [], best: null, laps: 0, cost: { labor: 0, driver: 0, track: 0 }, done: false };
+  };
+  function clap(cs, set) {
+    var c = {}, k; for (k in cs.inst) c[k] = cs.inst[k];
+    c.tune = {}; for (k in cs.inst.tune) c.tune[k] = cs.inst.tune[k]; for (k in set) c.tune[k] = set[k];
+    return DR.lapSim(c, cs.tr, DR.buildSpec(c), { lat: cs.f.lat, brk: cs.f.brk }).time;
+  }
+  // a stint: the average of the flying laps, as the timing shows it; a tuner
+  // who reads the data (sectors, the logger) sees through the driver's noise
+  function stint(cs, set) {
+    var ideal = clap(cs, set), sd = cs.f.sd * ideal / Math.sqrt(TU.CLAPS), read = 1 - 0.85 * cs.who.dat / 100;
+    cs.laps += TU.CLAPS;
+    return ideal + gauss() * sd * read + (Math.random() < cs.f.err ? 0.6 * read : 0);
+  }
+  // the next stint, or null when the day's done. Returns { label, note }
+  TU.circuitStep = function (cs) {
+    var G2 = G, out;
+    if (cs.best == null) {
+      cs.best = stint(cs, cs.set);
+      out = { label: 'Baseline', note: T_fmt(cs.best) };
+    } else {
+      cs.ki++;
+      if (cs.ki >= cs.keys.length) { cs.done = true; return null; }
+      var k = cs.keys[cs.ki], S = DR.buildSpec(T_car(cs)), g = cgrid(k, S, cs.set[k]), bi = 0, bt = 1e9;
+      // the call: the best on paper, off by a step or two for a weaker chassis tuner
+      g.forEach(function (v, i) { var tr = {}; for (var q in cs.set) tr[q] = cs.set[q]; tr[k] = v; var t = clap(cs, tr); if (t < bt) { bt = t; bi = i; } });
+      var miss = Math.round(gauss() * (1 - cs.who.chs / 100) * 2.2), v = g[clamp(bi + miss, 0, g.length - 1)];
+      if (v === cs.set[k]) { out = { label: label(k), note: 'Left at ' + fmt(k, v) + ': nothing to find there.', skip: true }; }
+      else {
+        var trial = {}; for (var q2 in cs.set) trial[q2] = cs.set[q2]; trial[k] = v;
+        var t2 = stint(cs, trial);
+        if (t2 < cs.best - 0.03) { out = { label: label(k) + ' ' + fmt(k, v), note: T_fmt(t2) + ', quicker: keeping it.' }; cs.set = trial; cs.best = t2; }
+        else out = { label: label(k) + ' ' + fmt(k, v), note: T_fmt(t2) + ', no better: back to ' + fmt(k, cs.set[k]) + '.' };
+      }
+    }
+    if (!out.skip) G2.addTireKm(cs.inst, G2.spec(cs.inst), TU.CLAPS * cs.tr.len / 1000);
+    cs.log.push(out);
+    return out;
+  };
+  function T_fmt(t) { return DR.Team.fmtLap(t); }
+  function T_car(cs) { var c = {}, k; for (k in cs.inst) c[k] = cs.inst[k]; c.tune = {}; for (k in cs.inst.tune) c.tune[k] = cs.inst.tune[k]; for (k in cs.set) c.tune[k] = cs.set[k]; return c; }
+  TU.circuitFinish = function (cs) {
+    var changed = cs.keys.filter(function (k) { return cs.inst.tune[k] == null || cs.inst.tune[k] !== cs.set[k]; });
+    cs.inst.ctune = { set: cs.set, by: cs.who.name, lap: +cs.best.toFixed(2), at: Date.now() };
+    if (cs.who.staff) DR.Team.learnTuner(cs.who.staff);
+    G.save();
+    return changed;
+  };
+  TU.clearCircuit = function (inst) { delete inst.ctune; G.save(); };
+
+  TU.openCircuit = function (inst) {
+    var T = DR.Team, s = T.state();
+    var cars = G.state.cars.filter(function (c) { return !c.damage && !T.carAway(c.uid); });
+    if (!cars.length) return UI.toast('No car free to test: repaired and not at the track');
+    if (!inst || cars.indexOf(inst) < 0) inst = cars[0];
+    var free = s.drivers.filter(function (d) { return !T.driverBusy(d.id); });
+    if (!free.length) return UI.toast(s.drivers.length ? 'All your circuit drivers are racing' : 'A circuit driver has to drive the test laps: hire one first');
+    var staff = T.tuner('circuit'), whoSel = staff ? 'staff' : 'local', drv = free[0].id, close, quote = h('div', { class: 'dim gsmall' });
+    function who() {
+      if (whoSel === 'staff') return { name: staff.name, chs: staff.chs, dat: staff.dat, staff: staff };
+      var f = TU.FREELANCE[whoSel]; return { name: f.name, chs: f.chs, dat: f.dat, day: f.day };
+    }
+    function cost() { var w = who(), d = T.driver(drv); return TU.CTRACK + (w.staff ? 0 : w.day) + (d ? d.wage : 0); }
+    function upd() { var w = who(); quote.textContent = 'The test day: ' + DR.money(TU.CTRACK) + ' track hire' + (w.staff ? '' : ' + ' + DR.money(w.day) + ' tuner') + ' + ' + DR.money(T.driver(drv).wage) + ' driver = ' + DR.money(cost()) + '. About ' + (TU.CKEYS.length + 1) + ' stints of ' + TU.CLAPS + ' laps on the car\'s tires.'; }
+    function radio(opts, cur, on) {
+      return h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, opts.map(function (o) {
+        var b = btn(o[1], function () { on(o[0]); Array.prototype.forEach.call(b.parentNode.children, function (x) { x.classList.remove('on'); }); b.classList.add('on'); upd(); }, 'chip' + (o[0] === cur ? ' on' : ''));
+        return b;
+      }));
+    }
+    var go = btn('Book the day', function () {
+      var c = cost(); if (!G.canAfford(c)) return UI.toast('The day costs ' + DR.money(c));
+      var cs = TU.circuitSession(inst, who(), drv), w = who(), d = T.driver(drv);
+      G.pay(c); cs.cost.track = TU.CTRACK; cs.cost.labor = w.staff ? 0 : w.day; cs.cost.driver = d.wage;
+      close(); circuitDay(cs);
+    }, 'primary');
+    close = UI.modal([h('div', { class: 'pix acc' }, 'CIRCUIT SETUP'),
+      cars.length > 1 ? radio(cars.map(function (c) { return [c.uid, DR.CARS[c.carId].name + (c.ctune ? ' ⚙' : '')]; }), inst.uid, function (v) { close(); TU.openCircuit(cars.filter(function (c) { return c.uid === v; })[0]); }) : h('div', { class: 'acc' }, DR.CARS[inst.carId].name),
+      h('div', { class: 'gsmall' }, 'A test day at Pixel Raceway. The tuner works through the final drive, tire pressure, roll-bar balance and ride heights (what the car\'s parts let you adjust) and leaves the car with a circuit setup: it\'s used for circuit races only, so your drag tune stays as it is.'),
+      inst.ctune ? h('div', { class: 'gsmall acc' }, 'Current circuit setup: by ' + inst.ctune.by + ', ' + T.fmtLap(inst.ctune.lap) + ' on the day. A new day starts from it.') : null,
+      h('div', { class: 'plvl' }, 'TUNER'), radio((staff ? [['staff', staff.name + ' (staff)']] : []).concat([['local', 'Local tuner'], ['pro', 'Pro tuner']]), whoSel, function (v) { whoSel = v; }),
+      h('div', { class: 'plvl' }, 'DRIVER'), radio(free.map(function (d) { return [d.id, d.name]; }), drv, function (v) { drv = v; }),
+      quote,
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px', marginTop: '8px' } },
+        inst.ctune ? btn('Remove setup', function () { TU.clearCircuit(inst); close(); UI.toast('Circuit setup removed: circuit races use the drag tune'); UI.refresh(); }, 'small red') : null,
+        btn('Cancel', function () { close(); }), go)]);
+    upd();
+  };
+  // the day as it goes: one line a stint, or skip to the end
+  function circuitDay(cs) {
+    var logEl = h('div', { class: 'tunerlog' }), close, timer, done = false;
+    function line(o) { logEl.appendChild(h('div', { class: 'row' }, h('span', { class: 'grow' }, o.label), h('span', { class: o.skip ? 'dim' : '' }, o.note))); logEl.scrollTop = 1e6; }
+    function finish() {
+      if (done) return; done = true; clearTimeout(timer);
+      while (TU.circuitStep(cs)) line(cs.log[cs.log.length - 1]);
+      var ch = TU.circuitFinish(cs);
+      logEl.appendChild(h('div', { class: 'row' }, h('span', { class: 'acc grow' }, '— Setup: ' + cs.keys.map(function (k) { return label(k) + ' ' + fmt(k, cs.set[k]); }).join(' • '))));
+      foot.innerHTML = '';
+      foot.appendChild(h('div', { class: 'dim gsmall grow' }, cs.laps + ' laps, ' + DR.money(cs.cost.track + cs.cost.labor + cs.cost.driver) + '. ' + (ch.length ? 'Circuit races now use this setup.' : 'Nothing worth changing.')));
+      foot.appendChild(btn('OK', function () { close(); UI.refresh(); }, 'primary'));
+    }
+    function tick() {
+      if (done) return;
+      var o = TU.circuitStep(cs);
+      if (!o) return finish();
+      line(o);
+      timer = setTimeout(tick, o.skip ? 500 : 1300);
+    }
+    var foot = h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px', marginTop: '8px' } }, btn('Skip to the end', function () { finish(); }, 'primary'));
+    close = UI.modal([h('div', { class: 'pix acc' }, 'TEST DAY • ' + cs.who.name.toUpperCase() + ' • ' + cs.d.name.toUpperCase()), logEl, foot]);
+    timer = setTimeout(tick, 400);
   }
 })();
