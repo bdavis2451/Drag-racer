@@ -214,7 +214,7 @@
     return h('div', { class: 'top' },
       back ? btn('◀', back, 'back') : null,
       h('h1', {}, title),
-      musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)), extra || null);
+      DR.Phone ? DR.Phone.button() : null, musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)), extra || null);
   }
   // The garage's two work areas share one header: back to the garage, a row
   // of tabs, the money. Upgrade = everything that makes the car quicker,
@@ -242,7 +242,7 @@
     return h('div', { class: 'top sectop' },
       btn('◀', function () { if (onLeave) onLeave(); UI.show(UI.Garage); }, 'back'),
       h('h1', { class: 'sectitle' }, section === 'upgrade' ? 'UPGRADE' : 'STYLE'), tabs,
-      musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
+      DR.Phone ? DR.Phone.button() : null, musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
   };
   // open a section on the tab it was last left on
   UI.openSection = function (section) {
@@ -409,6 +409,7 @@
         p('Class races are side races with a rule, like real heads-up classes: four cylinders only, all motor, street tires, 275 radials, small blocks and more. They pay well for a car built to the rule, but you never need them to move on.'),
         p('A quick launch pays: a career win with a reaction time of 0.05 s or better earns a 15% perfect-launch bonus, 0.15 s or better a 5% good-launch bonus.'),
         p('Home (My Cars > Home): you live where the cars live, like Test Drive Unlimited\'s houses. You start on Uncle Ray\'s couch with one bay of his shop; rent an apartment with a 2-car garage, a house with four, a shop with six or a hillside house with eight. Moving in takes a deposit of two race days\' rent, back when you move out. Every race day (each career event you turn up to) is a week: rent, your staff tuners\' salaries and storage are due, after the purse is paid. Miss rent and it\'s owed; miss it a third race day running and you\'re evicted back to Uncle Ray\'s. Tuners you can\'t pay walk. A car won on a pink slip with no free bay goes into a storage unit (' + DR.money(DR.STORAGE || 100) + ' a race day); leave storage unpaid three race days and the car is sold at a lien sale.'),
+        p('Messages (📱 in the top bar): the story comes in texts, Underground 2 style. Uncle Ray, whose couch and shop you start in, has something to say at the moments that matter: your first slip, your first win, a new class, your first hire, a King, a ticket, an eviction. Nothing to manage; the number shows what\'s unread.'),
         p('Getting there (Race day > Getting there): any car that can live in traffic is driven to the track or the street spot, Drag Week style. The more illegal it is, the likelier a cop pulls it over on the way (more so at night), and each violation they notice is a ticket: open or unmuffled exhaust, no catalytic converter, anti-lag, limo tint, underglow, racing slicks, a connected nitrous kit, a stripped interior, Lexan windows, wheelie bars. Fines are about what they run in the US. Tow it and nobody looks twice: a flatbed each trip, or buy a used pickup and open trailer (My Cars > Home) and pay only the gas. Pro race cars, tube chassis and builds that would overheat in traffic always go on a trailer. No breakdowns on the way.'),
         p('Every sponsor contract you fulfil pays for a car: pick it at the dealer from the cars marked Take free (cars up to a price that grows each stage; Pro race cars are cash only), when you have a bay for it. An unclaimed sponsor car waits for you. A sponsor car sells for its parts only.'),
         p('Sign one sponsor per stage. You get a signing bonus, a stipend every race day and a bonus for every win, a discount on what they sell while you\'re signed, plus a big payout when you fulfil the contract. Some want their product on the car (drag tires, a turbo, race fuel) for sponsor race wins to count. The class King will only race you once your contract is done.'),
