@@ -839,7 +839,7 @@
       if (cfg.mode === 'street') { moneyDelta = win ? cfg.bet : -cfg.bet; money.push([win ? 'Bet won' : 'Bet lost', moneyDelta]); }
       // your driver: their wage for the race day, and they learn from every pass
       if (drv && !testDrive) {
-        if (!(cfg.round > 0)) { moneyDelta -= drv.wage; money.push([drv.name + ' (driver)', -drv.wage]); }
+        if (!(cfg.round > 0) && !cfg.tuner) { moneyDelta -= drv.wage; money.push([drv.name + ' (driver)', -drv.wage]); }
         var grew = DR.Team.learnDrag(drv, !!win);
         news.push('Driven by ' + drv.name + (Object.keys(grew).length ? ' (getting better)' : ''));
       }
@@ -887,6 +887,12 @@
       }
       var carGone = false;
       if (pinkLost && G.loseCar(inst)) { carGone = true; damaged = null; news.push('PINK SLIP: your ' + DR.CARS[inst.carId].name + ' goes home with ' + opp.label); }
+      // a tuner's pass: they read the slip and decide
+      var tuned = cfg.tuner && DR.Tuner && DR.Tuner.active && !testDrive;
+      if (tuned) {
+        var sx = you.sim.splits['60ft'];
+        news.push('Tuner: ' + DR.Tuner.passDone({ et: you.sim.finished ? you.sim.et : 99, sixty: sx ? sx.t : 9, aborted: DR.Tuner.abortWhy(you.sim) }, cfg.driver));
+      }
       G.save();
 
       var head = them ? (win ? 'YOU WIN!' : 'YOU LOSE') : (you.sim.finished ? 'RUN COMPLETE' : 'DNF');
@@ -926,7 +932,10 @@
           btn('Back to Dealer', function () { UI.show(UI.Dealer); }, 'primary'),
           btn('Run Again', function () { DR.Race.start(cfg); })) :
         // the main action on top, the rest two to a row
-        carGone ? h('div', { class: 'col slipbtns' }, btn('Garage', function () { UI.show(UI.Garage); }, 'primary')) : h('div', { class: 'col slipbtns' },
+        carGone ? h('div', { class: 'col slipbtns' }, btn('Garage', function () { UI.show(UI.Garage); }, 'primary')) :
+        tuned ? h('div', { class: 'col slipbtns' },
+          !damaged ? btn('Next pass', function () { DR.Tuner.resume(); }, 'primary') : null,
+          btn('End the session', function () { DR.Tuner.end(); }, damaged ? 'primary' : '')) : h('div', { class: 'col slipbtns' },
           !damaged && nextRound != null ? btn('Next Round', function () {
             var nc = DR.Race.eventCfg(ev, nextRound); nc.driver = cfg.driver;
             if (bk) DR.Race.raceDay(nc); else DR.Race.start(nc);

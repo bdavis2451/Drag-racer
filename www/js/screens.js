@@ -428,7 +428,7 @@
     recalc();
     statBox.appendChild(h('div', { class: 'row', style: { flexWrap: 'wrap', marginTop: '6px' } },
       btn('Setups', function () { setupsModal(inst); }, 'small'),
-      btn('Hire a Tuner', function () { tunerModal(inst); }, 'small'),
+      btn('Tuner', function () { DR.Tuner.open(inst); }, 'small'),
       btn('Reset Tune', function () { UI.confirm('Put every tuning setting back to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }, 'Reset'); }, 'small red'),
       btn('Test Run', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, back: 'tune' }); }, 'small go')));
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'tune'),
@@ -465,84 +465,6 @@
           G.save(); close(); UI.toast('Saved ' + n); setupsModal(inst);
         }, 'small primary')),
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Close', function () { close(); }))]);
-  }
-
-  // The tuner: pick what to dial in, see the rate, let them make their hits.
-  function tunerModal(inst) {
-    if (inst.damage) return UI.toast('Repair your car first!');
-    var jobs = DR.tunerJobs(inst), pick = {}, close;
-    jobs.forEach(function (j) { pick[j.id] = true; });
-    var quoteEl = h('div', { class: 'dim' }), goBtn;
-    function ids() { return jobs.filter(function (j) { return pick[j.id]; }).map(function (j) { return j.id; }); }
-    function quote() {
-      var q = G.tunerQuote(inst, ids());
-      quoteEl.textContent = DR.money(q.fee) + ' a hit + ' + DR.money(q.fuel) + ' fuel. A baseline hit, then up to ' + (q.maxHits - 1) + ' more: up to ' + DR.money(q.max) + '. Every hit wears your tires and clutch (the tuner stops to ask when they\'re worn out), and a car on the edge can break.';
-      goBtn.disabled = !ids().length || !G.canAfford(q.perHit);
-    }
-    goBtn = btn('Start', function () {
-      var ss = G.startTuner(inst, ids());
-      if (!ss) return UI.toast('Not enough money for a hit');
-      close(); runTuner(inst, ss);
-    }, 'primary');
-    close = UI.modal([h('div', { class: 'pix acc' }, 'HIRE A TUNER'),
-      h('p', { class: 'dim' }, 'Test hits on a prepped strip, one setting at a time; they keep what the timeslips say is quicker.'),
-      h('div', { class: 'col' }, jobs.map(function (j) {
-        var cb = h('input', { type: 'checkbox', checked: true });
-        cb.addEventListener('change', function () { pick[j.id] = cb.checked; quote(); });
-        return h('label', { class: 'row', style: { gap: '8px' } }, cb, h('span', {}, j.name));
-      })),
-      quoteEl,
-      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px', gap: '8px' } }, btn('Cancel', function () { close(); }), goBtn)]);
-    quote();
-  }
-
-  // The session: hits a couple at a time (the screen stays alive), stopping
-  // to ask when the tires or clutch are worn out or the money runs out.
-  function tunerWorn(inst) {
-    var due = G.wearList(inst).filter(function (x) { return x.w >= DR.TUNER_WORN; });
-    return due.length ? due : null;
-  }
-  function runTuner(inst, ss) {
-    var prog = h('p', {}, 'The tuner is making passes...');
-    var wait = UI.modal([h('div', { class: 'pix acc' }, 'AT THE TRACK'), prog]);
-    if (tunerWorn(inst)) { wait(); return tunerPause(inst, ss, 'worn'); }
-    (function tick() {
-      for (var k = 0; k < 2; k++) {
-        var r = G.tunerStep(inst, ss), n = ss.log.filter(function (x) { return x.hit; }).length;
-        prog.textContent = 'The tuner is making passes... hit #' + n + (r.hit ? ': ' + r.hit.label : '');
-        if (r.pause || !r.hit) { wait(); A.cash(); return r.pause ? tunerPause(inst, ss, r.pause) : tunerNotes(inst, ss); }
-      }
-      setTimeout(tick, 0);
-    })();
-  }
-  function tunerPause(inst, ss, why) {
-    var due = tunerWorn(inst) || [], n = ss.log.filter(function (x) { return x.hit; }).length, close;
-    var cost = due.reduce(function (a, x) { return a + x.price; }, 0), what = due.map(function (x) { return x.cat === 'rtires' ? 'tires' : 'clutch'; }).join(' & ');
-    var msg = why === 'money' ? 'You\'re out of money for another hit.' :
-      (n ? 'After hit #' + n + ' the ' : 'Before the first hit: the ') + due.map(function (x) { return (x.cat === 'rtires' ? 'drive tires are ' : 'clutch is ') + Math.round(x.w * 100) + '% worn'; }).join(' and the ') + '. More hits on them would tune the car to parts that are used up.';
-    close = UI.modal([h('div', { class: 'pix acc' }, 'TUNER: PIT STOP'), h('p', {}, msg),
-      h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' } },
-        btn('Stop here', function () { close(); tunerNotes(inst, ss); }),
-        due.length && why !== 'money' ? btn('Fit fresh ' + what + ' ' + DR.money(cost) + ' & continue', function () {
-          if (!G.tunerService(inst, ss, due.map(function (x) { return x.cat; }))) return UI.toast('Not enough money');
-          A.cash(); close(); runTuner(inst, ss);
-        }, 'primary' + (G.canAfford(cost) ? '' : ' disabled')) : null)]);
-  }
-  function tunerNotes(inst, ss) {
-    var ch = G.finishTuner(inst, ss), n = 0, done;
-    var changes = Object.keys(ch).map(function (k) { var d = DR.TUNE_DEFS.filter(function (x) { return x.key === k; })[0]; return (d ? d.label : k) + ': ' + ch[k]; });
-    var total = ss.cost.fee + ss.cost.fuel + ss.cost.parts;
-    done = UI.modal([h('div', { class: 'pix acc' }, 'TUNER\'S NOTES'),
-      h('div', { class: 'tunerlog' }, ss.log.map(function (x) {
-        if (x.pit) return h('div', { class: 'row' }, h('span', { class: 'acc grow' }, '— ' + x.pit));
-        n++;
-        return h('div', { class: 'row' }, h('span', { class: 'dim' }, '#' + n), h('span', { class: 'grow' }, x.hit), x.broke ? h('span', { class: 'bad' }, 'BROKE: ' + x.broke) : h('span', {}, x.sixty.toFixed(3) + ' / ' + (x.et < 90 ? x.et.toFixed(3) : 'DNF')));
-      })),
-      h('p', {}, changes.length ? 'Set: ' + changes.join(' • ') : 'Nothing beat your current settings.'),
-      ss.broke ? h('p', { class: 'bad' }, 'The car broke on hit #' + n + ' (' + ss.broke + '). It needs a repair.') : null,
-      !ss.done && !ss.broke ? h('p', { class: 'dim' }, 'Stopped before the job was finished: the settings are from the hits made.') : null,
-      h('p', { class: 'dim' }, n + ' hits: ' + DR.money(ss.cost.fee) + ' tuner + ' + DR.money(ss.cost.fuel) + ' fuel' + (ss.cost.parts ? ' + ' + DR.money(ss.cost.parts) + ' parts' : '') + ' = ' + DR.money(total)),
-      h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('OK', function () { done(); UI.refresh(); }, 'primary'))]);
   }
 
   // ---------------------------------------------------------------- DYNO

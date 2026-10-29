@@ -559,63 +559,6 @@
     return true;
   };
 
-  // ---------------------------------------------------------------- the tuner
-  // Hire a tuner for a session of test hits (DR.runTuner). You pay the
-  // tuner by the hit, the fuel and nitrous each hit burns, and the car takes
-  // the wear (and whatever it breaks). The settings the tuner found go
-  // into your tune.
-  G.tunerQuote = function (inst, jobIds) {
-    var S = G.spec(inst), jobs = DR.tunerJobs(inst).filter(function (j) { return jobIds.indexOf(j.id) >= 0; });
-    var maxHits = DR.tunerMaxHits(jobs), perHit = DR.tunerFee(S) + DR.runCost(S).total;
-    return { maxHits: maxHits, fee: DR.tunerFee(S), fuel: DR.runCost(S).total, perHit: perHit, max: maxHits * perHit };
-  };
-  // A session with the tuner (DR.tunerSession), driven a hit at a time:
-  // each hit is paid for (the tuner's rate and the fuel) and wears the car
-  // as it's made. tunerStep returns { hit, pause } where pause is why the
-  // tuner stopped to ask you something: 'tires' / 'clutch' (worn out, fit
-  // fresh ones to go on), 'money', or null.
-  DR.TUNER_WORN = 0.75;
-  G.startTuner = function (inst, jobIds) {
-    var q = G.tunerQuote(inst, jobIds);
-    if (!G.canAfford(q.perHit)) return null;
-    var ss = DR.tunerSession(inst, jobIds);
-    ss.cost = { fee: 0, fuel: 0, parts: 0 };
-    ss.log = [];   // hits and pit stops, in order
-    return ss;
-  };
-  G.tunerStep = function (inst, ss) {
-    var q = G.tunerQuote(inst, []), S = G.spec(inst);
-    if (!G.canAfford(q.perHit)) return { hit: null, pause: 'money' };
-    var h = ss.step();
-    if (!h) return { hit: null, pause: null };
-    G.pay(q.fee + q.fuel); ss.cost.fee += q.fee; ss.cost.fuel += q.fuel;
-    G.addWear(inst, h.S || S, h, 1);
-    ss.log.push({ hit: h.label, et: h.et, sixty: h.sixty, broke: h.broke });
-    if (h.broke) inst.damage = h.broke === 'engine' ? { engine: true } : h.broke === 'axle' ? { axle: true } : h.broke === 'chassis' ? { chassis: true } : { trans: true };
-    G.save();
-    if (ss.done) return { hit: h, pause: null };
-    var w = inst.wear || {};
-    if (w.rtires && w.rtires.w >= DR.TUNER_WORN) return { hit: h, pause: 'tires' };
-    if (w.clutch && w.clutch.w >= DR.TUNER_WORN && S.trType !== 'auto') return { hit: h, pause: 'clutch' };
-    return { hit: h, pause: null };
-  };
-  // fresh tires (and clutch) mid-session: the car has changed, so the
-  // tuner makes a new baseline hit before carrying on
-  G.tunerService = function (inst, ss, cats) {
-    var cost = cats.reduce(function (a, c) { return a + G.servicePrice(inst, c); }, 0);
-    if (!G.service(inst, cats)) return false;
-    ss.cost.parts += cost; ss.rebase = true;
-    ss.log.push({ pit: 'Fresh ' + cats.map(function (c) { return c === 'rtires' ? 'tires' : 'clutch'; }).join(' & ') + ' fitted (' + DR.money(cost) + ')' });
-    return true;
-  };
-  // the settings the session found go into the tune
-  G.finishTuner = function (inst, ss) {
-    var ch = ss.changes();
-    for (var k in ch) inst.tune[k] = ch[k];
-    G.save();
-    return ch;
-  };
-
   // ---------------------------------------------------------------- damage
   // no other car that runs: the shop takes whatever you have, so a blown
   // engine can never leave you stuck with nothing to race
