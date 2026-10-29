@@ -15,7 +15,9 @@
 (function () {
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI;
   var T = DR.Team = {};
-  T.MAX = 4;
+  T.MAX = 3;                // circuit drivers
+  T.DMAX = 2;               // drag drivers
+  T.ROLES = { drag: 'Drag tuner', circuit: 'Circuit tuner' };   // one staff tuner each
   T.SPEED = 4;              // race clock vs real time
   T.TRACK = 'pixel';        // the reference track: classes go by the ideal lap here
   // where the team races: the purpose-built circuit and three night street
@@ -50,7 +52,11 @@
     var s = G.state.team;
     if (!s) s = G.state.team = { drivers: [], board: null, races: [], history: [], done: 0, boardAt: 0, wins: {}, nid: 1 };
     s.drivers = s.drivers || []; s.races = s.races || []; s.history = s.history || []; s.wins = s.wins || {};
+    // the drag side and the staff tuners (saves from before them start empty)
+    s.ddrivers = s.ddrivers || []; s.tuners = s.tuners || [];
     if (!s.board) { s.board = makeBoard(); s.boardAt = s.done || 0; }
+    if (!s.dboard) s.dboard = makeDragBoard();
+    if (!s.tboard) s.tboard = makeTunerBoard();
     return s;
   }
   T.state = st;
@@ -76,9 +82,9 @@
     d.fee = T.hireFee(d); d.wage = T.wage(d);
     return d;
   }
-  T.avg = function (d) { return (d.brk + d.cor + d.con) / 3; };
+  T.avg = function (d) { return d.kind === 'drag' ? (d.rt + d.lau + d.con) / 3 : d.kind === 'tuner' ? (d.eng + d.chs + d.dat) / 3 : (d.brk + d.cor + d.con) / 3; };
   T.hireFee = function (d) { var a = T.avg(d); return Math.round((a * a * 2 + d.pot * 12) / 50) * 50; };
-  T.wage = function (d) { var a = T.avg(d); return Math.round((40 + a * a * 0.06) / 10) * 10; };
+  T.wage = function (d) { var a = T.avg(d); return Math.round((40 + a * a * 0.06) * (d.kind === 'tuner' ? 1.6 : 1) / 10) * 10; };
   T.stars = function (d) { return Math.round(d.pot / 20 * 2) / 2; };   // potential, 0.5-5
   function makeBoard() {
     var qs = [rnd(18, 32), rnd(22, 38), rnd(28, 44), rnd(40, 58), rnd(45, 65), Math.random() < 0.35 ? rnd(72, 88) : rnd(58, 75)];
@@ -87,9 +93,80 @@
   T.scout = function () {
     if (!G.canAfford(T.SCOUT_COST)) return false;
     G.pay(T.SCOUT_COST);
-    var s = st(); s.board = makeBoard(); s.boardAt = s.done; G.save();
+    var s = st(); s.board = makeBoard(); s.dboard = makeDragBoard(); s.tboard = makeTunerBoard(); s.boardAt = s.done; G.save();
     return true;
   };
+  // ---------------------------------------------------------------- drag drivers
+  // Drag racing asks different things of a driver (and the two crowds don't
+  // mix: a drag driver doesn't run circuits):
+  //   Reaction:    how quickly they leave on the green (and how rarely early)
+  //   Launch:      leaving the line, feeding the throttle, pedalling tire shake
+  //   Consistency: how little they vary pass to pass (the bracket racer's gift)
+  function potFor(top, age) { return Math.round(clamp(top + (age < 24 ? rnd(14, 34) : age < 30 ? rnd(8, 24) : age < 36 ? rnd(3, 12) : rnd(0, 5)), top, 99)); }
+  function makeDragDriver(q) {
+    var age = Math.round(clamp(rnd(19, 32) + (q - 40) * 0.25 + rnd(-3, 8), 18, 52));
+    var d = { kind: 'drag', name: pick(FIRST) + ' ' + pick(LAST), age: age, rt: sk(q), lau: sk(q), con: sk(q), col: pick(COLORS), races: 0, wins: 0, podiums: 0 };
+    d.pot = potFor(Math.max(d.rt, d.lau, d.con), age);
+    d.fee = T.hireFee(d); d.wage = T.wage(d);
+    return d;
+  }
+  function makeDragBoard() { return [rnd(18, 34), rnd(28, 46), rnd(40, 60), Math.random() < 0.35 ? rnd(70, 88) : rnd(55, 72)].map(makeDragDriver); }
+  // ---------------------------------------------------------------- tuners
+  // A staff tuner, for the drag team or the circuit team:
+  //   Engine:  calibration on the dyno (how close to the limits they dare go,
+  //            and how few pulls they need)
+  //   Chassis: launch, converter, gearing and suspension at the track or test day
+  //   Data:    reading timeslips and logs (fewer passes, not fooled by a bad one)
+  function makeTuner(q, role) {
+    var age = Math.round(clamp(rnd(24, 40) + (q - 40) * 0.3 + rnd(-2, 8), 21, 64));
+    var d = { kind: 'tuner', role: role, name: pick(FIRST) + ' ' + pick(LAST), age: age, eng: sk(q), chs: sk(q), dat: sk(q), col: pick(COLORS), jobs: 0 };
+    d.pot = potFor(Math.max(d.eng, d.chs, d.dat), age - 6);
+    d.fee = T.hireFee(d); d.wage = T.wage(d);
+    return d;
+  }
+  function makeTunerBoard() { return [makeTuner(rnd(22, 40), 'drag'), makeTuner(rnd(40, 62), 'drag'), makeTuner(rnd(22, 40), 'circuit'), makeTuner(Math.random() < 0.35 ? rnd(68, 86) : rnd(45, 66), Math.random() < 0.5 ? 'drag' : 'circuit')]; }
+  T.dragDrivers = function () { return st().ddrivers; };
+  T.tuner = function (role) { return st().tuners.filter(function (x) { return x.role === role; })[0] || null; };
+  // hire from a board: 'circuit' (drivers), 'drag' or 'tuner'
+  T.hireFrom = function (which, i) {
+    var s = st(), board = which === 'drag' ? s.dboard : which === 'tuner' ? s.tboard : s.board, d = board[i];
+    if (!d) return 'Gone';
+    if (which === 'circuit') return T.hire(i);
+    if (which === 'drag' && s.ddrivers.length >= T.DMAX) return 'Your drag team is full (' + T.DMAX + ' drivers). Release one first.';
+    if (which === 'tuner' && T.tuner(d.role)) return 'You already have a ' + T.ROLES[d.role].toLowerCase() + '. Release them first.';
+    if (!G.canAfford(d.fee)) return 'Signing ' + d.name + ' costs ' + DR.money(d.fee);
+    G.pay(d.fee);
+    d.id = (which === 'drag' ? 'g' : 't') + (s.nid++); d.hired = Date.now();
+    (which === 'drag' ? s.ddrivers : s.tuners).push(d); board.splice(i, 1); G.save();
+    return '';
+  };
+  T.releaseStaff = function (id) {
+    var s = st();
+    s.ddrivers = s.ddrivers.filter(function (d) { return d.id !== id; });
+    s.tuners = s.tuners.filter(function (d) { return d.id !== id; });
+    G.save();
+    return '';
+  };
+  T.staff = function (id) { var s = st(); return s.ddrivers.concat(s.tuners).filter(function (d) { return d.id === id; })[0] || null; };
+  // a drag driver learns from every pass, more from the ones that matter
+  T.learnDrag = function (d, won) {
+    var ageK = d.age < 25 ? 1.3 : d.age < 31 ? 1 : d.age < 37 ? 0.6 : 0.3, out = {};
+    ['rt', 'lau', 'con'].forEach(function (k) {
+      var before = Math.floor(d[k]);
+      d[k] = Math.min(d.pot, d[k] + Math.max(0, d.pot - d[k]) * rnd(0.012, 0.03) * ageK * (won ? 1.25 : 1));
+      if (Math.floor(d[k]) > before) out[k] = Math.floor(d[k]) - before;
+    });
+    d.races++; if (won) d.wins++;
+    d.wage = T.wage(d); G.save();
+    return out;
+  };
+  // a tuner gets better with every job
+  T.learnTuner = function (d) {
+    var ageK = d.age < 30 ? 1.2 : d.age < 45 ? 1 : 0.5;
+    ['eng', 'chs', 'dat'].forEach(function (k) { d[k] = Math.min(d.pot, d[k] + Math.max(0, d.pot - d[k]) * rnd(0.02, 0.04) * ageK); });
+    d.jobs = (d.jobs || 0) + 1; d.wage = T.wage(d); G.save();
+  };
+
   T.racesToNewBoard = function () { var s = st(); return Math.max(0, T.REFRESH_EVERY - (s.done - s.boardAt)); };
   T.hire = function (i) {
     var s = st(), d = s.board[i];
@@ -305,7 +382,7 @@
       if (pos === 1 && !s.wins[cls.id]) unl = classUnlocks(cls);
       if (pos === 1) s.wins[cls.id] = (s.wins[cls.id] || 0) + 1;
       s.done++;
-      if (s.done - s.boardAt >= T.REFRESH_EVERY) { s.board = makeBoard(); s.boardAt = s.done; }
+      if (s.done - s.boardAt >= T.REFRESH_EVERY) { s.board = makeBoard(); s.dboard = makeDragBoard(); s.tboard = makeTunerBoard(); s.boardAt = s.done; }
       s.history.unshift({ cls: cls.id, track: r.track || T.TRACK, pos: pos, prize: prize, drv: d ? d.name : '?', car: car ? car.carId : you.car, at: Date.now(), best: you.best, grew: grew, unl: unl });
       s.history = s.history.slice(0, 20);
       var sm = r.series != null ? seriesRound(r) : null;

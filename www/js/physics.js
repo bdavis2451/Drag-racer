@@ -1385,6 +1385,20 @@
     this.pedal = 1;
   };
 
+  // A hired drag driver at the wheel: their reaction (how soon after the
+  // green, and how much it wanders), launch (revs off target, feeding the
+  // throttle, pedalling) and consistency (how much every pass varies).
+  DR.AIDriver.fromDrag = function (d, rnd) {
+    rnd = rnd || Math.random;
+    var r = d.rt / 100, c = d.con / 100, l = d.lau / 100;
+    var ai = new DR.AIDriver(l, rnd);
+    ai.react = 0.035 + (1 - r) * 0.22 + (rnd() - 0.5) * (0.012 + (1 - c) * 0.09);   // can go early: a red light
+    ai.launchErr = (rnd() - 0.5) * 1600 * (1 - l) * (0.5 + (1 - c));
+    ai.shiftErr = (rnd() - 0.5) * 500 * (1 - c);
+    ai.burnK = (rnd() - 0.5) * 24 * (1 - c);     // how far off the tire temperature they aim the burnout
+    return ai;
+  };
+
   // The revs a driver brings a clutch car up to before dropping the clutch
   // (no 2-step): the best of a sweep of short runs, found once per spec.
   DR.aiLaunchRpm = function (S) {

@@ -68,6 +68,14 @@
       }
       var canPink = ev && ev.type === 'callout' && G.state.cars.length > 1;
       if (canPink) pinkCb = h('input', { type: 'checkbox' });
+      // who drives: you, or one of your drag drivers (a King race or a pink
+      // slip is yours to drive)
+      var drivers = DR.Team ? DR.Team.dragDrivers() : [], youOnly = ev && (ev.type === 'boss' || ev.king), seat = null;
+      if (drivers.length && !youOnly) {
+        seat = h('select', { class: 'tinput', style: { maxWidth: '220px' } }, [h('option', { value: '' }, 'You')].concat(drivers.map(function (d) { return h('option', { value: d.id }, d.name + ' (' + DR.money(d.wage) + ')'); })));
+        if (cfg.driver) seat.value = cfg.driver;
+        if (pinkCb) pinkCb.addEventListener('change', function () { if (pinkCb.checked) seat.value = ''; seat.disabled = pinkCb.checked; });
+      }
       var techLine = cfg.theme !== 'strip' ? 'No tech on the street' : tech ? tech : 'Passed' + (S.tech ? ' (' + ['', 'roll bar', 'roll cage'][Math.min(2, S.tech)] + ')' : '');
       close = UI.modal([h('div', { class: 'pix acc' }, 'RACE DAY'),
         h('div', { class: 'pix' }, title || (cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name : 'Street race')),
@@ -77,6 +85,8 @@
         canPink ? h('label', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, pinkCb, h('span', { class: 'bad' }, 'Race for pink slips: win their car, or lose yours')) : null,
         ev && ev.type === 'callout' && !canPink ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'Pink slips need a second car in your garage.') : null,
         ev && (ev.type === 'boss' || ev.king) ? h('div', { class: 'acc', style: { marginTop: '4px' } }, 'The King races for their car.') : null,
+        seat ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'DRIVER'), seat) : null,
+        youOnly && drivers.length ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'You drive this one yourself.') : null,
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'TECH'), h('div', { class: tech ? 'bad' : '' }, techLine),
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'YOUR CAR'),
         h('div', { class: 'dim' }, ws.map(function (x) { return (x.cat === 'rtires' ? 'Tires ' : 'Clutch ') + Math.round(x.w * 100) + '% worn'; }).join(' • ') + ' • fuel about ' + DR.money(DR.runCost(S).total) + ' a pass'),
@@ -94,6 +104,7 @@
               cfg.bracket = { dial: [Math.round(d * 100) / 100, Math.round((tt - 0.01 - (1 - sk) * 0.15) * 100) / 100] };
             }
             if (pinkCb && pinkCb.checked) cfg.pinks = true;
+            cfg.driver = seat && seat.value && !cfg.pinks ? seat.value : null;
             close(); DR.Race.start(cfg);
           }, 'primary' + (tech ? ' disabled' : '')))]);
     },
@@ -282,6 +293,8 @@
     var settings = G.state.settings, testDrive = !!cfg.inst;
     var inst = cfg.inst || G.car(), S = G.spec(inst);
     var fail = rollFailure(S);
+    // a hired drag driver in your seat: they drive, you watch
+    var drv = cfg.driver && DR.Team ? DR.Team.staff(cfg.driver) : null, drvAI = drv ? DR.AIDriver.fromDrag(drv) : null, drvStageAt = null;
     var heat = testDrive ? { eng: 0, nosP: 1 } : G.roundHeat(inst, cfg);
     // the data logger, if the car has one
     var rec = testDrive ? null : DR.Logbook.recorder(inst, S);
@@ -328,7 +341,8 @@
     var stageBar = h('div', { class: 'stagebar' });
     var quitBtn = btn('✖', function () { quit(); }, 'small back quit');
     var controls = h('div', { class: 'controls' }, gasBtn, actBtn, nosBtn, stageBar, quitBtn);
-    var root = h('div', { class: 'screen race' }, cv, hud, controls);
+    var root = h('div', { class: 'screen race' + (drvAI ? ' drvmode' : '') }, cv, hud, controls);
+    if (drvAI) controls.appendChild(h('div', { class: 'drvtag' }, h('span', { class: 'dim' }, 'DRIVER'), h('span', { class: 'acc' }, drv.name)));
 
     // ---------------------------------------------------------------- input
     var input = { gas: 0, act: false, nos: false, gasHeld: false };
@@ -463,6 +477,7 @@
     function launchTip() {
       var seen = G.state.tips || (G.state.tips = {});
       if (seen.launch || testDrive || (G.state.stats && G.state.stats.races > 0)) return;
+      if (drvAI) return;
       seen.launch = true; G.save();
       tipOpen = true; input.gasHeld = false; input.gas = 0;
       var body = S.trType === 'auto' && !S.tbrake ?
@@ -482,6 +497,17 @@
     function update(dt) {
       phaseT += dt;
       var act = input.act; input.act = false;
+      // the hired driver's burnout and staging: heat the tires to where
+      // they like them, then pull up to the line
+      if (drvAI) {
+        act = false;
+        if (phase === 'burnout') {
+          var want = S.tire.topt + drvAI.burnK, hot = you.sim.tireT >= want || phaseT > 7;
+          input.gasHeld = !hot && phaseT > 0.6; input.gas = 1;
+          if (hot && drvStageAt === null) drvStageAt = phaseT + 0.5;
+          if (drvStageAt !== null && phaseT >= drvStageAt) { input.gasHeld = false; act = true; }
+        } else if (phase !== 'pre') input.gasHeld = false;
+      }
       if (phase === 'pre' || phase === 'burnout' || phase === 'stage') {
         if (phase === 'pre') { startBurnout(); actReady = Date.now() + 1000; }
         if (act && phase !== 'stage') startStaging();
@@ -560,6 +586,21 @@
           if (tree.amber && t < 0.05 && t >= 0) { /* amber beep */ }
         }
         var tG = !opp || opp.greenT == null ? -1 : opp.sim.time - opp.greenT;
+        if (drvAI) {
+          // their green, counted from the tree (so they can leave early on
+          // the last amber and red-light, like anyone)
+          var g0 = settings.proTree && !bk ? 0.4 : 1.5 + off[0];
+          var tG0 = phase === 'tree' || phase === 'race' ? (clock - treeStart) - g0 : -9;
+          var wasL = you.sim.launched, dinp = drvAI.input(you.sim, tG0, sdt);
+          if (!wasL && you.sim.launched) {
+            if (greenAt === null) { redLight = true; tree.red[0] = true; A.beep(220, 0.4); }
+            actLabel.textContent = 'SHIFT'; actBtn.classList.add('shift'); phase = 'race';
+          }
+          you.sim.step(sdt, dinp);
+          if (rec) rec.sample(you.sim, clock);
+          if (opp) opp.sim.step(sdt, ai.input(opp.sim, tG, sdt));
+          continue;
+        }
         // player: too much throttle against the foot brake rolls the car out
         // of the beams, which starts the run (a red light before the green)
         if (!you.sim.launched && you.sim.creep > 0.18) { act = true; if (greenAt === null) setMsg('', 'Rolled through the brakes!'); }
@@ -796,6 +837,12 @@
       }
       if (cfg.mode === 'career' && win === false && DR.multiRound(ev)) news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
       if (cfg.mode === 'street') { moneyDelta = win ? cfg.bet : -cfg.bet; money.push([win ? 'Bet won' : 'Bet lost', moneyDelta]); }
+      // your driver: their wage for the race day, and they learn from every pass
+      if (drv && !testDrive) {
+        if (!(cfg.round > 0)) { moneyDelta -= drv.wage; money.push([drv.name + ' (driver)', -drv.wage]); }
+        var grew = DR.Team.learnDrag(drv, !!win);
+        news.push('Driven by ' + drv.name + (Object.keys(grew).length ? ' (getting better)' : ''));
+      }
       // the sponsor's stipend: paid for every race day you turn up to
       var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) ? G.careerState().sponsor[ev.stage] : null;
       if (spn && spn.stipend && !testDrive) { moneyDelta += spn.stipend; money.push([DR.sponsorById(spn.id).name + ' stipend', spn.stipend]); }
@@ -806,7 +853,7 @@
       }
       // every pass wears the tires and the clutch (a dealer test drive isn't yours)
       if (!testDrive) {
-        DR.Logbook.add(inst, { mode: cfg.mode, what: cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (them ? ' vs ' + opp.label : '') : cfg.mode === 'street' ? 'Street vs ' + opp.label : 'Test & tune',
+        DR.Logbook.add(inst, { mode: cfg.mode, what: (cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (them ? ' vs ' + opp.label : '') : cfg.mode === 'street' ? 'Street vs ' + opp.label : cfg.tuner ? 'Tuner: ' + cfg.tuner.label : 'Test & tune') + (drv ? ' (' + drv.name + ')' : ''),
           dist: cfg.dist, cond: cfg.cond, me: me, sim: you.sim, S: S, water: heat.eng, result: them ? (win ? 'W' : 'L') : '' }, rec);
         G.addWear(inst, S, you.sim); G.afterRound(inst, S, you.sim);
       }
@@ -880,7 +927,10 @@
           btn('Run Again', function () { DR.Race.start(cfg); })) :
         // the main action on top, the rest two to a row
         carGone ? h('div', { class: 'col slipbtns' }, btn('Garage', function () { UI.show(UI.Garage); }, 'primary')) : h('div', { class: 'col slipbtns' },
-          !damaged && nextRound != null ? btn('Next Round', function () { if (bk) DR.Race.raceDay(DR.Race.eventCfg(ev, nextRound)); else DR.Race.careerEvent(ev, nextRound); }, 'primary') : null,
+          !damaged && nextRound != null ? btn('Next Round', function () {
+            var nc = DR.Race.eventCfg(ev, nextRound); nc.driver = cfg.driver;
+            if (bk) DR.Race.raceDay(nc); else DR.Race.start(nc);
+          }, 'primary') : null,
           !damaged && nextRound == null ? btn(them ? (cfg.mode === 'street' ? 'Back to Street' : 'Back to Career') : 'Run Again', function () {
             if (them) UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career');
             else DR.Race.start(cfg);

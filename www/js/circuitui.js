@@ -648,7 +648,7 @@
     if (UI.circuitTestTrack) { if (UI.circuitTestTrack !== TRACK) { TRACK = UI.circuitTestTrack; play = null; probe = -1; } UI.circuitTestTrack = null; }
     var chips = h('div', { class: 'schips trktabs' },
       [['races', 'Races'], ['team', 'Team'], ['test', 'Test Lap']].map(function (t) {
-        var n = t[0] === 'races' ? TM().active().length : t[0] === 'team' ? TM().state().drivers.length : 0;
+        var n = t[0] === 'races' ? TM().active().length : t[0] === 'team' ? TM().state().drivers.length + TM().state().ddrivers.length + TM().state().tuners.length : 0;
         return btn(t[1] + (n ? ' (' + n + ')' : ''), function () { UI.circuitTab = t[0]; if (t[0] !== 'races') UI.watchRace = null; UI.refresh(); }, 'chip' + (tab === t[0] ? ' on' : ''));
       }));
     var body;
@@ -686,8 +686,10 @@
     return cv;
   }
   var SKILLS = [['brk', 'Braking'], ['cor', 'Cornering'], ['con', 'Consistency']];
+  var SKILLS_DRAG = [['rt', 'Reaction'], ['lau', 'Launch'], ['con', 'Consistency']];
+  var SKILLS_TUNER = [['eng', 'Engine'], ['chs', 'Chassis'], ['dat', 'Data']];
   function bars(d) {
-    return h('div', { class: 'skbars' }, SKILLS.map(function (k) {
+    return h('div', { class: 'skbars' }, (d.kind === 'drag' ? SKILLS_DRAG : d.kind === 'tuner' ? SKILLS_TUNER : SKILLS).map(function (k) {
       var v = Math.floor(d[k[0]]);
       return h('div', { class: 'skrow' }, h('span', { class: 'k' }, k[1]),
         h('span', { class: 'skbar' }, h('span', { class: 'pot', style: { width: d.pot + '%' } }), h('span', { class: 'val', style: { width: v + '%' } })),
@@ -698,41 +700,58 @@
   function driverCard(d, foot, status) {
     return h('div', { class: 'ecard dcard' },
       h('div', { class: 'drow' }, helmet(d.col, 28), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, d.name),
-        h('div', { class: 'gsmall dim' }, 'Age ' + d.age + ' • potential ', starsEl(TM().stars(d)))),
+        h('div', { class: 'gsmall dim' }, (d.kind === 'tuner' ? TM().ROLES[d.role] + ' • ' : d.kind === 'drag' ? 'Drag driver • ' : '') + 'Age ' + d.age + ' • potential ', starsEl(TM().stars(d)))),
         status || null),
       bars(d),
-      h('div', { class: 'gsmall dim' }, d.races ? d.races + ' races • ' + d.wins + ' wins • ' + d.podiums + ' podiums' : 'No races yet', ' • ', h('span', { class: 'acc' }, DR.money(d.wage) + '/race')),
+      h('div', { class: 'gsmall dim' }, d.kind === 'tuner' ? (d.jobs ? d.jobs + ' jobs' : 'No jobs yet') : d.races ? d.races + ' races • ' + d.wins + ' wins' + (d.kind === 'drag' ? '' : ' • ' + d.podiums + ' podiums') : 'No races yet', ' • ',
+        h('span', { class: 'acc' }, DR.money(d.wage) + (d.kind === 'tuner' ? '/race day' : '/race'))),
       foot ? h('div', { class: 'efoot' }, foot) : null);
   }
 
   // ---------------------------------------------------------------- team
+  var hireTab = 'circuit';
   function teamView() {
     var T = TM(), s = T.state();
-    var mine = h('div', { class: 'egrid dgrid' });
-    s.drivers.forEach(function (d) {
-      var busy = T.active().filter(function (r) { return r.drv === d.id; })[0];
-      mine.appendChild(driverCard(d,
-        busy ? btn('Watch', function () { UI.circuitTab = 'races'; UI.watchRace = busy.id; UI.refresh(); }, 'small') :
-          btn('Release', function () { UI.confirm('Release ' + d.name + '? They leave the team (no refund).', function () { var w = T.release(d.id); if (w) UI.toast(w); UI.refresh(); }, 'Release'); }, 'small red'),
-        busy ? h('span', { class: 'ewon' }, 'RACING') : h('span', { class: 'etype good' }, 'FREE')));
-    });
-    for (var i = s.drivers.length; i < T.MAX; i++) mine.appendChild(h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, 'Empty seat'), h('div', { class: 'gsmall dim' }, 'Hire a driver from the board below.')));
+    function seats(list, max, empty, release) {
+      var g = h('div', { class: 'egrid dgrid' });
+      list.forEach(function (d) {
+        var busy = d.kind ? null : T.active().filter(function (r) { return r.drv === d.id; })[0];
+        g.appendChild(driverCard(d,
+          busy ? btn('Watch', function () { UI.circuitTab = 'races'; UI.watchRace = busy.id; UI.refresh(); }, 'small') :
+            btn('Release', function () { UI.confirm('Release ' + d.name + '? They leave the team (no refund).', function () { var w = release(d.id); if (w) UI.toast(w); UI.refresh(); }, 'Release'); }, 'small red'),
+          busy ? h('span', { class: 'ewon' }, 'RACING') : h('span', { class: 'etype good' }, 'FREE')));
+      });
+      for (var i = list.length; i < max; i++) g.appendChild(h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, empty), h('div', { class: 'gsmall dim' }, 'Hire from the board below.')));
+      return g;
+    }
+    var tunerSeats = h('div', { class: 'egrid dgrid' }, ['drag', 'circuit'].map(function (role) {
+      var tu = T.tuner(role);
+      return tu ? driverCard(tu, btn('Release', function () { UI.confirm('Release ' + tu.name + '?', function () { T.releaseStaff(tu.id); UI.refresh(); }, 'Release'); }, 'small red'), h('span', { class: 'etype good' }, 'ON STAFF')) :
+        h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, 'No ' + T.ROLES[role].toLowerCase()), h('div', { class: 'gsmall dim' }, role === 'drag' ? 'Tunes your drag cars: dyno and test passes.' : 'Sets up your circuit cars on test days.'));
+    }));
+    var boards = { circuit: s.board, drag: s.dboard, tuner: s.tboard };
     var board = h('div', { class: 'egrid dgrid' });
-    s.board.forEach(function (d, i) {
-      var full = s.drivers.length >= T.MAX;
+    boards[hireTab].forEach(function (d, i) {
       board.appendChild(driverCard(d, btn('Hire ' + DR.money(d.fee), function () {
-        var w = T.hire(i); if (w) return UI.toast(w);
+        var w = T.hireFrom(hireTab, i); if (w) return UI.toast(w);
         A.cash && A.cash(); UI.toast(d.name + ' joins the team!'); UI.refresh();
-      }, 'small ' + (full || !G.canAfford(d.fee) ? 'nofit' : 'go'))));
+      }, 'small ' + (G.canAfford(d.fee) ? 'go' : 'nofit'))));
     });
     var left = T.racesToNewBoard();
+    function head(t, sub) { return h('div', { class: 'stagehead', style: { marginTop: '10px' } }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, t), sub ? h('div', { class: 'dim' }, sub) : null)); }
     return h('div', {},
-      h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'YOUR TEAM • ' + s.drivers.length + ' / ' + T.MAX + ' drivers'),
-        h('div', { class: 'dim' }, 'Drivers race your cars on the circuit. Braking and cornering decide how much of the car\'s limit they use; consistency how steady their laps are and how often they make a mistake. Skills grow as they race, up to their potential (★): young drivers have the most room to grow.'))),
-      mine,
+      head('CIRCUIT DRIVERS • ' + s.drivers.length + ' / ' + T.MAX, 'They race your cars on the circuits. Braking and cornering decide how much of the car\'s limit they use; consistency how steady their laps are. Skills grow as they race, up to their potential (★).'),
+      seats(s.drivers, T.MAX, 'Empty seat', T.release),
+      head('DRAG DRIVERS • ' + s.ddrivers.length + ' / ' + T.DMAX, 'They can take your seat at drag race days (not King races or pink slips) and make your test passes. Reaction, launch and consistency, growing as they race.'),
+      seats(s.ddrivers, T.DMAX, 'Empty seat', T.releaseStaff),
+      head('TUNERS', 'One for each team, paid every race day. A staff tuner\'s sessions cost only the dyno time, fuel and wear.'),
+      tunerSeats,
       h('div', { class: 'stagehead', style: { marginTop: '10px' } }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'HIRING BOARD'),
-        h('div', { class: 'dim' }, 'Signing fee up front, then a wage every race they run. New faces in ' + left + ' race' + (left === 1 ? '' : 's') + '.')),
+        h('div', { class: 'dim' }, 'Signing fee up front, then wages. New faces in ' + left + ' race' + (left === 1 ? '' : 's') + '.')),
         btn('Scout now ' + DR.money(T.SCOUT_COST), function () { if (!T.scout()) return UI.toast('Scouting costs ' + DR.money(T.SCOUT_COST)); UI.refresh(); }, 'small')),
+      h('div', { class: 'schips' }, [['circuit', 'Circuit drivers'], ['drag', 'Drag drivers'], ['tuner', 'Tuners']].map(function (t) {
+        return btn(t[1], function () { hireTab = t[0]; UI.refresh(); }, 'chip' + (hireTab === t[0] ? ' on' : ''));
+      })),
       board);
   }
 
