@@ -86,6 +86,7 @@
         ev && ev.type === 'callout' && !canPink ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'Pink slips need a second car in your garage.') : null,
         ev && (ev.type === 'boss' || ev.king) ? h('div', { class: 'acc', style: { marginTop: '4px' } }, 'The King races for their car.') : null,
         seat ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'DRIVER'), seat) : null,
+        DR.Legal && !(cfg.round > 0) ? DR.Legal.haulPicker(inst) : null,
         youOnly && drivers.length ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'You drive this one yourself.') : null,
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'TECH'), h('div', { class: tech ? 'bad' : '' }, techLine),
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'YOUR CAR'),
@@ -852,6 +853,8 @@
         var dues = G.raceDayDues();
         money = money.concat(dues.money); moneyDelta += dues.total; news = news.concat(dues.news);
       }
+      // the trip there (paid on the way: shown here)
+      if (cfg.trip && !testDrive) { money = cfg.trip.money.concat(money); moneyDelta += cfg.trip.total; news = cfg.trip.news.concat(news); }
       if (them && !testDrive && (cfg.mode === 'career' || cfg.mode === 'street')) {
         var rc = G.payRunCost(S, you.sim.nosT);
         if (rc.paid) { money.push(['Fuel' + (rc.nos ? ' & nitrous' : ''), -rc.paid]); moneyDelta -= rc.paid; }

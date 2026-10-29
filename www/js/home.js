@@ -140,6 +140,8 @@
       G.storedCars() ? h('div', { class: 'warn' }, G.storedCars() + ' car' + (G.storedCars() > 1 ? 's' : '') + ' in storage: ' + DR.money(G.storedCars() * DR.STORAGE) + ' a race day' + (s.store ? ', ' + DR.money(s.store) + ' owed' : '') + '. Move somewhere bigger or sell.') : null,
       h('div', { class: 'gsmall dim' }, 'Next race day: ' + DR.money(G.weeklyBills()) + ' in bills.'),
       h('div', { class: 'col homelist' }, rows),
+      DR.Legal ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } }, h('span', { class: 'grow gsmall' }, DR.Legal.hasRig() ? 'Your truck & trailer is parked out front: tow any car to a race for the gas.' : 'A used 3/4-ton pickup and an open car trailer: tow any car to a race (no tickets, and race cars that can\'t be driven) for the gas. It parks on the street.'),
+        DR.Legal.hasRig() ? null : btn('Buy ' + DR.money(DR.Legal.RIG), function () { var w = DR.Legal.buyRig(); if (w) return UI.toast(w); close(); UI.toast('Truck & trailer bought'); UI.homeModal(); }, 'small' + (G.canAfford(DR.Legal.RIG) ? ' go' : ' disabled'))) : null,
       h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('Close', function () { close(); }, 'primary'))]);
   };
   // My Cars: home and bays on top
