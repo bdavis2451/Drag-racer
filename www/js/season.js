@@ -112,7 +112,7 @@
   // why a callout can't be raced ('' = it can)
   G.calloutLock = function (ev) {
     var si = ev.stage, pos = G.ladderPos(si);
-    if (si > C().stage) return 'Beat the previous class King';
+    if (si > C().stage) return 'Finish the previous stage (its King and its Circuit Cup)';
     if (ev.rung < pos) return '';                         // already beaten: a rematch
     if (ev.rung > pos) return 'Beat #' + (5 - pos) + ' first';
     var need = DR.LADDER_REP[ev.rung], have = G.rep(si);
@@ -159,9 +159,64 @@
     inst.tune = JSON.parse(JSON.stringify(o.tune || {}));
     inst.vis = Object.assign({}, o.vis || {}); inst.color = o.color || DR.CARS[o.carId].col; inst.stripe = o.stripe || ''; inst.rim = o.rim || '#c8c8c8';
     inst.won = o.name;
+    G.raceReady(inst);
     c.pinkSlots = (c.pinkSlots || 0) + 1;
     G.state.cars.push(inst);
     G.save();
+    return inst;
+  };
+  // The rival's crew ran the car properly (a rival's build counts as tuned
+  // and set up, inst.ai); it comes to you the way they raced it, with what
+  // that took: the ECU flash, fuel system, ignition, boost control and
+  // internals its power needs. Upgrades one part at a time, whichever helps
+  // most, then backs boost off if it's still not safe.
+  var FIX = ['ecu', 'injectors', 'fuelpump', 'ignition', 'wastegate', 'headstud', 'ic', 'pistons', 'rods', 'crank', 'block', 'oiling', 'valvetrain', 'clutch', 'trans', 'rearend', 'chassis', 'weight'];
+  function badness(S) {
+    var r = S.risk, n = 0;
+    r.notes.forEach(function (t) { if (/creeps|can't light|blows out|stock tune|get an ECU|slip|lean/i.test(t)) n++; });
+    return 10 * (r.engine + r.trans + (r.axle || 0) + (r.chassis || 0)) + 0.3 * n;
+  }
+  G.raceReady = function (inst) {
+    // every single upgrade: [{ cat, id, price }]
+    function moves() {
+      var out = [];
+      FIX.forEach(function (cat) {
+        if (!DR.partApplies(cat, inst)) return;
+        var id = DR.partId(cat, inst), price = (DR.getOption(cat, inst, id) || {}).price || 0;
+        DR.partOptions(cat, inst).forEach(function (o) { if (o.id !== id && (o.price || 0) > price) out.push({ cat: cat, id: o.id, price: o.price }); });
+      });
+      return out;
+    }
+    function tryParts(list) {
+      var was = list.map(function (m) { return inst.parts[m.cat]; });
+      list.forEach(function (m) { inst.parts[m.cat] = m.id; });
+      var b = badness(DR.buildSpec(inst));
+      list.forEach(function (m, i) { if (was[i] == null) delete inst.parts[m.cat]; else inst.parts[m.cat] = was[i]; });
+      return b;
+    }
+    // their car ran on a proper tune: a flash at the least
+    if (!DR.buildSpec(inst).tuned) { var fl = DR.partOptions('ecu', inst).filter(function (o) { return o.tune; })[0]; if (fl) inst.parts.ecu = fl.id; }
+    var cur = badness(DR.buildSpec(inst));
+    for (var step = 0; step < 24 && cur > 0.01; step++) {
+      var ms = moves(), best = null;
+      ms.forEach(function (m) { m.b = tryParts([m]); if (m.b < cur - 0.005 && (!best || m.b < best.b - 0.005 || (Math.abs(m.b - best.b) <= 0.005 && m.price < best.price))) best = { list: [m], b: m.b, price: m.price }; });
+      // nothing helps alone (a flash that wakes the engine up, then needs fuel): two at once
+      if (!best) ms.slice().sort(function (a, b) { return a.b - b.b; }).slice(0, 8).forEach(function (m) {
+        ms.forEach(function (n) {
+          if (n.cat === m.cat) return;
+          var b = tryParts([m, n]), pr = m.price + n.price;
+          if (b < cur - 0.005 && (!best || b < best.b - 0.005 || (Math.abs(b - best.b) <= 0.005 && pr < best.price))) best = { list: [m, n], b: b, price: pr };
+        });
+      });
+      if (!best) break;
+      best.list.forEach(function (m) { inst.parts[m.cat] = m.id; }); cur = best.b;
+      inst.parts = DR.fitTrans({ carId: inst.carId, parts: inst.parts }).parts;
+    }
+    // still not safe: less boost
+    var S = DR.buildSpec(inst);
+    if (S.fiType !== 'none' && inst.tune && inst.tune.boost) {
+      while (S.risk.engine > 0.02 && inst.tune.boost > 4) { inst.tune.boost = Math.round((inst.tune.boost - 0.5) * 2) / 2; S = DR.buildSpec(inst); }
+    }
     return inst;
   };
   G.loseCar = function (inst) {

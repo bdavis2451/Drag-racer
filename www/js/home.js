@@ -127,7 +127,7 @@
         h('div', { class: 'grow' }, h('div', { class: here ? 'acc' : '' }, hm.name),
           h('div', { class: 'gsmall dim' }, hm.blurb),
           h('div', { class: 'gsmall' }, hm.bays + ' bay' + (hm.bays > 1 ? 's' : '') + ' • ' + (hm.rent ? DR.money(hm.rent) + ' a race day' : 'free') + (here ? '' : ' • move in ' + (cost > 0 ? DR.money(cost) : cost < 0 ? '+' + DR.money(-cost) + ' back' : 'free')) + (!fits && !here ? ' • ' + (G.state.cars.length - hm.bays) + ' car' + (G.state.cars.length - hm.bays > 1 ? 's' : '') + ' to storage' : ''))),
-        here ? h('span', { class: 'etype good' }, 'HOME') : btn('Move in', function () {
+        here ? h('span', { class: 'good pix' }, 'HOME') : btn('Move in', function () {
           UI.confirm('Move to the ' + hm.name.toLowerCase() + '? ' + (cost > 0 ? DR.money(cost) + ' (two race days\' rent as a deposit' + (s.deposit ? ', less your deposit back' : '') + ').' : cost < 0 ? 'You get ' + DR.money(-cost) + ' of your deposit back.' : '') + (fits ? '' : ' Cars that don\'t fit go into storage at ' + DR.money(DR.STORAGE) + ' each a race day.'), function () {
             var w = G.moveHome(hm.id); if (w) return UI.toast(w);
             close(); UI.toast('Moved in: ' + hm.name); if (DR.Phone) DR.Phone.send('ray', 'moved', hm); UI.refresh();

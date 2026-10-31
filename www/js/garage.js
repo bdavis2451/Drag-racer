@@ -421,6 +421,7 @@
     var status = h('div', { class: 'gstatus', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
       h('span', { class: 'acc' }, 'Stage ' + (c.stage + 1) + ': ' + st.name),
       h('span', {}, G.stageWins(c.stage) + '/' + st.events.length + ' wins'),
+      G.cupWins ? h('span', { class: G.cupWon(c.stage) ? 'good' : '' }, 'Circuit ' + (G.cupWon(c.stage) ? 'Cup ✔' : G.cupWins(c.stage) + '/4')) : null,
       h('span', { class: sp ? '' : 'warn' }, sp ? DR.sponsorById(sp.id).name : 'No sponsor yet'));
     // the race team at a glance: how many cars are out racing
     var live = DR.Team ? DR.Team.active().length : 0;
@@ -748,7 +749,7 @@
   UI.Parts = function (jump) {
     var inst = G.car(), S = G.spec(inst), weak = G.simMode() ? {} : DR.bottlenecks(S);
     memory();
-    if (jump && !UI.refreshing) bayCat = jump;
+    if (jump && DR.PART_CATS[jump] && !UI.refreshing) bayCat = jump;
     remember();
     var cv = h('canvas', { class: 'preview' });
     DR.drawPreview(cv, inst);
