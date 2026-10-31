@@ -255,6 +255,7 @@
       ev.cls ? h('div', { class: 'gsmall acc' }, 'Side race • ' + DR.CLASSES[ev.cls].rule) : null,
       ev.unlocks.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + ev.unlocks.map(DR.unlockText).join(' • ')) : null,
       lock ? h('div', { class: 'warn gsmall' }, '🔒 ' + lock) : null,
+      !lock && G.countsForContract(ev) ? h('div', { class: 'acc gsmall' }, '★ A win here counts for your ' + DR.sponsorById(G.careerState().sponsor[ev.stage].id).name + ' contract') : null,
       !lock && issue ? h('div', { class: 'warn gsmall' }, '⚠ ' + issue) : null,
       h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))), G.car() ? h('span', { class: 'dim gsmall' }, '−' + DR.money(DR.runCost(G.spec(G.car())).total) + ' run') : null,
         btn('Race', function () { if (lock || issue) return UI.toast(lock || issue); DR.Race.raceDay(DR.Race.eventCfg(ev, 0)); }, 'erace ' + (lock || issue ? 'disabled' : 'red'))));

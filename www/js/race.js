@@ -37,7 +37,12 @@
     },
     // A career event (round: knockout round, 0-based). Some strip events
     // run under the lights (the same ones every time).
-    careerEvent: function (ev, round) { DR.Race.start(DR.Race.eventCfg(ev, round)); },
+    careerEvent: function (ev, round) {
+      var l = !(round > 0) && G.eventLock(ev); if (l) return UI.toast(l);
+      // a bracket race needs a dial-in: through the race day
+      if (ev.type === 'bracket') return DR.Race.raceDay(DR.Race.eventCfg(ev, round));
+      DR.Race.start(DR.Race.eventCfg(ev, round));
+    },
     eventCfg: function (ev, round) {
       var T = DR.EVENT_TYPES[ev.type];
       round = round || 0;
@@ -49,6 +54,9 @@
     // up against (their car and the time they've posted), tech, and the
     // state of your consumables.
     raceDay: function (cfg, title) {
+      // every way in goes through the event's lock (a sponsor race needs the sponsor, ...)
+      var lk = cfg.mode === 'career' && cfg.ev && !(cfg.round > 0) && G.eventLock(cfg.ev);
+      if (lk) return UI.toast(lk);
       var inst = G.car(), S = G.spec(inst), cond = cfg.cond || (cfg.cond = DR.Race.cond(cfg)), close;
       var opps = cfg.mode === 'career' ? cfg.ev.opps : [cfg.opp];
       var dist = cfg.dist > DR.EIGHTH + 1 ? 'quarter' : 'eighth';

@@ -298,9 +298,9 @@
   G.winEvent = function (ev) {
     var c = C(), first = !c.won[ev.id];
     // a sponsor race won without the sponsor's product doesn't count for them
-    var sp = ev.stage != null && c.sponsor[ev.stage], noProd = sp && ev.type === 'sponsor' && first && !G.sponsorProductOk(ev.stage, G.car());
+    var sp = ev.stage != null && c.sponsor[ev.stage];
     var out = ev.king ? null : winEvent0(ev);
-    if (noProd) { sp.spon = Math.max(0, sp.spon - 1); out.contract = 'That win doesn\'t count for ' + DR.sponsorById(sp.id).name + ': they want ' + sp.prod + ' on the car.'; }
+    if (out && out.noProd) { out.contract = 'That win doesn\'t count for ' + DR.sponsorById(sp.id).name + ': they want ' + sp.prod + ' on the car.'; }
     if (ev.king) {
       var purse = first ? ev.cash : Math.round(ev.cash * 0.35);
       out = { purse: purse, cash: purse, unlocks: [], money: [], banner: '', lines: [], first: first };

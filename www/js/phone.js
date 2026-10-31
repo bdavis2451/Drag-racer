@@ -31,6 +31,7 @@
     pinkwon: ['street', function () { return 'Enjoy the car. I\'ll want a rematch. — your last victim'; }],
     king: ['ray', function () { return 'You beat a King. Half this town will want to race you now, and the other half will want to know your tune. Tell neither.'; }],
     moved: ['ray', function (hm) { return hm && hm.id === 'uncle' ? 'Couch is still here. Kept it warm.' : 'Moving out already? Fine. The couch was getting a dent. Come by when you need the lathe.'; }, true],
+    bailout: ['ray', function () { return 'Saw your bank balance. Put $2,000 in it. Once, kid. Next time you\'re in the red, sell something: a car, the parts on the shelf. That\'s how the rest of us did it.'; }],
     evicted: ['ray', function () { return 'Landlord called me, kid. Couch is made up. Pay your rent first next time, then buy parts.'; }, true],
     ticket: ['ray', function (d) { return (d && d.fine >= 600 ? 'A ' + DR.money(d.fine) + ' stop? ' : 'Another ticket. ') + 'That\'s what trailers are for.'; }, true]
   };
@@ -74,11 +75,20 @@
     if (t && (t.history || []).some(function (x) { return x.pos === 1; })) hit('circuitwin');
     return out;
   }
+  // The first time the bank goes negative, Ray covers it with $2,000. Once.
+  function bailout() {
+    var s = G.state;
+    if (!s || !s.started || s.money >= 0 || s.bailedOut) return;
+    s.bailedOut = true; s.money += 2000; G.save();
+    P.send('bailout');
+  }
+  ['pay', 'earn'].forEach(function (fn) { var o = G[fn]; G[fn] = function () { var r = o.apply(this, arguments); bailout(); return r; }; });
+  P.bailout = bailout;
   // a new career starts with Ray
   var origNew = G.newGame;
   G.newGame = function () { var out = origNew.apply(this, arguments); G.state.phone = { msgs: [], sent: {} }; P.send('intro'); return out; };
   var origShow = UI.show;
-  UI.show = function () { var out = origShow.apply(this, arguments); if (G.state && G.state.started) { st(); checks(false); } return out; };
+  UI.show = function () { var out = origShow.apply(this, arguments); if (G.state && G.state.started) { st(); checks(false); bailout(); } return out; };
 
   // ---------------------------------------------------------------- ui
   var btnEl = null;

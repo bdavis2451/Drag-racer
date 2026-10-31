@@ -421,6 +421,21 @@
     G.state.cars.push(inst); G.state.active = inst.uid; G.save();
     return inst;
   };
+  // which races the contract has counted (saves from before: the first wins
+  // of their kind in the stage, as many as were counted)
+  G.contractIds = function (sp) {
+    if (sp.ids) return sp.ids;
+    sp.ids = {};
+    var si = +Object.keys(C().sponsor).filter(function (k) { return C().sponsor[k] === sp; })[0], st = DR.STAGES[si], n = { sponsor: sp.spon || 0, street: sp.street || 0 };
+    if (st) st.all.forEach(function (ev) { if ((ev.type === 'sponsor' || ev.type === 'street') && C().won[ev.id] && n[ev.type] > 0) { sp.ids[ev.id] = 1; n[ev.type]--; } });
+    return sp.ids;
+  };
+  // would winning this race count for the stage's contract?
+  G.countsForContract = function (ev) {
+    var sp = C().sponsor[ev.stage];
+    if (!sp || sp.paid || (ev.type !== 'sponsor' && ev.type !== 'street') || G.contractIds(sp)[ev.id]) return false;
+    return ev.type === 'sponsor' ? sp.spon < (sp.contract.spon || 0) : sp.street < (sp.contract.street || 0);
+  };
   G.contractProgress = function (si) {
     var sp = C().sponsor[si];
     if (!sp) return { done: false, lines: [] };
@@ -546,10 +561,7 @@
       var before = st.all.filter(function (x) { return G.eventVisible(x) && !G.eventLock(x); }).map(function (x) { return x.id; });
       c.won[ev.id] = true;
       ev.unlocks.forEach(function (u) { apply(u); lines.push('UNLOCKED: ' + unlockText(u)); });
-      if (sp) {
-        if (ev.type === 'sponsor') sp.spon++;
-        if (ev.type === 'street') sp.street++;
-      }
+      
       if (ev.type === 'boss') {
         if (ev.stage + 1 < DR.STAGES.length) {
           var adv = G.tryAdvance(ev.stage);
@@ -560,6 +572,15 @@
       st.all.forEach(function (x) { if (!c.won[x.id] && G.eventVisible(x) && !G.eventLock(x) && before.indexOf(x.id) < 0) newlyVisible.push(x); });
       if (newlyVisible.length) lines.push(newlyVisible.length + ' new race' + (newlyVisible.length > 1 ? 's' : '') + ' available');
       out.newRaces = newlyVisible.length;
+    }
+    // the contract counts each sponsor / street race once, won while signed
+    // (a race won before signing, or without the product, counts on a rerun)
+    var prodOk = ev.type !== 'sponsor' || !G.sponsorProductOk || G.sponsorProductOk(ev.stage, G.car());
+    if (sp && (ev.type === 'sponsor' || ev.type === 'street') && !G.contractIds(sp)[ev.id] && !prodOk) out.noProd = true;
+    else if (sp && (ev.type === 'sponsor' || ev.type === 'street') && !G.contractIds(sp)[ev.id]) {
+      sp.ids[ev.id] = 1;
+      if (ev.type === 'sponsor') sp.spon++; else sp.street++;
+      out.counted = true;
     }
     if (sp) {
       var spName = DR.sponsorById(sp.id).name;
