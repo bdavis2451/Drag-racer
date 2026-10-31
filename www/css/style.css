@@ -933,3 +933,7 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .sms { background: #22242c; box-shadow: inset 0 0 0 1px #3b3f4c; padding: 6px 9px; border-radius: 2px; }
 .sms.new { box-shadow: inset 3px 0 0 #ffcc00, inset 0 0 0 1px #3b3f4c; }
 .smsfrom { font-size: 13px; margin-bottom: 2px; }
+/* the drag career's line to the stage's circuit half */
+.cupline { display: flex; gap: 10px; align-items: center; padding: 4px 8px; margin: 4px 0; background: #22242c; box-shadow: inset 0 0 0 1px #3b3f4c; cursor: pointer; flex-wrap: wrap; }
+.cupcard { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #ffcc00 !important; }
+.trkcard.invite { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #ff2bd6; }

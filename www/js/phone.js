@@ -17,6 +17,9 @@
   // key: [from, text(data)]; once-only unless `again`
   var SCRIPT = {
     intro: ['ray', function () { return 'Couch is yours, kid. Bay three is yours too, as long as you sweep up and don\'t touch my lathe. Your car runs. Barely. Go find out how barely: the dragway does test and tune, and there\'s a Saturday heads-up for beaters.'; }],
+    circuit: ['ray', function () { return 'One more thing. Nobody moves up around here on straight lines alone: every class has a Circuit Cup too, and you\'ll need a driver for it. Rookies are cheap on the Race Team board. Hire one, send them to the Sunday Track Day.'; }],
+    cup: ['ray', function (n) { return 'Your team won the ' + DR.STAGES[n].name + ' Circuit Cup! The road course people will sell you their good stuff now: brakes, bars, wings.'; }],
+    invite: ['street', function (iv) { return (iv && iv.team ? iv.team : 'A team') + ' here. Two of ours against two of yours and one more crew, ' + (iv ? DR.TRACKS[iv.track].name : 'this weekend') + '. Team points. You in? (Race Team > Races)'; }, true],
     firstrace: ['ray', function () { return 'Saw your slip. Don\'t look at the ET, look at the 60 foot. That\'s where races are won and where yours isn\'t yet.'; }],
     firstwin: ['ray', function () { return 'A win! Frame the slip. Then spend the money on tires, not a wing.'; }],
     stage: ['track', function (n) { return 'Congratulations: you\'re moving up to ' + stageName(n) + '. New race days are on the board. The cars get quicker from here.'; }],
@@ -59,6 +62,7 @@
     var s = G.state, c = s.career || {}, out = [];
     function hit(key, data) { if (silent) st().sent[key + (typeof data === 'number' ? data : '')] = true; else P.send(key, data); }
     if (s.stats.races >= 1) hit('firstrace');
+    if (s.stats.races >= 2) hit('circuit');
     if (s.stats.wins >= 1) hit('firstwin');
     for (var n = 1; n <= (c.stage || 0); n++) { hit('stage', n); if (n === c.stage) hit('stageRay', n); }
     if (s.cars.length >= 2) hit('secondcar');

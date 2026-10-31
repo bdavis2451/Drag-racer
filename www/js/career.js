@@ -239,12 +239,13 @@
   DR.CAR_SCHEDULE = {
     '0.4': ['hauler'],
     '0.boss': ['fox', 'volta', 'cobaltss', 'camaro'],
-    '1.2': ['kaze', 'silvia'], '1.4': ['z35', 'nova'], '1.6': ['m3', 'belair'], '1.8': ['s2k', 'vette5'],
+    // (the road-course cars come from the circuit career instead: ccareer.js)
+    '1.2': ['kaze', 'silvia'], '1.4': ['z35', 'nova'], '1.6': ['belair'], '1.8': ['vette5'],
     '1.boss': ['sti', 'evo', 'cobra03', 'camss'],
-    '2.2': ['lightning', 'willys'], '2.4': ['rx7', 'gnx'], '2.6': ['stang15'], '2.8': ['chevelle', 'supra'],
+    '2.2': ['lightning', 'willys'], '2.4': ['gnx'], '2.6': ['stang15'], '2.8': ['chevelle', 'supra'],
     '2.boss': ['diesel', 'charger', 'r34'],
-    '3.2': ['z06', 'cuda'], '3.5': ['hellcat'], '3.8': ['gtr'], '3.boss': ['viper'],
-    '4.4': ['p911'], '4.boss': ['lambo'],
+    '3.2': ['cuda'], '3.5': ['hellcat'], '3.boss': ['viper'],
+    '4.boss': ['lambo'],
     '5.2': ['promod'], '5.5': ['rail']
   };
   DR.CAR_UNLOCK = {};   // car id -> event id ('' = from the start)
@@ -261,16 +262,23 @@
 
   // ---------------------------------------------------------------- state
   G.careerDefaults = function () {
-    return { stage: 0, won: {}, sponsor: {}, perf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF }, vis: {}, cars: { hachi: 1 }, bestStars: 0, freeCars: 0, carTokens: 1 };
+    return { stage: 0, won: {}, sponsor: {}, perf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF },
+      cperf: { engine: DR.BASE_PERF, power: DR.BASE_PERF, drive: DR.BASE_PERF, susp: DR.BASE_PERF, tires: DR.BASE_PERF, body: DR.BASE_PERF }, cwon: {}, vis: {}, cars: { hachi: 1 }, bestStars: 0, freeCars: 0, carTokens: 1 };
   };
-  function C() { if (!G.state.career || G.state.career.perf == null) G.state.career = G.careerDefaults(); return G.state.career; }
+  function C() {
+    if (!G.state.career || G.state.career.perf == null) G.state.career = G.careerDefaults();
+    var c = G.state.career;
+    if (!c.cperf) { c.cperf = {}; Object.keys(c.perf).forEach(function (k) { c.cperf[k] = DR.BASE_PERF; }); }
+    if (!c.cwon) c.cwon = {};
+    return c;
+  }
   G.careerState = C;
   // Testing: open every stage, car, part level and body-kit tier, and top
   // up the bank. Career wins, sponsors and covers are left as they are.
   G.unlockAll = function () {
     var c = C();
     c.stage = DR.STAGES.length - 1;
-    DR.PART_GROUPS.forEach(function (g) { c.perf[g.unlock || g.id] = 5; });
+    DR.PART_GROUPS.forEach(function (g) { c.perf[g.unlock || g.id] = 5; c.cperf[g.unlock || g.id] = 5; });
     DR.VISUAL.forEach(function (slot) { c.vis[slot.id] = 3; });
     Object.keys(DR.CARS).forEach(function (id) { c.cars[id] = 1; });
     G.state.money = Math.max(G.state.money, 5000000);
@@ -278,6 +286,17 @@
   };
 
   G.stageUnlocked = function (si) { return si <= C().stage; };
+  // A stage is done when both its drag King and its Circuit Cup are won
+  // (ProStreet-style: the career needs both disciplines). The next one
+  // opens then, whichever came last.
+  G.cupWon = G.cupWon || function () { return true; };
+  G.stageDone = function (si) { var st = DR.STAGES[si]; return !!C().won[st.boss.id] && G.cupWon(si); };
+  G.tryAdvance = function (si) {
+    var c = C();
+    if (!G.stageDone(si) || c.stage > si || si + 1 >= DR.STAGES.length) return '';
+    c.stage = si + 1; G.save();
+    return 'Stage ' + (si + 2) + ' unlocked: ' + DR.STAGES[si + 1].name;
+  };
   G.stageWins = function (si) { var w = 0; DR.STAGES[si].events.forEach(function (ev) { if (C().won[ev.id]) w++; }); return w; };
   G.eventWon = function (ev) { return !!C().won[ev.id]; };
   // cars unlocked since you last looked at them in the dealer
@@ -298,8 +317,9 @@
   }
   function shopGroupOf(cat) { for (var i = 0; i < DR.PART_GROUPS.length; i++) if (DR.PART_GROUPS[i].cats.indexOf(cat) >= 0) return DR.PART_GROUPS[i]; return null; }
   G.isNewPart = function (cat, lvl) { var g = shopGroupOf(cat); return !!g && lvl > 1 && G.partUnlocked(cat, lvl) && lvl > (seenParts().seenPerf[g.id] || 1); };
-  G.groupHasNew = function (g) { return (C().perf[g.unlock || g.id] || 1) > (seenParts().seenPerf[g.id] || 1); };
-  G.markGroupSeen = function (g) { var c = seenParts(), l = c.perf[g.unlock || g.id] || 1; if (c.seenPerf[g.id] !== l) { c.seenPerf[g.id] = l; G.save(); } };
+  function grpLevel(g) { var c = C(), k = g.unlock || g.id; return Math.max(c.perf[k] || 1, c.cperf[k] || 1); }
+  G.groupHasNew = function (g) { return grpLevel(g) > (seenParts().seenPerf[g.id] || 1); };
+  G.markGroupSeen = function (g) { var c = seenParts(), l = grpLevel(g); if (c.seenPerf[g.id] !== l) { c.seenPerf[g.id] = l; G.save(); } };
   G.isNewVis = function (slot, tier) { return tier > 0 && G.visUnlocked(slot, tier) && tier > (seenParts().seenVis[slot] || 0); };
   G.visSlotHasNew = function (slot) { return (C().vis[slot] || 0) > (seenParts().seenVis[slot] || 0); };
   G.markVisSeen = function (slot) { var c = seenParts(), t = c.vis[slot] || 0; if (c.seenVis[slot] !== t) { c.seenVis[slot] = t; G.save(); } };
@@ -307,15 +327,19 @@
   G.newVisCount = function () { return DR.VISUAL.filter(function (v) { return G.visSlotHasNew(v.id); }).length; };
   G.newCarCount = function (cat) { return Object.keys(DR.CARS).filter(function (id) { return (!cat || DR.CARS[id].cat === cat) && G.isNewCar(id); }).length; };
   G.carUnlocked = function (carId) { return !!C().cars[carId] || DR.CAR_UNLOCK[carId] === ''; };
-  G.partUnlocked = function (cat, lvl) {
-    return lvl <= 1 || lvl <= (C().perf[DR.groupOf(cat)] || 1);
+  // Drag wins open drag parts, circuit wins circuit parts, either opens the
+  // shared ones (DR.PART_DISC). id: the option (without it, the category's).
+  G.partUnlocked = function (cat, lvl, id) {
+    if (lvl <= 1) return true;
+    var c = C(), g = DR.groupOf(cat), d = DR.partDisc(cat, id), dl = c.perf[g] || 1, cl = c.cperf[g] || 1;
+    return lvl <= (d === 'drag' ? dl : d === 'circuit' ? cl : Math.max(dl, cl));
   };
   G.visUnlocked = function (slot, tier) { return tier <= (C().vis[slot] || 0); };
 
   // Why an event cannot be raced yet ('' = it can).
   G.eventLock = function (ev) {
     var c = C(), st = DR.STAGES[ev.stage];
-    if (ev.stage > c.stage) return 'Beat the previous stage boss';
+    if (ev.stage > c.stage) return 'Finish stage ' + ev.stage + ': its King and its Circuit Cup';
     var wins = G.stageWins(ev.stage);
     if (wins < ev.needWins) return 'Win ' + (ev.needWins - wins) + ' more race' + (ev.needWins - wins > 1 ? 's' : '') + ' in this stage';
     if (ev.type === 'boss') {
@@ -435,8 +459,12 @@
       return ids.length + ' new cars at the dealer: ' + names.join(', ') + (ids.length > 3 ? ' and ' + (ids.length - 3) + ' more' : '');
     }
     if (p[0] === 'perf') {
-      if (p[1] === 'all') return 'All performance parts up to ' + DR.LEVEL_NAMES[+p[2]] + ' level';
-      return (DR.UNLOCK_NAMES[p[1]] || p[1]) + ' parts: ' + DR.LEVEL_NAMES[+p[2]] + ' level';
+      if (p[1] === 'all') return 'Drag and shared parts up to ' + DR.LEVEL_NAMES[+p[2]] + ' level';
+      return (DR.UNLOCK_NAMES[p[1]] || p[1]) + ' parts (drag & shared): ' + DR.LEVEL_NAMES[+p[2]] + ' level';
+    }
+    if (p[0] === 'cperf') {
+      if (p[1] === 'all') return 'Circuit and shared parts up to ' + DR.LEVEL_NAMES[+p[2]] + ' level';
+      return (DR.UNLOCK_NAMES[p[1]] || p[1]) + ' parts (circuit & shared): ' + DR.LEVEL_NAMES[+p[2]] + ' level';
     }
     if (p[0] === 'vis') {
       var s = DR.visSlot(p[1]);
@@ -445,20 +473,23 @@
     return u;
   }
   DR.unlockText = unlockText;
+  G.applyUnlock = function (u) { apply(u); };
   // The short form for the time slip: { kind: parts|body|car, text }.
   DR.unlockChip = function (u) {
     var p = u.split(':');
     if (p[0] === 'car') return { kind: 'car', text: DR.CARS[p[1]].name };
-    if (p[0] === 'perf') return { kind: 'parts', text: (p[1] === 'all' ? 'All parts' : DR.UNLOCK_NAMES[p[1]] || p[1]) + ' → ' + DR.LEVEL_NAMES[+p[2]] };
+    if (p[0] === 'perf') return { kind: 'parts', text: 'Drag: ' + (p[1] === 'all' ? 'all parts' : DR.UNLOCK_NAMES[p[1]] || p[1]) + ' → ' + DR.LEVEL_NAMES[+p[2]] };
+    if (p[0] === 'cperf') return { kind: 'parts', text: 'Circuit: ' + (p[1] === 'all' ? 'all parts' : DR.UNLOCK_NAMES[p[1]] || p[1]) + ' → ' + DR.LEVEL_NAMES[+p[2]] };
     if (p[0] === 'vis') return { kind: 'body', text: DR.visSlot(p[1]).name + (+p[2] > 1 ? ' ' + ['', 'I', 'II', 'III'][+p[2]] : '') };
     return { kind: 'parts', text: unlockText(u) };
   };
   function apply(u) {
     var c = C(), p = u.split(':');
     if (p[0] === 'car') c.cars[p[1]] = 1;
-    else if (p[0] === 'perf') {
-      if (p[1] === 'all') DR.PART_GROUPS.forEach(function (g) { var u = g.unlock || g.id; c.perf[u] = Math.max(c.perf[u] || 1, +p[2]); });
-      else c.perf[p[1]] = Math.max(c.perf[p[1]] || 1, +p[2]);
+    else if (p[0] === 'perf' || p[0] === 'cperf') {
+      var tr = p[0] === 'perf' ? c.perf : c.cperf;
+      if (p[1] === 'all') DR.PART_GROUPS.forEach(function (g) { var u = g.unlock || g.id; tr[u] = Math.max(tr[u] || 1, +p[2]); });
+      else tr[p[1]] = Math.max(tr[p[1]] || 1, +p[2]);
     } else if (p[0] === 'vis') c.vis[p[1]] = Math.max(c.vis[p[1]] || 0, +p[2]);
   }
   // Saves made under an older unlock schedule: give back every unlock the
@@ -480,8 +511,10 @@
   }
   // Where a part level opens: the first career race whose win unlocks it
   // ('Beat Tony B', 'S2 boss'), for the shop's lock tags.
-  G.unlockWhere = function (cat, lvl) {
-    var grp = DR.groupOf(cat);
+  G.unlockWhere = function (cat, lvl, id) {
+    var grp = DR.groupOf(cat), d = DR.partDisc(cat, id);
+    // circuit parts (and shared ones the circuit opens first): the Race Team's career
+    if (d === 'circuit' && G.cupUnlockWhere) return G.cupUnlockWhere(grp, lvl);
     for (var si = 0; si < DR.STAGES.length; si++) {
       var evs = DR.STAGES[si].events.slice().sort(function (a, b) { return a.needWins - b.needWins || a.idx - b.idx; }).concat([DR.STAGES[si].boss]);
       for (var i = 0; i < evs.length; i++) {
@@ -519,9 +552,9 @@
       }
       if (ev.type === 'boss') {
         if (ev.stage + 1 < DR.STAGES.length) {
-          c.stage = Math.max(c.stage, ev.stage + 1);
-          lines.push('STAGE ' + (ev.stage + 2) + ' UNLOCKED: ' + DR.STAGES[ev.stage + 1].name);
-          out.banner = 'Stage ' + (ev.stage + 2) + ' unlocked: ' + DR.STAGES[ev.stage + 1].name;
+          var adv = G.tryAdvance(ev.stage);
+          if (adv) { lines.push(adv.toUpperCase()); out.banner = adv; }
+          else { out.banner = 'King beaten! Win the ' + (G.cupName ? G.cupName(ev.stage) : 'Circuit Cup') + ' (Race Team) to open stage ' + (ev.stage + 2); lines.push(out.banner); }
         } else { lines.push('YOU ARE THE KING OF THE STRIP!'); out.banner = 'You are the King of the Strip!'; }
       }
       st.all.forEach(function (x) { if (!c.won[x.id] && G.eventVisible(x) && !G.eventLock(x) && before.indexOf(x.id) < 0) newlyVisible.push(x); });

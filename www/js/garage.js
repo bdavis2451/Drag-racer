@@ -496,14 +496,14 @@
     var grid = h('div', { class: 'pgrid' });
     DR.partOptions(cat, inst).forEach(function (o) {
       if (!o.price) return;
-      var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(cat, o.id), locked = !G.partUnlocked(cat, lvl);
+      var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(cat, o.id), locked = !G.partUnlocked(cat, lvl, o.id);
       grid.appendChild(h('div', { class: 'pcard l' + lvl + (locked ? ' locked' : '') + (installed ? ' inst' : ''), onclick: function () { partModal(inst, cat, o.id); } },
         h('div', { class: 'pic' }, iconEl(DR.iconCat(cat, inst), lvl, o.id, 48)),
         h('div', { class: 'plvl' }, DR.LEVEL_NAMES[lvl]),
         h('div', { class: 'pname' }, o.name),
         // what it does for this car, at a glance
         !locked && !installed && DR.partApplies(cat, inst) ? gainLine(inst, cat, o.id) : null,
-        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl)) : h('span', { class: 'price' + (G.canAfford(G.partPrice(cat, o) + (o.install || 0)) ? '' : ' bad') }, DR.money(G.partPrice(cat, o) + (o.install || 0)) + (o.install ? ' fitted' : '') + (G.partDiscount(cat) ? ' (sponsor)' : '')),
+        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl, o.id)) : h('span', { class: 'price' + (G.canAfford(G.partPrice(cat, o) + (o.install || 0)) ? '' : ' bad') }, DR.money(G.partPrice(cat, o) + (o.install || 0)) + (o.install ? ' fitted' : '') + (G.partDiscount(cat) ? ' (sponsor)' : '')),
           installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(cat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
@@ -561,7 +561,7 @@
     var tier = DR.PKG_TIERS[t], lvl = PKG_LVL[t], locked = pkgLocked(pg, t);
     var S0 = G.spec(inst), S1 = DR.buildSpec(plan.after), close;
     var list = h('div', { class: 'pkglist' }, plan.steps.map(function (s) {
-      var lk = !!locked && !G.partUnlocked(s.cat, s.opt.lvl);
+      var lk = !!locked && !G.partUnlocked(s.cat, s.opt.lvl, s.id);
       return h('div', { class: 'pkgrow' + (lk ? ' bad' : '') }, iconEl(s.cat, s.opt.lvl, s.id, 20), h('span', { class: 'dim' }, DR.catName(s.cat, inst)), h('span', {}, (lk ? '🔒 ' : '') + s.opt.name.replace(' (Factory)', '')));
     }));
     close = UI.modal(h('div', { class: 'col pmodal l' + lvl },
@@ -609,7 +609,7 @@
     ].concat(opt.fit && !opt.fit.block ? opt.fit.lines.map(function (l) { return [l[0], DR.money(l[1])]; }).concat([['Installed price', DR.money(opt.price + opt.fit.install), 'acc']]) : []));
   }
   function partModal(inst, cat, id) {
-    var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt), locked = !G.partUnlocked(cat, lvl);
+    var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt), locked = !G.partUnlocked(cat, lvl, id);
     var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
     var fits = DR.partApplies(cat, inst), owned = G.ownedCount(cat, id), installed = DR.partId(cat, inst) === id;
     var close;
@@ -645,7 +645,7 @@
       G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : null,
       opt.tune && opt.tune !== true && !S0.tuned ? h('div', { class: 'warnbox' }, opt.tune === 'soft' ? 'Runs on your stock ECU, but only makes about half its gain until you get an ECU flash (Fuel & Spark > ECU).' :
         cat === 'fi' ? 'Needs an ECU tune: on the stock ECU it can only run about 5 psi. Plan on injectors and a fuel pump too.' : 'Needs an ECU tune (Fuel & Spark > ECU: a flash or a standalone). Without one ' + (cat === 'injectors' ? 'it runs pig-rich and loses power.' : cat === 'fueltype' ? 'it runs lean and can burn a piston.' : 'the stock ECU can\'t run it properly.')) : null,
-      locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock in the career: ' + G.unlockWhere(cat, lvl) + '.') :
+      locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + ({ drag: 'drag ', circuit: 'circuit ' }[DR.partDisc(cat, id)] || '') + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock in the career: ' + G.unlockWhere(cat, lvl, id) + '.') :
         h('div', { class: 'row', style: { flexWrap: 'wrap' } },
           btn('Buy ' + DR.money(price), function () { buy(false); }, 'go' + (G.canAfford(price) ? '' : ' disabled')),
           fits && !installed && owned && !(opt.fit && opt.fit.block) ? btn('Install Yours' + (opt.install ? ' ' + DR.money(opt.install) : ''), function () {

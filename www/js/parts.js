@@ -531,6 +531,27 @@
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['rtires', 'wheels', 'ftires', 'brakes'] },
     { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'safety'] }
   ];
+  // Which side of the career opens a part (anything not listed is shared:
+  // either discipline opens it). Drag racing opens the launch and straight-
+  // line hardware, circuit racing what a road course rewards: brakes, bars,
+  // aero, cooling, sequential boxes and grip tires. cat: { optionId: disc }
+  // or a whole category: '*'.
+  DR.PART_DISC = {
+    converter: { '*': 'drag' }, transbrake: { '*': 'drag' }, launch: { '*': 'drag' }, nosctrl: { '*': 'drag' }, nosheat: { '*': 'drag' }, wheeliebar: { '*': 'drag' },
+    nitrous: { n250: 'drag', n400: 'drag', n650: 'drag' },
+    rearsusp: { rs1: 'drag', rs2: 'drag', rs3: 'drag' }, frontsusp: { fs2: 'drag' },
+    springs: { sp3: 'drag', sp2: 'circuit' }, shocks: { sh2: 'drag', sh3: 'circuit' },
+    sway: { sw1: 'circuit', sw2: 'circuit' }, aero: { a1: 'circuit', a2: 'circuit', a3: 'circuit' },
+    gears: { rp2: 'drag', rp3: 'drag', qc: 'drag' }, diff: { spool: 'drag' },
+    clutch: { cls: 'drag', cl5: 'drag' }, rearend: { ra2: 'drag', ra3: 'drag' },
+    trans: { pg2: 'drag', pg_pm: 'drag', a3_pm: 'drag', a3_400: 'drag', dog4: 'drag', cl5: 'drag', lenco5: 'drag', dct7: 'circuit', seq6: 'circuit', seq6_hd: 'circuit' },
+    wheels: { wh3: 'drag' }, brakes: { br1: 'drag', br3: 'circuit', br2: 'circuit' },
+    ftires: { ft1: 'drag', ft2: 'circuit' },
+    rtires: { dr_245: 'drag', dr_275: 'drag', dr_315: 'drag', ets_28: 'drag', sl_31: 'drag', sl_33: 'drag', sl_36: 'drag', tr_255: 'circuit', tr_315: 'circuit', rr_slk: 'circuit' },
+    cooling: { co2: 'circuit', co3: 'circuit' }, oiling: { o2: 'circuit' },
+    fueltype: { meth: 'drag' }, safety: { sf2: 'drag' }, weight: { w4: 'drag' }
+  };
+  DR.partDisc = function (cat, id) { var t = DR.PART_DISC[cat]; return t ? t[id] || t['*'] || '' : ''; };
   DR.UNLOCK_NAMES = { engine: 'Engine', power: 'Power adder', drive: 'Drivetrain', susp: 'Suspension', tires: 'Wheel & tire', body: 'Weight' };
   DR.CAT_NAMES = { engine: 'Engine Swap', fi: 'Turbo / Supercharger', trans: 'Transmission', rtires: 'Drive Tires' };
 
@@ -950,7 +971,7 @@
     copy.parts = copy.parts || {}; copy.tune = copy.tune || {};
     // A package fits the best parts you have unlocked up to its tier's pick
     // (so it can always be bought, and gets better as the career opens up)
-    function unl(cat, opt) { return anyLevel || !DR.Game || !DR.Game.partUnlocked || DR.Game.partUnlocked(cat, opt.lvl); }
+    function unl(cat, opt) { return anyLevel || !DR.Game || !DR.Game.partUnlocked || DR.Game.partUnlocked(cat, opt.lvl, opt.id); }
     function pick(cat, id) {
       var want = DR.getOption(cat, copy, id);
       if (!want || want.id !== id) return null;

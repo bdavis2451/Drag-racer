@@ -90,8 +90,8 @@
 
   function stageChips() {
     return h('div', { class: 'schips' }, DR.STAGES.map(function (st, si) {
-      var un = G.stageUnlocked(si), boss = G.eventWon(st.boss);
-      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Beat the stage ' + si + ' boss first'); selStage = si; selPlace = null; UI.refresh(); }, un ? '' : 'nofit');
+      var un = G.stageUnlocked(si), boss = G.stageDone(si);
+      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Finish stage ' + si + ': its King and its Circuit Cup'); selStage = si; selPlace = null; UI.refresh(); }, un ? '' : 'nofit');
     }));
   }
   function nextEvent(st) {
@@ -207,9 +207,14 @@
     var head = h('div', { class: 'rhead' },
       h('div', { class: 'grow' }, h('span', { class: 'pix acc' }, st.name), ' ', h('span', { class: 'gsmall dim' }, wins + ' / ' + st.events.length + ' won'),
         h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(wins / st.events.length * 100) + '%' } }))));
+    // the other half of the stage: its circuit race days (Race Team)
+    var cupW = G.cupWins ? G.cupWins(selStage) : 0, cupDone = G.cupWon(selStage), kingDone = G.eventWon(st.boss);
+    var cupLine = G.cupWins ? h('div', { class: 'cupline', onclick: function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); } },
+      h('span', { class: kingDone ? 'good' : 'dim' }, (kingDone ? '✔' : '✗') + ' King'), h('span', { class: cupDone ? 'good' : 'dim' }, (cupDone ? '✔' : '✗') + ' Circuit Cup'),
+      h('span', { class: 'gsmall dim grow' }, 'Circuit race days ' + cupW + ' / 4' + (G.stageDone(selStage) ? ' • stage done' : ' • both open the next stage')), h('span', { class: 'gsmall acc' }, 'Race Team ▸')) : null;
     var side = h('div', { class: 'rdetail' }, eventCard(selEv, selEv === next), sponsorCard(c));
     setTimeout(function () { var el = road.querySelector('.rnode.sel'); if (el && arriving) road.scrollLeft = Math.max(0, el.offsetLeft - road.clientWidth / 2 + 28); }, 0);
-    return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, road, h('div', { class: 'gsmall dim rtip' }, 'Each week opens as you win race days. Side races (class shootouts, brackets, shows) sit above the road.')), side);
+    return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, cupLine, road, h('div', { class: 'gsmall dim rtip' }, 'Each week opens as you win race days. Side races (class shootouts, brackets, shows) sit above the road.')), side);
   }
   function sponsorCard(c) {
     var sp = c.sponsor[selStage];

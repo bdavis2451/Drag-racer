@@ -246,7 +246,10 @@
     var tr = DR.TRACKS[tid], S = DR.buildSpec(inst);
     return { lat: (DR.lapSim(inst, tr, S, { lat: 0.95 }).time / ideal - 1) / 0.05, brk: (DR.lapSim(inst, tr, S, { brk: 0.9 }).time / ideal - 1) / 0.1 };
   }
-  T.eligible = function (inst, cls) {
+  // ev: a career race (no class floor: the field is set by the stage)
+  T.eligible = function (inst, cls, ev) {
+    if (DR.CARS[inst.carId].cat === 'Pro') return 'Dragsters and Pro Mods don\'t turn: they can\'t race a circuit';
+    if (ev) return '';
     if (cls.floor && T.idealLap(inst) < cls.floor) return 'Too quick for this class: its ideal lap is ' + fmtLap(T.idealLap(inst)) + ', the class allows ' + fmtLap(cls.floor) + ' or slower';
     return '';
   };
@@ -268,13 +271,16 @@
     if (!ids.length) ids = Object.keys(stock).sort(function (a, b) { return stock[a] - stock[b]; }).slice(0, 6);
     return pick(ids);
   }
-  function aiField(cls, n, per) {
-    var used = {}, out = [], base = cls.floor || cls.pace, team;
+  // ev: a career race sets its own pace (seconds off the class's) and skill
+  // band, and its named rival leads the field
+  function aiField(cls, n, per, ev) {
+    var used = {}, out = [], base = (cls.floor || cls.pace) + (ev ? ev.pace : 0), team, ai = ev ? ev.ai : cls.ai;
     for (var i = 0; i < n; i++) {
       if (i % (per || 1) === 0) { do team = pick(TEAMS); while (used[team]); used[team] = 1; }
-      var q = rnd(cls.ai[0], cls.ai[1]), d = makeDriver(q);
+      var q = rnd(ai[0], ai[1]), d = makeDriver(q);
       var pace = base + rnd(0.2, cls.spread);
-      out.push({ name: d.name, team: team, car: carFor(pace), col: d.col, pace: pace, d: d });
+      if (ev && ev.rival && i === 0) { d = makeDriver(ai[1]); d.name = ev.rival.name; d.col = ev.rival.col; team = ev.rival.team; pace = base + 0.1; }
+      out.push({ name: d.name, team: team, car: ev && ev.rival && i === 0 && ev.rival.car ? ev.rival.car : carFor(pace), col: d.col, pace: pace, d: d });
     }
     return out;
   }
@@ -300,12 +306,12 @@
       if (mi.inst.damage) return { msg: 'Repair the ' + DR.CARS[mi.inst.carId].name + ' first' };
       if (T.carAway(mi.uid)) return { msg: 'The ' + DR.CARS[mi.inst.carId].name + ' is already at the track' };
       if (T.driverBusy(mi.drv)) return { msg: mi.d.name + ' is already racing' };
-      var why = T.eligible(mi.inst, cls); if (why) return { msg: why };
-      cost += cls.fee + mi.d.wage;
+      var why = T.eligible(mi.inst, cls, opts.ev); if (why) return { msg: why };
+      cost += (opts.ev ? opts.ev.fee : cls.fee) + mi.d.wage;
     }
     if (!G.canAfford(cost)) return { msg: 'Entry and wages: ' + DR.money(cost) };
     var inst = mine[0].inst, d = mine[0].d;
-    var tr = DR.TRACKS[tid], S = DR.buildSpec(T.circuitCar(inst)), ideal = T.idealLap(inst, tid), sens = sensitivity(inst, ideal, tid), laps = T.lapsAt(cls, tid);
+    var tr = DR.TRACKS[tid], S = DR.buildSpec(T.circuitCar(inst)), ideal = T.idealLap(inst, tid), sens = sensitivity(inst, ideal, tid), laps = opts.ev ? opts.ev.laps : T.lapsAt(cls, tid);
     var stock0 = DR.TRACKS[T.TRACK].stock || {}, stockT = tr.stock || stock0;
     var f = T.factors(d), you = DR.lapSim(T.circuitCar(inst), tr, S, { lat: f.lat, brk: f.brk });
     // the shape of a lap in time (fraction of the lap time at each point),
@@ -330,7 +336,7 @@
       var ci = T.circuitCar(mi.inst), S2 = DR.buildSpec(ci), f2 = T.factors(mi.d);
       mi.S = S2; field.push(entry(mi, S2, DR.lapSim(ci, tr, S2, { lat: f2.lat, brk: f2.brk })));
     });
-    (opts.field || (mine.length > 1 ? aiField(cls, 4, 2) : aiField(cls, 5))).forEach(function (o) {
+    (opts.field || (mine.length > 1 ? aiField(cls, 4, 2) : aiField(cls, 5, 1, opts.ev))).forEach(function (o) {
       var of = T.factors(o.d);
       // their pace here: the same car's stock lap here vs on the reference track
       var k2 = stockT[o.car] && stock0[o.car] ? stockT[o.car] / stock0[o.car] : tr.len / DR.TRACKS[T.TRACK].len;
@@ -367,7 +373,7 @@
     }
     var end = Math.max.apply(null, order.map(function (e) { return e.cum[e.cum.length - 1]; }));
     G.pay(cost);
-    var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series,
+    var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series, ev: opts.ev ? opts.ev.id : undefined,
       cars: mine.length > 1 ? mine.map(function (x) { return x.uid; }) : undefined, drvs: mine.length > 1 ? mine.map(function (x) { return x.drv; }) : undefined, teams: mine.length > 1 || undefined,
       field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, drv: e.drv, uid: e.uid, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err, hot: e.hot ? +e.hot.toFixed(1) : 0, tires: e.tires ? +e.tires.toFixed(1) : 0 }; }),
       ideal: ideal, base: you.time, snd: snd };
@@ -415,16 +421,20 @@
         line = 'Team race, ' + cls.name + ' at ' + DR.TRACKS[r.track || T.TRACK].name + ': your team ' + ['won', 'came 2nd', 'came 3rd'][tp - 1] + ' on ' + mine.pts + ' points (' + mine.rows.map(function (e) { return e.name.split(' ')[0] + ' P' + (r.field.indexOf(e) + 1); }).join(', ') + ')' + (prize ? ': +' + DR.money(prize) : '');
         d = { name: mine.rows.map(function (e) { return e.name.split(' ')[0]; }).join(' & ') };
       } else {
+        // a career race: its purse and unlocks if the goal was met
+        var cr = r.ev && G.cupFinish ? G.cupFinish(r.ev, pos) : null;
+        if (cr) prize = cr.cash;
         if (prize) G.earn(prize);
         grew = d ? learn(d, pos, you) : null;
-        line = (d ? d.name : 'Your driver') + ' finished P' + pos + ' in the ' + cls.name + ' at ' + DR.TRACKS[r.track || T.TRACK].name + (car ? ' (' + DR.CARS[car.carId].name + ')' : '') + (prize ? ': +' + DR.money(prize) : '');
+        line = (d ? d.name : 'Your driver') + ' finished P' + pos + ' in ' + (cr ? cr.name : 'the ' + cls.name) + ' at ' + DR.TRACKS[r.track || T.TRACK].name + (car ? ' (' + DR.CARS[car.carId].name + ')' : '') + (prize ? ': +' + DR.money(prize) : '') + (cr && cr.note ? ' • ' + cr.note : '');
       }
-      var unl = [];
-      if (pos === 1 && !s.wins[cls.id]) unl = classUnlocks(cls);
-      if (pos === 1) s.wins[cls.id] = (s.wins[cls.id] || 0) + 1;
+      // open class races pay prize money; the career's circuit races open parts and cars
+      var unl = cr ? cr.unlocks : [];
+      if (pos === 1 && !r.ev) s.wins[cls.id] = (s.wins[cls.id] || 0) + 1;
       s.done++;
+      T.rollInvite();
       if (s.done - s.boardAt >= T.REFRESH_EVERY) { s.board = makeBoard(); s.dboard = makeDragBoard(); s.tboard = makeTunerBoard(); s.boardAt = s.done; }
-      s.history.unshift({ cls: cls.id, track: r.track || T.TRACK, pos: pos, team: r.teams || undefined, prize: prize, drv: d ? d.name : '?', car: car ? car.carId : you.car, at: Date.now(), best: you.best, grew: grew, unl: unl });
+      s.history.unshift({ cls: cls.id, track: r.track || T.TRACK, pos: pos, team: r.teams || undefined, ev: r.ev, note: cr ? cr.note : undefined, prize: prize, drv: d ? d.name : '?', car: car ? car.carId : you.car, at: Date.now(), best: you.best, grew: grew, unl: unl });
       s.history = s.history.slice(0, 20);
       var sm = r.series != null ? seriesRound(r) : null;
       msgs.push({ text: line + (sm ? ' • ' + sm : ''), race: r, pos: pos, prize: prize, grew: grew, unl: unl });
@@ -439,6 +449,26 @@
   T.NIGHT_BONUS = 1.25;
   T.isNight = function (tid) { return !!(DR.TRACKS[tid] && DR.TRACKS[tid].theme); };
   T.prize = function (cls, pos, tid) { var p = cls.prize[pos - 1] || 0; return T.isNight(tid) ? Math.round(p * T.NIGHT_BONUS / 50) * 50 : p; };
+
+  // ---------------------------------------------------------------- invitations
+  // Team races (2v2v2) aren't on the board every day: now and then a team
+  // invites yours, at your stage's class, and the invitation stands for a
+  // few races. Never with fewer than two circuit drivers; likelier with
+  // three. Rolled each time one of your races finishes.
+  T.INVITE_P = [0, 0, 0.18, 0.32];   // by circuit drivers on the team
+  T.INVITE_FOR = 4;                  // finished races it stands for
+  T.invite = function () { var s = st(); if (s.invite && s.done >= s.invite.exp) s.invite = null; return s.invite || null; };
+  T.rollInvite = function (force) {
+    var s = st(), n = Math.min(3, s.drivers.length);
+    if (T.invite()) return null;
+    if (!force && Math.random() >= T.INVITE_P[n]) return null;
+    var c = G.careerState(), cls = T.classById(T.stageClass(c.stage)), tid = pick(['pixel'].concat(T.SERIES));
+    s.invite = { cls: cls.id, track: tid, team: pick(TEAMS), exp: s.done + T.INVITE_FOR };
+    if (DR.Phone) DR.Phone.send('street', 'invite', s.invite);
+    return s.invite;
+  };
+  T.STAGE_CLASS = ['D', 'D', 'C', 'B', 'A', 'O'];
+  T.stageClass = function (si) { return T.STAGE_CLASS[Math.min(si, T.STAGE_CLASS.length - 1)]; };
 
   // ---------------------------------------------------------------- team races
   // Three teams of two, points 25-18-15-12-10-8 for every car; the most
@@ -524,18 +554,7 @@
     d.wage = T.wage(d);
     return out;
   }
-  function classUnlocks(cls) {
-    var c = G.careerState(), out = [];
-    if (cls.perf) {
-      var any = false;
-      DR.PART_GROUPS.forEach(function (g) { var u = g.unlock || g.id; if ((c.perf[u] || 1) < cls.perf) { c.perf[u] = cls.perf; any = true; } });
-      if (any) out.push('All performance parts up to ' + DR.LEVEL_NAMES[cls.perf] + ' level');
-    }
-    var cars = [];
-    (cls.stages || []).forEach(function (si) { DR.carsAtStage(si).forEach(function (id) { if (!c.cars[id]) { c.cars[id] = 1; cars.push(DR.CARS[id].name); } }); });
-    if (cars.length) out.push(cars.length + ' new car' + (cars.length > 1 ? 's' : '') + ' at the dealer: ' + cars.slice(0, 3).join(', ') + (cars.length > 3 ? ' and ' + (cars.length - 3) + ' more' : ''));
-    return out;
-  }
+
 
   // ---------------------------------------------------------------- the rest of the game
   // A car at the track can't be raced, worked on, shown or sold.
