@@ -946,3 +946,27 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .jobrow { gap: 8px; font-size: 14px; }
 .clockchip { font-size: 11px; padding: 3px 6px; white-space: nowrap; }
 .baybanner { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #2a2410; box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #ffcc00; padding: 4px 8px; margin: 4px 0; }
+/* calendar */
+.calwrap { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.calleft { flex: 1 1 360px; min-width: 280px; }
+.calgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.calwd { font-size: 11px; text-align: center; color: #9aa; }
+.calcell { min-height: 40px; background: #22242c; box-shadow: inset 0 0 0 1px #3b3f4c; padding: 2px 3px; cursor: pointer; }
+.calcell.off { background: transparent; box-shadow: none; cursor: default; }
+.calcell.past { opacity: .4; cursor: default; }
+.calcell.today { box-shadow: inset 0 0 0 2px #3aa0ff; }
+.calcell.sel { box-shadow: inset 0 0 0 2px #ffcc00; }
+.calnum { font-size: 12px; }
+.caldots { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; }
+.caldots i, .caldot { display: inline-block; width: 6px; height: 6px; margin-right: 3px; }
+.calday { flex: 1 1 260px; min-width: 240px; display: flex; flex-direction: column; gap: 4px; }
+.calev { display: flex; gap: 6px; align-items: center; padding: 4px 6px; background: #22242c; box-shadow: inset 0 0 0 1px #3b3f4c; }
+.calev.past { opacity: .45; }
+.calnav { gap: 8px; align-items: center; margin-bottom: 4px; }
+.callegend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; }
+.rdbar { position: relative; height: 10px; background: #22242c; box-shadow: inset 0 0 0 1px #3b3f4c; margin: 6px 0 2px; }
+.rdbar b { position: absolute; left: 0; top: 0; bottom: 0; background: #ffcc00; }
+.rdbar .wmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #39ff14; }
+.rdpicks { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.rdpick { flex: 1 1 140px; padding: 6px 8px; background: #22242c; box-shadow: inset 0 0 0 2px #ffcc00; cursor: pointer; }
+.rdpick:hover { background: #2e3140; }

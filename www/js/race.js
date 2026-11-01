@@ -844,7 +844,7 @@
           if (style) { moneyDelta += style; money.push(['Style ' + DR.starText(DR.starRating(inst)), style]); }
         }
       }
-      if (cfg.mode === 'career' && win === false && DR.multiRound(ev)) news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
+      if (cfg.mode === 'career' && win === false && DR.multiRound(ev) && !ev.hosted) news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
       if (cfg.mode === 'street') { moneyDelta = win ? cfg.bet : -cfg.bet; money.push([win ? 'Bet won' : 'Bet lost', moneyDelta]); }
       // your driver: their wage for the race day, and they learn from every pass
       if (drv && !testDrive) {
@@ -895,6 +895,14 @@
         // auto-repair (Settings): the shop fixes it straight away when you can pay
         if (settings.autoRepair && G.canAfford(fix) && G.repair(inst)) { notes.push(['bad', what + ' Auto-repaired: ' + DR.money(fix)]); damaged = null; }
         else notes.push(['bad', what + ' Repair: ' + DR.money(fix)]);
+      }
+      // the clock and the race day: the run's time, its points
+      if (G.afterRun && !testDrive) {
+        var both = them && me.total < Infinity && them.total < Infinity && !me.red && !them.red, gap = both ? (bk ? them.pkg - me.pkg : them.total - me.total) : null;
+        var ar = G.afterRun(cfg, { win: win, red: me.red, rt: me.rt, margin: gap != null && gap > 0 ? gap : null, deficit: gap != null && gap < 0 ? -gap : null, final: !!win && nextRound == null, testDrive: testDrive, sim: you.sim });
+        if (ar && ar.license) news.push(ar.license);
+        if (ar && ar.score) notes.push(['acc', 'Race day +' + ar.score.pts + ': ' + ar.score.total + ' pts (win ' + ar.score.win + ', dominate ' + ar.score.dom + ')']);
+        if (ar && ar.news) ar.news.filter(function (n) { return !/^Race day:/.test(n) && n !== ar.license; }).forEach(function (n, i) { setTimeout(function () { UI.toast(n); }, 1500 + i * 2400); });
       }
       var carGone = false;
       if (pinkLost && G.loseCar(inst)) { carGone = true; damaged = null; news.push('PINK SLIP: your ' + DR.CARS[inst.carId].name + ' goes home with ' + opp.label); }
@@ -957,7 +965,7 @@
           }, 'primary') : null,
           // broke something: fix it and go again from here
           damaged ? (function () {
-            var fix = G.repairCost(inst), career = them && cfg.mode === 'career';
+            var fix = G.repairCost(inst), career = them && cfg.mode === 'career' && !ev.hosted;
             if (!G.canAfford(fix)) return btn('Garage (repair ' + DR.money(fix) + ')', function () { UI.show(UI.Garage); }, 'primary');
             return btn('Repair ' + DR.money(fix) + (career ? ' & Race Again' : ''), function () {
               if (!G.repair(inst)) return UI.toast('Not enough money');
@@ -969,8 +977,8 @@
           })() : null,
           damaged ? btn('Garage', function () { UI.show(UI.Garage); }) : null,
           h('div', { class: 'btngrid' },
-            !damaged && them && cfg.mode === 'career' && !win ? btn(DR.multiRound(ev) ? 'Retry KO' : 'Rematch', function () { DR.Race.raceDay(DR.Race.eventCfg(ev, 0)); }, 'red') : null,
-            !damaged && them && cfg.mode === 'career' && win && nextRound == null ? btn('Again ' + DR.money(G.eventReward(ev)), function () { DR.Race.careerEvent(ev, 0); }) : null,
+            !damaged && them && cfg.mode === 'career' && !win && !ev.hosted ? btn(DR.multiRound(ev) ? 'Retry KO' : 'Rematch', function () { DR.Race.raceDay(DR.Race.eventCfg(ev, 0)); }, 'red') : null,
+            !damaged && them && cfg.mode === 'career' && win && nextRound == null && !ev.hosted ? btn('Again ' + DR.money(G.eventReward(ev)), function () { DR.Race.careerEvent(ev, 0); }) : null,
             back && !damaged ? btn('Back to Tuning', function () { UI.show(back); }) : null,
             damaged ? null : btn('Garage', function () { UI.show(UI.Garage); }),
             btn('Tune', function () { UI.show(UI.Tune); }))))));

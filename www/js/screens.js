@@ -84,7 +84,7 @@
       railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
       railItem('u_circuit', 2, 'Race Team', tab === 'circuit', function () { UI.show(UI.RaceMenu, 'circuit'); }));
     var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'circuit' ? UI.circuitView(inst) : testView(inst);
-    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, tab === 'circuit' ? UI.circuitBest(inst) : bestText(inst))),
+    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('div', { class: 'row', style: { gap: '6px', alignItems: 'center' } }, UI.Calendar ? btn('Calendar', function () { UI.show(UI.Calendar); }, 'small') : null, h('span', { class: 'topcar' }, tab === 'circuit' ? UI.circuitBest(inst) : bestText(inst)))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
   };
 
@@ -354,7 +354,7 @@
           btn('Run', function () { DR.Race.start(r[3]); }, 'small go'))));
     });
     return h('div', {}, h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'DRAG TEST & TUNE'), h('div', { class: 'pix acc' }, 'Solo passes'),
-      h('div', { class: 'dim' }, 'No money on the line - dial in your tune. Your best times are saved.'))), grid);
+      h('div', { class: 'dim' }, 'No money on the line - dial in your tune. Your best times are saved. Test & tune runs Wednesday and Friday evenings and weekend days' + (G.whenText ? ' (' + (G.slotOpen('tnt') ? 'on now' : 'next: ' + G.whenText('tnt')) + ')' : '') + '.'))), UI.licenseCard ? UI.licenseCard(inst) : null, grid);
   }
 
   // ---------------------------------------------------------------- TUNE

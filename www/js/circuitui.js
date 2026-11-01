@@ -785,7 +785,7 @@
       out.push(h('div', { class: 'plvl secthead' }, '✉ INVITATION • team race'), h('div', { class: 'trkcard invite' },
         h('div', {}, h('b', { class: 'acc' }, iv.team), ' invite your team: two cars and two drivers against two teams of two at ' + DR.TRACKS[iv.track].name + ', ' + icls.name + ' rules. Points 25-18-15-12-10-8 for every car; the team with the most wins.'),
         h('div', { class: 'gsmall dim' }, 'Team prizes: ' + [1, 2, 3].map(function (p) { return ['', '1st ', '2nd ', '3rd '][p] + DR.money(T.teamPrize(icls, p, iv.track)); }).join(' • ') + ' • stands for ' + Math.max(1, iv.exp - s.done) + ' more race' + (iv.exp - s.done > 1 ? 's' : '')),
-        h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, '2 entries + 2 wages'), btn('Accept', function () { entryModal(icls, iv.track, false, true); }, 'small go'))));
+        h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, '2 entries + 2 wages'), btn('Accept', function () { gateC('cup', 'The team race', function () { entryModal(icls, iv.track, false, true); }); }, 'small go'))));
     }
     out.push(seriesCard());
     // the venue: the circuit or one of the night street circuits
@@ -807,7 +807,7 @@
         h('div', { class: 'gst' }, h('span', { class: 'k' }, 'WIN'), h('span', { class: 'v acc' }, DR.money(T.prize(cls, 1, tid)) + (T.isNight(tid) ? ' ☾' : ''))),
         unl.length ? h('div', { class: 'gsmall eunl' }, '🔓 First win: ' + unl.join(' + ')) : null,
         h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, 'Field of 6 • ~' + Math.max(1, Math.round(cls.laps * (cls.floor || cls.pace) / T.SPEED / 60)) + ' min'),
-          btn('Enter', function () { entryModal(cls, tid); }, 'small go'))));
+          btn('Enter', function () { gateC('circ', cls.name, function () { entryModal(cls, tid); }); }, 'small go'))));
     });
     out.push(h('div', { class: 'plvl secthead' }, 'OPEN RACES • ' + trk.name + ' • prize money only'), grid);
     if (s.history.length) {
@@ -821,6 +821,8 @@
     return h('div', {}, out);
   }
 
+  // a race that isn't on now: when it is, and go there
+  function gateC(slot, what, go) { if (G.slotGate) G.slotGate(slot, what, go); else go(); }
   // the stage's circuit race days and its Cup: half of what opens the next stage
   var cupStage = null;
   function careerCard() {
@@ -841,7 +843,7 @@
         h('div', { class: 'gst' }, h('span', { class: 'k' }, 'PURSE'), h('span', { class: 'v acc' }, DR.money(won ? Math.round(ev.cash * 0.35) : ev.cash))),
         ev.unlocks.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + ev.unlocks.map(function (u) { return DR.unlockChip(u).text; }).join(' • ')) : null,
         h('div', { class: 'efoot' }, lock ? h('span', { class: 'gsmall dim' }, '🔒 ' + lock) : h('span', {}),
-          live ? btn('Watch', function () { UI.watchRace = live.id; UI.refresh(); }, 'small go') : lock ? null : btn(won ? 'Rerun' : 'Enter', function () { entryModal(cls, ev.track, false, false, ev); }, 'small go')));
+          live ? btn('Watch', function () { UI.watchRace = live.id; UI.refresh(); }, 'small go') : lock ? null : btn(won ? 'Rerun' : 'Enter', function () { gateC('cup', ev.name, function () { entryModal(cls, ev.track, false, false, ev); }); }, 'small go')));
     }));
     var need = h('div', { class: 'gsmall' }, 'Stage ' + (cupStage + 1) + ' is done when both are won: ',
       h('span', { class: kingWon ? 'good' : 'dim' }, (kingWon ? '✔ ' : '✗ ') + 'the King of ' + st.name + ' (drag)'), ' and ', h('span', { class: G.cupWon(cupStage) ? 'good' : 'dim' }, (G.cupWon(cupStage) ? '✔ ' : '✗ ') + 'the ' + cs.cup.name), '.');
@@ -859,7 +861,7 @@
         h('div', {}, 'Four night rounds: Bayview Airfield, Route 99, Canyon Run and the Downtown Grand Prix. One car and one driver all season against the same five rivals; points 25-18-15-12-10-8 every round, and a title prize for the top three (3x the class win for the champion).'), last,
         h('div', { class: 'schips' }, T.CLASSES.map(function (c) { return btn(c.id + ' • ' + c.name, function () { seriesCls = c.id; UI.refresh(); }, 'chip' + (seriesCls === c.id ? ' on' : '')); })),
         h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, 'Each round: entry + wage as usual, night prizes +25%'),
-          btn('Start a season', function () { entryModal(T.classById(seriesCls), T.SERIES[0], true); }, 'small go'))));
+          btn('Start a season', function () { gateC('series', 'A Night Series round', function () { entryModal(T.classById(seriesCls), T.SERIES[0], true); }); }, 'small go'))));
       return h('div', {}, out);
     }
     var cls = T.classById(se.cls), live = T.active().filter(function (r) { return r.series != null; })[0], d = T.driver(se.drv);
@@ -878,8 +880,11 @@
         btn('Retire', function () { UI.confirm('Retire from this season? Points so far are lost.', function () { var w = T.quitSeries(); if (w) UI.toast(w); UI.refresh(); }, 'Retire'); }, 'small red'),
         live ? btn('Watch round ' + (se.round + 1), function () { UI.watchRace = live.id; UI.refresh(); }, 'small go') :
           btn('Run round ' + (se.round + 1) + ': ' + DR.TRACKS[T.SERIES[se.round]].name, function (e) {
-            var b = e.currentTarget; b.classList.add('busy'); b.textContent = 'Qualifying…';
-            setTimeout(function () { var res = T.nextRound(); if (!res.race) { UI.toast(res.msg); UI.refresh(); return; } UI.watchRace = res.race.id; UI.refresh(); }, 30);
+            var b = e.currentTarget;
+            gateC('series', 'A Night Series round', function () {
+              b.classList.add('busy'); b.textContent = 'Qualifying…';
+              setTimeout(function () { var res = T.nextRound(); if (!res.race) { UI.toast(res.msg); UI.refresh(); return; } UI.watchRace = res.race.id; UI.refresh(); }, 30);
+            });
           }, 'small go'))));
     return h('div', {}, out);
   }

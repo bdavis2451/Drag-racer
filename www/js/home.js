@@ -263,6 +263,7 @@
       h('div', { class: 'plvl' }, 'BILLS'), billsCard(),
       h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', marginTop: '6px' } },
         btn('Sleep / wait', sleepModal, 'small'), btn('Bank', function () { UI.bankModal(); }, 'small'), UI.Calendar ? btn('Calendar', function () { UI.show(UI.Calendar); }, 'small') : null,
+        UI.Promoter ? btn('Promoter', function () { UI.show(UI.Promoter); }, 'small') : null,
         btn('Move house', function () { UI.homeModal(); }, 'small')));
     return h('div', { class: 'screen' }, UI.top('HOME', function () { UI.show(UI.Garage); }),
       h('div', { class: 'content' }, h('div', { class: 'homewrap' }, h('div', { class: 'roomwrap' }, cv), side)));

@@ -70,7 +70,7 @@
     G.pay(fine); out.total -= fine;
     seen.forEach(function (x) { out.money.push(['Ticket: ' + x.name, -x.fine]); });
     out.news.push('PULLED OVER on the way: ' + seen.length + ' ticket' + (seen.length > 1 ? 's' : '') + ', ' + DR.money(fine) + '.');
-    G.state.stats.tickets = (G.state.stats.tickets || 0) + 1;
+    G.state.stats.tickets = (G.state.stats.tickets || 0) + 1; G.state.lastTicket = G.now ? G.now() : 0;
     if (DR.Phone) DR.Phone.send('ray', 'ticket', { fine: fine });
     G.save();
     return out;
