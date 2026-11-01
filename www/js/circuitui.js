@@ -863,7 +863,7 @@
         h('div', { class: 'gst' }, h('span', { class: 'k' }, 'PURSE'), h('span', { class: 'v acc' }, DR.money(won ? Math.round(ev.cash * 0.35) : ev.cash))),
         ev.unlocks.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + ev.unlocks.map(function (u) { return DR.unlockChip(u).text; }).join(' • ')) : null,
         h('div', { class: 'efoot' }, lock ? h('span', { class: 'gsmall dim' }, '🔒 ' + lock) : h('span', {}),
-          live ? btn('Watch', function () { UI.watchRace = live.id; UI.refresh(); }, 'small go') : lock ? null : btn(won ? 'Rerun' : 'Enter', function () { gateC('cup', ev.name, function () { entryModal(cls, ev.track, false, false, ev); }); }, 'small go')));
+          live ? btn('Watch', function () { UI.watchRace = live.id; UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); }, 'small go') : lock ? null : btn(won ? 'Rerun' : 'Enter', function () { gateC('cup', ev.name, function () { entryModal(cls, ev.track, false, false, ev); }); }, 'small go')));
     }));
     var need = h('div', { class: 'gsmall' }, 'Stage ' + (cupStage + 1) + ' is done when both are won: ',
       h('span', { class: kingWon ? 'good' : 'dim' }, (kingWon ? '✔ ' : '✗ ') + 'the King of ' + st.name + ' (drag)'), ' and ', h('span', { class: G.cupWon(cupStage) ? 'good' : 'dim' }, (G.cupWon(cupStage) ? '✔ ' : '✗ ') + 'the ' + cs.cup.name), '.');
@@ -961,7 +961,7 @@
         var res = series ? T.startSeries(cls.id, selCar, selDrv) : ev ? T.enter(cls.id, selCar, selDrv, tid, { ev: ev }) : teams ? T.enter(cls.id, cars2[0], drvs2[0], tid, { mate: { uid: cars2[1], drv: drvs2[1] } }) : T.enter(cls.id, selCar, selDrv, tid);
         if (!res.race) { go.classList.remove('busy'); go.textContent = 'Send to the track'; return UI.toast(res.msg); }
         if (teams && s.invite) s.invite = null;
-        close(); UI.watchRace = res.race.id; A.cash && A.cash(); UI.refresh();
+        close(); UI.watchRace = res.race.id; A.cash && A.cash(); UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit');
       }, 30);
     }, 'primary');
     // ideal laps take a moment the first time: draw after the modal shows
