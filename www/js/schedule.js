@@ -265,7 +265,7 @@
     }
     if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }); });
     // the circuit career's race days, the Night Series, an invitation
-    if (DR.CSTAGES) { var cs = DR.CSTAGES[Math.min(c.stage, DR.CSTAGES.length - 1)], todoC = cs.all.filter(function (ev) { return !c.cwon[ev.id] && !G.cupLock(ev); }); if (todoC.length) add('cup', 'circuit', 'Circuit race day', function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); }, todoC.map(function (ev) { return ev.name; }).join(', ')); }
+    if (DR.CSTAGES) { var cs = DR.CSTAGES[Math.min(c.stage, DR.CSTAGES.length - 1)], todoC = cs.all.filter(function (ev) { return !c.cwon[ev.id] && !G.cupLock(ev); }); if (todoC.length) add('cup', 'circuit', 'Circuit race day', function () { UI.careerSub = 'circuit'; UI.show(UI.RaceMenu, 'career'); }, todoC.map(function (ev) { return ev.name; }).join(', ')); }
     if (DR.Team) {
       var se = DR.Team.series && DR.Team.series(); if (se && !se.done) add('series', 'circuit', 'Night Series round ' + (se.round + 1), function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });
       var iv = DR.Team.invite && DR.Team.invite(); if (iv) add('cup', 'circuit', 'Team race invitation (' + iv.team + ')', function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });
@@ -300,7 +300,7 @@
         return h('div', { class: 'calev' + (past ? ' past' : '') }, h('i', { class: 'caldot', style: { background: KCOL[e.kind] || '#888' } }),
           h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, (e.end > e.t ? CAL.hourText(Math.floor(e.t % 24)) + '–' + CAL.hourText(Math.floor(e.end % 24)) : '') + (e.sub ? ' • ' + e.sub : ''))),
           past ? null : on ? btn('Go', function () { e.go(); }, 'small go') : btn(e.t > now ? 'Go (' + CAL.dur(e.t - now) + ')' : 'Go', function () { if (e.t > now) UI.timeNews(G.advanceTo(e.t)); e.go(); }, 'small'));
-      }) : h('div', { class: 'dim' }, 'Nothing on. Wrench, rest, or race the street at night (City Map).'),
+      }) : h('div', { class: 'dim' }, 'Nothing on. Wrench, rest, or race the street at night (Race > Street).'),
       h('div', { class: 'gsmall dim', style: { marginTop: '6px' } }, 'Street spots and callouts: any night, 9 PM–3 AM. The dyno shop: Mon–Sat, 8–6.'));
     var nav = h('div', { class: 'row calnav' }, btn('◀', function () { calMonth--; UI.refresh(); }, 'small'), h('div', { class: 'pix acc grow', style: { textAlign: 'center' } }, CAL.MONL[m] + ' ' + y), btn('▶', function () { calMonth++; UI.refresh(); }, 'small'));
     var legend = h('div', { class: 'gsmall callegend' }, [['drag', 'Drag race day'], ['king', 'King'], ['circuit', 'Circuit'], ['show', 'Show'], ['test', 'Test & tune'], ['host', 'Your event'], ['wander', 'Wanderer'], ['club', 'Club'], ['bill', 'Bills']].map(function (x) { return h('span', {}, h('i', { class: 'caldot', style: { background: KCOL[x[0]] } }), x[1]); }));

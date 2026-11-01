@@ -6,7 +6,7 @@
 (function () {
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, A = DR.Audio, h = UI.h, btn = UI.btn;
   function icon(cat, lvl, size) { return UI.partIconEl(cat, lvl || 2, '', size || 26); }
-  function railItem(cat, lvl, label, on, fn) { return h('div', { class: 'srail-i' + (on ? ' on' : ''), onclick: fn }, icon(cat, lvl), h('span', {}, label)); }
+  function railItem(cat, lvl, label, on, fn, badge) { return h('div', { class: 'srail-i' + (on ? ' on' : ''), onclick: fn }, icon(cat, lvl), h('span', {}, label), badge ? h('b', { class: 'railbadge' }, String(badge)) : null); }
   // no predicted times anywhere: you find out what a car runs by running it
   function bestText(inst) { return inst && inst.best && inst.best.q ? 'Best 1/4 ' + inst.best.q.toFixed(3) + 's' : 'No timeslip yet'; }
   function chip(label, on, fn, extra) { return btn(label, fn, 'chip' + (on ? ' on' : '') + (extra ? ' ' + extra : '')); }
@@ -60,7 +60,7 @@
   function memory() {
     var m = UI.memory('screens');
     if (!m) return;
-    if (['map', 'career', 'street', 'test', 'circuit'].indexOf(m.raceTab) >= 0) UI.raceTab = m.raceTab;
+    if (['week', 'map', 'career', 'practice', 'events', 'promo'].indexOf(m.raceTab) >= 0) UI.raceTab = m.raceTab;
     if (m.selStage != null) { selStage = m.selStage; seenStage = m.seenStage; }
     if (TUNE_ICONS[m.tuneGroup]) tuneGroup = m.tuneGroup;
     if (DR.CAR_CATS.indexOf(m.dealerCat) >= 0) dealerCat = m.dealerCat;
@@ -71,22 +71,121 @@
     if (selStage == null || selStage > c.stage || seenStage !== c.stage) selStage = c.stage;
     seenStage = c.stage;
   }
+  // The Race menu, by what you want to do: This Week (what's on), Career
+  // (the stage: strip and circuit), Street (the city at night), Practice
+  // (test & tune, licenses, the circuit test lap, tuners), Events (open
+  // circuit races, the Night Series, clubs, series, shows) and Promoter.
+  var practiceTab = 'drag', eventsTab = 'circuit';
   UI.RaceMenu = function (tab) {
     memory();
-    tab = tab || UI.raceTab || 'career';
+    tab = tab || UI.raceTab || 'week';
     if (tab === 'street') tab = 'map';
+    if (tab === 'test') { tab = 'practice'; practiceTab = 'drag'; }
+    // older ways in: the Race Team's tabs
+    if (tab === 'circuit') {
+      if (UI.circuitTab === 'team') return UI.TeamScreen();
+      if (UI.circuitTab === 'test') { tab = 'practice'; practiceTab = 'circuit'; } else { tab = 'events'; eventsTab = 'circuit'; }
+    }
     UI.raceTab = tab;
     remember();
-    var inst = G.car();
+    var inst = G.car(), b = badges();
     var rail = h('div', { class: 'srail' },
-      railItem('u_career', 2, 'Drag Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }),
-      railItem('u_test', 2, 'Drag Test', tab === 'test', function () { UI.show(UI.RaceMenu, 'test'); }),
-      railItem('u_map', 2, 'City Map', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }),
-      railItem('u_circuit', 2, 'Race Team', tab === 'circuit', function () { UI.show(UI.RaceMenu, 'circuit'); }));
-    var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'circuit' ? UI.circuitView(inst) : testView(inst);
-    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('div', { class: 'row', style: { gap: '6px', alignItems: 'center' } }, UI.Calendar ? btn('Calendar', function () { UI.show(UI.Calendar); }, 'small') : null, h('span', { class: 'topcar' }, tab === 'circuit' ? UI.circuitBest(inst) : bestText(inst)))),
+      railItem('u_flag', 2, 'This Week', tab === 'week', function () { UI.show(UI.RaceMenu, 'week'); }, b.week),
+      railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }, b.career),
+      railItem('u_map', 2, 'Street', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }, b.street),
+      railItem('u_test', 2, 'Practice', tab === 'practice', function () { UI.show(UI.RaceMenu, 'practice'); }, b.practice),
+      railItem('u_circuit', 2, 'Events', tab === 'events', function () { UI.show(UI.RaceMenu, 'events'); }, b.events),
+      UI.promoterBody ? railItem('g_shows', 2, 'Promoter', tab === 'promo', function () { UI.show(UI.RaceMenu, 'promo'); }, b.promo) : null);
+    var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'practice' ? practiceView(inst) : tab === 'events' ? eventsView() : tab === 'promo' && UI.promoterBody ? UI.promoterBody() : weekView();
+    return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, bestText(inst))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
   };
+  // the counts on the rail: what's on right now
+  function onNow(kinds) {
+    if (!G.dayAgenda) return 0;
+    var now = G.now(), d0 = DR.Cal.dayStart(now), n = 0;
+    G.dayAgenda(d0).concat(G.dayAgenda(d0 - 24)).forEach(function (e) { if (e.t <= now && now < e.end && kinds.indexOf(e.kind) >= 0) n++; });
+    return n;
+  }
+  function badges() {
+    var out = { week: onNow(['drag', 'king', 'circuit', 'host', 'series', 'club', 'show', 'wander']), career: onNow(['drag', 'king']), events: onNow(['circuit', 'series', 'club', 'show']) + (DR.Team ? DR.Team.active().length : 0), promo: onNow(['host']) };
+    if (DR.Extras && DR.CITY) out.street = DR.CITY.filter(function (p) { return !p.circuit && DR.Extras.wandererAt(p.id); }).length;
+    if (G.state.lic && G.state.lic.test) out.practice = '!';
+    return out;
+  }
+  // the next thing you can go and race
+  UI.nextUp = function () {
+    if (!G.dayAgenda) return null;
+    var now = G.now(), d0 = DR.Cal.dayStart(now), best = null;
+    for (var k = -1; k < 10 && !best; k++) G.dayAgenda(d0 + k * 24).forEach(function (e) {
+      if (['test', 'bill', 'wander'].indexOf(e.kind) >= 0 || e.end <= now) return;
+      if (!best || e.t < best.t) best = e;
+    });
+    if (!best) return null;
+    var on = best.t <= now;
+    return h('div', { class: 'nextup' }, h('i', { class: 'caldot', style: { background: (DR.KCOL || {})[best.kind] || '#888' } }),
+      h('div', { class: 'grow' }, h('div', { class: 'gsmall acc' }, on ? 'ON NOW' : 'NEXT UP • ' + DR.Cal.fmt(best.t) + ' (in ' + DR.Cal.dur(best.t - now) + ')'), h('div', {}, best.label), best.sub ? h('div', { class: 'gsmall dim' }, best.sub) : null),
+      btn(on ? 'Go' : 'Go there', function () { if (best.t > G.now()) UI.timeNews(G.advanceTo(best.t)); best.go(); }, 'small go'));
+  };
+  // This Week: next up, then each day's events
+  function weekView() {
+    var now = G.now(), d0 = DR.Cal.dayStart(now), days = [];
+    for (var k = 0; k < 8; k++) {
+      var d = d0 + k * 24, ag = G.dayAgenda(d).filter(function (e) { return e.end > now || e.end === e.t; });
+      if (!ag.length) continue;
+      days.push(h('div', { class: 'wkday' }, h('div', { class: 'plvl' }, k === 0 ? 'TODAY • ' + DR.Cal.fmt(d, { noTime: true }) : DR.Cal.fmt(d, { long: true, noTime: true })),
+        ag.map(function (e) {
+          var on = e.t <= now && now < e.end;
+          return h('div', { class: 'calev' }, h('i', { class: 'caldot', style: { background: DR.KCOL[e.kind] || '#888' } }),
+            h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, (e.end > e.t ? DR.Cal.hourText(Math.floor(e.t % 24)) + '–' + DR.Cal.hourText(Math.floor(e.end % 24)) : '') + (e.sub ? ' • ' + e.sub : ''))),
+            on ? btn('Go', function () { e.go(); }, 'small go') : btn('Go (' + DR.Cal.dur(e.t - now) + ')', function () { UI.timeNews(G.advanceTo(e.t)); e.go(); }, 'small'));
+        })));
+    }
+    var cur = G.raceDayNow && G.raceDayNow();
+    return h('div', {},
+      UI.nextUp(),
+      cur ? h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'RACE DAY ON'), h('span', { class: 'grow gsmall' }, DR.STAGES[cur.si].name + ' • ' + G.dayScore(cur) + ' pts (win ' + G.dayTargets(cur).win + ', dominate ' + G.dayTargets(cur).dom + ')'), btn('Call it a day', function () { G.closeRaceDay(); UI.refresh(); }, 'small')) : null,
+      h('div', { class: 'row', style: { gap: '6px', alignItems: 'center', margin: '4px 0' } }, h('span', { class: 'gsmall dim grow' }, 'Street spots and callouts: any night, 9 PM–3 AM (Street).'),
+        btn('Month view', function () { UI.show(UI.Calendar); }, 'small'), btn('Home', function () { UI.show(UI.Home); }, 'small')),
+      days.length ? days : h('div', { class: 'dim' }, 'Nothing on this week.'));
+  }
+  // Practice: the strip's test & tune and licenses, the circuit test lap
+  function practiceView(inst) {
+    var tabs = h('div', { class: 'schips' },
+      chip('Drag strip', practiceTab === 'drag', function () { practiceTab = 'drag'; UI.refresh(); }),
+      chip('Circuit', practiceTab === 'circuit', function () { practiceTab = 'circuit'; UI.refresh(); }),
+      h('span', { class: 'gsmall dim', style: { marginLeft: 'auto', alignSelf: 'center' } }, practiceTab === 'drag' ? 'Tuner: Upgrade > Setup' : 'Test day: book a tuner below'));
+    return h('div', {}, tabs, practiceTab === 'circuit' && UI.circuitTestView ? UI.circuitTestView(inst) : testView(inst));
+  }
+  // Events: open circuit races, the Night Series and invitations; clubs and
+  // series; car shows; the rumors
+  function eventsView() {
+    var tabs = h('div', { class: 'schips' },
+      chip('Circuit', eventsTab === 'circuit', function () { eventsTab = 'circuit'; UI.watchRace = null; UI.refresh(); }),
+      chip('Clubs & series', eventsTab === 'clubs', function () { eventsTab = 'clubs'; UI.refresh(); }),
+      chip('Car shows', eventsTab === 'shows', function () { eventsTab = 'shows'; UI.refresh(); }));
+    var body;
+    if (eventsTab === 'clubs') body = clubsView();
+    else if (eventsTab === 'shows') body = h('div', { class: 'trkcard' }, h('div', { class: 'pix acc' }, 'Car shows'), h('div', {}, 'Sunday shows, judged on looks (the star rating). Placing pays; some count for your career.'), btn('Go to the shows', function () { UI.show(UI.Shows); }, 'small go'));
+    else body = UI.circuitEventsView ? UI.circuitEventsView() : null;
+    return h('div', {}, tabs, body);
+  }
+  function clubsView() {
+    var now = G.now(), d0 = DR.Cal.dayStart(now), rows = { club: [], series: [], wander: [] };
+    for (var k = 0; k < 35; k++) G.dayAgenda(d0 + k * 24).forEach(function (e) { if (rows[e.kind] && e.end > now && rows[e.kind].filter(function (x) { return x.label === e.label; }).length < 1) rows[e.kind].push(e); });
+    function list(arr, empty) {
+      return arr.length ? arr.map(function (e) {
+        var on = e.t <= now;
+        return h('div', { class: 'calev' }, h('i', { class: 'caldot', style: { background: DR.KCOL[e.kind] } }), h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, DR.Cal.fmt(e.t) + (e.sub ? ' • ' + e.sub : ''))),
+          btn(on ? 'Go' : 'Go (' + DR.Cal.dur(e.t - now) + ')', function () { if (!on) UI.timeNews(G.advanceTo(e.t)); e.go(); }, 'small' + (on ? ' go' : '')));
+      }) : h('div', { class: 'dim gsmall' }, empty);
+    }
+    var se = DR.Extras && DR.Extras.state().series;
+    return h('div', {},
+      h('div', { class: 'plvl secthead' }, 'CAR CLUBS • monthly tournaments'), list(rows.club, 'No club meets coming up.'),
+      h('div', { class: 'plvl secthead' }, 'SHORT SERIES • three Sundays'), se && !se.done ? h('div', { class: 'gsmall acc' }, se.name + ': ' + se.pts + ' pts • rounds ' + se.rounds.map(function (r) { return r.res || '–'; }).join(' ')) : null, list(rows.series, 'No series open right now.'),
+      h('div', { class: 'plvl secthead' }, 'WANDERERS • rumors'), list(rows.wander, 'No word on the street yet. Texts come in as you move up.'));
+  }
 
   function stageChips() {
     return h('div', { class: 'schips' }, DR.STAGES.map(function (st, si) {
@@ -142,14 +241,22 @@
   function careerView() {
     var c = G.careerState();
     pickStage(c); remember();
+    if (UI.careerSub) { careerTab = UI.careerSub; UI.careerSub = null; }
     var tabs = h('div', { class: 'schips' },
-      chip('Race Days', careerTab === 'days', function () { careerTab = 'days'; UI.refresh(); }),
+      chip('Strip', careerTab === 'days', function () { careerTab = 'days'; UI.refresh(); }),
       chip('Ladder', careerTab === 'ladder', function () { careerTab = 'ladder'; UI.refresh(); }),
+      chip('Circuit', careerTab === 'circuit', function () { careerTab = 'circuit'; UI.refresh(); }),
       chip('Kings', careerTab === 'kings', function () { careerTab = 'kings'; UI.refresh(); }),
       h('span', { class: 'gsmall acc', style: { marginLeft: 'auto' } }, 'Class rep ' + G.rep(selStage)));
-    if (careerTab === 'ladder') return h('div', {}, stageChips(), tabs, ladderView(selStage));
-    if (careerTab === 'kings') return h('div', {}, tabs, kingsView());
-    return h('div', {}, stageChips(), tabs, raceDaysView(c));
+    // the stage at a glance: both halves, once
+    var st = DR.STAGES[selStage], kingDone = G.eventWon(st.boss), cupDone = G.cupWon(selStage);
+    var status = G.cupWins ? h('div', { class: 'cupline' },
+      h('span', { class: 'acc' }, st.name), h('span', { class: 'gsmall' }, G.stageWins(selStage) + '/' + st.events.length + ' strip'),
+      h('span', { class: 'gsmall' }, G.cupWins(selStage) + '/4 circuit'),
+      h('span', { class: kingDone ? 'good' : 'dim' }, (kingDone ? '✔' : '✗') + ' King'), h('span', { class: cupDone ? 'good' : 'dim' }, (cupDone ? '✔' : '✗') + ' Cup'),
+      h('span', { class: 'gsmall dim grow' }, G.stageDone(selStage) ? 'stage done' : 'both open the next stage')) : null;
+    var body = careerTab === 'ladder' ? ladderView(selStage) : careerTab === 'kings' ? kingsView() : careerTab === 'circuit' && UI.circuitCareerView ? UI.circuitCareerView(selStage) : raceDaysView(c);
+    return h('div', {}, UI.nextUp ? UI.nextUp() : null, careerTab === 'kings' ? null : stageChips(), status, tabs, body);
   }
   // the ladder: #5 up to #1, then the King. Call out the rival above you
   // once your rep in the class is high enough.
@@ -207,14 +314,9 @@
     var head = h('div', { class: 'rhead' },
       h('div', { class: 'grow' }, h('span', { class: 'pix acc' }, st.name), ' ', h('span', { class: 'gsmall dim' }, wins + ' / ' + st.events.length + ' won'),
         h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(wins / st.events.length * 100) + '%' } }))));
-    // the other half of the stage: its circuit race days (Race Team)
-    var cupW = G.cupWins ? G.cupWins(selStage) : 0, cupDone = G.cupWon(selStage), kingDone = G.eventWon(st.boss);
-    var cupLine = G.cupWins ? h('div', { class: 'cupline', onclick: function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); } },
-      h('span', { class: kingDone ? 'good' : 'dim' }, (kingDone ? '✔' : '✗') + ' King'), h('span', { class: cupDone ? 'good' : 'dim' }, (cupDone ? '✔' : '✗') + ' Circuit Cup'),
-      h('span', { class: 'gsmall dim grow' }, 'Circuit race days ' + cupW + ' / 4' + (G.stageDone(selStage) ? ' • stage done' : ' • both open the next stage')), h('span', { class: 'gsmall acc' }, 'Race Team ▸')) : null;
     var side = h('div', { class: 'rdetail' }, eventCard(selEv, selEv === next), sponsorCard(c));
     setTimeout(function () { var el = road.querySelector('.rnode.sel'); if (el && arriving) road.scrollLeft = Math.max(0, el.offsetLeft - road.clientWidth / 2 + 28); }, 0);
-    return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, cupLine, road, h('div', { class: 'gsmall dim rtip' }, 'Each week opens as you win race days. Side races (class shootouts, brackets, shows) sit above the road.')), side);
+    return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, road, h('div', { class: 'gsmall dim rtip' }, 'Each week opens as you win race days. Side races (class shootouts, brackets, shows) sit above the road.')), side);
   }
   function sponsorCard(c) {
     var sp = c.sponsor[selStage];
@@ -286,8 +388,8 @@
       h('div', { class: 'pix acc' }, t.name), h('div', { class: 'dim' }, p.blurb))),
       h('div', { class: 'ecard' }, h('div', { class: 'ecvwrap' }, thumb),
         h('div', { class: 'gsmall dim' }, live.length ? live.length + ' of your cars racing here now' : 'Team races: your hired drivers in your cars, against five AI teams. Five classes, from Club Cup to Unlimited GP.'),
-        h('div', { class: 'efoot' }, btn('Test lap', function () { UI.circuitTab = 'test'; UI.circuitTestTrack = p.circuit; UI.show(UI.RaceMenu, 'circuit'); }, 'small'),
-          btn('Race here', function () { UI.circuitTab = 'races'; UI.circuitTrack = p.circuit; UI.watchRace = null; UI.show(UI.RaceMenu, 'circuit'); }, 'small go'))));
+        h('div', { class: 'efoot' }, btn('Test lap', function () { UI.circuitTestTrack = p.circuit; practiceTab = 'circuit'; UI.show(UI.RaceMenu, 'practice'); }, 'small'),
+          btn('Race here', function () { UI.circuitTrack = p.circuit; UI.watchRace = null; eventsTab = 'circuit'; UI.show(UI.RaceMenu, 'events'); }, 'small go'))));
   }
   function streetView(inst, p) {
     var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET SPOT • ' + (p.dist === 'quarter' ? '1/4' : '1/8') + ' MILE • ' + (p.grip >= 0.9 ? 'NO-PREP' : 'STREET') + ' • NIGHT'),

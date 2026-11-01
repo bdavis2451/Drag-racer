@@ -219,13 +219,13 @@
   })(G.extraAgenda);
 
   // ---------------------------------------------------------------- the promoter's desk
-  UI.Promoter = function () {
+  UI.Promoter = function () { return h('div', { class: 'screen' }, UI.top('PROMOTER', function () { UI.show(UI.RaceMenu, 'week'); }), h('div', { class: 'content' }, UI.promoterBody())); };
+  UI.promoterBody = function () {
     var s = S(), up = s.events.filter(function (e) { return e.status === 'planned'; });
     var permit = P.permitOk() ? h('div', { class: 'good gsmall' }, 'Permit valid till ' + CAL.fmt(s.permit, { noTime: true })) :
       h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } }, h('span', { class: 'gsmall grow' }, 'A promoter permit from City Hall: ' + DR.money(P.PERMIT) + ' a year, and a clean record (no tickets in the last 30 days).'),
         btn('Get the permit', function () { var w = P.buyPermit(); if (w) return UI.toast(w); UI.refresh(); }, 'small go'));
-    return h('div', { class: 'screen' }, UI.top('PROMOTER', function () { UI.show(UI.Calendar); }),
-      h('div', { class: 'content' },
+    return h('div', {},
         h('div', { class: 'trkcard' }, h('div', { class: 'row', style: { gap: '8px' } }, h('div', { class: 'grow' }, h('div', { class: 'pix acc' }, 'Promoter rep ' + Math.round(s.rep) + ' • ' + P.repName(s.rep)),
           h('div', { class: 'gsmall dim' }, 'Full fields and a profit build it; a flop sinks it. 20 rep opens the airfield and the strip, 50 the Sunday invitational.')),
           P.permitOk() ? btn('Plan an event', function () { planModal(); }, 'small go') : null), permit),
@@ -236,7 +236,7 @@
             btn('Cancel', function () { UI.confirm('Cancel it? You get half the booking back and your rep takes a knock.', function () { P.cancel(e.id); UI.refresh(); }, 'Cancel it'); }, 'small red'));
         })) : h('div', { class: 'dim' }, 'Nothing booked.'),
         s.hist.length ? h('div', { class: 'plvl secthead' }, 'PAST EVENTS') : null,
-        s.hist.length ? h('table', { class: 'trktab' }, s.hist.map(function (x) { return h('tr', {}, h('td', {}, CAL.fmt(x.t, { noTime: true })), h('td', {}, x.title), h('td', { class: 'dim' }, x.n + ' cars • ' + x.winner), h('td', { class: 'num ' + (x.profit >= 0 ? 'good' : 'bad') }, DR.money(x.profit))); })) : null));
+        s.hist.length ? h('table', { class: 'trktab' }, s.hist.map(function (x) { return h('tr', {}, h('td', {}, CAL.fmt(x.t, { noTime: true })), h('td', {}, x.title), h('td', { class: 'dim' }, x.n + ' cars • ' + x.winner), h('td', { class: 'num ' + (x.profit >= 0 ? 'good' : 'bad') }, DR.money(x.profit))); })) : null);
   };
   function planModal() {
     var s = S(), vids = Object.keys(P.VENUES), pl = { venue: 'lot', fmt: 'np18', rule: 'open', fee: 0, purse: 0, promo: 1, start: null, end: null }, close;

@@ -426,7 +426,7 @@
     // the race team at a glance: how many cars are out racing
     var live = DR.Team ? DR.Team.active().length : 0;
     var teamChip = DR.Team && DR.Team.state().drivers.length ? h('div', { class: 'gstatus gteam', onclick: function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); } },
-      h('span', { class: 'acc' }, 'Race Team'), h('span', {}, DR.Team.state().drivers.length + ' driver' + (DR.Team.state().drivers.length > 1 ? 's' : '')),
+      h('span', { class: 'acc' }, 'Team'), h('span', {}, DR.Team.state().drivers.length + ' driver' + (DR.Team.state().drivers.length > 1 ? 's' : '')),
       h('span', { class: live ? 'good' : 'dim' }, live ? live + ' racing now' : 'all in the pits')) : null;
     function bbtn(label, icon, fn, cls, badge) {
       return btn([iconEl(icon, 1, '', 26, 'gico'), h('span', {}, label), badge ? h('span', { class: badge === 'NEW' || badge === 'FREE' ? 'newdot' : 'badge' }, String(badge)) : null], fn, 'gbb ' + (cls || ''));
@@ -436,7 +436,7 @@
       bbtn('Upgrade', 'g_shop', function () { UI.openSection('upgrade'); }, 'shop', G.newPartsCount() ? 'NEW' : spare || 0),
       bbtn('Style', 'g_body', function () { UI.openSection('style'); }, 'purple', G.newVisCount() ? 'NEW' : 0),
       bbtn('Dealer', 'g_dealer', function () { UI.show(UI.Dealer); }, '', G.freeCars && G.freeCars() ? 'FREE' : G.newCarCount() ? 'NEW' : 0),
-      bbtn('Shows', 'g_shows', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.Shows); }, ''),
+      bbtn('Team', 'g_shows', function () { UI.show(UI.TeamScreen); }, '', DR.Team ? (DR.Team.state().drivers.length + DR.Team.state().ddrivers.length + DR.Team.state().tuners.length) || 0 : 0),
       bbtn('Race', 'g_race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'));
     var stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };

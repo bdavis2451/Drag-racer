@@ -292,7 +292,7 @@
     var whoOpts = (staff ? [['staff', staff.name + ' (staff)']] : []).concat([['local', 'Local tuner'], ['pro', 'Pro tuner']]);
     close = UI.modal([h('div', { class: 'pix acc' }, 'TUNER'),
       h('div', { class: 'plvl' }, 'WHO'), radio('who', whoOpts, whoSel, function (v) { whoSel = v; }),
-      h('div', { class: 'dim gsmall' }, staff ? 'Your staff tuner works for their wage.' : 'No staff tuner: hire one on the Race Team\'s Team tab, or book a freelancer.'),
+      h('div', { class: 'dim gsmall' }, staff ? 'Your staff tuner works for their wage.' : 'No staff tuner: hire one at Team (on the garage), or book a freelancer.'),
       h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'HOW FAR TO GO'),
       h('div', { class: 'col' }, TU.JOBS.map(function (j) {
         var cb = h('input', { type: 'checkbox', checked: !!jobs[j.id] });

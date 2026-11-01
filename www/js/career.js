@@ -566,7 +566,7 @@
         if (ev.stage + 1 < DR.STAGES.length) {
           var adv = G.tryAdvance(ev.stage);
           if (adv) { lines.push(adv.toUpperCase()); out.banner = adv; }
-          else { out.banner = 'King beaten! Win the ' + (G.cupName ? G.cupName(ev.stage) : 'Circuit Cup') + ' (Race Team) to open stage ' + (ev.stage + 2); lines.push(out.banner); }
+          else { out.banner = 'King beaten! Win the ' + (G.cupName ? G.cupName(ev.stage) : 'Circuit Cup') + ' (Race > Career > Circuit) to open stage ' + (ev.stage + 2); lines.push(out.banner); }
         } else { lines.push('YOU ARE THE KING OF THE STRIP!'); out.banner = 'You are the King of the Strip!'; }
       }
       st.all.forEach(function (x) { if (!c.won[x.id] && G.eventVisible(x) && !G.eventLock(x) && before.indexOf(x.id) < 0) newlyVisible.push(x); });

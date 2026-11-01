@@ -663,6 +663,26 @@
     return h('div', {}, chips, body);
   };
 
+  // the Team: your drivers and tuners, and the hiring board (on the garage)
+  UI.TeamScreen = function () {
+    return h('div', { class: 'screen' }, UI.top('TEAM', function () { UI.show(UI.Garage); }),
+      h('div', { class: 'content' }, teamView()));
+  };
+  // the pieces, for the Race menu (Career > Circuit, Events, Practice) and the Team screen
+  UI.circuitCareerView = function (si) { return careerCard(si); };
+  UI.circuitEventsView = function () {
+    UI.cleanup = engineStop;
+    var r = UI.watchRace && TM().state().races.filter(function (x) { return x.id === UI.watchRace; })[0];
+    return r ? watchView(r) : racesView();
+  };
+  UI.teamRosterView = function () { return teamView(); };
+  UI.circuitTestView = function (inst) {
+    UI.cleanup = engineStop;
+    if (UI.circuitTestTrack) { if (UI.circuitTestTrack !== TRACK) { TRACK = UI.circuitTestTrack; play = null; probe = -1; } UI.circuitTestTrack = null; }
+    if (inst && TM().carAway(inst.uid)) return h('div', { class: 'trkcard' }, h('div', {}, TM().awayText(inst.uid)), h('div', { class: 'dim gsmall' }, 'Pick another car in My Cars to run a test lap.'));
+    return h('div', {}, trackChips(TRACK, function (id) { TRACK = id; play = null; probe = -1; UI.refresh(); }), testLapView(inst));
+  };
+
   // a track's map as a postcard (the city map's venue cards)
   UI.circuitThumb = function (cv, track) { cv.getContext('2d').drawImage(drawBase(track).cv, 0, 0); };
   // pick one of the tracks
@@ -763,8 +783,8 @@
     var T = TM(), s = T.state(), live = T.active();
     var out = [];
     if (!s.drivers.length) out.push(h('div', { class: 'trkcard callout' }, h('div', { class: 'acc pix' }, 'No drivers yet'),
-      h('div', {}, 'Circuit races are run by your hired drivers, in your cars. Hire one on the Team tab: rookies are cheap and learn fast.'),
-      btn('Go to Team', function () { UI.circuitTab = 'team'; UI.refresh(); }, 'small go')));
+      h('div', {}, 'Circuit races are run by your hired drivers, in your cars. Hire one at Team (on the garage): rookies are cheap and learn fast.'),
+      btn('Go to Team', function () { UI.show(UI.TeamScreen); }, 'small go')));
     if (live.length) {
       var lg = h('div', { class: 'egrid' });
       live.forEach(function (r) {
@@ -778,7 +798,6 @@
       });
       out.push(h('div', { class: 'plvl secthead' }, 'LIVE NOW'), lg);
     }
-    out.push(careerCard());
     var iv = T.invite();
     if (iv) {
       var icls = T.classById(iv.cls);
@@ -825,8 +844,9 @@
   function gateC(slot, what, go) { if (G.slotGate) G.slotGate(slot, what, go); else go(); }
   // the stage's circuit race days and its Cup: half of what opens the next stage
   var cupStage = null;
-  function careerCard() {
-    var T = TM(), c = G.careerState();
+  function careerCard(si) {
+    var T = TM(), c = G.careerState(), embed = si != null;
+    if (embed) cupStage = si;
     if (cupStage == null || cupStage > c.stage) cupStage = c.stage;
     var cs = DR.CSTAGES[cupStage], st = DR.STAGES[cupStage], kingWon = G.eventWon(st.boss);
     var chips = h('div', { class: 'schips' }, DR.STAGES.map(function (x, si) {
@@ -847,6 +867,7 @@
     }));
     var need = h('div', { class: 'gsmall' }, 'Stage ' + (cupStage + 1) + ' is done when both are won: ',
       h('span', { class: kingWon ? 'good' : 'dim' }, (kingWon ? '✔ ' : '✗ ') + 'the King of ' + st.name + ' (drag)'), ' and ', h('span', { class: G.cupWon(cupStage) ? 'good' : 'dim' }, (G.cupWon(cupStage) ? '✔ ' : '✗ ') + 'the ' + cs.cup.name), '.');
+    if (embed) return h('div', {}, h('div', { class: 'gsmall dim' }, 'Run by your circuit drivers on Sunday race days. Early race days ask for a podium, later ones the win; the Cup is half of what opens the next stage.'), grid);
     return h('div', {}, h('div', { class: 'plvl secthead' }, 'CAREER • ' + st.name + ' • circuit race days'), chips, need, grid);
   }
 
@@ -894,9 +915,9 @@
     var T = TM(), s = T.state(), selCar = null, selDrv = null, close, cars2 = [], drvs2 = [];
     var carBox = h('div', { class: 'col entlist' }), drvBox = h('div', { class: 'col entlist' }), sum = h('div', { class: 'entsum' }), go;
     var free = s.drivers.filter(function (d) { return !T.driverBusy(d.id); });
-    if (!s.drivers.length) return UI.toast('Hire a driver first (Team tab)');
+    if (!s.drivers.length) return UI.toast('Hire a driver first (Team, on the garage)');
     if (!free.length) return UI.toast('All your drivers are racing');
-    if (teams && free.length < 2) return UI.toast('A team race needs two free drivers (Team tab)');
+    if (teams && free.length < 2) return UI.toast('A team race needs two free drivers (Team, on the garage)');
     if (teams && G.state.cars.filter(function (c) { return !T.carAway(c.uid) && !c.damage; }).length < 2) return UI.toast('A team race needs two cars');
     // two of each for a team race: a tap adds, a second tap takes it off
     function pick2(list, id) { var i = list.indexOf(id); if (i >= 0) list.splice(i, 1); else { list.push(id); if (list.length > 2) list.shift(); } }

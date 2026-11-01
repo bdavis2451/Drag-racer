@@ -29,7 +29,7 @@
     var t = tech0.apply(this, arguments);
     if (t || DR.EVENT_TYPES[ev.type].theme !== 'strip') return t;
     var need = G.licenseNeed(inst);
-    if (need && !G.hasLicense(need)) return 'License: a car that runs ' + DR.LICENSES[need].rule + ' needs a ' + DR.LICENSES[need].name + ' (Race > Drag Test: License)';
+    if (need && !G.hasLicense(need)) return 'License: a car that runs ' + DR.LICENSES[need].rule + ' needs a ' + DR.LICENSES[need].name + ' (Race > Practice: Licenses)';
     return '';
   };
   // the test: pay, then observed passes at test & tune

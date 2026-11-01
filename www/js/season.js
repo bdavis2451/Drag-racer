@@ -134,7 +134,7 @@
     street: { name: 'No-Prep King', blurb: 'Bare asphalt, no traction compound, and the meanest car in the city.',
       ev: { type: 'kingstreet', id: 'K.street', idx: 'Ks', king: 'street', needWins: 0, stars: 0, unlocks: [], cash: 120000,
         opps: [kingOpp(DR.STAGES[5].events[9].opps[0], { name: 'Asphalt Annie', skill: 0.95, color: '#ff2bd6' })] } },
-    circuit: { name: 'Circuit King', blurb: 'Your team\'s drivers against the best: win the Supercar Trophy Night Series (Race Team).', circuit: true }
+    circuit: { name: 'Circuit King', blurb: 'Your team\'s drivers against the best: win the Supercar Trophy Night Series (Race > Events).', circuit: true }
   };
   G.kingLock = function (d) {
     var K = DR.KINGS[d];
