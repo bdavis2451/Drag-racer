@@ -31,6 +31,7 @@
     pinkwon: ['street', function () { return 'Enjoy the car. I\'ll want a rematch. — your last victim'; }],
     king: ['ray', function () { return 'You beat a King. Half this town will want to race you now, and the other half will want to know your tune. Tell neither.'; }],
     moved: ['ray', function (hm) { return hm && hm.id === 'uncle' ? 'Couch is still here. Kept it warm.' : 'Moving out already? Fine. The couch was getting a dent. Come by when you need the lathe.'; }, true],
+    repo: ['ray', function () { return 'Heard about the car. Lenders don\'t care how fast it was, kid. Borrow less than you can lose.'; }, true],
     bailout: ['ray', function () { return 'Saw your bank balance. Put $2,000 in it. Once, kid. Next time you\'re in the red, sell something: a car, the parts on the shelf. That\'s how the rest of us did it.'; }],
     evicted: ['ray', function () { return 'Landlord called me, kid. Couch is made up. Pay your rent first next time, then buy parts.'; }, true],
     ticket: ['ray', function (d) { return (d && d.fine >= 600 ? 'A ' + DR.money(d.fine) + ' stop? ' : 'Another ticket. ') + 'That\'s what trailers are for.'; }, true]

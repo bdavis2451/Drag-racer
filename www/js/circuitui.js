@@ -705,7 +705,7 @@
         status || null),
       bars(d),
       h('div', { class: 'gsmall dim' }, d.kind === 'tuner' ? (d.jobs ? d.jobs + ' jobs' : 'No jobs yet') : d.races ? d.races + ' races • ' + d.wins + ' wins' + (d.kind === 'drag' ? '' : ' • ' + d.podiums + ' podiums') : 'No races yet', ' • ',
-        h('span', { class: 'acc' }, DR.money(d.wage) + (d.kind === 'tuner' ? '/race day' : '/race'))),
+        h('span', { class: 'acc' }, (d.kind === 'tuner' && G.salary ? DR.money(G.salary(d)) + '/month' : DR.money(d.wage) + '/race'))),
       foot ? h('div', { class: 'efoot' }, foot) : null);
   }
 
@@ -747,7 +747,7 @@
       seats(s.drivers, T.MAX, 'Empty seat', T.release),
       head('DRAG DRIVERS • ' + s.ddrivers.length + ' / ' + T.DMAX, 'They can take your seat at drag race days (not King races or pink slips) and make your test passes. Reaction, launch and consistency, growing as they race.'),
       seats(s.ddrivers, T.DMAX, 'Empty seat', T.releaseStaff),
-      head('TUNERS', 'One for each team, paid every race day. A staff tuner\'s sessions cost only the dyno time, fuel and wear.'),
+      head('TUNERS', 'One for each team, on a salary paid the 1st of the month. A staff tuner\'s sessions cost only the dyno time, fuel and wear.'),
       tunerSeats,
       h('div', { class: 'stagehead', style: { marginTop: '10px' } }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'HIRING BOARD'),
         h('div', { class: 'dim' }, 'Signing fee up front, then wages. New faces in ' + left + ' race' + (left === 1 ? '' : 's') + '.')),
@@ -897,6 +897,7 @@
     function pick2(list, id) { var i = list.indexOf(id); if (i >= 0) list.splice(i, 1); else { list.push(id); if (list.length > 2) list.shift(); } }
     function status(inst) {
       if (T.carAway(inst.uid)) return 'At the track';
+      if (G.carBusy && G.carBusy(inst)) return 'In the bay';
       if (inst.damage) return 'Broken';
       var why = T.eligible(inst, cls, ev);
       return why ? (/turn/.test(why) ? 'Can\'t turn' : 'Too quick') : '';

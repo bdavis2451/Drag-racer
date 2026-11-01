@@ -856,11 +856,6 @@
       var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) ? G.careerState().sponsor[ev.stage] : null;
       if (spn && spn.stipend && !testDrive) { moneyDelta += spn.stipend; money.push([DR.sponsorById(spn.id).name + ' stipend', spn.stipend]); }
       if (moneyDelta) G.earn(moneyDelta);
-      // a race day is a week: rent, salaries and storage are due (after the purse is in)
-      if (cfg.mode === 'career' && !(cfg.round > 0) && !testDrive && G.raceDayDues) {
-        var dues = G.raceDayDues();
-        money = money.concat(dues.money); moneyDelta += dues.total; news = news.concat(dues.news);
-      }
       // the trip there (paid on the way: shown here)
       if (cfg.trip && !testDrive) { money = cfg.trip.money.concat(money); moneyDelta += cfg.trip.total; news = cfg.trip.news.concat(news); }
       if (them && !testDrive && (cfg.mode === 'career' || cfg.mode === 'street')) {

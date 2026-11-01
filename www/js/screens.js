@@ -760,7 +760,7 @@
       var c = cost();
       if (!c) return UI.toast('Nothing changed');
       if (!G.canAfford(c)) return UI.toast('Not enough money');
-      G.pay(c); inst.color = d.color; inst.stripe = d.stripe; inst.rim = d.rim; G.save(); A.cash(); UI.toast('Fresh paint!');
+      G.pay(c); inst.color = d.color; inst.stripe = d.stripe; inst.rim = d.rim; if (G.work) G.work(inst, 16, 'Paint'); G.save(); A.cash(); UI.toast('Fresh paint! The car\'s in the bay while it cures.');
       paintDraft = null;
       UI.show(UI.Garage);
       UI.afterStars(G.noteStars());

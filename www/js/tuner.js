@@ -504,7 +504,7 @@
 
   TU.openCircuit = function (inst) {
     var T = DR.Team, s = T.state();
-    var cars = G.state.cars.filter(function (c) { return !c.damage && !T.carAway(c.uid); });
+    var cars = G.state.cars.filter(function (c) { return !c.damage && !T.carAway(c.uid) && !(G.carBusy && G.carBusy(c)); });
     if (!cars.length) return UI.toast('No car free to test: repaired and not at the track');
     if (!inst || cars.indexOf(inst) < 0) inst = cars[0];
     var free = s.drivers.filter(function (d) { return !T.driverBusy(d.id); });

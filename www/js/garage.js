@@ -456,8 +456,23 @@
       cars.length > 1 ? btn('▶', function () { cycle(1); }, 'arrow') : null);
     return h('div', { class: 'screen' }, UI.top('GARAGE', function () { UI.show(UI.Title); }, h('div', { class: 'row', style: { gap: '6px' } },
         btn('?', function () { UI.show(UI.Help, UI.Garage); }, 'small back', { title: 'How to play', 'aria-label': 'How to play' }), btn(h('span', { class: 'gearic', html: '<svg viewBox="0 0 16 16" width="14" height="14" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v2h2v1h1v1h1v2h2v4h-2v2h-1v1h-1v1H9v2H7v-2H5v-1H4v-1H3v-2H1V6h2V4h1V3h1V2h2zm0 5v1H6v4h1v1h2v-1h1V6H9V5z"/></svg>' }), function () { UI.show(UI.Settings, UI.Garage); }, 'small back', { title: 'Settings', 'aria-label': 'Settings' }))),
-      h('div', { class: 'gwrap hub' }, cv, h('div', { class: 'gstatuses' }, status, teamChip), side, sel, dmg), bar);
+      h('div', { class: 'gwrap hub' }, cv, h('div', { class: 'gstatuses' }, status, teamChip, homeChip(), bayBanner(inst)), side, sel, dmg), bar);
   };
+
+  // home at a glance, and the car's work in the bay
+  function homeChip() {
+    if (!G.home) return null;
+    var bh = G.benchHours ? G.benchHours() : 0;
+    return h('div', { class: 'gstatus', onclick: function () { UI.show(UI.Home); } }, h('span', { class: 'acc' }, '⌂ Home'), h('span', {}, bh ? CAL_dur(bh) + ' on the bench' : 'sleep • bills • bank'));
+  }
+  function CAL_dur(x) { return DR.Cal.dur(x); }
+  function bayBanner(inst) {
+    var b = G.carBusy && G.carBusy(inst); if (!b) return null;
+    var q = G.rushQuote(inst.uid);
+    return h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'IN THE BAY'), h('span', { class: 'grow gsmall' }, b.jobs.join(', ')),
+      b.own ? btn('Work on it (' + DR.Cal.dur(b.bench) + ')', function () { UI.passTime(b.bench, b.bench); }, 'small go') : h('span', { class: 'gsmall' }, 'Shop: ' + DR.Cal.dur(b.shop)),
+      q.h ? btn('Shop ' + DR.money(q.cost) + ', ' + DR.Cal.dur(q.done), function () { UI.confirm('Have the shop finish it? ' + DR.money(q.cost) + ' (' + DR.Cal.dur(q.h) + ' book time at ' + DR.money(DR.Cal.SHOP_RATE) + '/h), done in ' + DR.Cal.dur(q.done) + '.', function () { var w = G.rush(inst.uid); if (w) return UI.toast(w); A.cash(); UI.refresh(); }, 'Pay'); }, 'small') : null);
+  }
 
   // ---------------------------------------------------------------- PARTS SHOP
   var shopGroup = 'engine', shopCat = 'intake', partsGroup = 'engine';
@@ -683,6 +698,8 @@
       (inst.visOwned || (inst.visOwned = {}))[slot.id + ':' + o.value] = 1;
     }
     if (o.value) inst.vis[slot.id] = slot.id === 'neon' ? (inst.vis.neon || neonPick || slot.colors[0]) : o.value; else delete inst.vis[slot.id];
+    // body work takes time: a kit piece half a day, tint and neon a couple of hours
+    if (G.work) G.work(inst, { rims: 1, tint: 2, neon: 2, tips: 0.5, vinyl: 5, finish: 16, roof: 4 }[slot.id] || 5, o.value ? o.name : slot.name + ' off');
     G.save();
     UI.toast(o.value ? o.name + ' fitted!' : 'Back to stock');
     UI.afterStars(G.noteStars());

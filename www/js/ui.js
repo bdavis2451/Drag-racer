@@ -210,11 +210,17 @@
     return b;
   }
   UI.musicBtn = musicBtn;
+  // the clock (opens Home: the bed, the bench, the bills)
+  function clockBtn() {
+    if (!DR.Cal || !G.state || !G.state.started) return null;
+    return btn(DR.Cal.fmt(G.now()), function () { UI.show(UI.Home); }, 'small clockchip', { title: 'Home: sleep, work, bills' });
+  }
+  UI.clockRefresh = function () { var t = DR.Cal.fmt(G.now()); Array.prototype.forEach.call(document.querySelectorAll('.clockchip'), function (b) { b.textContent = t; }); };
   function top(title, back, extra) {
     return h('div', { class: 'top' },
       back ? btn('◀', back, 'back') : null,
       h('h1', {}, title),
-      DR.Phone ? DR.Phone.button() : null, musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)), extra || null);
+      clockBtn(), DR.Phone ? DR.Phone.button() : null, musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)), extra || null);
   }
   // The garage's two work areas share one header: back to the garage, a row
   // of tabs, the money. Upgrade = everything that makes the car quicker,
@@ -242,7 +248,7 @@
     return h('div', { class: 'top sectop' },
       btn('◀', function () { if (onLeave) onLeave(); UI.show(UI.Garage); }, 'back'),
       h('h1', { class: 'sectitle' }, section === 'upgrade' ? 'UPGRADE' : 'STYLE'), tabs,
-      DR.Phone ? DR.Phone.button() : null, musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
+      clockBtn(), DR.Phone ? DR.Phone.button() : null, musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
   };
   // open a section on the tab it was last left on
   UI.openSection = function (section) {
