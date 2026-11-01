@@ -11,7 +11,7 @@
     return {
       v: 5, money: 4000, cars: [], active: null, uid: 1,
       career: G.careerDefaults(), stats: { races: 0, wins: 0, earned: 0 }, shows: {}, covers: [], inv: [],
-      settings: { sound: true, music: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, autoRepair: false, volume: 1, sim: true },
+      settings: { sound: true, music: true, autoShift: false, proTree: false, units: 'mph', pedal: 'hold', autoStage: true, autoRepair: false, volume: 1, sim: false },
       started: false
     };
   };
@@ -27,6 +27,8 @@
     if (s.v === 4) migrate4(s);
     for (var k in d) if (s[k] == null) s[k] = d[k];
     for (k in d.settings) if (s.settings[k] == null) s.settings[k] = d.settings[k];
+    // sim mode went from on to off by default: older saves start with it off once (Settings turns it back on)
+    if (!s.simDefault2) { s.settings.sim = false; s.simDefault2 = true; }
     try { retired(s); } catch (e) { /* keep what loaded */ }
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
     // older saves could put a rear-drive gearbox in a front-drive car: it

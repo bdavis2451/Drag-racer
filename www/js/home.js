@@ -233,14 +233,20 @@
   UI.sleepModal = sleepModal;
   // the bench: jobs in the order you'll do them, and what the shop has
   function benchCard() {
-    var c = G.calState(), out = [];
+    var c = G.calState(), out = [], per = {};
     if (!c.jobs.length && !c.shop.length) return h('div', { class: 'dim gsmall' }, 'Nothing on the bench.');
-    c.jobs.forEach(function (j) { var car = G.state.cars.filter(function (x) { return x.uid === j.uid; })[0]; out.push(h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, (car ? DR.CARS[car.carId].name + ': ' : '') + j.label), h('span', { class: 'dim' }, CAL.dur(j.h)))); });
-    c.shop.forEach(function (j) { var car = G.state.cars.filter(function (x) { return x.uid === j.uid; })[0]; out.push(h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, (car ? DR.CARS[car.carId].name + ': ' : '') + j.label), h('span', { class: 'acc' }, 'shop, ' + CAL.dur(j.until - c.t)))); });
+    function name(uid) { var car = G.state.cars.filter(function (x) { return x.uid === uid; })[0]; return car ? DR.CARS[car.carId].name : 'A car'; }
+    // the buttons first, then a line a car, then every job (scrolls)
     var bh = G.benchHours();
-    return h('div', { class: 'col' }, out, bh ? h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', marginTop: '4px' } },
+    c.jobs.forEach(function (j) { var p = per[j.uid] || (per[j.uid] = { n: 0, h: 0 }); p.n++; p.h += j.h; });
+    Object.keys(per).forEach(function (uid) { out.push(h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, name(+uid)), h('span', { class: 'dim' }, per[uid].n + ' job' + (per[uid].n > 1 ? 's' : '') + ', ' + CAL.dur(per[uid].h)),
+      btn('Shop', function () { var q = G.rushQuote(+uid); UI.confirm('Have the shop do the ' + name(+uid) + '\'s ' + per[uid].n + ' job' + (per[uid].n > 1 ? 's' : '') + '? ' + DR.money(q.cost) + ', done in ' + CAL.dur(q.done) + '.', function () { var w = G.rush(+uid); if (w) return UI.toast(w); UI.refresh(); }, 'Pay'); }, 'small'))); });
+    c.shop.forEach(function (j) { out.push(h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, name(j.uid) + ' at the shop'), h('span', { class: 'acc' }, CAL.dur(j.until - c.t)))); });
+    var all = h('details', { class: 'joblist' }, h('summary', { class: 'gsmall dim' }, 'All ' + c.jobs.length + ' jobs, in order'),
+      h('div', { class: 'jobscroll' }, c.jobs.map(function (j) { return h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, j.label), h('span', { class: 'dim' }, CAL.dur(j.h))); })));
+    return h('div', { class: 'col' }, bh ? h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', marginBottom: '4px' } },
       btn('Work till it\'s done (' + CAL.dur(bh) + ')', function () { pass(bh, bh); }, 'small go'),
-      bh > 4 ? btn('Work 4 hours', function () { pass(4, 4); }, 'small') : null) : null);
+      bh > 4 ? btn('Work 4 hours', function () { pass(4, 4); }, 'small') : null) : null, out, c.jobs.length > 1 ? all : null);
   }
   UI.benchCard = benchCard;
   function billsCard() {

@@ -469,7 +469,9 @@
   function bayBanner(inst) {
     var b = G.carBusy && G.carBusy(inst); if (!b) return null;
     var q = G.rushQuote(inst.uid);
-    return h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'IN THE BAY'), h('span', { class: 'grow gsmall' }, b.jobs.join(', ')),
+    // one line: how many jobs and the first couple (the full list is at Home)
+    var summary = b.jobs.length + ' job' + (b.jobs.length > 1 ? 's' : '') + ': ' + b.jobs.slice(0, 2).join(', ') + (b.jobs.length > 2 ? ' +' + (b.jobs.length - 2) + ' more' : '');
+    return h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'IN THE BAY'), h('span', { class: 'grow gsmall bayjobs', title: b.jobs.join(', '), onclick: function () { UI.show(UI.Home); } }, summary),
       b.own ? btn('Work on it (' + DR.Cal.dur(b.bench) + ')', function () { UI.passTime(b.bench, b.bench); }, 'small go') : h('span', { class: 'gsmall' }, 'Shop: ' + DR.Cal.dur(b.shop)),
       q.h ? btn('Shop ' + DR.money(q.cost) + ', ' + DR.Cal.dur(q.done), function () { UI.confirm('Have the shop finish it? ' + DR.money(q.cost) + ' (' + DR.Cal.dur(q.h) + ' book time at ' + DR.money(DR.Cal.SHOP_RATE) + '/h), done in ' + DR.Cal.dur(q.done) + '.', function () { var w = G.rush(inst.uid); if (w) return UI.toast(w); A.cash(); UI.refresh(); }, 'Pay'); }, 'small') : null);
   }

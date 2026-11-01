@@ -806,7 +806,6 @@
         h('div', { class: 'gsmall dim' }, 'Team prizes: ' + [1, 2, 3].map(function (p) { return ['', '1st ', '2nd ', '3rd '][p] + DR.money(T.teamPrize(icls, p, iv.track)); }).join(' • ') + ' • stands for ' + Math.max(1, iv.exp - s.done) + ' more race' + (iv.exp - s.done > 1 ? 's' : '')),
         h('div', { class: 'efoot' }, h('span', { class: 'gsmall dim' }, '2 entries + 2 wages'), btn('Accept', function () { gateC('cup', 'The team race', function () { entryModal(icls, iv.track, false, true); }); }, 'small go'))));
     }
-    out.push(seriesCard());
     // the venue: the circuit or one of the night street circuits
     var tid = DR.TRACKS[UI.circuitTrack] ? UI.circuitTrack : 'pixel', ven = T.venue(tid), trk = DR.TRACKS[tid];
     var thumb = h('canvas', { class: 'venthumb', width: CW, height: CH });
@@ -829,6 +828,7 @@
           btn('Enter', function () { gateC('circ', cls.name, function () { entryModal(cls, tid); }); }, 'small go'))));
     });
     out.push(h('div', { class: 'plvl secthead' }, 'OPEN RACES • ' + trk.name + ' • prize money only'), grid);
+    out.push(seriesCard());
     if (s.history.length) {
       out.push(h('div', { class: 'plvl secthead' }, 'RECENT RESULTS'));
       out.push(h('div', { class: 'trkcard' }, h('table', { class: 'trktab' }, s.history.slice(0, 6).map(function (x) {

@@ -305,7 +305,7 @@
     var nav = h('div', { class: 'row calnav' }, btn('◀', function () { calMonth--; UI.refresh(); }, 'small'), h('div', { class: 'pix acc grow', style: { textAlign: 'center' } }, CAL.MONL[m] + ' ' + y), btn('▶', function () { calMonth++; UI.refresh(); }, 'small'));
     var legend = h('div', { class: 'gsmall callegend' }, [['drag', 'Drag race day'], ['king', 'King'], ['circuit', 'Circuit'], ['show', 'Show'], ['test', 'Test & tune'], ['host', 'Your event'], ['wander', 'Wanderer'], ['club', 'Club'], ['bill', 'Bills']].map(function (x) { return h('span', {}, h('i', { class: 'caldot', style: { background: KCOL[x[0]] } }), x[1]); }));
     var cur = G.raceDayNow();
-    return h('div', { class: 'screen' }, UI.top('CALENDAR', function () { UI.show(UI.Home); }, UI.Promoter ? btn('Promoter', function () { UI.show(UI.Promoter); }, 'small') : null),
+    return h('div', { class: 'screen' }, UI.top('CALENDAR', function () { UI.show(UI.Home); }),
       h('div', { class: 'content' },
         cur ? h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'RACE DAY ON'), h('span', { class: 'grow gsmall' }, DR.STAGES[cur.si].name + ' • ' + G.dayScore(cur) + ' pts (win ' + G.dayTargets(cur).win + ', dominate ' + G.dayTargets(cur).dom + ')'), btn('Call it a day', function () { G.closeRaceDay(); UI.refresh(); }, 'small')) : null,
         h('div', { class: 'calwrap' }, h('div', { class: 'calleft' }, nav, grid, legend), list)));
