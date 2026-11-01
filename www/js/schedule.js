@@ -148,7 +148,7 @@
   G.afterRun = function (cfg, r) {
     if (cfg.inst) return { news: [] };   // a dealer test drive
     var hours = cfg.mode === 'street' ? 1 : cfg.mode === 'test' ? 0.25 : 0.5, out = { news: [] };
-    if (cfg.mode === 'career' && cfg.ev && !cfg.ev.hosted && !r.testDrive) out = scoreRun(cfg, r);
+    if (cfg.mode === 'career' && cfg.ev && !cfg.ev.hosted && !cfg.ev.special && !r.testDrive) out = scoreRun(cfg, r);
     var news = G.advance(hours);
     out.news = out.news.concat(news);
     return out;

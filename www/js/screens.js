@@ -314,6 +314,7 @@
         return chip(DR.money(b), b === betSel, function () { betSel = b; UI.refresh(); }, b > G.state.money ? 'disabled' : '');
       })),
       h('div', { class: 'gsmall dim' }, 'Win and you take their ' + DR.money(betSel) + '; lose and they take yours.'),
+      UI.wanderCard ? UI.wanderCard(inst, p) : null,
       grid, h('div', { style: { marginTop: '8px' } }, btn('New Opponents', function () { streetOpps = null; UI.refresh(); }, 'small')));
   }
 

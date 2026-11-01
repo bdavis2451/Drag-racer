@@ -830,7 +830,7 @@
         } else {
           var res = G.winEvent(ev);
           moneyDelta = res.cash; firstWin = res.first;
-          money.push([res.first ? 'Prize' : 'Prize (rerun)', res.purse]);
+          if (!(ev.special || ev.hosted) || res.purse) money.push([ev.special || ev.hosted ? 'Purse' : res.first ? 'Prize' : 'Prize (rerun)', res.purse]);
           money = money.concat(res.money);
           if (res.banner) news.push(res.banner);
           if (res.contract) news.push(res.contract);
@@ -844,7 +844,7 @@
           if (style) { moneyDelta += style; money.push(['Style ' + DR.starText(DR.starRating(inst)), style]); }
         }
       }
-      if (cfg.mode === 'career' && win === false && DR.multiRound(ev) && !ev.hosted) news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
+      if (cfg.mode === 'career' && win === false && DR.multiRound(ev) && !ev.hosted && !ev.special) news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
       if (cfg.mode === 'street') { moneyDelta = win ? cfg.bet : -cfg.bet; money.push([win ? 'Bet won' : 'Bet lost', moneyDelta]); }
       // your driver: their wage for the race day, and they learn from every pass
       if (drv && !testDrive) {
@@ -965,7 +965,7 @@
           }, 'primary') : null,
           // broke something: fix it and go again from here
           damaged ? (function () {
-            var fix = G.repairCost(inst), career = them && cfg.mode === 'career' && !ev.hosted;
+            var fix = G.repairCost(inst), career = them && cfg.mode === 'career' && !ev.hosted && !ev.special;
             if (!G.canAfford(fix)) return btn('Garage (repair ' + DR.money(fix) + ')', function () { UI.show(UI.Garage); }, 'primary');
             return btn('Repair ' + DR.money(fix) + (career ? ' & Race Again' : ''), function () {
               if (!G.repair(inst)) return UI.toast('Not enough money');
@@ -977,8 +977,8 @@
           })() : null,
           damaged ? btn('Garage', function () { UI.show(UI.Garage); }) : null,
           h('div', { class: 'btngrid' },
-            !damaged && them && cfg.mode === 'career' && !win && !ev.hosted ? btn(DR.multiRound(ev) ? 'Retry KO' : 'Rematch', function () { DR.Race.raceDay(DR.Race.eventCfg(ev, 0)); }, 'red') : null,
-            !damaged && them && cfg.mode === 'career' && win && nextRound == null && !ev.hosted ? btn('Again ' + DR.money(G.eventReward(ev)), function () { DR.Race.careerEvent(ev, 0); }) : null,
+            !damaged && them && cfg.mode === 'career' && !win && !ev.hosted && !ev.special ? btn(DR.multiRound(ev) ? 'Retry KO' : 'Rematch', function () { DR.Race.raceDay(DR.Race.eventCfg(ev, 0)); }, 'red') : null,
+            !damaged && them && cfg.mode === 'career' && win && nextRound == null && !ev.hosted && !ev.special ? btn('Again ' + DR.money(G.eventReward(ev)), function () { DR.Race.careerEvent(ev, 0); }) : null,
             back && !damaged ? btn('Back to Tuning', function () { UI.show(back); }) : null,
             damaged ? null : btn('Garage', function () { UI.show(UI.Garage); }),
             btn('Tune', function () { UI.show(UI.Tune); }))))));
