@@ -229,4 +229,43 @@
       return out;
     };
   })(G.extraAgenda);
+
+  // ---------------------------------------------------------------- side bets (Juiced)
+  // Before a career race, the other driver sometimes puts money on it. You
+  // can take it, raise it (double), lower it (half) or pass. Settled on the
+  // timeslip.
+  DR.sideBetRow = function (cfg) {
+    if (cfg.mode !== 'career' || !cfg.ev || cfg.ev.hosted || cfg.ev.special || cfg.round > 0 || cfg.ev.type === 'boss' || cfg.ev.king) return null;
+    var o = cfg.ev.opps[0], base = Math.max(100, Math.round((cfg.ev.cash || stageBase()) * 0.25 / 50) * 50);
+    if (cfg.betOffer == null) cfg.betOffer = Math.random() < 0.5 ? base : 0;
+    if (!cfg.betOffer) return null;
+    var amt = cfg.betOffer, row = h('div', { class: 'row', style: { gap: '6px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' } });
+    function draw() {
+      row.innerHTML = '';
+      row.appendChild(h('span', { class: 'plvl' }, 'SIDE BET'));
+      row.appendChild(h('span', { class: 'gsmall grow' }, cfg.sideBet ? 'On: ' + DR.money(cfg.sideBet) + ' with ' + o.name : o.name + ' puts ' + DR.money(amt) + ' on it.'));
+      if (cfg.sideBet) { row.appendChild(btn('Call it off', function () { cfg.sideBet = 0; draw(); }, 'small')); return; }
+      [['Take it', amt], ['Raise ' + DR.money(amt * 2), amt * 2], ['Half', Math.round(amt / 2 / 50) * 50]].forEach(function (x) {
+        row.appendChild(btn(x[0], function () {
+          if (G.state.money < x[1]) return UI.toast('You can\'t cover ' + DR.money(x[1]));
+          // they don't always go for a raise
+          if (x[1] > amt && Math.random() < 0.35) { UI.toast(o.name + ': "Too rich for me."'); cfg.betOffer = amt; return; }
+          cfg.sideBet = x[1]; draw();
+        }, 'small' + (x[1] === amt ? ' go' : '')));
+      });
+    }
+    draw();
+    return row;
+  };
+  var after1 = G.afterRun;
+  G.afterRun = function (cfg, r) {
+    var out = after1.apply(this, arguments);
+    if (cfg.sideBet && r.win != null) {   // (with the first-round opponent)
+      var v = r.win ? cfg.sideBet : -cfg.sideBet;
+      if (v > 0) G.earn(v); else G.pay(-v);
+      out.money = (out.money || []).concat([['Side bet with ' + cfg.ev.opps[0].name, v]]);
+      cfg.sideBet = 0;
+    }
+    return out;
+  };
 })();

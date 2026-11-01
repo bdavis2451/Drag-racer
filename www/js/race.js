@@ -95,6 +95,7 @@
         ev && (ev.type === 'boss' || ev.king) ? h('div', { class: 'acc', style: { marginTop: '4px' } }, 'The King races for their car.') : null,
         seat ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'DRIVER'), seat) : null,
         DR.Legal && !(cfg.round > 0) ? DR.Legal.haulPicker(inst) : null,
+        DR.sideBetRow ? DR.sideBetRow(cfg) : null,
         youOnly && drivers.length ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'You drive this one yourself.') : null,
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'TECH'), h('div', { class: tech ? 'bad' : '' }, techLine),
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'YOUR CAR'),
@@ -901,6 +902,7 @@
         var both = them && me.total < Infinity && them.total < Infinity && !me.red && !them.red, gap = both ? (bk ? them.pkg - me.pkg : them.total - me.total) : null;
         var ar = G.afterRun(cfg, { win: win, red: me.red, rt: me.rt, margin: gap != null && gap > 0 ? gap : null, deficit: gap != null && gap < 0 ? -gap : null, final: !!win && nextRound == null, testDrive: testDrive, sim: you.sim });
         if (ar && ar.license) news.push(ar.license);
+        if (ar && ar.money) { money = money.concat(ar.money); ar.money.forEach(function (m) { moneyDelta += m[1]; }); }
         if (ar && ar.score) notes.push(['acc', 'Race day +' + ar.score.pts + ': ' + ar.score.total + ' pts (win ' + ar.score.win + ', dominate ' + ar.score.dom + ')']);
         if (ar && ar.news) ar.news.filter(function (n) { return !/^Race day:/.test(n) && n !== ar.license; }).forEach(function (n, i) { setTimeout(function () { UI.toast(n); }, 1500 + i * 2400); });
       }

@@ -16,7 +16,7 @@
   function stageName(n) { return DR.STAGES[n] ? DR.STAGES[n].name : ''; }
   // key: [from, text(data)]; once-only unless `again`
   var SCRIPT = {
-    intro: ['ray', function () { return 'Couch is yours, kid. Bay three is yours too, as long as you sweep up and don\'t touch my lathe. Your car runs. Barely. Go find out how barely: the dragway does test and tune, and there\'s a Saturday heads-up for beaters.'; }],
+    intro: ['ray', function () { return 'Couch is yours, kid. Bay three is yours too, as long as you sweep up and don\'t touch my lathe. Your car runs. Barely. Go find out how barely: the dragway does test and tune Wednesday and Friday nights, and there\'s a Saturday heads-up for beaters. Calendar\'s on the wall.'; }],
     circuit: ['ray', function () { return 'One more thing. Nobody moves up around here on straight lines alone: every class has a Circuit Cup too, and you\'ll need a driver for it. Rookies are cheap on the Race Team board. Hire one, send them to the Sunday Track Day.'; }],
     cup: ['ray', function (n) { return 'Your team won the ' + DR.STAGES[n].name + ' Circuit Cup! The road course people will sell you their good stuff now: brakes, bars, wings.'; }],
     invite: ['street', function (iv) { return (iv && iv.team ? iv.team : 'A team') + ' here. Two of ours against two of yours and one more crew, ' + (iv ? DR.TRACKS[iv.track].name : 'this weekend') + '. Team points. You in? (Race Team > Races)'; }, true],
