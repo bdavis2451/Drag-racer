@@ -25,11 +25,39 @@
   };
   TU.JOBS = [
     { id: 'engine', name: 'Engine (dyno)', what: 'Boost, rev limiter, shift points' },
-    { id: 'launch', name: 'Launch (track)', what: 'Launch rpm, launch throttle, traction control' },
-    { id: 'drive', name: 'Drivetrain (track)', what: 'Converter stall, lockup gear, final drive' },
-    { id: 'chassis', name: 'Chassis (track)', what: 'Tire pressure, anti-squat, rear rebound' }
+    { id: 'chassis', name: 'Chassis (track)', what: 'Tire pressure, front shocks & limiter, instant centre, rear shocks, wheelie bars' },
+    { id: 'launch', name: 'Launch (track)', what: 'Boost in 1st & 2nd, 2-step rpm, launch throttle, traction control' },
+    { id: 'drive', name: 'Drivetrain (track)', what: 'Converter stall, lockup, final drive (last: gear a car once it hooks)' },
+    { id: 'nitrous', name: 'Nitrous (track)', what: 'When the nitrous comes in and how fast' }
   ];
-  var KEYS = { launch: ['launchRpm', 'launchThr', 'thrRamp', 'tcSlip'], drive: ['stall', 'luGear', 'fd'], chassis: ['psi', 'antiSquat', 'rebR'] };
+  // The order a drag tuner works in (traction first, gearing last): the tire
+  // pressure for a baseline, the front end (how the weight comes off it),
+  // the rear (how it lands on the tires), then the launch on top of a car
+  // that hooks, the converter and gear, then the nitrous.
+  var KEYS = {
+    chassis: ['psi', 'rebF', 'limitF', 'antiSquat', 'bumpR', 'rebR', 'barDeg'],
+    launch: ['gb1', 'gb2', 'launchRpm', 'launchThr', 'thrRamp', 'tcSlip', 'tcGain'],
+    drive: ['stall', 'luGear', 'fd'],
+    nitrous: ['nosDelay', 'nosRamp']
+  };
+  // What a tuner knows to touch: anyone does tire pressure, the 2-step, the
+  // traction control, the converter and the gear; a good chassis tuner
+  // works the shocks and the instant centre; the best, everything.
+  var SCOPE = {
+    basic: ['psi', 'launchRpm', 'tcSlip', 'stall', 'fd', 'gb1', 'launchThr'],
+    good: ['antiSquat', 'rebR', 'rebF', 'luGear', 'gb2', 'thrRamp', 'barDeg', 'nosDelay'],
+    pro: ['limitF', 'bumpR', 'tcGain', 'nosRamp']
+  };
+  TU.knows = function (who, k) {
+    if (SCOPE.basic.indexOf(k) >= 0) return true;
+    if (SCOPE.good.indexOf(k) >= 0) return who.chs >= 58;
+    return who.chs >= 75;
+  };
+  // boost by gear, one gear at a time: gb1 = the cap in 1st, gb2 in 2nd
+  // (first in the launch: a tuner tames wheelspin with the boost before
+  // softening the launch)
+  var GB = { gb1: 0, gb2: 1 };
+  var GBDEF = { show: function (S) { var d = def('gearBoost'); return d && d.show(S); } };
   // how hard to lean on it: knock margin, rpm under the valvetrain, power
   // under what the internals take
   TU.AGG = {
@@ -38,10 +66,12 @@
     edge: { name: 'On the edge', psi: 0.3, rpm: 50, hp: 0 }
   };
   var STOICH = { stock: 14.7, race: 14.7, e85: 9.8, meth: 6.4 };
-  function def(k) { return DR.TUNE_DEFS.filter(function (x) { return x.key === k; })[0]; }
+  function def(k) { if (GB && GB[k] != null) return GBDEF; return DR.TUNE_DEFS.filter(function (x) { return x.key === k; })[0]; }
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
   function gauss() { var u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
   function fmt(k, v) {
+    if (GB[k] != null) return v >= 99 ? 'no cap' : (+v).toFixed(1) + ' psi';
+    if (k === 'gearBoost' && Array.isArray(v)) return v.slice(0, 3).map(function (b, i) { return ['1st', '2nd', '3rd'][i] + ' ' + (+b).toFixed(1); }).join(', ') + ' psi';
     if (k === 'launchRpm' || k === 'stall' || k === 'shiftRpm' || k === 'revLimit') return Math.round(v) + ' rpm';
     if (k === 'launchThr' || k === 'tcSlip') return v + '%';
     if (k === 'thrRamp') return (+v).toFixed(1) + ' s';
@@ -52,15 +82,18 @@
     return String(Math.round(v * 100) / 100);
   }
   TU.fmt = fmt;
-  function label(k) { var d = def(k); return d ? d.label : k; }
+  function label(k) { if (GB[k] != null) return 'Boost in ' + ['1st', '2nd'][GB[k]]; var d = def(k); return d ? d.label : k; }
 
   // ---------------------------------------------------------------- session
   // who: { name, eng, chs, dat, staff (team tuner object) | freelance tier }
-  TU.session = function (inst, who, jobs, agg) {
+  TU.session = function (inst, who, jobs, agg, drvId) {
     var t0 = JSON.parse(JSON.stringify(inst.tune || {}));
     var S0 = G.spec(inst), d0 = DR.fullTune(inst, S0);
     var ss = { inst: inst, who: who, jobs: jobs, agg: TU.AGG[agg] || TU.AGG.bal, t0: t0, d0: d0, log: [], cost: { labor: 0, driver: 0, dyno: 0, fuel: 0, track: 0, parts: 0 },
       pulls: [], passes: 0, best: null, items: [], phase: 'dyno', dayPaid: false, dynoPaid: false };
+    // who'll drive the passes: the tuner sets the car up for them
+    var drs = DR.Team && DR.Team.dragDrivers ? DR.Team.dragDrivers() : [];
+    ss.drv = drvId === 'me' ? null : (drvId && DR.Team.staff(drvId)) || drs[0] || null;
     // the dyno work
     if (jobs.indexOf('engine') >= 0) {
       if (S0.fiType !== 'none' && def('boost').show(S0)) ss.items.push({ k: 'boost' });
@@ -70,15 +103,20 @@
     if (!ss.items.length) ss.phase = 'track';
     // the track work: the settings the car's parts allow
     ss.track = [];
-    ['launch', 'drive', 'chassis'].forEach(function (j) {
+    // traction first (tires, suspension), then the launch, then the gearing:
+    // gear a car that's spinning and you gear it too tall
+    ['chassis', 'launch', 'drive', 'nitrous'].forEach(function (j) {
       if (jobs.indexOf(j) < 0) return;
-      KEYS[j].forEach(function (k) { var dd = def(k); if (dd && dd.show(S0)) ss.track.push({ k: k, grp: j }); });
+      KEYS[j].forEach(function (k) { var dd = def(k); if (dd && dd.show(S0) && TU.knows(who, k)) ss.track.push({ k: k, grp: j }); });
     });
     ss.ti = 0;
     return ss;
   };
-  function val(ss, k) { var t = ss.inst.tune; return t[k] != null ? t[k] : DR.fullTune(ss.inst, G.spec(ss.inst))[k]; }
-  function setTune(ss, k, v) { ss.inst.tune[k] = v; }
+  // a boost cap at or over the boost target is no cap (shown as 99)
+  function gbOf(tune, inst, i) { var a = tune.gearBoost || DR.fullTune(inst, G.spec(inst)).gearBoost, S = G.spec(inst); var b = a && a[i] != null ? a[i] : 99; return b >= S.boostSet - 0.01 ? 99 : b; }
+  function gbSet(tune, inst, i, v) { var S = G.spec(inst), a = (tune.gearBoost || DR.fullTune(inst, S).gearBoost).slice(); a[i] = v >= 99 ? (S.maxBoost || 0) : v; tune.gearBoost = a; }
+  function val(ss, k) { var t = ss.inst.tune; if (GB[k] != null) return gbOf(t, ss.inst, GB[k]); return t[k] != null ? t[k] : DR.fullTune(ss.inst, G.spec(ss.inst))[k]; }
+  function setTune(ss, k, v) { if (GB[k] != null) return gbSet(ss.inst.tune, ss.inst, GB[k], v); ss.inst.tune[k] = v; }
 
   // ---------------------------------------------------------------- the dyno
   // what the engine is asking for at this boost: { knock, lean, safe, spark, top }
@@ -161,44 +199,81 @@
   // by however much their chassis skill misses by. Suspension and tire
   // pressure move in steps from where the car is, not across the whole
   // range, and a setting the car doesn't care about is left alone.
-  var WIN = { psi: 4, antiSquat: 0.5, rebR: 4 };
+  var WIN = { psi: 4, antiSquat: 0.5, rebR: 4, rebF: 3, bumpR: 3, limitF: 30, barDeg: 2, tcGain: 3, stall: 800, fd: 0.5, launchRpm: 1200, nosDelay: 1, nosRamp: 1 };
+  var GSTEP = { antiSquat: 0.05, fd: 0.1, launchRpm: 200, stall: 200, nosDelay: 0.2, nosRamp: 0.2 };
   function grid(ss, k) {
-    var S = G.spec(ss.inst), dd = def(k), lo = dd.min(S), hi = dd.max(S), st = dd.step || 1, out = [], cur = val(ss, k), n = 7;
+    var S = G.spec(ss.inst), cur = val(ss, k), out = [], n = 7;
+    if (GB[k] != null) {
+      // the cap in this gear: none, or the target less 10% at a time
+      var B = S.boostSet;
+      [99, 0.9, 0.8, 0.7, 0.6, 0.5].forEach(function (f) { out.push(f === 99 ? 99 : Math.max(S.boostMin || 0, Math.round(B * f * 2) / 2)); });
+      if (out.indexOf(cur) < 0) out.push(cur);
+      return out.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
+    }
+    var dd = def(k), lo = dd.min(S), hi = dd.max(S), st = dd.step || 1;
     if (k === 'tcSlip') return [0, 6, 9, 12, 15, 18];
     if (k === 'luGear') { for (var g = 1; g <= hi; g++) out.push(g); return out; }
     if (k === 'psi') { var o = S.tire.optP; lo = Math.max(lo, o * 0.7); hi = Math.min(hi, o * 1.1); }
-    if (k === 'fd') { var f0 = S.fd; lo = Math.max(lo, f0 * 0.8); hi = Math.min(hi, f0 * 1.25); }
-    if (k === 'launchRpm') { lo = Math.max(lo, S.idle + 1200); hi = Math.min(hi, S.red - 400); }
+    if (k === 'fd') {
+      var f0 = S.fd; lo = Math.max(lo, f0 * 0.8); hi = Math.min(hi, f0 * 1.25);
+      // a drag tuner gears down from the factory ratio, not up: taller only
+      // when the car runs out of revs in top gear before the stripe
+      score(ss, 'fd', cur);
+      var fi = ss.finfo[fdKey(ss, cur)];
+      if (!(fi && fi.toppedOut)) lo = Math.max(lo, Math.min(cur, S.car.fd));
+    }
+    if (k === 'launchRpm') {
+      lo = Math.max(lo, S.idle + 1200); hi = Math.min(hi, S.red - 400);
+      // a turbo car leaves on boost: never below where the 2-step builds
+      // half the target (unless it's set there already)
+      if (S.fiType === 'turbo' && DR.steadyBoost) { for (var r0 = lo; r0 < hi && DR.steadyBoost(S, r0) < 0.5 * S.boostSet; r0 += 100); lo = Math.max(lo, Math.min(cur, r0)); }
+    }
     if (WIN[k] != null) {
       // around the current setting, a click or a half-psi at a time
       lo = Math.max(lo, Math.min(hi, cur) - WIN[k]); hi = Math.min(hi, Math.max(lo, cur) + WIN[k]);
-      var gs = k === 'antiSquat' ? 0.05 : st;
+      var gs = GSTEP[k] || st;
       for (var v = lo; v <= hi + 1e-9; v += gs) out.push(Math.round(v / st) * st);
     } else for (var i = 0; i < n; i++) out.push(Math.round((lo + (hi - lo) * i / (n - 1)) / st) * st);
     out.push(cur);
     out = out.map(function (v) { return +(+v).toFixed(3); });
     return out.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
   }
-  // the model: a driven quarter (a good driver, prepped strip), the shake
-  // rolled three ways. Smooth, and it tracks what real passes show.
+  // the model: a driven quarter on a prepped strip, by the driver who'll
+  // drive it (their launch and how well they pedal it; a tuner sets a car
+  // up for its driver), the shake rolled three ways. Smooth, and it tracks
+  // what real passes show.
+  function modelDriver(ss) {
+    var ai = ss.drv ? DR.AIDriver.fromDrag(ss.drv, function () { return 0.5; }) : new DR.AIDriver(1, function () { return 0.5; });
+    ai.react = 0; ai.launchErr = 0; ai.shiftErr = 0;
+    return ai;
+  }
   function score(ss, k, v) {
-    var t = JSON.parse(JSON.stringify(ss.inst.tune)); t[k] = v;
+    var t = JSON.parse(JSON.stringify(ss.inst.tune));
+    if (GB[k] != null) gbSet(t, ss.inst, GB[k], v); else t[k] = v;
     var key = JSON.stringify(t); ss.memo = ss.memo || {};
     if (ss.memo[key] != null) return ss.memo[key];
     var S = DR.buildSpec(ss.inst, t), cond = DR.conditions('prep', false), sum = 0;
+    ss.finfo = ss.finfo || {};
     [0.7, 1, 1.3].forEach(function (sr) {
       var sim = new DR.Sim(S, { cond: cond, shakeRnd: sr, dist: DR.QUARTER, tireT: S.tire.topt });
-      var ai = new DR.AIDriver(1, function () { return 0.5; }), dt = 1 / 400, tG = -1.2;
-      ai.react = 0;
+      var ai = modelDriver(ss), dt = 1 / 400, tG = -1.2;
       while (!sim.finished && tG < 40 && !sim.crashed && !sim.blown) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
       sum += sim.finished ? sim.et : 30;
+      if (sr === 1) ss.finfo[key] = { toppedOut: sim.gear >= S.ratios.length - 1 && sim.rpm() >= S.limit - 150, endRpm: sim.rpm(), peak: S.peakHpRpm };
     });
     return (ss.memo[key] = sum / 3);
   }
   TU.score = score;
+  function fdKey(ss, v) { var t = JSON.parse(JSON.stringify(ss.inst.tune)); t.fd = v; return JSON.stringify(t); }
   var FLAT = 0.004, WORTH = 0.006;
   function call(ss, k) {
     var g = grid(ss, k), cur = val(ss, k), ci = g.indexOf(+(+cur).toFixed(3)), sc = g.map(function (v) { return score(ss, k, v); });
+    if (k === 'fd') {
+      // gear it to cross the stripe at (or a little past) peak power, not
+      // lugging through the traps in a gear it doesn't pull
+      var okFd = g.map(function (v) { var fi = ss.finfo[fdKey(ss, v)]; return !fi || fi.toppedOut || fi.endRpm >= 0.92 * fi.peak; });
+      if (okFd.some(Boolean)) sc = sc.map(function (x, i) { return okFd[i] || i === ci ? x : x + 1; });
+    }
     var bs = Math.min.apply(null, sc), bi = ci;
     // of the settings within a whisker of the best, the one nearest where the car is
     g.forEach(function (v, i) { if (sc[i] <= bs + FLAT && (bi < 0 || sc[bi] > bs + FLAT || Math.abs(i - ci) < Math.abs(bi - ci))) bi = i; });
@@ -219,12 +294,12 @@
       var cur = val(ss, it.k);
       if (!it.tried) {
         if (it.call.guess === cur) { it.tried = true; it.kept = true; }
-        else { it.tried = true; it.was = cur; it.unset = ss.inst.tune[it.k] == null; it.v = it.call.guess; setTune(ss, it.k, it.v); return { label: label(it.k) + ' ' + fmt(it.k, it.v), k: it.k, v: it.v }; }
+        else { it.tried = true; it.was = cur; it.unset = GB[it.k] == null && ss.inst.tune[it.k] == null; it.v = it.call.guess; setTune(ss, it.k, it.v); return { label: label(it.k) + ' ' + fmt(it.k, it.v), k: it.k, v: it.v }; }
       }
       // a tuner who reads the data well goes once more, to where the data
       // points, if it's worth a pass from here
       if (!it.refined && ss.who.dat >= 55 && it.call.opt !== cur && (it.kept ? ss.who.dat >= 55 : ss.who.dat >= 70) && score(ss, it.k, cur) - score(ss, it.k, it.call.opt) >= WORTH) {
-        it.refined = true; it.was = cur; it.unset = ss.inst.tune[it.k] == null; it.v = it.call.opt; setTune(ss, it.k, it.v);
+        it.refined = true; it.was = cur; it.unset = GB[it.k] == null && ss.inst.tune[it.k] == null; it.v = it.call.opt; setTune(ss, it.k, it.v);
         return { label: label(it.k) + ' ' + fmt(it.k, it.v) + ' (from the data)', k: it.k, v: it.v };
       }
       ss.ti++;
@@ -247,14 +322,17 @@
       pass.rerun = true; ss.again = pass;
       note = 'Threw that one out (' + res.aborted + '). Run it again.';
     } else if (pass.k === null) {
-      ss.best = et; note = 'Baseline ' + (et < 90 ? et.toFixed(3) : 'DNF') + '.';
+      ss.best = et; ss.refEt = et; note = 'Baseline ' + (et < 90 ? et.toFixed(3) : 'DNF') + '.';
     } else {
       var it = ss.track[ss.ti], was = it ? it.was : val(ss, pass.k);
       var meas = et < 90 && ss.best < 90 ? clamp(et - ss.best, -0.08, 0.08) : (et < 90 ? -0.08 : 0.08);
-      var model = score(ss, pass.k, pass.v) - score(ss, pass.k, was), w = 0.2 + 0.6 * ss.who.dat / 100;
-      var judged = (1 - w) * meas + w * model, quicker = et < ss.best - 0.005;
+      // how much one slip says: less from an inconsistent driver
+      var con = ss.drv ? ss.drv.con / 100 : 0.7;
+      var model = score(ss, pass.k, pass.v) - score(ss, pass.k, was), w = clamp(0.15 + 0.6 * ss.who.dat / 100 + 0.25 * (1 - con), 0.15, 0.9);
+      // (the slip against the last pass on the setup it's being compared with)
+      var judged = (1 - w) * meas + w * model, quicker = et < (ss.refEt != null ? ss.refEt : ss.best) - 0.005;
       if (judged < -0.004) {
-        ss.best = Math.min(ss.best, ss.best + judged); if (it) it.kept = true;
+        ss.best = Math.min(ss.best, ss.best + judged); ss.refEt = et; if (it) it.kept = true;
         note = quicker ? 'Quicker: ' + et.toFixed(3) + '. Keeping ' + fmt(pass.k, pass.v) + '.' : (et < 90 ? et.toFixed(3) : 'No time') + ': the slip says no, but the 60-foot and the logger say it helps (that pass was off). Keeping ' + fmt(pass.k, pass.v) + '.';
       } else {
         if (it) { if (it.unset) delete ss.inst.tune[pass.k]; else setTune(ss, pass.k, it.was); }
@@ -303,8 +381,16 @@
   TU.open = function (inst) {
     if (inst.damage) return UI.toast('Repair your car first!');
     if (TU.active && TU.active.inst === inst) return passPrompt(TU.active);
-    var staff = DR.Team && DR.Team.tuner('drag'), whoSel = staff ? 'staff' : 'local', jobs = { engine: true, launch: true, drive: false, chassis: false }, agg = 'bal', close;
-    var S = G.spec(inst), quote = h('div', { class: 'dim gsmall' }), go;
+    var staff = DR.Team && DR.Team.tuner('drag'), whoSel = staff ? 'staff' : 'local', jobs = { engine: true, chassis: true, launch: true, drive: false, nitrous: false }, agg = 'bal', close;
+    var S = G.spec(inst), quote = h('div', { class: 'dim gsmall' }), scope = h('div', { class: 'gsmall' }), go;
+    var drivers = DR.Team ? DR.Team.dragDrivers() : [], drvSel = drivers.length ? drivers[0].id : 'me';
+    function covers() {
+      var w = who(), out = [];
+      chosen().forEach(function (j) { (KEYS[j] || []).forEach(function (k) { var dd = def(k); if (dd && dd.show(S) && TU.knows(w, k)) out.push(label(k)); }); });
+      var miss = [];
+      chosen().forEach(function (j) { (KEYS[j] || []).forEach(function (k) { var dd = def(k); if (dd && dd.show(S) && !TU.knows(w, k)) miss.push(label(k)); }); });
+      return (out.length ? 'Works on: ' + out.join(', ') + '.' : '') + (miss.length ? ' Won\'t touch (beyond them): ' + miss.join(', ') + '.' : '');
+    }
     function who() {
       if (whoSel === 'staff') return { name: staff.name, eng: staff.eng, chs: staff.chs, dat: staff.dat, staff: staff };
       var f = TU.FREELANCE[whoSel]; return { name: f.name, eng: f.eng, chs: f.chs, dat: f.dat, dyno: f.dyno, day: f.day };
@@ -314,8 +400,9 @@
       var w = who(), js = chosen(), eng = js.indexOf('engine') >= 0, trk = js.some(function (j) { return j !== 'engine'; });
       var dynoCost = !eng ? 0 : w.staff ? DR.dynoFee(S) + ' a pull (about 4-10 pulls)' : DR.money(Math.round((w.dyno + S.peakHp) / 50) * 50) + ' for the dyno tune';
       quote.textContent = (eng ? 'Dyno: ' + (w.staff ? DR.money(DR.dynoFee(S)) + ' a pull, about 4-10 pulls. ' : dynoCost + '. ') : '') +
-        (trk ? 'Track: ' + (w.staff ? '' : DR.money(w.day) + ' for the day, ') + DR.money(DR.runCost(S).total + TU.TRACK_FEE) + ' a pass (fuel and the test-and-tune ticket), about ' + (2 + js.length * 2) + ' passes, each one driven by you or a drag driver, and each one wearing the car.' : '');
+        (trk ? 'Track: ' + (w.staff ? '' : DR.money(w.day) + ' for the day, ') + DR.money(DR.runCost(S).total + TU.TRACK_FEE) + ' a pass (fuel and the test-and-tune ticket), about ' + (2 + js.length * 2) + ' passes, each one wearing the car.' : '');
       go.disabled = !js.length;
+      scope.textContent = covers();
     }
     function radio(name, opts, cur, on) {
       return h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, opts.map(function (o) {
@@ -324,7 +411,7 @@
       }));
     }
     go = btn('Start', function () {
-      var ss = TU.session(inst, who(), chosen(), agg);
+      var ss = TU.session(inst, who(), chosen(), agg, drvSel);
       TU.active = ss; close();
       if (ss.phase === 'dyno') dynoPhase(ss); else passPrompt(ss);
     }, 'primary');
@@ -332,15 +419,18 @@
     close = UI.modal([h('div', { class: 'pix acc' }, 'TUNER'),
       h('div', { class: 'plvl' }, 'WHO'), radio('who', whoOpts, whoSel, function (v) { whoSel = v; }),
       h('div', { class: 'dim gsmall' }, staff ? 'Your staff tuner works for their wage.' : 'No staff tuner: hire one at Team (on the garage), or book a freelancer.'),
+      h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'WHO DRIVES'),
+      radio('drv', drivers.map(function (d) { return [d.id, d.name]; }).concat([['me', 'Me']]), drvSel, function (v) { drvSel = v; }),
+      h('div', { class: 'dim gsmall' }, 'The tuner sets the car up for whoever drives it: their launch, how they pedal it, and how much one of their passes can be trusted.'),
       h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'HOW FAR TO GO'),
-      h('div', { class: 'col' }, TU.JOBS.map(function (j) {
+      h('div', { class: 'col' }, TU.JOBS.filter(function (j) { return j.id !== 'nitrous' || S.nosW; }).map(function (j) {
         var cb = h('input', { type: 'checkbox', checked: !!jobs[j.id] });
         cb.addEventListener('change', function () { jobs[j.id] = cb.checked; upd(); });
         return h('label', { class: 'row', style: { gap: '8px' } }, cb, h('span', {}, j.name), h('span', { class: 'dim gsmall' }, j.what));
       })),
       h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'HOW HARD TO LEAN ON IT'),
       radio('agg', Object.keys(TU.AGG).map(function (k) { return [k, TU.AGG[k].name]; }), agg, function (v) { agg = v; }),
-      quote,
+      scope, quote,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px', marginTop: '8px' } }, btn('Cancel', function () { close(); }), go)]);
     upd();
   };
@@ -398,11 +488,16 @@
     if (!pass) return notes(ss);
     ss.cur = pass;
     var drivers = DR.Team ? DR.Team.dragDrivers() : [], close;
-    var rows = [btn('Drive it', function () { close(); runPass(ss, null); }, 'primary')];
-    drivers.forEach(function (d) {
-      rows.push(btn(d.name + ' drives', function () { close(); runPass(ss, d.id); }));
-      rows.push(btn(d.name + ' drives (skip)', function () { close(); simPass(ss, d.id); }));
+    // the session's driver keeps going on their own
+    if (ss.auto && drivers.some(function (d) { return d.id === ss.auto; })) { ss.cur = pass; return setTimeout(function () { simPass(ss, ss.auto); }, 30); }
+    if (ss.drv) drivers = [ss.drv].concat(drivers.filter(function (d) { return d.id !== ss.drv.id; }));
+    var rows = [];
+    drivers.forEach(function (d, i) {
+      rows.push(btn(d.name + ' drives', function () { close(); runPass(ss, d.id); }, i ? '' : 'primary'));
+      rows.push(btn('Skip', function () { close(); simPass(ss, d.id); }));
+      if (!i) rows.push(btn(d.name + ' runs the rest', function () { close(); ss.auto = d.id; simPass(ss, d.id); }));
     });
+    rows.push(btn('Drive it yourself', function () { close(); runPass(ss, null); }, drivers.length ? 'small' : 'primary'));
     close = UI.modal([h('div', { class: 'plvl' }, 'TEST PASS ' + (ss.passes + 1) + ' • ' + ss.who.name.toUpperCase()),
       h('div', { class: 'pix acc' }, pass.label),
       h('div', { class: 'dim gsmall' }, 'Prepped strip, daytime. ' + (ss.best != null ? 'Best so far ' + ss.best.toFixed(3) + '.' : '') + ' Fuel and the ticket: ' + DR.money(DR.runCost(G.spec(inst)).total + TU.TRACK_FEE) + '.'),
@@ -419,7 +514,7 @@
           if (!G.service(ss.inst, due.map(function (x) { return x.cat; }))) return UI.toast('Not enough money');
           ss.cost.parts += cost; ss.log.push({ pit: 'Fresh ' + what + ' fitted' });
           // a new baseline on the fresh parts
-          ss.best = null; A.cash(); close(); passPrompt(ss);
+          ss.best = null; ss.refEt = null; ss.auto = ss.auto || null; A.cash(); close(); passPrompt(ss);
         }, 'primary' + (G.canAfford(cost) ? '' : ' disabled')))]);
   }
   function runPass(ss, drvId) {
@@ -477,7 +572,12 @@
   // races over its drag tune; it's what was found on the day, nothing more.
   TU.CTRACK = 600;          // a test day at the circuit
   TU.CLAPS = 3;             // laps a stint
-  TU.CKEYS = ['fd', 'psi', 'rollBal', 'rideF', 'rideR'];
+  // A road-course test day's order: tire pressure first (the baseline every
+  // other change sits on), the ride heights, then the bar balance for how
+  // the car turns, and the gearing last, once the car's speed out of the
+  // corners is what it will be (top gear just short of the limiter at the
+  // end of the longest straight is what the lap time ends up asking for).
+  TU.CKEYS = ['psi', 'rideF', 'rideR', 'rollBal', 'fd'];
   function cgrid(k, S, cur) {
     var d = def(k), lo = d.min(S), hi = d.max(S), st = d.step, out = [];
     if (k === 'fd') { lo = Math.max(lo, cur - 0.6); hi = Math.min(hi, cur + 0.6); st = 0.15; }
