@@ -176,6 +176,7 @@
     G.work(inst, h, 'Package (' + plan.steps.length + ' parts)');
   });
   hook('service', function (r, inst, cats) { if (r) G.work(inst, cats.reduce(function (a, c) { return a + (c === 'clutch' ? 6 : 1); }, 0), 'Fresh ' + cats.map(function (c) { return c === 'rtires' ? 'tires' : 'clutch'; }).join(' & ')); });
+  hook('moveOver', function (r, d, cat, target) { if (r && r.swap) { G.work(target, DR.jobHours('engine', target, target.engine), 'Engine swap (' + DR.ENGINES[target.engine].name + ')'); G.work(d, DR.jobHours('engine', d, d.engine), 'Engine swap (' + DR.ENGINES[d.engine].name + ')'); } });
   hook('stripCar', function (r, inst) { if (r) G.work(inst, Math.max(2, r * 1.5), 'Stripping ' + r + ' parts'); });
   var repair0 = G.repair;
   G.repair = function (inst) {

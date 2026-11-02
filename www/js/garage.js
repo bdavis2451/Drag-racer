@@ -827,6 +827,23 @@
           UI.confirm('Sell the ' + G.partName(it) + ' for ' + DR.money(G.partSellValue(it)) + '?', function () { G.sellPart(it.uid); A.cash(); UI.refresh(); }, 'Sell');
         }, 'small')));
     });
+    // the same slot on your other cars: move it over (an engine swaps)
+    var others = G.carsWith ? G.carsWith(inst, bayCat) : [];
+    if (others.length) {
+      right.appendChild(h('h3', {}, 'ON YOUR OTHER CARS'));
+      others.sort(function (a, b) { return (a.issue ? 1 : 0) - (b.issue ? 1 : 0); }).forEach(function (q) {
+        var dn = DR.CARS[q.donor.carId].name, lvl = q.swap ? 0 : lvlOf(DR.getOption(bayCat, q.donor, q.id));
+        var cost = q.fee + q.cost, sub = q.issue ? h('div', { class: 'warn', style: { fontSize: '15px' } }, q.issue) : q.swap ? h('div', { class: 'dim gsmall' }, 'Swap: your ' + DR.ENGINES[inst.engine].name + ' goes in the ' + dn) : gainLine(inst, bayCat, q.id);
+        right.appendChild(h('div', { class: 'item inv l' + lvl + (q.issue ? ' locked' : '') },
+          iconEl(DR.iconCat(bayCat, inst), lvl, q.id, 32),
+          h('div', { class: 'name' }, h('div', {}, q.name + ' (' + dn + ')'), sub),
+          q.issue ? null : btn((q.swap ? 'Swap engines' : 'Move over') + (cost ? ' ' + DR.money(cost) : ''), function () {
+            var go = function () { var r = G.moveOver(q.donor, bayCat, inst); UI.toast(r.msg); if (r.ok) A.click(); UI.refresh(); };
+            if (q.swap) UI.confirm('Swap engines? The ' + q.name + ' (and its engine parts) comes out of the ' + dn + ' and goes in this car; your ' + DR.ENGINES[inst.engine].name + ' (and its parts) goes in the ' + dn + '.' + (q.fee ? ' The shop work for both installs: ' + DR.money(q.fee) + '.' : '') + ' Both cars go on the bench.', go, 'Swap');
+            else UI.confirm('Move the ' + q.name + ' from the ' + dn + ' to this car? The ' + dn + ' goes back to its factory part' + (q.cost ? ' (a used one, ' + DR.money(q.cost) + ')' : '') + '.', go, 'Move');
+          }, 'small go')));
+      });
+    }
     // the catalog for the slot
     right.appendChild(h('h3', {}, 'FOR SALE'));
     if (!DR.partApplies(bayCat, inst)) right.appendChild(h('div', { class: 'warnbox' }, G.partFitIssue({ cat: bayCat, id: '' }, inst) + ' — you can still buy these for another car.'));

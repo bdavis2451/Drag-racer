@@ -392,6 +392,74 @@
     G.save();
     return true;
   };
+  // Parts straight from one of your cars to another. An aftermarket part
+  // comes off (the donor goes back to its factory part, yours off the shelf
+  // or a used one) and goes on. An engine (factory or not) is swapped: the
+  // donor takes the engine coming out, so neither car sits without one, and
+  // each engine keeps its own parts (heads, cams, turbo...).
+  G.carsWith = function (target, cat) {
+    var out = [];
+    (G.state.cars || []).forEach(function (d) {
+      if (d === target || d.uid === target.uid) return;
+      var x = G.moveQuote(d, cat, target); if (x) out.push(x);
+    });
+    return out;
+  };
+  // { donor, cat, id, swap, name, issue, fee, cost } or null (nothing to move)
+  G.moveQuote = function (d, cat, target) {
+    var isEng = cat === 'engine', id = isEng ? d.engine : DR.partId(cat, d);
+    if (!isEng && (!DR.partApplies(cat, d) || id === DR.stockPart(cat, d))) return null;
+    if (isEng && id === target.engine) return null;
+    var q = { donor: d, cat: cat, id: id, swap: isEng, fee: 0, cost: 0, issue: '' };
+    q.name = isEng ? DR.ENGINES[id].name : DR.getOption(cat, d, id).name;
+    var away = DR.Team && DR.Team.carAway;
+    if (away && (away(d.uid) || away(target.uid))) q.issue = 'A car is at the track';
+    else if (isEng) {
+      q.issue = G.partFitIssue({ cat: 'engine', id: id }, target);
+      var back = G.partFitIssue({ cat: 'engine', id: target.engine }, d);
+      if (!q.issue && back && back !== 'Already in this car') q.issue = 'Your ' + DR.ENGINES[target.engine].name + ' can\'t go in the ' + DR.CARS[d.carId].name + ' in its place (' + back + ')';
+      if (!q.issue && ((d.damage && d.damage.engine) || (target.damage && target.damage.engine))) q.issue = 'A blown engine: repair it first';
+      q.fee = DR.swapFit(target, id).install + DR.swapFit(d, target.engine).install;
+    } else {
+      q.issue = G.partFitIssue({ cat: cat, id: id, eng: G.isEngineBound(cat) ? d.engine : undefined }, target) || G.removeIssue(d, cat);
+      q.cost = G.factoryFor(d, cat).cost;
+    }
+    return q;
+  };
+  G.moveOver = function (d, cat, target) {
+    var q = G.moveQuote(d, cat, target);
+    if (!q) return { ok: false, msg: 'Nothing to move' };
+    if (q.issue) return { ok: false, msg: q.issue };
+    if (!G.canAfford(q.fee + q.cost)) return { ok: false, msg: 'That costs ' + DR.money(q.fee + q.cost) };
+    var dn = DR.CARS[d.carId].name, tn = DR.CARS[target.carId].name;
+    if (!q.swap) {
+      if (!G.removePart(d, cat)) return { ok: false, msg: 'It wouldn\'t come off' };
+      var it = G.state.inv.filter(function (x) { return x.cat === cat && x.id === q.id && x.from === d.uid; }).sort(function (a, b) { return b.uid - a.uid; })[0];
+      var r = it ? G.installPart(target, it.uid) : { ok: false, msg: 'Part not found' };
+      return r.ok ? { ok: true, msg: q.name + ' moved from the ' + dn + ' to the ' + tn } : r;
+    }
+    // the engine swap: each car gets the other's engine and its parts
+    G.pay(q.fee);
+    var dE = d.engine, tE = target.engine, keys = DR.ENGINE_BOUND.concat(['engine']);
+    function take(inst) {
+      var o = { parts: {}, wear: {}, spent: 0 };
+      DR.ENGINE_BOUND.forEach(function (c) { if (inst.parts[c] != null) { o.parts[c] = inst.parts[c]; o.spent += DR.getOption(c, inst, inst.parts[c]).price || 0; delete inst.parts[c]; } });
+      keys.forEach(function (c) { if (inst.wear && inst.wear[c]) { o.wear[c] = inst.wear[c]; delete inst.wear[c]; } });
+      return o;
+    }
+    function put(inst, eng, o) {
+      inst.engine = eng;
+      Object.keys(o.parts).forEach(function (c) { inst.parts[c] = o.parts[c]; });
+      if (Object.keys(o.wear).length) { inst.wear = inst.wear || {}; Object.keys(o.wear).forEach(function (c) { inst.wear[c] = o.wear[c]; }); }
+      clearTune(inst, 'engine', null);
+    }
+    var fromD = take(d), fromT = take(target);
+    d.spent = Math.max(0, (d.spent || 0) - fromD.spent + fromT.spent);
+    target.spent = Math.max(0, (target.spent || 0) - fromT.spent + fromD.spent);
+    put(target, dE, fromD); put(d, tE, fromT);
+    G.save();
+    return { ok: true, swap: true, msg: 'Engines swapped: the ' + DR.ENGINES[dE].name + ' is in the ' + tn + ', the ' + DR.ENGINES[tE].name + ' in the ' + dn };
+  };
   // A quick upgrade package (DR.packagePlan): pay the package price, then
   // each part goes on the car (at its share of the discount) and anything
   // it replaces goes to the shelf. Sets the boost the package was built
