@@ -409,6 +409,10 @@
     // ---- tune
     var T = DR.fullTune(inst, S, tuneOverride);
     if (S.convAdj) { S.stall = T.stall; S.TR = convTR(T.stall); }
+    // a slider clutch is set up like the real ones: base pressure (how much
+    // of the engine's torque it holds on the hit) and the lockup timer (how
+    // long its clamp takes to build to full lock)
+    if (S.slider) S.slider = [T.clBase / 100, T.clLock];
     S.tune = T;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
     S.boostTop = S.boostSet + (S.creep || 0);   // what it really sees up top
@@ -526,6 +530,7 @@
       barDeg: 3,
       launchThr: 100, thrRamp: 0,
       tcSlip: 0, tcGain: 5,
+      clBase: S.slider ? Math.round(S.slider[0] * 100) : 60, clLock: S.slider ? S.slider[1] : 0.9,
       nosDelay: 0.6, nosRamp: 0.5
     };
   };
@@ -563,6 +568,12 @@
       show: function () { return true; }, group: 'Drivetrain', help: 'The shift light comes on here. Auto-shift also uses it.' },
     { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function (S) { return S.qc || !S.fdSet ? 2.2 : S.fdSet; }, max: function (S) { return S.qc || !S.fdSet ? 6.5 : S.fdSet; },
       show: function (S) { return !!S.qc; }, req: 'Set by your gear set: a quick-change rear end (Drivetrain: Ring & Pinion) makes it adjustable', group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed. A quick-change rear: swap gear sets in minutes for each track.' },
+    { key: 'clBase', label: 'Slider Clutch Base Pressure', unit: '%', step: 5, min: function () { return 30; }, max: function () { return 100; },
+      show: function (S) { return !!S.slider; }, req: 'Requires a slider (slipper) clutch', group: 'Drivetrain',
+      help: 'How much of the engine\'s torque the clutch holds on the hit. Less: it slips more, the engine stays up on the boost and the tires get it gently. Too little and the car is lazy off the line; too much and it hits the tires like a plain clutch.' },
+    { key: 'clLock', label: 'Slider Clutch Lockup Time', unit: 's', step: 0.1, min: function () { return 0.3; }, max: function () { return 3; },
+      show: function (S) { return !!S.slider; }, req: 'Requires a slider (slipper) clutch', group: 'Drivetrain',
+      help: 'How long the clamp takes to build to full lock. Too short and it locks while the car is slow, pulling the engine down off the boost; too long and it slips (and heats) past where it should have locked.' },
     { key: 'stall', label: 'Converter Stall', unit: 'rpm', step: 100, min: function () { return 3000; }, max: function () { return 7500; },
       show: function (S) { return !!S.convAdj; }, req: 'Requires a bolt-together converter', group: 'Drivetrain',
       help: 'The stall speed the converter flashes to on the hit, set by the stator you bolt into it. Higher gets a big turbo lit and the engine into its power, but slips more all the way down the track; lower couples tighter and carries more mph. A converter that wants more rpm than the engine can pull just slips at the limiter.' },
@@ -899,9 +910,28 @@
   var HOT = { 'Drag Radial': [15, 0.009], Street: [25, 0.006] };
   Sim.prototype.tempFactor = function () {
     var t = this.S.tire, T = this.tireT, hot = (this.cond && HOT[t.kind]) || [30, 0.005];
-    if (T < t.topt) return 1 - t.cold * clamp((t.topt - T) / (t.topt - 20), 0, 1);
-    if (T > t.topt + hot[0]) return Math.max(0.72, 1 - (T - t.topt - hot[0]) * hot[1]);
-    return 1;
+    var k = this.surfFactor();
+    if (T < t.topt) return k * (1 - t.cold * clamp((t.topt - T) / (t.topt - 20), 0, 1));
+    if (T > t.topt + hot[0]) return k * Math.max(0.72, 1 - (T - t.topt - hot[0]) * hot[1]);
+    return k;
+  };
+  // The tread's surface. A tire turning near its peak slip makes little heat;
+  // one spinning hard puts tens of kilowatts into the thin surface layer of
+  // the tread (force x slip speed), which heats in tenths of a second and
+  // sheds it into the carcass and the track about as fast. Past what the
+  // compound takes it goes greasy: why spin costs a drag car so much more
+  // than a dry-road skid test suggests (a street tire locked on dry asphalt
+  // keeps ~88% of its peak). A drag radial is the least forgiving ("dead
+  // hook it"), a bias-ply slick is built to work with some slip, a street
+  // or track tire somewhere between (and a street tire sliding still keeps
+  // most of its grip). [window above the carcass in C, grip lost per C past
+  // it, the least it keeps]
+  // [.., lowest it goes]
+  var SURF = { 'Drag Radial': [30, 0.0045, 0.55], Slick: [45, 0.003, 0.65], Street: [40, 0.003, 0.72], Track: [40, 0.003, 0.72], 'Race Slick': [40, 0.003, 0.7] };
+  Sim.SURF_TAU = 0.5; Sim.SURF_K = 1.9e-3;
+  Sim.prototype.surfFactor = function () {
+    var w = SURF[this.S.tire.kind] || SURF.Street, over = (this.tsurf || 0) - w[0];
+    return over > 0 ? Math.max(w[2], 1 - over * w[1]) : 1;
   };
 
   Sim.prototype.launch = function () {
@@ -1329,6 +1359,8 @@
         var slipV = Math.max(0, this.ww * r - this.v);
         this.tireT += Math.abs(Fx) * slipV * dt * 3.5e-5 * (30 / S.tire.m);
         this.tireE += Math.abs(Fx) * slipV * dt;
+        // the tread surface: heated by the spin, shedding it in ~half a second
+        this.tsurf = (this.tsurf || 0) + Math.abs(Fx) * slipV * dt * Sim.SURF_K * (24 / S.tire.m) - (this.tsurf || 0) * dt / Sim.SURF_TAU;
       }
     } else if (this.burnMode) {
       this.v = 0; this.a = 0; this.x = 0;

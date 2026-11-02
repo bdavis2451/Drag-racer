@@ -27,7 +27,7 @@
     { id: 'engine', name: 'Engine (dyno)', what: 'Boost, rev limiter, shift points' },
     { id: 'chassis', name: 'Chassis (track)', what: 'Tire pressure, front shocks & limiter, instant centre, rear shocks, wheelie bars' },
     { id: 'launch', name: 'Launch (track)', what: 'Boost in 1st & 2nd, 2-step rpm, launch throttle, traction control' },
-    { id: 'drive', name: 'Drivetrain (track)', what: 'Converter stall, lockup, final drive (last: gear a car once it hooks)' },
+    { id: 'drive', name: 'Drivetrain (track)', what: 'Slider clutch, converter stall, lockup, final drive (last: gear a car once it hooks)' },
     { id: 'nitrous', name: 'Nitrous (track)', what: 'When the nitrous comes in and how fast' }
   ];
   // The order a drag tuner works in (traction first, gearing last): the tire
@@ -37,7 +37,7 @@
   var KEYS = {
     chassis: ['psi', 'rebF', 'limitF', 'antiSquat', 'bumpR', 'rebR', 'barDeg'],
     launch: ['gb1', 'gb2', 'launchRpm', 'launchThr', 'thrRamp', 'tcSlip', 'tcGain'],
-    drive: ['stall', 'luGear', 'fd'],
+    drive: ['clBase', 'clLock', 'stall', 'luGear', 'fd'],
     nitrous: ['nosDelay', 'nosRamp']
   };
   // What a tuner knows to touch: anyone does tire pressure, the 2-step, the
@@ -45,8 +45,8 @@
   // works the shocks and the instant centre; the best, everything.
   var SCOPE = {
     basic: ['psi', 'launchRpm', 'tcSlip', 'stall', 'fd', 'gb1', 'launchThr'],
-    good: ['antiSquat', 'rebR', 'rebF', 'luGear', 'gb2', 'thrRamp', 'barDeg', 'nosDelay'],
-    pro: ['limitF', 'bumpR', 'tcGain', 'nosRamp']
+    good: ['antiSquat', 'rebR', 'rebF', 'luGear', 'gb2', 'thrRamp', 'barDeg', 'nosDelay', 'clLock'],
+    pro: ['limitF', 'bumpR', 'tcGain', 'nosRamp', 'clBase']
   };
   TU.knows = function (who, k) {
     if (SCOPE.basic.indexOf(k) >= 0) return true;
@@ -73,7 +73,8 @@
     if (GB[k] != null) return v >= 99 ? 'no cap' : (+v).toFixed(1) + ' psi';
     if (k === 'gearBoost' && Array.isArray(v)) return v.slice(0, 3).map(function (b, i) { return ['1st', '2nd', '3rd'][i] + ' ' + (+b).toFixed(1); }).join(', ') + ' psi';
     if (k === 'launchRpm' || k === 'stall' || k === 'shiftRpm' || k === 'revLimit') return Math.round(v) + ' rpm';
-    if (k === 'launchThr' || k === 'tcSlip') return v + '%';
+    if (k === 'launchThr' || k === 'tcSlip' || k === 'clBase') return v + '%';
+    if (k === 'clLock' || k === 'nosDelay' || k === 'nosRamp') return (+v).toFixed(1) + ' s';
     if (k === 'thrRamp') return (+v).toFixed(1) + ' s';
     if (k === 'fd') return (+v).toFixed(2) + ':1';
     if (k === 'boost') return (+v).toFixed(1) + ' psi';
@@ -199,8 +200,8 @@
   // by however much their chassis skill misses by. Suspension and tire
   // pressure move in steps from where the car is, not across the whole
   // range, and a setting the car doesn't care about is left alone.
-  var WIN = { psi: 4, antiSquat: 0.5, rebR: 4, rebF: 3, bumpR: 3, limitF: 30, barDeg: 2, tcGain: 3, stall: 800, fd: 0.5, launchRpm: 1200, nosDelay: 1, nosRamp: 1 };
-  var GSTEP = { antiSquat: 0.05, fd: 0.1, launchRpm: 200, stall: 200, nosDelay: 0.2, nosRamp: 0.2 };
+  var WIN = { psi: 4, antiSquat: 0.5, rebR: 4, rebF: 3, bumpR: 3, limitF: 30, barDeg: 2, tcGain: 3, stall: 800, clBase: 20, clLock: 1, fd: 0.5, launchRpm: 1200, nosDelay: 1, nosRamp: 1 };
+  var GSTEP = { antiSquat: 0.05, fd: 0.1, launchRpm: 200, stall: 200, nosDelay: 0.2, nosRamp: 0.2, clLock: 0.2 };
   function grid(ss, k) {
     var S = G.spec(ss.inst), cur = val(ss, k), out = [], n = 7;
     if (GB[k] != null) {
@@ -249,7 +250,7 @@
     var inp0 = ai.input;
     // (pinned, but for tire shake: every driver pedals that, and the tune
     // that shakes pays for the pedal)
-    ai.input = function (sim, tG, dt) { var o = inp0.call(this, sim, tG, dt); if (sim.launched && !(sim.shake > 0.5)) o.throttle = 1; return o; };
+    ai.input = function (sim, tG, dt) { var o = inp0.call(this, sim, tG, dt); if (sim.launched && !(sim.shake > 0.35)) o.throttle = 1; return o; };
     return ai;
   }
   function score(ss, k, v) {
