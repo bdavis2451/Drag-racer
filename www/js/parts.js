@@ -779,7 +779,13 @@
 
   // Engine-related categories that get removed on an engine swap.
   DR.ENGINE_BOUND = ['airfilter', 'intake', 'throttle', 'exhaust', 'headers', 'heads', 'cams', 'valvetrain',
-    'pistons', 'rods', 'crank', 'block', 'oiling', 'fi', 'ic', 'wastegate', 'bov', 'tmanifold', 'headstud', 'pulleys'];
+    'pistons', 'rods', 'crank', 'block', 'oiling', 'fi', 'ic', 'wastegate', 'bov', 'tmanifold', 'headstud', 'pulleys',
+    // made for the engine too: its injectors and coils, the ECU's calibration,
+    // the turbo's downpipe and heat wrap, the flywheel bolted to its crank
+    'injectors', 'ignition', 'ecu', 'downpipe', 'theat', 'flywheel'];
+  // Made for the car (its suspension pickup points, body, frame, driveline
+  // length): they only go back on the same model.
+  DR.CAR_BOUND = ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero', 'brakes', 'driveshaft', 'mounts', 'cooling', 'rearend', 'layout'];
 
   // ---------------------------------------------------------------- packages
   // Quick upgrade packages (like Need for Speed: Underground 2's Street / Pro

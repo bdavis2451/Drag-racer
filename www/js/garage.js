@@ -660,7 +660,7 @@
       fits ? UI.riskBox(S1) : null,
       cat === 'engine' && opt.fit && opt.fit.block ? h('div', { class: 'warnbox' }, opt.fit.block + '.') : null,
       cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory. The install is paid when the engine goes in.') : null,
-      G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : null,
+      G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : G.isCarBound(cat) ? h('div', { class: 'dim' }, 'Built for your ' + DR.CARS[inst.carId].name + '.') : null,
       opt.tune && opt.tune !== true && !S0.tuned ? h('div', { class: 'warnbox' }, opt.tune === 'soft' ? 'Runs on your stock ECU, but only makes about half its gain until you get an ECU flash (Fuel & Spark > ECU).' :
         cat === 'fi' ? 'Needs an ECU tune: on the stock ECU it can only run about 5 psi. Plan on injectors and a fuel pump too.' : 'Needs an ECU tune (Fuel & Spark > ECU: a flash or a standalone). Without one ' + (cat === 'injectors' ? 'it runs pig-rich and loses power.' : cat === 'fueltype' ? 'it runs lean and can burn a piston.' : 'the stock ECU can\'t run it properly.')) : null,
       locked ? h('div', { class: 'warnbox' }, '🔒 ' + DR.LEVEL_NAMES[lvl] + '-level ' + ({ drag: 'drag ', circuit: 'circuit ' }[DR.partDisc(cat, id)] || '') + (DR.UNLOCK_NAMES[DR.groupOf(cat)] || '').toLowerCase() + ' parts unlock in the career: ' + G.unlockWhere(cat, lvl, id) + '.') :

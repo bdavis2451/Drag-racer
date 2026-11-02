@@ -85,7 +85,8 @@
     var cur = s.cars.filter(function (c) { return c.uid === s.active; })[0];
     s.inv = (s.inv || []).filter(function (it) {
       if (!it || !it.cat) return false;
-      if (G.isEngineBound(it.cat) && !DR.ENGINES[it.eng]) { if (!cur) return false; it.eng = cur.engine; }
+      if (G.isEngineBound(it.cat) && !DR.ENGINES[it.eng]) { var src = s.cars.filter(function (c) { return c.uid === it.from; })[0] || cur; if (!src) return false; it.eng = src.engine; }
+      if (G.isCarBound(it.cat) && !it.car && it.from != null) { var fc = s.cars.filter(function (c) { return c.uid === it.from; })[0]; if (fc) it.car = fc.carId; }
       var ctx = { carId: cur ? cur.carId : 'fox', engine: it.eng || (cur ? cur.engine : 'v8_50'), parts: {}, tune: {} };
       return fits(it.cat, ctx, it.id);
     });
@@ -205,6 +206,7 @@
   // Engine parts (intake, cams, turbos...) are made for one engine.
   //   item: { uid, cat, id, price, eng }
   G.isEngineBound = function (cat) { return DR.ENGINE_BOUND.indexOf(cat) >= 0; };
+  G.isCarBound = function (cat) { return DR.CAR_BOUND.indexOf(cat) >= 0; };
   // The catalog entry for an inventory item (as it would be on this car).
   G.itemOption = function (item) {
     var inst = G.car(), ctx = { carId: inst.carId, engine: item.eng || inst.engine, parts: {}, tune: {} };
@@ -216,6 +218,7 @@
     var base = partBaseName(item), used = item.wear > 0.005 ? ' (used, ' + Math.round(item.wear * 100) + '% worn)' : '';
     // a factory part says what it came off
     if (item.stock && !G.isEngineBound(item.cat) && item.cat !== 'engine' && item.car && DR.CARS[item.car]) return base + ' (' + DR.CARS[item.car].name.replace(/ '\d+$/, '') + ')' + used;
+    if (!item.stock && G.isCarBound(item.cat) && item.car && DR.CARS[item.car]) return base + ' (for the ' + DR.CARS[item.car].name.replace(/ '\d+$/, '') + ')' + used;
     if (item.stock && G.isEngineBound(item.cat) && DR.ENGINES[item.eng]) return base + ' (' + DR.ENGINES[item.eng].name.replace(/ \(.*\)$/, '') + ')' + used;
     return base + used;
   };
@@ -235,6 +238,7 @@
     if (item.stock && item.id === 'stock' && !G.isEngineBound(item.cat) && item.car && item.car !== inst.carId) return 'Factory part for the ' + DR.CARS[item.car].name;
     if (DR.partId(item.cat, inst) === item.id && (item.id !== 'stock' || DR.stockPart(item.cat, inst) === 'stock')) return 'Already on this car';
     if (G.isEngineBound(item.cat) && item.eng !== inst.engine) return DR.ENGINES[item.eng] ? 'Made for the ' + DR.ENGINES[item.eng].name : 'Made for another engine';
+    if (G.isCarBound(item.cat) && item.car && item.car !== inst.carId && DR.CARS[item.car]) return 'Made for the ' + DR.CARS[item.car].name;
     if (!DR.partApplies(item.cat, inst)) {
       if (item.cat === 'clutch' || item.cat === 'flywheel') return 'Needs a manual gearbox';
       if (item.cat === 'converter' || item.cat === 'transbrake') return 'Needs an automatic';
@@ -286,13 +290,13 @@
     if (id === DR.stockPart(cat, inst)) {
       if (keepStock || !G.stockIsPart(cat, inst)) { if (!keepStock && inst.wear) delete inst.wear[cat]; return null; }
       var st = { uid: G.state.uid++, cat: cat, id: id, price: 0, stock: true, val: G.stockValue(cat, inst, id), from: inst.uid };
-      if (G.isEngineBound(cat)) st.eng = inst.engine; else if (id === 'stock') st.car = inst.carId;
+      if (G.isEngineBound(cat)) st.eng = inst.engine; else if (id === 'stock' || G.isCarBound(cat)) st.car = inst.carId;
       wearOff(inst, cat, st);
       G.state.inv.push(st);
       return st;
     }
     var opt = DR.getOption(cat, inst, id);
-    var item = { uid: G.state.uid++, cat: cat, id: id, price: opt.price || 0, eng: G.isEngineBound(cat) ? inst.engine : undefined, from: inst.uid };
+    var item = { uid: G.state.uid++, cat: cat, id: id, price: opt.price || 0, eng: G.isEngineBound(cat) ? inst.engine : undefined, car: G.isCarBound(cat) ? inst.carId : undefined, from: inst.uid };
     wearOff(inst, cat, item);
     G.state.inv.push(item);
     inst.spent = Math.max(0, inst.spent - item.price);
@@ -340,7 +344,7 @@
     var inst = G.car(), opt = DR.getOption(cat, inst, id), price = G.partPrice ? G.partPrice(cat, opt) : opt.price || 0;
     if (!G.canAfford(price)) return null;
     G.pay(price);
-    var item = { uid: G.state.uid++, cat: cat, id: id, price: price, eng: G.isEngineBound(cat) ? inst.engine : undefined };
+    var item = { uid: G.state.uid++, cat: cat, id: id, price: price, eng: G.isEngineBound(cat) ? inst.engine : undefined, car: G.isCarBound(cat) ? inst.carId : undefined };
     G.state.inv.push(item); G.save();
     return item;
   };
@@ -379,6 +383,7 @@
   G.partFitIssueStock = function (it, inst) {
     if (it.id === 'stock' && !G.isEngineBound(it.cat) && it.car && it.car !== inst.carId) return 'other car';
     if (G.isEngineBound(it.cat) && it.eng !== inst.engine) return 'other engine';
+    if (G.isCarBound(it.cat) && it.car && it.car !== inst.carId) return 'other car';
     return '';
   };
   // Back to the factory part; the old one goes to the inventory.
@@ -421,7 +426,7 @@
       if (!q.issue && ((d.damage && d.damage.engine) || (target.damage && target.damage.engine))) q.issue = 'A blown engine: repair it first';
       q.fee = DR.swapFit(target, id).install + DR.swapFit(d, target.engine).install;
     } else {
-      q.issue = G.partFitIssue({ cat: cat, id: id, eng: G.isEngineBound(cat) ? d.engine : undefined }, target) || G.removeIssue(d, cat);
+      q.issue = G.partFitIssue({ cat: cat, id: id, eng: G.isEngineBound(cat) ? d.engine : undefined, car: G.isCarBound(cat) ? d.carId : undefined }, target) || G.removeIssue(d, cat);
       q.cost = G.factoryFor(d, cat).cost;
     }
     return q;
@@ -469,7 +474,7 @@
     G.pay(plan.price);
     var k = plan.full ? plan.price / plan.full : 1;
     plan.steps.forEach(function (s) {
-      var item = { uid: G.state.uid++, cat: s.cat, id: s.id, price: Math.round((s.opt.price || 0) * k), eng: G.isEngineBound(s.cat) ? inst.engine : undefined };
+      var item = { uid: G.state.uid++, cat: s.cat, id: s.id, price: Math.round((s.opt.price || 0) * k), eng: G.isEngineBound(s.cat) ? inst.engine : undefined, car: G.isCarBound(s.cat) ? inst.carId : undefined };
       G.state.inv.push(item);
       G.installPart(inst, item.uid);
     });
