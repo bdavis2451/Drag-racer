@@ -151,7 +151,7 @@
   G.afterRun = function (cfg, r) {
     if (cfg.inst) return { news: [] };   // a dealer test drive
     var hours = cfg.mode === 'street' ? 1 : cfg.mode === 'test' ? 0.25 : 0.5, out = { news: [] };
-    if (cfg.mode === 'career' && cfg.ev && !cfg.ev.hosted && !cfg.ev.special && !r.testDrive) out = scoreRun(cfg, r);
+    if (DR.RD_SCORING && cfg.mode === 'career' && cfg.ev && !cfg.ev.hosted && !cfg.ev.special && !r.testDrive) out = scoreRun(cfg, r);
     var news = G.advance(hours);
     out.news = out.news.concat(news);
     return out;
@@ -166,6 +166,9 @@
     return st.all.filter(function (ev) { return ev.type !== 'boss' && ev.type !== 'callout' && !ev.king && ev.type !== 'show' && ev.type !== 'class' && DR.evSlot(ev) === slot && G.eventVisible(ev); });
   };
   DR.RD_WIN = 80; DR.RD_DOM = 115;   // a race's share of the targets
+  // Race-day scoring (win/dominate targets, the reward pick) is switched off
+  // for now: the code stays, ready to come back.
+  DR.RD_SCORING = false;
   function dayKey(si, slot, w) { return si + ':' + slot + ':' + w.start; }
   function rd() { var s = G.state; if (!s.rd) s.rd = { cur: null, best: {} }; return s.rd; }
   // the open race day for a run, started on the first run of the window
@@ -181,7 +184,7 @@
     if (R.cur.ids.indexOf(ev.id) < 0) { R.cur.ids.push(ev.id); R.cur.n++; R.cur.purse += G.eventReward(ev); }
     return R.cur;
   }
-  G.raceDayNow = function () { var R = rd(); return R.cur && R.cur.end > G.now() ? R.cur : null; };
+  G.raceDayNow = function () { if (!DR.RD_SCORING) return null; var R = rd(); return R.cur && R.cur.end > G.now() ? R.cur : null; };
   G.dayScore = function (d) { return Object.keys(d.best).reduce(function (a, k) { return a + d.best[k]; }, 0); };
   G.dayTargets = function (d) { return { win: DR.RD_WIN * d.n, dom: DR.RD_DOM * d.n }; };
   // a run's points: the win (100), the light (up to 25), the margin (up to
@@ -223,6 +226,7 @@
   ];
   function closeDay(d) {
     var R = rd(); if (R.cur === d) R.cur = null;
+    if (!DR.RD_SCORING) { G.save(); return; }
     var sc = G.dayScore(d), tg = G.dayTargets(d), name = DR.STAGES[d.si].name + ' • ' + DR.slotName(d.slot);
     var rec = R.best[d.si + ':' + d.slot] || 0, isRec = sc > rec;
     if (isRec) R.best[d.si + ':' + d.slot] = sc;
