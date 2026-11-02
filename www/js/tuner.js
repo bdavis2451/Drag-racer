@@ -238,13 +238,18 @@
     out = out.map(function (v) { return +(+v).toFixed(3); });
     return out.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
   }
-  // the model: a driven quarter on a prepped strip, by the driver who'll
-  // drive it (their launch and how well they pedal it; a tuner sets a car
-  // up for its driver), the shake rolled three ways. Smooth, and it tracks
-  // what real passes show.
-  function modelDriver(ss) {
-    var ai = ss.drv ? DR.AIDriver.fromDrag(ss.drv, function () { return 0.5; }) : new DR.AIDriver(1, function () { return 0.5; });
+  // the model: a quarter on a prepped strip driven flat out, the shake
+  // rolled three ways. A good tune has the car at its limit with the driver
+  // never lifting: the 2-step, boost by gear and the traction control do
+  // what a driver's foot would otherwise have to. So the model doesn't
+  // pedal spin: from the hit to the stripe the throttle is pinned.
+  function modelDriver() {
+    var ai = new DR.AIDriver(1, function () { return 0.5; });
     ai.react = 0; ai.launchErr = 0; ai.shiftErr = 0;
+    var inp0 = ai.input;
+    // (pinned, but for tire shake: every driver pedals that, and the tune
+    // that shakes pays for the pedal)
+    ai.input = function (sim, tG, dt) { var o = inp0.call(this, sim, tG, dt); if (sim.launched && !(sim.shake > 0.5)) o.throttle = 1; return o; };
     return ai;
   }
   function score(ss, k, v) {
@@ -421,7 +426,7 @@
       h('div', { class: 'dim gsmall' }, staff ? 'Your staff tuner works for their wage.' : 'No staff tuner: hire one at Team (on the garage), or book a freelancer.'),
       h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'WHO DRIVES'),
       radio('drv', drivers.map(function (d) { return [d.id, d.name]; }).concat([['me', 'Me']]), drvSel, function (v) { drvSel = v; }),
-      h('div', { class: 'dim gsmall' }, 'The tuner sets the car up for whoever drives it: their launch, how they pedal it, and how much one of their passes can be trusted.'),
+      h('div', { class: 'dim gsmall' }, 'The tuner tunes the car to run flat out, so whoever drives never has to lift: the 2-step, boost by gear and the traction control do that work. A more consistent driver\'s slips are easier to read.'),
       h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'HOW FAR TO GO'),
       h('div', { class: 'col' }, TU.JOBS.filter(function (j) { return j.id !== 'nitrous' || S.nosW; }).map(function (j) {
         var cb = h('input', { type: 'checkbox', checked: !!jobs[j.id] });

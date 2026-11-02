@@ -1396,6 +1396,10 @@
     ai.launchErr = (rnd() - 0.5) * 1600 * (1 - l) * (0.5 + (1 - c));
     ai.shiftErr = (rnd() - 0.5) * 500 * (1 - c);
     ai.burnK = (rnd() - 0.5) * 24 * (1 - c);     // how far off the tire temperature they aim the burnout
+    // a drag driver stays in it through the spin at the hit (with a car
+    // tuned to hook, the tire bites); they pedal spin that keeps going, and
+    // once they've had to, they're on it straight away
+    ai.spinHold = 0.35;
     return ai;
   };
 
@@ -1435,7 +1439,9 @@
     var over = sim.slip / S.tslip;
     // (a tire still has most of its grip a little past its peak, so it only
     // backs off for real wheelspin, and never to a bog)
-    if (over > 3 + (1 - this.skill) * 3) this.pedal = Math.max(Math.min(this.pedal, 0.45), this.pedal - dt * (1.5 + 3 * this.skill));
+    var spinning = over > 3 + (1 - this.skill) * 3;
+    if (this.spinHold && !this.pedalled) { this.spinT = spinning ? (this.spinT || 0) + dt : 0; spinning = this.spinT > this.spinHold; if (spinning) this.pedalled = true; }
+    if (spinning) this.pedal = Math.max(Math.min(this.pedal, 0.45), this.pedal - dt * (1.5 + 3 * this.skill));
     else if (over < 2) this.pedal = Math.min(1, this.pedal + dt * (2 + 3 * this.skill));
     if (sim.wheelie && sim.th > 0.2 + 0.15 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.3);
     // tire shake: a good driver pedals it the moment it starts
