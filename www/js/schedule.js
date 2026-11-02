@@ -27,6 +27,7 @@
     sun:    { name: 'Sunday bracket day', where: 'Pixel Dragway', win: [{ wd: [0], from: 10, to: 16 }] },
     side:   { name: 'Sunday class races', where: 'Pixel Dragway', win: [{ wd: [0], from: 12, to: 17 }] },
     show:   { name: 'Sunday car show', where: 'the show', win: [{ wd: [0], from: 11, to: 17 }] },
+    meet:   { name: 'Friday night car meet', where: 'the grocery store lot', win: [{ wd: [5], from: 19, to: 23 }] },
     night:  { name: 'any night', where: 'the street', win: [{ wd: [0, 1, 2, 3, 4, 5, 6], from: 21, to: 27 }] },
     tnt:    { name: 'test & tune', where: 'Pixel Dragway', win: [{ wd: [3, 5], from: 17, to: 22 }, { wd: [6, 0], from: 9, to: 17 }] },
     dyno:   { name: 'dyno shop hours', where: 'the dyno shop', win: [{ wd: [1, 2, 3, 4, 5, 6], from: 8, to: 18 }] },
@@ -73,10 +74,12 @@
     if (ev.type === 'callout') return 'night';
     if (ev.type === 'bracket') return 'sun';
     if (ev.type === 'class') return 'side';
-    if (ev.type === 'show') return 'show';
+    if (ev.type === 'show') return DR.showSlot(DR.showById(ev.show));
     if (ev.type === 'street' || ev.type === 'showcase' || ev.type === 'kingstreet') return 'fri';
     return DR.evCond(ev).night ? 'satn' : 'sat';
   };
+  // the Friday Night Meet is on Friday night; the other shows on Sunday
+  DR.showSlot = function (sh) { return sh && sh.id === 'meet' ? 'meet' : 'show'; };
   // when: "Sat Mar 4, 12 PM" or "on now (till 6 PM)"
   G.whenText = function (slot) {
     var w = G.slotWindow(slot); if (!w) return '';
@@ -115,7 +118,7 @@
     if (cfg.mode === 'test' && !cfg.inst) return gate('tnt', cfg.license ? 'The license test' : 'Test & tune', go);
     return go();
   });
-  wrap(DR, 'enterShow', function (go) { return gate('show', 'A car show', function () { G.advance(3); return go(); }); });
+  wrap(DR, 'enterShow', function (go, a) { var sh = a[0]; return gate(DR.showSlot(sh), sh ? 'The ' + sh.name : 'A car show', function () { G.advance(3); return go(); }); });
   if (DR.Tuner) {
     wrap(DR.Tuner, 'open', function (go) { return gate('dyno', 'The tuner (it starts on the dyno)', go); });
     wrap(DR.Tuner, 'openCircuit', function (go) { return gate('testday', 'A circuit test day', function () { var r = go(); return r; }); });
@@ -261,7 +264,12 @@
       });
       var st = DR.STAGES[si];
       if (!G.eventWon(st.boss) && !G.eventLock(st.boss)) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); });
-      st.side.forEach(function (ev) { if ((ev.type === 'class' || ev.type === 'show') && G.eventVisible(ev) && !G.eventLock(ev) && !G.eventWon(ev)) add(DR.evSlot(ev), ev.type === 'show' ? 'show' : 'drag', ev.type === 'show' ? DR.showGoal(ev) : DR.CLASSES[ev.cls].name + ' class race', function () { UI.show(UI.RaceMenu, 'career'); }); });
+      st.side.forEach(function (ev) { if ((ev.type === 'class' || ev.type === 'show') && G.eventVisible(ev) && !G.eventLock(ev) && !G.eventWon(ev)) add(DR.evSlot(ev), ev.type === 'show' ? 'show' : 'drag', ev.type === 'show' ? DR.showGoal(ev) : DR.CLASSES[ev.cls].name + ' class race', function () {
+        // straight to it: the show itself, or the class race (if the car can run it)
+        var issue = G.car() ? G.carIssue(G.car(), ev) : 'No car';
+        if (issue) { UI.toast(issue); return UI.show(UI.RaceMenu, 'career'); }
+        if (ev.type === 'show') DR.enterShow(DR.showById(ev.show), ev); else DR.Race.raceDay(DR.Race.eventCfg(ev, 0));
+      }); });
     }
     if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }); });
     // the circuit career's race days, the Night Series, an invitation

@@ -166,7 +166,7 @@
       chip('Car shows', eventsTab === 'shows', function () { eventsTab = 'shows'; UI.refresh(); }));
     var body;
     if (eventsTab === 'clubs') body = clubsView();
-    else if (eventsTab === 'shows') body = h('div', { class: 'trkcard' }, h('div', { class: 'pix acc' }, 'Car shows'), h('div', {}, 'Sunday shows, judged on looks (the star rating). Placing pays; some count for your career.'), btn('Go to the shows', function () { UI.show(UI.Shows); }, 'small go'));
+    else if (eventsTab === 'shows') body = h('div', { class: 'trkcard' }, h('div', { class: 'pix acc' }, 'Car shows'), h('div', {}, 'Car shows (the Friday Night Meet, the rest on Sundays), judged on looks (the star rating). Placing pays; some count for your career.'), btn('Go to the shows', function () { UI.show(UI.Shows); }, 'small go'));
     else body = UI.circuitEventsView ? UI.circuitEventsView() : null;
     return h('div', {}, tabs, body);
   }

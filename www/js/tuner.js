@@ -155,31 +155,58 @@
   }
 
   // ---------------------------------------------------------------- the track
-  // The tuner's call for a setting: what experience says is right for this
-  // car (worked out from short runs, like a tuner's notes from other cars),
-  // missed by however much their chassis skill misses by.
+  // The tuner's call for a setting: what experience says this car wants
+  // (worked out the way a tuner's notes from other cars would: a driven
+  // quarter on a prepped strip, the tire shake rolled a few ways), missed
+  // by however much their chassis skill misses by. Suspension and tire
+  // pressure move in steps from where the car is, not across the whole
+  // range, and a setting the car doesn't care about is left alone.
+  var WIN = { psi: 4, antiSquat: 0.5, rebR: 4 };
   function grid(ss, k) {
-    var S = G.spec(ss.inst), dd = def(k), lo = dd.min(S), hi = dd.max(S), st = dd.step || 1, out = [];
+    var S = G.spec(ss.inst), dd = def(k), lo = dd.min(S), hi = dd.max(S), st = dd.step || 1, out = [], cur = val(ss, k), n = 7;
     if (k === 'tcSlip') return [0, 6, 9, 12, 15, 18];
     if (k === 'luGear') { for (var g = 1; g <= hi; g++) out.push(g); return out; }
     if (k === 'psi') { var o = S.tire.optP; lo = Math.max(lo, o * 0.7); hi = Math.min(hi, o * 1.1); }
     if (k === 'fd') { var f0 = S.fd; lo = Math.max(lo, f0 * 0.8); hi = Math.min(hi, f0 * 1.25); }
     if (k === 'launchRpm') { lo = Math.max(lo, S.idle + 1200); hi = Math.min(hi, S.red - 400); }
-    for (var i = 0; i < 7; i++) out.push(Math.round((lo + (hi - lo) * i / 6) / st) * st);
-    return out.filter(function (v, i, a) { return a.indexOf(v) === i; });
+    if (WIN[k] != null) {
+      // around the current setting, a click or a half-psi at a time
+      lo = Math.max(lo, Math.min(hi, cur) - WIN[k]); hi = Math.min(hi, Math.max(lo, cur) + WIN[k]);
+      var gs = k === 'antiSquat' ? 0.05 : st;
+      for (var v = lo; v <= hi + 1e-9; v += gs) out.push(Math.round(v / st) * st);
+    } else for (var i = 0; i < n; i++) out.push(Math.round((lo + (hi - lo) * i / (n - 1)) / st) * st);
+    out.push(cur);
+    out = out.map(function (v) { return +(+v).toFixed(3); });
+    return out.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
   }
+  // the model: a driven quarter (a good driver, prepped strip), the shake
+  // rolled three ways. Smooth, and it tracks what real passes show.
   function score(ss, k, v) {
     var t = JSON.parse(JSON.stringify(ss.inst.tune)); t[k] = v;
-    var S = DR.buildSpec(ss.inst, t);
-    if (k === 'fd' || k === 'luGear') return -DR.playerPass(S, 30, true);
-    return DR.playerPass(S, 3) + DR.playerPass(S, 3, false, 0.85);
+    var key = JSON.stringify(t); ss.memo = ss.memo || {};
+    if (ss.memo[key] != null) return ss.memo[key];
+    var S = DR.buildSpec(ss.inst, t), cond = DR.conditions('prep', false), sum = 0;
+    [0.7, 1, 1.3].forEach(function (sr) {
+      var sim = new DR.Sim(S, { cond: cond, shakeRnd: sr, dist: DR.QUARTER, tireT: S.tire.topt });
+      var ai = new DR.AIDriver(1, function () { return 0.5; }), dt = 1 / 400, tG = -1.2;
+      ai.react = 0;
+      while (!sim.finished && tG < 40 && !sim.crashed && !sim.blown) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
+      sum += sim.finished ? sim.et : 30;
+    });
+    return (ss.memo[key] = sum / 3);
   }
+  TU.score = score;
+  var FLAT = 0.004, WORTH = 0.006;
   function call(ss, k) {
-    var g = grid(ss, k), best = g[0], bs = -1e9;
-    g.forEach(function (v) { var x = score(ss, k, v); if (x > bs) { bs = x; best = v; } });
-    var dd = def(k), S = G.spec(ss.inst), lo = dd.min(S), hi = dd.max(S), st = dd.step || 1;
-    var miss = gauss() * (1 - ss.who.chs / 100) * (g[g.length - 1] - g[0]) * 0.22;
-    return { opt: best, guess: Math.round(clamp(best + miss, lo, hi) / st) * st };
+    var g = grid(ss, k), cur = val(ss, k), ci = g.indexOf(+(+cur).toFixed(3)), sc = g.map(function (v) { return score(ss, k, v); });
+    var bs = Math.min.apply(null, sc), bi = ci;
+    // of the settings within a whisker of the best, the one nearest where the car is
+    g.forEach(function (v, i) { if (sc[i] <= bs + FLAT && (bi < 0 || sc[bi] > bs + FLAT || Math.abs(i - ci) < Math.abs(bi - ci))) bi = i; });
+    // not worth a pass: nothing to find there
+    if (ci >= 0 && sc[ci] - sc[bi] < WORTH) bi = ci;
+    var miss = bi === ci ? 0 : Math.round(gauss() * (1 - ss.who.chs / 100) * 2);
+    var gi = clamp(bi + miss, 0, g.length - 1);
+    return { opt: g[bi], guess: g[gi], gain: ci >= 0 ? sc[ci] - sc[bi] : 0 };
   }
   // the next pass: { label, k, v } (null when done). The setting goes on
   // the car for the pass.
@@ -194,17 +221,21 @@
         if (it.call.guess === cur) { it.tried = true; it.kept = true; }
         else { it.tried = true; it.was = cur; it.unset = ss.inst.tune[it.k] == null; it.v = it.call.guess; setTune(ss, it.k, it.v); return { label: label(it.k) + ' ' + fmt(it.k, it.v), k: it.k, v: it.v }; }
       }
-      // a tuner who reads the data well goes once more, to where the data points
-      if (!it.refined && ss.who.dat >= 55 && it.call.opt !== val(ss, it.k) && (it.kept ? ss.who.dat >= 55 : ss.who.dat >= 70)) {
-        it.refined = true; it.was = val(ss, it.k); it.unset = ss.inst.tune[it.k] == null; it.v = it.call.opt; setTune(ss, it.k, it.v);
+      // a tuner who reads the data well goes once more, to where the data
+      // points, if it's worth a pass from here
+      if (!it.refined && ss.who.dat >= 55 && it.call.opt !== cur && (it.kept ? ss.who.dat >= 55 : ss.who.dat >= 70) && score(ss, it.k, cur) - score(ss, it.k, it.call.opt) >= WORTH) {
+        it.refined = true; it.was = cur; it.unset = ss.inst.tune[it.k] == null; it.v = it.call.opt; setTune(ss, it.k, it.v);
         return { label: label(it.k) + ' ' + fmt(it.k, it.v) + ' (from the data)', k: it.k, v: it.v };
       }
       ss.ti++;
     }
     return null;
   };
-  // after a pass: keep the change if the slip says it's quicker. Returns the
-  // tuner's note. res: { et, sixty, aborted }
+  // after a pass: keep the change if it's quicker. One pass is noisy (a
+  // couple of hundredths either way from the driver alone), so a tuner
+  // weighs the slip against the 60-foot, the logger and what they know of
+  // the car: the better they read data, the less one lucky or unlucky pass
+  // fools them. Returns the tuner's note. res: { et, sixty, aborted }
   TU.record = function (ss, pass, res) {
     var S = G.spec(ss.inst), fuel = DR.runCost(S).total;
     G.pay(fuel + TU.TRACK_FEE); ss.cost.fuel += fuel; ss.cost.track += TU.TRACK_FEE; ss.passes++;
@@ -218,9 +249,17 @@
     } else if (pass.k === null) {
       ss.best = et; note = 'Baseline ' + (et < 90 ? et.toFixed(3) : 'DNF') + '.';
     } else {
-      var it = ss.track[ss.ti];
-      if (et < ss.best - 0.005) { ss.best = et; if (it) it.kept = true; note = 'Quicker: ' + et.toFixed(3) + '. Keeping ' + fmt(pass.k, pass.v) + '.'; }
-      else { if (it) { if (it.unset) delete ss.inst.tune[pass.k]; else setTune(ss, pass.k, it.was); } note = (et < 90 ? et.toFixed(3) : 'No time') + ': no better. Back to ' + fmt(pass.k, it ? it.was : val(ss, pass.k)) + '.'; }
+      var it = ss.track[ss.ti], was = it ? it.was : val(ss, pass.k);
+      var meas = et < 90 && ss.best < 90 ? clamp(et - ss.best, -0.08, 0.08) : (et < 90 ? -0.08 : 0.08);
+      var model = score(ss, pass.k, pass.v) - score(ss, pass.k, was), w = 0.2 + 0.6 * ss.who.dat / 100;
+      var judged = (1 - w) * meas + w * model, quicker = et < ss.best - 0.005;
+      if (judged < -0.004) {
+        ss.best = Math.min(ss.best, ss.best + judged); if (it) it.kept = true;
+        note = quicker ? 'Quicker: ' + et.toFixed(3) + '. Keeping ' + fmt(pass.k, pass.v) + '.' : (et < 90 ? et.toFixed(3) : 'No time') + ': the slip says no, but the 60-foot and the logger say it helps (that pass was off). Keeping ' + fmt(pass.k, pass.v) + '.';
+      } else {
+        if (it) { if (it.unset) delete ss.inst.tune[pass.k]; else setTune(ss, pass.k, it.was); }
+        note = quicker ? et.toFixed(3) + ': quicker, but that was the pass, not the setting. Back to ' + fmt(pass.k, was) + '.' : (et < 90 ? et.toFixed(3) : 'No time') + ': no better. Back to ' + fmt(pass.k, was) + '.';
+      }
     }
     ss.log[ss.log.length - 1].note = note;
     G.save();
@@ -443,7 +482,8 @@
     var d = def(k), lo = d.min(S), hi = d.max(S), st = d.step, out = [];
     if (k === 'fd') { lo = Math.max(lo, cur - 0.6); hi = Math.min(hi, cur + 0.6); st = 0.15; }
     else if (k === 'psi') { lo = Math.max(lo, cur - 6); hi = Math.min(hi, cur + 6); st = 2; }
-    else if (k === 'rideF' || k === 'rideR') st = Math.max(st, Math.round((hi - lo) / 6 / 5) * 5 || 5);
+    else if (k === 'rideF' || k === 'rideR') { lo = Math.max(lo, cur - 30); hi = Math.min(hi, cur + 30); st = 10; }
+    else if (k === 'rollBal') { lo = Math.max(lo, cur - 2); hi = Math.min(hi, cur + 2); }
     for (var v = lo; v <= hi + 1e-6; v += st) out.push(+v.toFixed(2));
     if (out.indexOf(cur) < 0) out.push(cur);
     return out.sort(function (a, b) { return a - b; });
@@ -476,9 +516,14 @@
       cs.ki++;
       if (cs.ki >= cs.keys.length) { cs.done = true; return null; }
       var k = cs.keys[cs.ki], S = DR.buildSpec(T_car(cs)), g = cgrid(k, S, cs.set[k]), bi = 0, bt = 1e9;
-      // the call: the best on paper, off by a step or two for a weaker chassis tuner
-      g.forEach(function (v, i) { var tr = {}; for (var q in cs.set) tr[q] = cs.set[q]; tr[k] = v; var t = clap(cs, tr); if (t < bt) { bt = t; bi = i; } });
-      var miss = Math.round(gauss() * (1 - cs.who.chs / 100) * 2.2), v = g[clamp(bi + miss, 0, g.length - 1)];
+      // the call: the best on paper (of the settings within a whisker of
+      // it, the one nearest where the car is), off by a step for a weaker
+      // chassis tuner; nothing worth a stint, and it stays where it is
+      var lt = g.map(function (v) { var tr = {}; for (var q in cs.set) tr[q] = cs.set[q]; tr[k] = v; return clap(cs, tr); }), ci = g.indexOf(cs.set[k]);
+      bt = Math.min.apply(null, lt); bi = ci;
+      g.forEach(function (v, i) { if (lt[i] <= bt + 0.02 && (lt[bi] > bt + 0.02 || Math.abs(i - ci) < Math.abs(bi - ci))) bi = i; });
+      if (lt[ci] - lt[bi] < 0.05) bi = ci;
+      var miss = bi === ci ? 0 : Math.round(gauss() * (1 - cs.who.chs / 100) * 1.5), v = g[clamp(bi + miss, 0, g.length - 1)];
       if (v === cs.set[k]) { out = { label: label(k), note: 'Left at ' + fmt(k, v) + ': nothing to find there.', skip: true }; }
       else {
         var trial = {}; for (var q2 in cs.set) trial[q2] = cs.set[q2]; trial[k] = v;
