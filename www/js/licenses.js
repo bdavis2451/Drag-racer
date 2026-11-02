@@ -10,28 +10,50 @@
 (function () {
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, h = UI.h, btn = UI.btn, A = DR.Audio;
   DR.LICENSES = {
-    comp: { name: 'Competition license', et: 9.99, mph: 135, fee: 150, rule: '9.99 or quicker in the quarter, or 135 mph and up' },
-    pro: { name: 'Pro license', et: 7.49, fee: 450, rule: '7.49 or quicker in the quarter' }
+    comp: { name: 'Competition license', et: 9.99, et8: 6.39, mph: 135, fee: 150, fine: 250, rule: '9.99 or quicker in the quarter (6.39 in the eighth), or 135 mph and up' },
+    pro: { name: 'Pro license', et: 7.49, et8: 4.74, fee: 450, fine: 600, rule: '7.49 or quicker in the quarter (4.74 in the eighth)' }
   };
   DR.LIC_PASSES = 3; DR.LIC_TRIES = 5;
-  function L() { var s = G.state; if (!s.lic) s.lic = {}; return s.lic; }
+  function L() { var s = G.state; if (!s.lic) s.lic = {}; if (!s.lic.warned) s.lic.warned = {}; if (!s.lic.ban) s.lic.ban = {}; return s.lic; }
   G.hasLicense = function (tier) { var l = L(); return tier === 'comp' ? !!(l.comp || l.pro) : !!l[tier]; };
-  // what this car's numbers ask for ('' = none)
-  G.licenseNeed = function (inst) {
-    var e = G.estimate(inst), q = Math.min(e.et, inst.best && inst.best.q || 99), mph = Math.max(e.trap || 0, inst.best && inst.best.qt || 0);
-    if (q <= DR.LICENSES.pro.et) return 'pro';
-    if (q <= DR.LICENSES.comp.et || mph >= DR.LICENSES.comp.mph) return 'comp';
+  // what a time slip asks for ('' = none)
+  function runNeed(et, mph, eighth) {
+    var P = DR.LICENSES.pro, C = DR.LICENSES.comp;
+    if (et <= (eighth ? P.et8 : P.et)) return 'pro';
+    if (et <= (eighth ? C.et8 : C.et) || (!eighth && mph >= C.mph)) return 'comp';
     return '';
+  }
+  // what this car has actually run ('' = nothing that needs a license yet).
+  // Like the real thing, it's the time slip that counts, not what the car
+  // might do on paper.
+  G.licenseNeed = function (inst) {
+    var b = inst.best || {}, q = b.q || 99, e = b.e || 99;
+    var a = runNeed(q, b.qt || 0, false), c = runNeed(e, 0, true);
+    return a === 'pro' || c === 'pro' ? 'pro' : a || c;
   };
-  // tech at the strip checks it too
+  // what it could run (a heads-up on the license card)
+  G.licenseCould = function (inst) { var e = G.estimate(inst); return runNeed(e.et, e.trap || 0, false); };
+  // tech at the strip: run under the number without the license and you're
+  // warned; do it again and it's a fine, and that car stays out until you
+  // hold the license
   var tech0 = G.techIssue;
   G.techIssue = function (inst, ev) {
     var t = tech0.apply(this, arguments);
     if (t || DR.EVENT_TYPES[ev.type].theme !== 'strip') return t;
-    var need = G.licenseNeed(inst);
-    if (need && !G.hasLicense(need)) return 'License: a car that runs ' + DR.LICENSES[need].rule + ' needs a ' + DR.LICENSES[need].name + ' (Race > Practice: Licenses)';
+    var need = G.licenseNeed(inst), l = L();
+    if (need && !G.hasLicense(need) && l.ban[need]) return 'License: this car has run ' + DR.LICENSES[need].rule.split(',')[0] + ' and tech has you on their list: it stays out until you hold a ' + DR.LICENSES[need].name + ' (Race > Practice: Licenses)';
     return '';
   };
+  // a run at the strip under the number, unlicensed
+  function techCheck(cfg, sim) {
+    if (cfg.license || cfg.theme !== 'strip' || !sim || !sim.finished || sim.crashed) return '';
+    var eighth = cfg.dist && cfg.dist < DR.QUARTER - 1, need = runNeed(sim.et, eighth ? 0 : (sim.trap || 0), eighth);
+    if (!need || G.hasLicense(need)) return '';
+    var l = L(), Lc = DR.LICENSES[need], what = sim.et.toFixed(3) + (!eighth && sim.trap ? ' @ ' + Math.round(sim.trap) + ' mph' : '');
+    if (!l.warned[need]) { l.warned[need] = true; return { msg: 'TECH WARNING: ' + what + ' without a ' + Lc.name + '. Next time it\'s a ' + DR.money(Lc.fine) + ' fine and the car is out until you\'re licensed (Race > Practice: Licenses).' }; }
+    l.ban[need] = true;
+    return { msg: 'TECH: ' + what + ' unlicensed, again. Fined ' + DR.money(Lc.fine) + ', and a car that runs that doesn\'t race here until you hold a ' + Lc.name + '.', fine: Lc.fine };
+  }
   // the test: pay, then observed passes at test & tune
   G.startLicense = function (tier) {
     var Lc = DR.LICENSES[tier], l = L();
@@ -47,6 +69,21 @@
   G.afterRun = function (cfg, r) {
     var out = after0 ? after0.apply(this, arguments) : { news: [] };
     var l = L(), t = l.test;
+    var tc = r && !r.testDrive ? techCheck(cfg, r.sim) : '';
+    // the safety gear that time asks for (a cage under 10.00, a chute over 150)
+    var inst = G.car(), sim = r && r.sim;
+    if (!r.testDrive && inst && sim && sim.finished && cfg.theme === 'strip' && !(cfg.dist && cfg.dist < DR.QUARTER - 1)) {
+      var b0 = inst.best || {};
+      inst.best = Object.assign({}, b0, { q: Math.min(b0.q || 99, sim.et), qt: Math.max(b0.qt || 0, Math.round(sim.trap || 0)) });
+      var gear = G.techIssue(inst, { type: 'knockout' });
+      inst.best = b0;
+      if (gear && /^Tech: /.test(gear)) out.news = (out.news || []).concat(['TECH: after a ' + sim.et.toFixed(3) + ', ' + gear.replace(/^Tech: /, '') + ' before it races here again.']);
+    }
+    if (tc) {
+      out.news = (out.news || []).concat([tc.msg]); out.license = tc.msg;
+      if (tc.fine) { G.pay(tc.fine); out.money = (out.money || []).concat([['Tech fine (no license)', -tc.fine]]); }
+      G.save();
+    }
     if (!cfg.license || !t || !r.sim) return out;
     var Lc = DR.LICENSES[t.tier], sim = r.sim, clean = sim.finished && !sim.crashed && !sim.blown && !sim.broke && (sim.shakeMax || 0) < 0.6;
     var fast = clean && (sim.et <= Lc.et || (Lc.mph && (sim.trap || 0) >= Lc.mph));
@@ -70,7 +107,8 @@
           btn('Take the test ' + DR.money(Lc.fee), function () { var w = G.startLicense(k); if (w) return UI.toast(w); UI.refresh(); }, 'small' + (G.canAfford(Lc.fee) ? '' : ' disabled'))));
     });
     return h('div', { class: 'trkcard' }, h('div', { class: 'plvl' }, 'LICENSES'),
-      need && !G.hasLicense(need) ? h('div', { class: 'warn gsmall' }, 'Your ' + DR.CARS[inst.carId].name + ' runs ' + DR.LICENSES[need].rule + ': tech won\'t pass it at the strip without a ' + DR.LICENSES[need].name + '.') : null,
+      need && !G.hasLicense(need) ? h('div', { class: 'warn gsmall' }, 'Your ' + DR.CARS[inst.carId].name + ' has run ' + DR.LICENSES[need].rule.split(',')[0] + '. ' + (l.ban[need] ? 'Tech has it on their list: it can\'t race at the strip without a ' + DR.LICENSES[need].name + '.' : l.warned[need] ? 'You\'ve had your warning: the next unlicensed run like that is a ' + DR.money(DR.LICENSES[need].fine) + ' fine and a ban until you\'re licensed.' : 'Run it unlicensed and tech will warn you, then fine you.')) :
+        !need && G.licenseCould(inst) && !G.hasLicense(G.licenseCould(inst)) ? h('div', { class: 'dim gsmall' }, 'On paper your ' + DR.CARS[inst.carId].name + ' could get under the ' + DR.LICENSES[G.licenseCould(inst)].name + ' number. Tech goes by the time slip: the first unlicensed run under it is a warning, the next a fine.') : null,
       rows, h('div', { class: 'gsmall dim' }, 'The test: ' + DR.LIC_PASSES + ' clean observed passes (finished, no shake, nothing broken) out of ' + DR.LIC_TRIES + ', at least one at the number, at test & tune.'));
   };
 })();
