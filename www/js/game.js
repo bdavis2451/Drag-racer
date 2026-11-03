@@ -141,7 +141,36 @@
     s.v = 5;
   }
 
-  G.save = function () { try { localStorage.setItem(KEY, JSON.stringify(G.state)); } catch (e) { /* storage unavailable */ } };
+  // Saves live in the web view's storage; in the installed app they're also
+  // mirrored to the phone's native storage (Capacitor Preferences), which
+  // the OS doesn't clear when it's short of space (iOS can clear web
+  // storage). G.restoreNative puts a mirrored save back before boot.
+  function prefs() { var C = globalThis.Capacitor; return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.Preferences || null; }
+  var mirrorT = 0;
+  G.save = function () {
+    var json;
+    try { json = JSON.stringify(G.state); localStorage.setItem(KEY, json); } catch (e) { /* storage unavailable */ }
+    var P = prefs();
+    if (P && json) { clearTimeout(mirrorT); mirrorT = setTimeout(function () { try { P.set({ key: KEY, value: json }); } catch (e) { /* ignore */ } }, 400); }
+  };
+  G.restoreNative = function () {
+    var P = prefs();
+    if (!P) return Promise.resolve(false);
+    var have = null; try { have = localStorage.getItem(KEY); } catch (e) { /* ignore */ }
+    return P.get({ key: KEY }).then(function (r) {
+      if (!have && r && r.value) { try { localStorage.setItem(KEY, r.value); return true; } catch (e) { /* ignore */ } }
+      return false;
+    }, function () { return false; });
+  };
+  // a save as text, to back it up or move it to another phone
+  G.exportSave = function () { return JSON.stringify(G.state); };
+  G.importSave = function (text) {
+    var s; try { s = JSON.parse(String(text).trim()); } catch (e) { return 'That isn\'t a save'; }
+    if (!s || typeof s !== 'object' || !s.v || !Array.isArray(s.cars)) return 'That isn\'t a save';
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { return 'Couldn\'t store it'; }
+    G.load(); G.save();
+    return '';
+  };
   G.reset = function () { G.state = G.defaults(); G.save(); };
 
   G.newInst = function (carId) {

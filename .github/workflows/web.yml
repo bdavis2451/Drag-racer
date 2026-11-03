@@ -1,0 +1,41 @@
+name: Publish web version
+
+# The game as a web page (GitHub Pages), for playing on an iPhone or any
+# browser: open the link in Safari, Share > Add to Home Screen.
+# This copies www/ to the gh-pages branch; Pages serves that branch
+# (Settings > Pages > Deploy from a branch > gh-pages / root, set once).
+
+on:
+  push:
+    paths:
+      - 'www/**'
+      - '.github/workflows/web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Publish www/ to gh-pages
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp -r www /tmp/site
+          cd /tmp/site
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Web version from ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          echo "Published. Once Pages is on: https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/" >> "$GITHUB_STEP_SUMMARY"

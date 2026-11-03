@@ -1,0 +1,47 @@
+name: Build iOS (check)
+
+# Compiles the iOS app for the simulator, unsigned, to prove the Xcode
+# project builds. Installing on a real iPhone needs signing (an Apple
+# Developer account, for TestFlight); this doesn't do that.
+# macOS minutes cost 10x, so it runs only when the iOS project changes, or
+# by hand (Actions > Build iOS (check) > Run workflow).
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pick the newest Xcode on the runner
+        run: |
+          X=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $X"
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Copy the game into the iOS project
+        run: npx cap sync ios
+
+      - name: Build for the simulator (unsigned)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -40
+          test ${PIPESTATUS[0]} -eq 0

@@ -2,17 +2,19 @@
   "name": "pixel-drag",
   "version": "0.1.0",
   "private": true,
-  "description": "Pixel Drag - a side-scrolling pixel art drag racing game for Android",
+  "description": "Pixel Drag - a side-scrolling pixel art drag racing game for Android and iPhone",
   "scripts": {
     "serve": "npx http-server www -p 8080 -c-1",
     "sim": "node tools/simtest.js",
     "career": "node tools/career.js",
-    "sync": "npx cap sync android",
+    "sync": "npx cap sync",
     "apk": "npx cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
-    "@capacitor/core": "^8.5.3"
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.6.0",
+    "@capacitor/preferences": "^8.0.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3"

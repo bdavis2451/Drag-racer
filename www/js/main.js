@@ -4,6 +4,10 @@
 (function () {
   var DR = globalThis.DR;
   function boot() {
+    // (in the installed app, a save the OS cleared comes back from native storage first)
+    if (DR.Game.restoreNative && !boot.restored) { boot.restored = true; var t = setTimeout(boot, 1500); return DR.Game.restoreNative().then(function () { clearTimeout(t); if (!boot.done) boot(); }, function () { clearTimeout(t); if (!boot.done) boot(); }); }
+    if (boot.done) return;
+    boot.done = true;
     DR.Game.load();
     DR.Audio.on = DR.Game.state.settings.sound;
     DR.Audio.setVolume(DR.Game.state.settings.volume != null ? DR.Game.state.settings.volume : 1);
@@ -20,8 +24,15 @@
       DR.UI.warm(function () { DR.Game.estimate(DR.Game.oppInst(o), DR.EIGHTH, 0.85); });
     }); });
     // unlock audio on the first touch anywhere
-    var unlock = function () { DR.Audio.init(); DR.Audio.resume(); window.removeEventListener('pointerdown', unlock); };
-    window.addEventListener('pointerdown', unlock);
+    // (iOS counts a tap's end, not its start, as permission to play sound,
+    // and Safari mutes web audio on the silent switch unless the page asks
+    // to play like a media app)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+    var unlock = function () {
+      DR.Audio.init(); DR.Audio.resume();
+      if (DR.Audio.ctx && DR.Audio.ctx.state === 'running') ['pointerdown', 'touchend', 'click'].forEach(function (ev) { window.removeEventListener(ev, unlock, true); });
+    };
+    ['pointerdown', 'touchend', 'click'].forEach(function (ev) { window.addEventListener(ev, unlock, true); });
     // Back: Capacitor's Android back button walks the WebView history, so keep
     // one history entry in hand and turn each pop into an in-game back step
     // (Cordova's backbutton and the Escape key go the same way).

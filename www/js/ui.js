@@ -378,6 +378,25 @@
         toggle('Auto-repair', 'autoRepair', false, true, 'Off', 'On', 'On: anything you break is fixed and paid for right after the race, when you have the cash.'),
         G.state && G.state.started && DR.Tutorial ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Tutorial'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'The tour of the garage and the Race menu, again.')),
           btn('Replay', function () { DR.Tutorial.start(); }, 'small')) : null,
+        G.state && G.state.started ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Back up save'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Copies your save as text: keep it, or send it along with a bug report.')),
+          btn('Copy', function () {
+            var txt = G.exportSave();
+            function show() {
+              var ta = h('textarea', { class: 'savebox', readonly: true }); ta.value = txt;
+              var close = UI.modal([h('div', { class: 'pix acc' }, 'YOUR SAVE'), h('div', { class: 'dim gsmall' }, 'Select it all and copy it.'), ta, h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('Close', function () { close(); }, 'primary'))]);
+              setTimeout(function () { ta.focus(); ta.select(); }, 50);
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { UI.toast('Save copied (' + Math.round(txt.length / 1024) + ' KB of text)'); }, show);
+            else show();
+          }, 'small')) : null,
+        h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Restore save'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Paste a backed-up save. It replaces the career on this phone.')),
+          btn('Paste', function () {
+            var ta = h('textarea', { class: 'savebox', placeholder: 'Paste the save here' }), close;
+            close = UI.modal([h('div', { class: 'pix acc' }, 'RESTORE A SAVE'), ta,
+              h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } }, btn('Cancel', function () { close(); }),
+                btn('Restore', function () { var w = G.importSave(ta.value); if (w) return UI.toast(w); close(); UI.toast('Save restored'); UI.show(UI.Title); }, 'primary'))]);
+            setTimeout(function () { ta.focus(); }, 50);
+          }, 'small')),
         h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Unlock everything'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For testing: every stage, car, part level and body-kit tier, plus $5,000,000.')),
           btn('Unlock', function () {
             UI.confirm('Unlock everything on this save? This cannot be undone (except by erasing the save).', function () { G.unlockAll(); A.cash(); UI.toast('Everything unlocked'); UI.refresh(); }, 'Unlock');
