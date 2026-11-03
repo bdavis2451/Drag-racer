@@ -418,7 +418,7 @@
     // the hub: what you're working toward on top, the car in the middle,
     // the five places to go along the bottom (Race on the right, under the thumb)
     var c = G.careerState(), st = DR.STAGES[c.stage], sp = c.sponsor[c.stage];
-    var status = h('div', { class: 'gstatus', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
+    var status = h('div', { class: 'gstatus gcareer', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
       h('span', { class: 'acc' }, 'Stage ' + (c.stage + 1) + ': ' + st.name),
       h('span', {}, G.stageWins(c.stage) + '/' + st.events.length + ' wins'),
       G.cupWins ? h('span', { class: G.cupWon(c.stage) ? 'good' : '' }, 'Circuit ' + (G.cupWon(c.stage) ? 'Cup ✔' : G.cupWins(c.stage) + '/4')) : null,
@@ -436,7 +436,7 @@
       bbtn('Upgrade', 'g_shop', function () { UI.openSection('upgrade'); }, 'shop', G.newPartsCount() ? 'NEW' : spare || 0),
       bbtn('Style', 'g_body', function () { UI.openSection('style'); }, 'purple', G.newVisCount() ? 'NEW' : 0),
       bbtn('Dealer', 'g_dealer', function () { UI.show(UI.Dealer); }, '', G.freeCars && G.freeCars() ? 'FREE' : G.newCarCount() ? 'NEW' : 0),
-      bbtn('Team', 'g_shows', function () { UI.show(UI.TeamScreen); }, '', DR.Team ? (DR.Team.state().drivers.length + DR.Team.state().ddrivers.length + DR.Team.state().tuners.length) || 0 : 0),
+      bbtn('Team', 'g_shows', function () { UI.show(UI.TeamScreen); }, 'team', DR.Team ? (DR.Team.state().drivers.length + DR.Team.state().ddrivers.length + DR.Team.state().tuners.length) || 0 : 0),
       bbtn('Race', 'g_race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'));
     var stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };
@@ -463,7 +463,7 @@
   function homeChip() {
     if (!G.home) return null;
     var bh = G.benchHours ? G.benchHours() : 0;
-    return h('div', { class: 'gstatus', onclick: function () { UI.show(UI.Home); } }, h('span', { class: 'acc' }, '⌂ Home'), h('span', {}, bh ? CAL_dur(bh) + ' on the bench' : 'sleep • bills • bank'));
+    return h('div', { class: 'gstatus ghome', onclick: function () { UI.show(UI.Home); } }, h('span', { class: 'acc' }, '⌂ Home'), h('span', {}, bh ? CAL_dur(bh) + ' on the bench' : 'sleep • bills • bank'));
   }
   function CAL_dur(x) { return DR.Cal.dur(x); }
   function bayBanner(inst) {

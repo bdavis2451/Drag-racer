@@ -986,3 +986,25 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .homeside { max-height: calc(100vh - 80px); overflow-y: auto; }
 /* a picked option chip (tuner, settings) */
 .btn.chip.on { --bc: #d4a300; color: #1a1200; text-shadow: none; box-shadow: inset 0 0 0 2px #fff3b0, 0 0 0 2px #000; }
+/* the phone: a text arriving, and the conversations */
+.phonenote { position: fixed; left: 50%; top: 8px; transform: translate(-50%, -140%); z-index: 60; width: min(420px, calc(100vw - 32px));
+  background: #1b1d24; box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #3b3f4c, 0 6px 18px rgba(0,0,0,.55); padding: 7px 10px; cursor: pointer; transition: transform .3s ease-out; }
+.phonenote.show { transform: translate(-50%, 0); }
+.phonenote .pnhead { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.phonenote .pnhead .dim { margin-left: auto; font-size: 11px; }
+.phonenote .pnbody { font-size: 14px; margin-top: 2px; }
+.phonenote .pnhint { font-size: 11px; margin-top: 2px; }
+.smsthread { background: #22242c; box-shadow: inset 0 0 0 1px #3b3f4c; padding: 6px 9px; cursor: pointer; }
+.smsthread.new { box-shadow: inset 3px 0 0 #ffcc00, inset 0 0 0 1px #3b3f4c; }
+.phonebtn.unread { color: #ffcc00; }
+/* the tutorial: a spotlight on the button, a card that explains it */
+.tut-layer { position: fixed; inset: 0; z-index: 70; }
+.tut-dim { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
+.tut-ring { position: absolute; box-shadow: 0 0 0 9999px rgba(0,0,0,.6), 0 0 0 3px #ffcc00; border-radius: 3px; animation: tutpulse 1.2s ease-in-out infinite; pointer-events: none; }
+@keyframes tutpulse { 50% { box-shadow: 0 0 0 9999px rgba(0,0,0,.6), 0 0 0 6px #ffcc00; } }
+.tut-card { display: block; position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); background: #1b1d24;
+  box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #ffcc00, 0 8px 24px rgba(0,0,0,.6); padding: 10px 12px; }
+.tut-card.attop { bottom: auto; top: 14px; }
+.tut-card > .row { display: flex; }
+.tut-card > .tut-text { display: block; }
+.tut-text { font-size: 15px; line-height: 1.35; margin-top: 6px; }
