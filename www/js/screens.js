@@ -6,6 +6,7 @@
 (function () {
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, A = DR.Audio, h = UI.h, btn = UI.btn;
   function icon(cat, lvl, size) { return UI.partIconEl(cat, lvl || 2, '', size || 26); }
+  function tagRail(el, key) { el.classList.add('rt-' + key); return el; }
   function railItem(cat, lvl, label, on, fn, badge) { return h('div', { class: 'srail-i' + (on ? ' on' : ''), onclick: fn }, icon(cat, lvl), h('span', {}, label), badge ? h('b', { class: 'railbadge' }, String(badge)) : null); }
   // no predicted times anywhere: you find out what a car runs by running it
   function bestText(inst) { return inst && inst.best && inst.best.q ? 'Best 1/4 ' + inst.best.q.toFixed(3) + 's' : 'No timeslip yet'; }
@@ -90,12 +91,12 @@
     remember();
     var inst = G.car(), b = badges();
     var rail = h('div', { class: 'srail' },
-      railItem('u_flag', 2, 'This Week', tab === 'week', function () { UI.show(UI.RaceMenu, 'week'); }, b.week),
-      railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }, b.career),
-      railItem('u_map', 2, 'Street', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }, b.street),
-      railItem('u_test', 2, 'Practice', tab === 'practice', function () { UI.show(UI.RaceMenu, 'practice'); }, b.practice),
-      railItem('u_circuit', 2, 'Events', tab === 'events', function () { UI.show(UI.RaceMenu, 'events'); }, b.events),
-      UI.promoterBody ? railItem('g_shows', 2, 'Promoter', tab === 'promo', function () { UI.show(UI.RaceMenu, 'promo'); }, b.promo) : null);
+      tagRail(railItem('u_flag', 2, 'This Week', tab === 'week', function () { UI.show(UI.RaceMenu, 'week'); }, b.week), 'week'),
+      tagRail(railItem('u_career', 2, 'Career', tab === 'career', function () { UI.show(UI.RaceMenu, 'career'); }, b.career), 'career'),
+      tagRail(railItem('u_map', 2, 'Street', tab === 'map', function () { UI.show(UI.RaceMenu, 'map'); }, b.street), 'map'),
+      tagRail(railItem('u_test', 2, 'Practice', tab === 'practice', function () { UI.show(UI.RaceMenu, 'practice'); }, b.practice), 'practice'),
+      tagRail(railItem('u_circuit', 2, 'Events', tab === 'events', function () { UI.show(UI.RaceMenu, 'events'); }, b.events), 'events'),
+      UI.promoterBody ? tagRail(railItem('g_shows', 2, 'Promoter', tab === 'promo', function () { UI.show(UI.RaceMenu, 'promo'); }, b.promo), 'promo') : null);
     var body = tab === 'map' ? mapView(inst) : tab === 'career' ? careerView() : tab === 'practice' ? practiceView(inst) : tab === 'events' ? eventsView() : tab === 'promo' && UI.promoterBody ? UI.promoterBody() : weekView();
     return h('div', { class: 'screen' }, UI.top('RACE', function () { UI.show(UI.Garage); }, h('span', { class: 'topcar' }, bestText(inst))),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain' }, body)));
