@@ -2,7 +2,7 @@
 
 ## For a beta tester (no App Store needed)
 
-1. Open the link in **Safari**: https://bdavis2451.github.io/drag-racer/
+1. Open the link in **Safari**: https://bdavis2451.github.io/Drag-racer/
 2. Tap **Share** (the square with the arrow), then **Add to Home Screen**.
 3. Open Pixel Drag from the home screen and turn the phone sideways. It runs
    full-screen like an app, and updates arrive by themselves.
