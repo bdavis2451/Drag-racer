@@ -4,8 +4,9 @@
 
 1. Open the link in **Safari**: https://bdavis2451.github.io/Drag-racer/
 2. Tap **Share** (the square with the arrow), then **Add to Home Screen**.
-3. Open Pixel Drag from the home screen and turn the phone sideways. It runs
-   full-screen like an app, and updates arrive by themselves.
+3. Open Pixel Drag from the home screen and turn the phone sideways (to the
+   left). It runs full-screen like an app, and updates arrive by themselves.
+   Rotation lock on is fine: the game turns itself to landscape either way.
 
 - No sound? Flip the silent switch off, then tap the screen once.
 - Play from the home-screen icon, not a Safari tab: Safari can clear a site's

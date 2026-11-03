@@ -2,6 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>
+    // On a phone or tablet's browser the game runs inside phone.html, which
+    // turns it to landscape when the phone is held upright (a web page can't
+    // lock the orientation). Not inside that frame or any other, not in the
+    // installed app (it locks landscape itself), not with a mouse.
+    (function () {
+      try {
+        var native = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        if (window.top === window && !native && touch && !/[?&](frame|noframe)=1/.test(location.search)) location.replace('phone.html');
+      } catch (e) { /* stay here */ }
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#16171c">
   <meta name="mobile-web-app-capable" content="yes">

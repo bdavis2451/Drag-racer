@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#16171c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pixel Drag">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Pixel Drag</title>
+  <!--
+    The game on a phone's browser. A web page can't lock a phone to
+    landscape (and with the rotation lock on, it never turns at all), so the
+    game runs in a frame: held sideways the frame fills the screen; held
+    upright it's turned a quarter-turn and sized as landscape, so the game
+    always sees a landscape screen whichever way the phone is held. The
+    frame sits inside the notch and home-bar insets.
+  -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #16171c; overflow: hidden; }
+    #probe { position: fixed; visibility: hidden; pointer-events: none;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+    #game { position: fixed; border: 0; display: block; background: #16171c; transform-origin: top left; }
+  </style>
+</head>
+<body>
+  <div id="probe"></div>
+  <iframe id="game" src="index.html?frame=1" title="Pixel Drag" allow="autoplay; fullscreen"></iframe>
+  <script>
+    (function () {
+      var f = document.getElementById('game'), probe = document.getElementById('probe');
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+      function inset(side) { return parseFloat(getComputedStyle(probe)['padding' + side]) || 0; }
+      function fit() {
+        var w = window.innerWidth, h = window.innerHeight;
+        var t = inset('Top'), r = inset('Right'), b = inset('Bottom'), l = inset('Left');
+        var aw = w - l - r, ah = h - t - b;          // the room inside the insets
+        if (ah > aw) {
+          // upright: the game turned a quarter-turn clockwise, as landscape
+          f.style.width = ah + 'px'; f.style.height = aw + 'px';
+          f.style.left = l + 'px'; f.style.top = t + 'px';
+          f.style.transform = 'rotate(90deg) translateY(-100%)';
+        } else {
+          f.style.width = aw + 'px'; f.style.height = ah + 'px';
+          f.style.left = l + 'px'; f.style.top = t + 'px';
+          f.style.transform = 'none';
+        }
+      }
+      fit();
+      window.addEventListener('resize', fit);
+      window.addEventListener('orientationchange', function () { setTimeout(fit, 120); });
+      // the page shouldn't scroll or bounce under a finger
+      document.addEventListener('touchmove', function (e) { if (e.target === document.body) e.preventDefault(); }, { passive: false });
+    })();
+  </script>
+</body>
+</html>
