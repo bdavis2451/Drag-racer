@@ -200,6 +200,23 @@ def build(cfg, prev_dir=None, crops=None):
         yy, xx = np.mgrid[0:b['a'].shape[0], 0:b['a'].shape[1]]
         for w_ in (b['wheelR'], b['wheelF']):
             b['paint'] &= (xx + 0.5 - w_[0]) ** 2 + (yy + 0.5 - w_[1]) ** 2 > (w_[2] * 0.9) ** 2
+    pc = cfg['paint']
+    loose = dict(pc)
+    if 'neutral' in pc:
+        loose['neutral'] = [max(0.0, pc['neutral'][0] - 0.1), min(1.0, pc['neutral'][1] + 0.12)]; loose['maxSat'] = pc.get('maxSat', 0.18) * 1.6
+    else:
+        loose['minSat'] = pc.get('minSat', 0.45) * 0.5; loose['minVal'] = 0.08
+    for b in builds:
+        cand = is_paint(b['hsv'], loose) & b['a'] & ~b['paint']
+        yy, xx = np.mgrid[0:b['a'].shape[0], 0:b['a'].shape[1]]
+        for w_ in (b['wheelR'], b['wheelF']):
+            cand &= (xx + 0.5 - w_[0]) ** 2 + (yy + 0.5 - w_[1]) ** 2 > (w_[2] * 0.9) ** 2
+        for _ in range(cfg.get('edgePasses', 3)):
+            P = b['paint']; nb = np.zeros_like(P)
+            nb[1:] |= P[:-1]; nb[:-1] |= P[1:]; nb[:, 1:] |= P[:, :-1]; nb[:, :-1] |= P[:, 1:]
+            add = cand & nb
+            if not add.any(): break
+            b['paint'] = P | add; cand &= ~add
     base_v = float(np.median(builds[0]['hsv'][..., 2][builds[0]['paint']]))
     for b in builds:
         # brightness smoothed over neighbouring paint pixels (5x5), so the
@@ -210,6 +227,10 @@ def build(cfg, prev_dir=None, crops=None):
         vs = np.where(b['paint'], box(v) / np.maximum(box(m), 1), b['hsv'][..., 2])
         r = (0.5 * vs + 0.5 * b['hsv'][..., 2]) / base_v
         b['step'] = np.select([r > 1.36, r > 1.18, r > 1.03, r > 0.88, r > 0.74, r > 0.6], [0, 1, 2, 3, 4, 5], 6)
+        if base_v < 0.3:
+            v2 = 0.9 * vs + 0.1 * b['hsv'][..., 2]
+            q = np.percentile(v2[b['paint']], [97, 90, 72, 30, 12, 4])
+            b['step'] = np.select([v2 > q[0], v2 > q[1], v2 > q[2], v2 > q[3], v2 > q[4], v2 > q[5]], [0, 1, 2, 3, 4, 5], 6)
 
     # ---- landmarks per build (in its own scaled pixels)
     for b in builds:
@@ -420,7 +441,11 @@ def keyed(img, key):
         # and the fringe: magenta-ish pixels touching the background
         grow = bgm.copy(); grow[1:] |= bgm[:-1]; grow[:-1] |= bgm[1:]; grow[:, 1:] |= bgm[:, :-1]; grow[:, :-1] |= bgm[:, 1:]
         fringe = grow & (np.minimum(c[..., 0], c[..., 2]) - c[..., 1] > 40)
-        out[..., 3] = np.where(bgm | fringe, 0, 255).astype(np.uint8)
+        mm = np.minimum(c[..., 0], c[..., 2]) - c[..., 1]
+        pocket = mm > 110                                               # magenta seen through a gap (a purple window stays under ~100)
+        pg = pocket.copy(); pg[1:] |= pocket[:-1]; pg[:-1] |= pocket[1:]; pg[:, 1:] |= pocket[:, :-1]; pg[:, :-1] |= pocket[:, 1:]
+        pocket |= pg & (mm > 60)
+        out[..., 3] = np.where(bgm | fringe | pocket, 0, 255).astype(np.uint8)
     return out
 
 
