@@ -349,6 +349,34 @@
         return;
       }
     }
+    // NaN guard (runs on the audio thread): an invalid sample (NaN or a
+    // runaway value) is replaced with silence before it leaves, so it can't
+    // poison the shared mix and mute every sound in the race. Any it finds
+    // are reported to the page (Settings > Audio check), and a processor
+    // that keeps producing them is restarted from its last setup.
+    (function (Cls) {
+      var p0 = Cls.prototype.process, s0 = Cls.prototype.setup;
+      Cls.prototype.setup = function (d) { this._sd = d; return s0.call(this, d); };
+      Cls.prototype.process = function (inputs, outputs, P) {
+        var r = true, bad = 0, o = outputs[0], c, i, a, x, k;
+        try { r = p0.call(this, inputs, outputs, P); } catch (e) {
+          this._dErr = (this._dErr || 0) + 1;
+          if (this._dErr === 1) try { this.port.postMessage({ diag: 'err', msg: String(e && e.message || e) }); } catch (e2) { /* page gone */ }
+        }
+        for (c = 0; c < o.length; c++) { a = o[c]; for (i = 0; i < a.length; i++) { x = a[i]; if (x !== x || x > 64 || x < -64) { a[i] = 0; bad++; } } }
+        this._dBlk = (this._dBlk || 0) + 1;
+        if (bad) {
+          this._dBad = (this._dBad || 0) + bad; this._dRun = (this._dRun || 0) + 1;
+          if (!this._dSent || this._dBlk - this._dLast > 375) {
+            var snap = {}; for (k in P) snap[k] = +P[k][0].toFixed(3);
+            try { this.port.postMessage({ diag: 'nan', first: !this._dSent, blk: this._dBlk, bad: this._dBad, resets: this._dReset || 0, p: snap }); } catch (e3) { /* page gone */ }
+            this._dSent = true; this._dLast = this._dBlk;
+          }
+          if (this._dRun > 8 && this._sd) { this._dRun = 0; this._dReset = (this._dReset || 0) + 1; try { s0.call(this, this._sd); } catch (e4) { /* keep silent */ } }
+        } else this._dRun = 0;
+        return r;
+      };
+    })(EngineProc);
     registerProcessor('pd-engine', EngineProc);
   }
 

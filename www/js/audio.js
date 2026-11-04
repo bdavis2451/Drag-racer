@@ -30,6 +30,7 @@
     var lim = ctx.createDynamicsCompressor();
     lim.threshold.value = -3; lim.knee.value = 2; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.12;
     comp.connect(lim); lim.connect(ctx.destination);
+    A.outNode = lim;   // the last stage before the speakers (Audio check listens here)
     A.master = ctx.createGain(); A.master.gain.value = 0.55 * A.volume; A.master.connect(comp);
     try {
       var rate = ctx.sampleRate, n = Math.floor(rate * 0.9), ir = ctx.createBuffer(2, n, rate);

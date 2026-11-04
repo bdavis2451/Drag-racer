@@ -22,25 +22,100 @@
   ];
 
 
-  // a quiet monitor for real races: the audio clock and state while a race
-  // screen is up, kept for the report (the last three races)
+  // A quiet monitor for real races: the audio clock and state while a race
+  // screen is up, the level and any invalid samples at each stage (each
+  // engine's modelled sound and recording, the mix going in, the speakers'
+  // feed coming out), and anything the audio thread's NaN guard caught.
+  // Kept for the report: the last three races.
   R.races = [];
-  (function () {
-    var cur = null, lastW = 0, lastA = 0;
-    setInterval(function () {
-      var c = A.ctx, on = !!document.querySelector('.screen.race');
-      if (on && c && !cur) {
-        cur = { at: new Date().toTimeString().slice(0, 8), setting: A.quality ? A.quality() : '?', start: performance.now(), minClock: 9, stalls: 0, slow: 0, states: [c.state], nodes: '' };
-        lastW = performance.now(); lastA = c.currentTime;
-      } else if (cur && c) {
-        var now = performance.now(), dw = (now - lastW) / 1000, da = c.currentTime - lastA;
-        if (dw > 0.2) { var r = da / dw; cur.minClock = Math.min(cur.minClock, r); if (r < 0.2) cur.stalls++; if (r < 0.9) cur.slow++; lastW = now; lastA = c.currentTime; }
-        if (cur.states[cur.states.length - 1] !== c.state) cur.states.push(c.state);
-        if (!cur.nodes && A.voices.length) cur.nodes = A.voices.map(function (v) { return (v.wk ? 'model' : 'synth') + (v.smp ? '+rec' : ''); }).join(', ');
-        if (!on) { cur.secs = Math.round((now - cur.start) / 1000); R.races.unshift(cur); R.races.length = Math.min(3, R.races.length); cur = null; }
-      }
-    }, 250);
-  })();
+  R.raceMode = 'normal';
+  try { R.raceMode = localStorage.getItem('pd_race_snd') || 'normal'; } catch (e) { /* private mode */ }
+  var RACE_MODES = { normal: 'Normal', nomodel: 'No modelled engine', norec: 'No recordings' };
+  var cur = null, lastW = 0, lastA = 0, taps = [], tbuf = new Float32Array(1024);
+  function racing() { return !!document.querySelector('.screen.race'); }
+  function mkTap(node, name) {
+    if (!node || !A.ctx) return null;
+    try { var an = A.ctx.createAnalyser(); an.fftSize = 1024; node.connect(an); return { an: an, name: name, nan: 0, ticks: 0, quiet: 0, rms: [], firstNan: null }; } catch (e) { return null; }
+  }
+  function sharedTaps() {
+    var out = [];
+    if (A.master) out.push(mkTap(A.master, 'mix in'));
+    if (A.outNode) out.push(mkTap(A.outNode, 'speakers'));
+    return out.filter(Boolean);
+  }
+  function startRace() {
+    var c = A.ctx;
+    cur = { at: new Date().toTimeString().slice(0, 8), setting: A.quality ? A.quality() : '?', mode: R.raceMode, start: performance.now(), minClock: 9, stalls: 0, slow: 0, states: [c.state], nodes: '', guard: [], errs: [], nv: 0 };
+    lastW = performance.now(); lastA = c.currentTime;
+    taps = sharedTaps();
+  }
+  function endRace(now) {
+    cur.secs = Math.round((now - cur.start) / 1000);
+    cur.taps = taps.map(function (t) {
+      var r = t.rms.slice().sort(function (x, y) { return x - y; });
+      try { t.an.disconnect(); } catch (e) { /* gone */ }
+      return { name: t.name, nan: t.nan, ticks: t.ticks, quiet: t.quiet, med: r.length ? r[Math.floor(r.length / 2)] : null, max: r.length ? r[r.length - 1] : null, firstNan: t.firstNan };
+    });
+    taps = [];
+    R.races.unshift(cur); R.races.length = Math.min(3, R.races.length); cur = null;
+  }
+  function sample(t, now) {
+    t.an.getFloatTimeDomainData(tbuf);
+    var s = 0, bad = 0;
+    for (var i = 0; i < tbuf.length; i++) { var x = tbuf[i]; if (x !== x || x > 64 || x < -64) bad++; else s += x * x; }
+    var rms = Math.sqrt(s / tbuf.length);
+    t.ticks++; t.rms.push(rms); if (rms < 1e-5 && !bad) t.quiet++;
+    if (bad) { t.nan++; if (t.firstNan == null) t.firstNan = +((now - cur.start) / 1000).toFixed(1); }
+  }
+  setInterval(function () {
+    var c = A.ctx, on = racing(), now = performance.now();
+    if (on && c && !cur) startRace();
+    else if (cur && c) {
+      var dw = (now - lastW) / 1000, da = c.currentTime - lastA;
+      if (dw > 0.2) { var r = da / dw; cur.minClock = Math.min(cur.minClock, r); if (r < 0.2) cur.stalls++; if (r < 0.9) cur.slow++; lastW = now; lastA = c.currentTime; }
+      if (cur.states[cur.states.length - 1] !== c.state) cur.states.push(c.state);
+      if (!cur.nodes && A.voices.length) cur.nodes = A.voices.map(function (v) { return (v.wk ? 'model' : 'synth') + (v.smp ? '+rec' : ''); }).join(', ');
+      if (!on) return endRace(now);
+      taps.forEach(function (t) { sample(t, now); });
+    }
+  }, 250);
+
+  // every engine voice: listen to its audio-thread processors, and (in a
+  // race) tap its sources; apply the race test mode chosen in Audio check
+  function onDiag(who, d) {
+    var rec = cur || R.curTest;
+    if (!rec || !d || !d.diag) return;
+    rec.guard = rec.guard || [];
+    var g = rec.guard.filter(function (x) { return x.who === who; })[0];
+    if (!g) { g = { who: who, n: 0, bad: 0, err: '', first: null, p: null, resets: 0 }; rec.guard.push(g); }
+    if (d.diag === 'err') g.err = d.msg;
+    else { g.n++; g.bad = d.bad; g.resets = d.resets; if (g.first == null) { g.first = +((performance.now() - (rec.start || performance.now())) / 1000).toFixed(1); g.p = d.p; } }
+  }
+  var engine0 = A.engine;
+  A.engine = function (eng, vol, build) {
+    var inRace = racing() && !!A.ctx, mode = inRace && A.quality && A.quality() === 'full' ? R.raceMode : 'normal';
+    if (inRace && !cur) startRace();
+    var keepWk = A.wk, keepNs = A.noSamples;
+    if (mode === 'nomodel') A.wk = false;
+    if (mode === 'norec') A.noSamples = true;
+    var v;
+    try { v = engine0.apply(this, arguments); } finally { A.wk = keepWk; A.noSamples = keepNs; }
+    if (!v) return v;
+    if (mode === 'nomodel') v.recOnly = true;
+    var who = (inRace ? (cur.nv++ ? 'opp' : 'you') : 'test') + ' ';
+    [[v.node, who + 'model'], [v.smp && v.smp.node, who + 'rec']].forEach(function (x) {
+      var n = x[0]; if (!n) return;
+      try { n.port.addEventListener('message', function (e) { onDiag(x[1], e.data); }); n.port.start(); } catch (e) { /* old */ }
+      n.addEventListener && n.addEventListener('processorerror', function () { var rec = cur || R.curTest; if (rec) (rec.errs = rec.errs || []).push(x[1] + ' processor failed'); });
+    });
+    if (inRace) {
+      var src = mkTap(v.trim || v.out, who + (v.wk ? 'model' : 'synth')); if (src) taps.push(src);
+      var rt = v.smp && mkTap(v.smp.out, who + 'rec'); if (rt) taps.push(rt);
+    }
+    return v;
+  };
+  var update0 = A.update;
+  A.update = function (v) { update0.apply(this, arguments); if (v && v.recOnly && v.trim) v.trim.gain.value = 0; };
 
   function ua() { return navigator.userAgent; }
   function iosVer() { var m = ua().match(/OS (\d+)[_.](\d+)(?:[_.](\d+))? like Mac OS X/); return m ? m[1] + '.' + m[2] + (m[3] ? '.' + m[3] : '') : null; }
@@ -99,7 +174,8 @@
 
   // one test: ~4.5 s of idle, a pull to near the limiter and a lift
   function runTest(T, onDone) {
-    var c = A.ctx, out = R.tests[T.id] = { ran: true, heard: null, errs: [], states: [] };
+    var c = A.ctx, out = R.tests[T.id] = { ran: true, heard: null, errs: [], states: [], start: performance.now() };
+    R.curTest = out;
     if (!c) { out.skip = 'no audio'; return onDone(); }
     if (T.needs === 'wk' && !A.wk) { out.skip = 'the modelled engine did not load'; return onDone(); }
     if (T.needs === 'loops' && !(A.loopsWk && R.prep && R.prep.bankOk)) { out.skip = !A.loopsWk ? 'the loop player did not load' : 'the recording did not decode'; return onDone(); }
@@ -169,10 +245,14 @@
       out.endState = c.state;
       if (out.load && out.load.length) { var L = out.load; out.loadAvg = f(L.reduce(function (a, x) { return a + x[0]; }, 0) / L.length, 2); out.loadPeak = f(Math.max.apply(null, L.map(function (x) { return x[1]; })), 2); out.underrun = f(Math.max.apply(null, L.map(function (x) { return x[2]; })), 3); }
       delete out.load;
+      R.curTest = null;
       onDone();
     }
   }
 
+  function guardText(g) {
+    return g.who + (g.err ? ' threw "' + g.err + '"' : '') + (g.n ? ' caught ' + g.bad + ' bad samples (first at ' + g.first + ' s, ' + g.resets + ' restarts, inputs ' + JSON.stringify(g.p) + ')' : '');
+  }
   function report() {
     var i = R.info || {}, p = R.prep || {}, lines = [];
     lines.push('PIXEL DRAG AUDIO CHECK ' + new Date().toISOString().slice(0, 16));
@@ -187,10 +267,12 @@
       if (!o) return lines.push(T.id + ': not run');
       if (o.skip) return lines.push(T.id + ': skipped (' + o.skip + ')');
       lines.push(T.id + ': heard ' + (o.heard || '?') + ' | clock ' + o.clock + ' min ' + o.minClock + ' stalls ' + o.stalls + ' slow ' + o.slow + ' longest ' + o.longestStallMs + 'ms | rms max ' + o.rmsMax + ' med ' + o.rmsMed + ' silent ' + o.silent +
-        ' | end ' + o.endState + (o.states.length ? ' states ' + o.states.join('>') : '') + (o.nodes ? ' | ' + o.nodes : '') + (o.loadAvg ? ' | load ' + o.loadAvg + '/' + o.loadPeak + ' underrun ' + o.underrun : '') + (o.errs.length ? ' | ERR ' + o.errs.join('; ') : ''));
+        ' | end ' + o.endState + (o.states.length ? ' states ' + o.states.join('>') : '') + (o.nodes ? ' | ' + o.nodes : '') + (o.loadAvg ? ' | load ' + o.loadAvg + '/' + o.loadPeak + ' underrun ' + o.underrun : '') + (o.errs.length ? ' | ERR ' + o.errs.join('; ') : '') + (o.guard && o.guard.length ? ' | guard ' + o.guard.map(guardText).join('; ') : ''));
     });
     R.races.forEach(function (r, k) {
-      lines.push('race ' + (k + 1) + ' (' + r.at + ', ' + r.secs + ' s, ' + r.setting + ', ' + (r.nodes || 'no engines') + '): clock min ' + f(r.minClock === 9 ? null : r.minClock, 2) + ' stalls ' + r.stalls + ' slow ' + r.slow + ' | states ' + r.states.join('>'));
+      lines.push('race ' + (k + 1) + ' (' + r.at + ', ' + r.secs + ' s, ' + r.setting + (r.setting === 'full' ? ' / ' + RACE_MODES[r.mode] : '') + ', ' + (r.nodes || 'no engines') + '): clock min ' + f(r.minClock === 9 ? null : r.minClock, 2) + ' stalls ' + r.stalls + ' slow ' + r.slow + ' | states ' + r.states.join('>'));
+      (r.taps || []).forEach(function (t) { lines.push('  ' + t.name + ': rms med ' + f(t.med, 4) + ' max ' + f(t.max, 4) + ' | silent ' + t.quiet + '/' + t.ticks + ' | bad ' + t.nan + (t.firstNan != null ? ' (first at ' + t.firstNan + ' s)' : '')); });
+      lines.push('  guard: ' + (r.guard && r.guard.length ? r.guard.map(guardText).join('; ') : 'nothing caught') + (r.errs && r.errs.length ? ' | ERR ' + r.errs.join('; ') : ''));
     });
     if (!R.races.length) lines.push('races: none since the game was opened');
     return lines.join('\n');
@@ -231,8 +313,12 @@
     return h('div', { class: 'screen' }, UI.top('AUDIO CHECK', function () { if (!running) UI.show(UI.Settings, back); }),
       h('div', { class: 'content' }, h('div', { class: 'col', style: { gap: '6px', maxWidth: '760px', margin: '0 auto' } },
         h('div', { class: 'panel' }, h('div', { class: 'acc' }, 'For testers'),
-          h('p', { class: 'gsmall' }, 'Turn the ringer on and the volume up. Play each test in order and answer whether you heard it. Then run one race (on Full sound, if you can), come back here, tap Copy report and send it to the developer. ' + (car ? 'Tests use your ' + car.name + '.' : 'Pick a car in the garage first for the engine tests.'))),
+          h('p', { class: 'gsmall' }, 'Turn the ringer on and the volume up. Play each test in order and answer whether you heard it. Then set Engine sound to Full and run one race in each Race sound mode below (Normal, No modelled engine, No recordings), noting which ones you could hear. Come back here, tap Copy report and send it with your notes. ' + (car ? 'Tests use your ' + car.name + '.' : 'Pick a car in the garage first for the engine tests.'))),
         rows,
+        h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Race sound (testing)'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'With Engine sound on Full: race with part of the engine sound switched off, to find which part goes quiet. Back to Normal when done.')),
+          h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' } }, Object.keys(RACE_MODES).map(function (m) {
+            return btn(RACE_MODES[m], function () { R.raceMode = m; try { localStorage.setItem('pd_race_snd', m); } catch (e) { /* private mode */ } UI.refresh(); }, 'small' + (R.raceMode === m ? ' primary' : ''));
+          }))),
         h('div', { class: 'row', style: { gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' } },
           btn('Reset', function () { if (running) return; R.tests = {}; R.prep = null; gatherInfo(); UI.refresh(); }, 'small'),
           btn('Copy report', function () { copy(report()); }, 'primary')),
