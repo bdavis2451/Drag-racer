@@ -338,7 +338,19 @@
         if (out.length > n0) { out[n0].evs = open; out[n0].short = DR.STAGES[si].name; }
       });
       var st = DR.STAGES[si];
-      if (!G.eventWon(st.boss) && !G.eventLock(st.boss)) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); }, '', true, function () { return carWhy([st.boss]); });
+      if (!G.eventWon(st.boss)) (function (st, si) {
+        var kLock = G.eventLock(st.boss), pos = G.ladderPos ? G.ladderPos(si) : 5;
+        function toLadder() { UI.careerSub = 'ladder'; UI.show(UI.RaceMenu, 'career'); }
+        // the next callout on the ladder, once you have the rep for it
+        var co = pos < 5 && G.ladder ? G.ladder(si)[pos] : null;
+        if (co && !G.calloutLock(co)) add('night', 'drag', 'Ladder callout #' + (5 - pos) + ': ' + co.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(co, 0), 'Callout: ' + co.opps[0].name); }, 'Win to take their spot', true, function () { return carWhy([co]); });
+        if (!kLock) return add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); }, '', true, function () { return carWhy([st.boss]); });
+        // locked: shown (with why and a fix) once the class's race days are all won, so you're never left with nothing to do
+        var left = Object.keys(SCORED).some(function (slot) { return DR.raceDayEvents(si, slot).some(function (ev) { return !G.eventLock(ev) && !G.eventWon(ev); }); });
+        if (!left) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, toLadder, '', true, function () {
+          return { msg: kLock, fix: /ladder/i.test(kLock) ? ['Ladder', toLadder] : ['Career', function () { UI.show(UI.RaceMenu, 'career'); }] };
+        });
+      })(st, si);
       st.side.forEach(function (ev) { if ((ev.type === 'class' || ev.type === 'show') && G.eventVisible(ev) && !G.eventLock(ev) && !G.eventWon(ev)) add(DR.evSlot(ev), ev.type === 'show' ? 'show' : 'drag', ev.type === 'show' ? DR.showGoal(ev) : DR.CLASSES[ev.cls].name + ' class race', function () {
         // straight to it: the show itself, or the class race (if the car can run it)
         var issue = G.car() ? G.carIssue(G.car(), ev) : 'No car';
