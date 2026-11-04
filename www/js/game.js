@@ -695,8 +695,11 @@
   };
   G.repair = function (inst) {
     var c = G.repairCost(inst);
-    if (!G.canAfford(c)) return false;
-    G.pay(c); inst.damage = null; G.save(); return true;
+    // your only car: the shop takes what you have, even if that's nothing
+    // (in the red after a ticket) - never a dead end
+    if (!G.canAfford(c) && !(c <= 0 && G.mercyRepair(inst))) return false;
+    if (c > 0) G.pay(c);
+    inst.damage = null; G.save(); return true;
   };
 
   // ---------------------------------------------------------------- rivals
