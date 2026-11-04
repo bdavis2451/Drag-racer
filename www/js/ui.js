@@ -388,6 +388,8 @@
         DR.Audio.setQuality ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Engine sound'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Full: the modelled engine and recorded sounds. Simple: lighter, for phones where the race goes silent (iPhones start here).')),
           btn('Full', function () { DR.Audio.setQuality('full'); UI.refresh(); }, 'small ' + (DR.Audio.quality() === 'full' ? 'primary' : '')),
           btn('Simple', function () { DR.Audio.setQuality('simple'); UI.refresh(); }, 'small ' + (DR.Audio.quality() === 'simple' ? 'primary' : ''))) : null,
+        UI.AudioCheck ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Audio check'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For testers: short sound tests and a report to send if the race goes quiet.')),
+          btn('Open', function () { UI.show(UI.AudioCheck, back); }, 'small')) : null,
         navigator.vibrate ? toggle('Vibration', 'vibrate', true, false, 'On', 'Off', 'The phone buzzes with the tire shake, so you feel it to lift.') : null,
         toggle('Auto-repair', 'autoRepair', false, true, 'Off', 'On', 'On: anything you break is fixed and paid for right after the race, when you have the cash.'),
         G.state && G.state.started && DR.Tutorial ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Tutorial'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'The tour of the garage and the Race menu, again.')),
