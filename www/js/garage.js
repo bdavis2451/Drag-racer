@@ -843,7 +843,7 @@
     var bg = DR.PART_GROUPS.filter(function (g) { return g.cats.indexOf(bayCat) >= 0; })[0];
     if (bg) G.markGroupSeen(bg);
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'parts'),
-      h('div', { class: 'content' }, h('div', { class: 'split' },
+      h('div', { class: 'content splithost' }, h('div', { class: 'split' },
         h('div', { class: 'left bay-left' }, cv,
           h('div', { class: 'row bay-quick' }, h('span', { class: 'acc' }, Math.round(S.peakHp + S.nosHp) + 'hp'), h('span', {}, UI.kgLb(S.m)), h('span', { class: 'good' }, inst.best && inst.best.q ? '1/4 ' + inst.best.q.toFixed(2) + 's' : 'no 1/4 yet')),
           UI.riskBox(S), list),

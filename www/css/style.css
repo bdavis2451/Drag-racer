@@ -93,6 +93,12 @@ h3 { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dim
 .split { display: flex; gap: 10px; height: 100%; }
 .split > .left { width: 38%; min-width: 200px; overflow: auto; }
 .split > .right { flex: 1; overflow: auto; min-width: 0; }
+/* a two-panel screen: the frame itself never scrolls, each side scrolls on
+   its own (no percentage heights: WebKit can't resolve them in a flex item,
+   and the outer frame would take the scroll) */
+.content.splithost { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.content.splithost > .split { flex: 1 1 0; height: auto; min-height: 0; }
+.content.splithost > .split > .left, .content.splithost > .split > .right { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; transform: translateZ(0); }
 .delta { font-family: 'Press Start 2P', monospace; font-size: 9px; }
 
 /* ---------------------------------------------------------------- tuning sliders */
