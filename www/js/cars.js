@@ -250,22 +250,8 @@
   }
   function inRect(r, x, y) { return x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]; }
 
-  // (sheet_<id>.js files add four-build cars made by tools/carsheet.py)
-  DR.BITMAP_CARS = Object.assign(DR.BITMAP_CARS || {}, {
-    // 1992-95 Civic hatch (EG)
-    ronin: { sheet: 'eg', body: [33, 8, 224], ground: 74, tireM: 0.30,
-      wheelR: [65, 60, 14.5], wheelF: [187, 60, 14.5],
-      // paint: the sheet's reds, by brightness, onto the 7-step paint ramp;
-      // lamps keep their own colours
-      paintV: 0.62, keep: [[38, 35, 44, 41]],   // the tail lamp lens
-      tail: [41, 37], head: [214, 46], exhaust: [37, 63],
-      belt: 31, rocker: 63, hood: [160, 214],
-      kit: { spoiler: ['spoiler_w', 'wing_b'], fbumper: ['lip_w', 'splitter_b'], rbumper: ['rear_w', 'rear_b'], skirt: ['skirt_w', 'skirt_b'],
-        hood: 'hood_w', decals: 'decal_b', cage: 'cage_b' },
-      // side-view parts on the sheet: [x0, y0, x1, y1]
-      wheels: [[7, 85, 34, 113], [37, 85, 65, 112], [68, 85, 95, 112], [98, 85, 126, 112]],
-      rims: { deep: 1, mesh: 2, split: 3, drag: 4 } }
-  });
+  // (sheet_<id>.js files add the cars' art, made by tools/carsheet.py)
+  DR.BITMAP_CARS = DR.BITMAP_CARS || {};
 
   // the sheet's wheels as rim styles ('sheet:eg:0' is the car's own stock
   // wheel, cut from the body): pre-rendered per size and rotation step

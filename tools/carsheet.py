@@ -108,6 +108,27 @@ def wheels(crop):
             keep = res < max(1.0, np.percentile(res, 80))
             if keep.all() or keep.sum() < 8: break
             X, Y = X[keep], Y[keep]
+        # better, as a template (a flat-bottomed tire, or the body's outline
+        # running into it at the ground, fits a circle too big from the
+        # bottom edge): circles standing on the ground, scored on their lower
+        # half for a dark tire ring with a light rim inside it
+        Lm = rgb.mean(axis=2) / 255
+        dark = a & (Lm < 0.3); lit = a & (Lm > 0.42)
+        ang = np.linspace(np.radians(195), np.radians(345), 40)
+        best_ = (0, None)
+        for cxx in np.arange(cx - 4, cx + 4.5, 1.0):
+            for rr in np.arange(0.07 * wb, 0.2 * wb, 0.5):
+                cyy = ground + 1 - rr
+                def frac(m, f0, f1):
+                    n = k = 0
+                    for f in np.linspace(f0, f1, 4):
+                        xs_ = (cxx + np.cos(ang) * rr * f).astype(int); ys_ = (cyy - np.sin(ang) * rr * f).astype(int)
+                        ok = (xs_ >= 0) & (xs_ < a.shape[1]) & (ys_ >= 0) & (ys_ < a.shape[0])
+                        n += len(xs_); k += m[ys_[ok], xs_[ok]].sum()
+                    return k / n
+                sc = frac(dark, 0.8, 0.97) * frac(lit, 0.2, 0.62) * (1 - frac(dark, 1.12, 1.25) * 0.5)
+                if sc > best_[0]: best_ = (sc, (cxx, cyy, rr))
+        if best_[1] and best_[0] > 0.1: cx, cy, r = best_[1]
         out.append((cx, cy, r))
     return out, ground + 1
 
@@ -164,7 +185,7 @@ def build(cfg, prev_dir=None, crops=None):
             r_ = min((wr[2] + wf[2]) * f / 2, sr * 1.03)
             for w_ in (builds[-1]['wheelR'], builds[-1]['wheelF']):
                 w_[2] = r_; w_[1] = min(w_[1], builds[-1]['ground'] - r_)
-        if len(crops) == 1:
+        if len(crops) == 1 and cfg.get('sameWheels', True):
             # one stock car: the same tires front and rear; a fit that takes
             # in the arch reads large, so the smaller one
             r_ = min(builds[-1]['wheelR'][2], builds[-1]['wheelF'][2])
@@ -384,8 +405,19 @@ def cut_grid(img, n):
     return out
 
 
+def keyed(img, key):
+    """A sheet on a solid colour (magenta): that colour, and the fringe
+    blended into it, become transparent."""
+    out = img.copy(); c = img[..., :3].astype(int)
+    if key == 'magenta':
+        m = np.minimum(c[..., 0], c[..., 2]) - c[..., 1]
+        out[..., 3] = np.where(m > 70, 0, 255).astype(np.uint8)
+    return out
+
+
 def grid(cfg, prev_dir=None):
     img = np.asarray(Image.open(cfg['sheet']).convert('RGBA'))
+    if cfg.get('key'): img = keyed(img, cfg['key'])
     crops = cut_grid(img, cfg['count'])
     for car in cfg['cars']:
         c = dict(car); c.setdefault('carId', c['id']); c['src'] = os.path.basename(cfg['sheet'])

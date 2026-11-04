@@ -1,16 +1,188 @@
-{ "sheet": "tools/carsheets/stock_a.webp", "count": 15,
-  "note": "15 stock cars, left to right, top to bottom. #1 Metro, #3 Mustang LX 2.3 and #4 Civic already have their own build sheets (pip, fox23, eg).",
-  "cars": [
-    { "slot": 2,  "id": "beetle",   "lenM": 4.1, "paint": { "hue": [0.53, 0.66], "minSat": 0.22, "minVal": 0.55 } },
-    { "slot": 5,  "id": "bolt",     "lenM": 4.4, "paint": { "hue": [0.09, 0.18], "minSat": 0.45 } },
-    { "slot": 6,  "id": "camaro6",  "lenM": 4.9, "paint": { "neutral": [0.06, 0.34], "maxSat": 0.22 } },
-    { "slot": 7,  "id": "hachi",    "lenM": 4.2, "paint": { "neutral": [0.55, 1.0], "maxSat": 0.12 } },
-    { "slot": 8,  "id": "fox",      "lenM": 4.6, "paint": { "hue": [0.94, 0.04], "minSat": 0.45 } },
-    { "slot": 9,  "id": "mira",     "lenM": 3.9, "paint": { "hue": [0.94, 0.04], "minSat": 0.45 } },
-    { "slot": 10, "id": "monte",    "lenM": 5.1, "paint": { "neutral": [0.08, 0.42], "maxSat": 0.16 } },
-    { "slot": 11, "id": "hauler",   "lenM": 5.8, "paint": { "hue": [0.94, 0.04], "minSat": 0.45 } },
-    { "slot": 12, "id": "volta",    "lenM": 4.2, "paint": { "hue": [0.94, 0.04], "minSat": 0.45 } },
-    { "slot": 13, "id": "cobaltss", "lenM": 4.6, "paint": { "neutral": [0.42, 0.88], "maxSat": 0.1 } },
-    { "slot": 14, "id": "camaro",   "lenM": 4.9, "paint": { "hue": [0.09, 0.18], "minSat": 0.45 } },
-    { "slot": 15, "id": "kaze",     "lenM": 4.3, "paint": { "neutral": [0.55, 1.0], "maxSat": 0.12 } }
-  ] }
+{
+ "sheet": "tools/carsheets/stock_a.webp",
+ "count": 15,
+ "note": "15 stock cars, left to right, top to bottom.",
+ "cars": [
+  {
+   "slot": 1,
+   "id": "pip",
+   "lenM": 3.6,
+   "paint": {
+    "neutral": [
+     0.55,
+     1.0
+    ],
+    "maxSat": 0.12
+   }
+  },
+  {
+   "slot": 2,
+   "id": "beetle",
+   "lenM": 4.1,
+   "paint": {
+    "hue": [
+     0.53,
+     0.66
+    ],
+    "minSat": 0.22,
+    "minVal": 0.55
+   }
+  },
+  {
+   "slot": 3,
+   "id": "fox23",
+   "lenM": 4.6,
+   "paint": {
+    "hue": [
+     0.94,
+     0.04
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 4,
+   "id": "ronin",
+   "lenM": 4.0,
+   "paint": {
+    "neutral": [
+     0.55,
+     1.0
+    ],
+    "maxSat": 0.12
+   }
+  },
+  {
+   "slot": 5,
+   "id": "bolt",
+   "lenM": 4.4,
+   "paint": {
+    "hue": [
+     0.09,
+     0.18
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 6,
+   "id": "camaro6",
+   "lenM": 4.9,
+   "paint": {
+    "neutral": [
+     0.06,
+     0.34
+    ],
+    "maxSat": 0.22
+   }
+  },
+  {
+   "slot": 7,
+   "id": "hachi",
+   "lenM": 4.2,
+   "paint": {
+    "neutral": [
+     0.55,
+     1.0
+    ],
+    "maxSat": 0.12
+   }
+  },
+  {
+   "slot": 8,
+   "id": "fox",
+   "lenM": 4.6,
+   "paint": {
+    "hue": [
+     0.94,
+     0.04
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 9,
+   "id": "mira",
+   "lenM": 3.9,
+   "paint": {
+    "hue": [
+     0.94,
+     0.04
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 10,
+   "id": "monte",
+   "lenM": 5.1,
+   "paint": {
+    "neutral": [
+     0.08,
+     0.42
+    ],
+    "maxSat": 0.16
+   }
+  },
+  {
+   "slot": 11,
+   "id": "hauler",
+   "lenM": 5.8,
+   "paint": {
+    "hue": [
+     0.94,
+     0.04
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 12,
+   "id": "volta",
+   "lenM": 4.2,
+   "paint": {
+    "hue": [
+     0.94,
+     0.04
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 13,
+   "id": "cobaltss",
+   "lenM": 4.6,
+   "paint": {
+    "neutral": [
+     0.42,
+     0.88
+    ],
+    "maxSat": 0.1
+   }
+  },
+  {
+   "slot": 14,
+   "id": "camaro",
+   "lenM": 4.9,
+   "paint": {
+    "hue": [
+     0.09,
+     0.18
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 15,
+   "id": "kaze",
+   "lenM": 4.3,
+   "paint": {
+    "neutral": [
+     0.55,
+     1.0
+    ],
+    "maxSat": 0.12
+   }
+  }
+ ]
+}
