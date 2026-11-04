@@ -32,11 +32,11 @@
     night:  { name: 'Monday, Tuesday, Thursday and Friday nights', where: 'the street', win: [{ wd: [1, 2, 4, 5], from: 21, to: 27 }] },
     grudge: { name: 'Wednesday nights', where: 'Pixel Dragway', win: [{ wd: [3], from: 18, to: 23 }] },
     tnt:    { name: 'whenever the strip\'s open (weekdays noon to 10 PM, weekends 9 to 5)', where: 'Pixel Dragway', win: [{ wd: [1, 2, 3, 4, 5], from: 12, to: 22 }, { wd: [6, 0], from: 9, to: 17 }] },
-    dyno:   { name: 'dyno shop hours', where: 'the dyno shop', win: [{ wd: [1, 2, 3, 4, 5, 6], from: 8, to: 18 }] },
+    dyno:   { name: 'Monday to Saturday, 8 AM to 6 PM', where: 'the dyno shop', win: [{ wd: [1, 2, 3, 4, 5, 6], from: 8, to: 18 }] },
     cup:    { name: 'Sunday circuit race day', where: 'the circuits', win: [{ wd: [0], from: 10, to: 18 }] },
     circ:   { name: 'circuit open races', where: 'the circuits', win: [{ wd: [0], from: 10, to: 18 }, { wd: [4], from: 18, to: 23 }] },
     series: { name: 'Night Series rounds', where: 'the street circuits', win: [{ wd: [6], from: 20, to: 24 }] },
-    testday:{ name: 'circuit test days', where: 'Pixel Raceway', win: [{ wd: [1, 2, 3, 4], from: 9, to: 17 }] },
+    testday:{ name: 'Monday to Thursday, 9 AM to 5 PM', where: 'Pixel Raceway', win: [{ wd: [1, 2, 3, 4], from: 9, to: 17 }] },
     king:   { name: 'King race (2nd & 4th Saturday night)', where: 'Pixel Dragway', win: [{ wd: [6], from: 21, to: 24, nth: [2, 4] }] },
     kingb:  { name: 'Bracket King (last Sunday)', where: 'Pixel Dragway', win: [{ wd: [0], from: 12, to: 17, last: true }] },
     kingst: { name: 'No-Prep King (last Friday night)', where: 'the old airfield', win: [{ wd: [5], from: 22, to: 27, last: true }] }
@@ -98,7 +98,7 @@
     if (!w || w.open) return go();
     var close;
     close = UI.modal([h('div', { class: 'pix acc' }, 'NOT ON RIGHT NOW'),
-      h('p', {}, what + ' runs ' + DR.slotName(slot) + (DR.SLOTS[slot].where ? ' at ' + DR.SLOTS[slot].where : '') + '. Next: ' + CAL.fmt(w.start, { long: true }) + '.'),
+      h('p', {}, what + ': ' + DR.slotName(slot) + (DR.SLOTS[slot].where && DR.slotName(slot).indexOf(' at ') < 0 && what.toLowerCase().indexOf(DR.SLOTS[slot].where.replace(/^the /, '')) < 0 ? ', at ' + DR.SLOTS[slot].where : '') + '. Next: ' + CAL.fmt(w.start, { long: true }) + '.'),
       h('p', { class: 'gsmall' }, G.skipText(w.start)),
       h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } },
         btn('Cancel', function () { close(); }),

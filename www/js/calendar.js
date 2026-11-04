@@ -147,7 +147,7 @@
   G.rushQuote = function (uid) { var h = G.carJobs(uid).reduce(function (a, j) { return a + j.h; }, 0); return { h: h, cost: Math.round(h * CAL.SHOP_RATE / 10) * 10, done: Math.max(0.5, h * 0.5) }; };
   G.rush = function (uid) {
     var q = G.rushQuote(uid), c = st();
-    if (!q.h) return 'Nothing on the bench for it';
+    if (!q.h) return 'No work waiting on it';
     if (!G.canAfford(q.cost)) return 'The shop wants ' + DR.money(q.cost);
     G.pay(q.cost);
     var labels = G.carJobs(uid).map(function (j) { return j.label; });
@@ -178,8 +178,10 @@
   hook('moveOver', function (r, d, cat, target) { if (r && r.swap) { G.work(target, DR.jobHours('engine', target, target.engine), 'Engine swap (' + DR.ENGINES[target.engine].name + ')'); G.work(d, DR.jobHours('engine', d, d.engine), 'Engine swap (' + DR.ENGINES[d.engine].name + ')'); } });
   hook('stripCar', function (r, inst) { if (r) G.work(inst, Math.max(2, r * 1.5), 'Stripping ' + r + ' parts'); });
   var repair0 = G.repair;
+  // a repair is shop work: the car's there this long
+  G.repairHours = function (inst) { var d = inst && inst.damage; return !d ? 0 : d.engine ? 20 : d.trans ? 10 : d.axle ? 4 : d.chassis ? 16 : 6; };
   G.repair = function (inst) {
-    var d = inst.damage, h = !d ? 0 : d.engine ? 20 : d.trans ? 10 : d.axle ? 4 : d.chassis ? 16 : 6;
+    var d = inst.damage, h = G.repairHours(inst);
     var r = repair0.apply(this, arguments);
     if (r && h) { var c = st(); c.shop.push({ uid: inst.uid, label: d.engine ? 'Engine rebuild' : d.trans ? 'Transmission rebuild' : d.axle ? 'New axle' : 'Chassis repair', until: c.t + h }); G.save(); }
     return r;

@@ -894,7 +894,7 @@
         inst.damage = damaged;
         var what = damaged.engine ? 'Engine blown.' : damaged.axle ? 'Snapped an axle.' : damaged.chassis ? 'Cracked the chassis.' : 'Transmission broken.', fix = G.repairCost(inst);
         // auto-repair (Settings): the shop fixes it straight away when you can pay
-        if (settings.autoRepair && G.canAfford(fix) && G.repair(inst)) { notes.push(['bad', what + ' Auto-repaired: ' + DR.money(fix)]); damaged = null; }
+        if (settings.autoRepair && G.canAfford(fix)) { var arh = G.repairHours ? G.repairHours(inst) : 0; if (G.repair(inst)) { notes.push(['bad', what + ' Auto-repaired: ' + DR.money(fix) + (arh ? ', at the shop for ' + DR.Cal.dur(arh) : '')]); damaged = null; } }
         else notes.push(['bad', what + ' Repair: ' + DR.money(fix)]);
       }
       // the clock and the race day: the run's time, its points
@@ -970,9 +970,13 @@
           damaged ? (function () {
             var fix = G.repairCost(inst), career = them && cfg.mode === 'career' && !ev.hosted && !ev.special;
             if (!G.canAfford(fix)) return btn('Garage (repair ' + DR.money(fix) + ')', function () { UI.show(UI.Garage); }, 'primary');
-            return btn('Repair ' + DR.money(fix) + (career ? ' & Race Again' : ''), function () {
+            // a repair is shop work: the car goes to the shop for hours,
+            // so there's no racing again straight away
+            var rh = G.repairHours ? G.repairHours(inst) : 0;
+            return btn('Repair at the shop ' + DR.money(fix) + (rh ? ' (' + DR.Cal.dur(rh) + ')' : ''), function () {
               if (!G.repair(inst)) return UI.toast('Not enough money');
               A.cash();
+              if (rh) { UI.show(UI.Garage); UI.toast('The ' + DR.CARS[inst.carId].name + ' is at the shop till ' + DR.Cal.fmt(G.now() + rh)); return; }
               if (career) DR.Race.careerEvent(ev, nextRound != null ? nextRound : 0);
               else if (cfg.mode === 'street') UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : 'street');
               else DR.Race.start(cfg);

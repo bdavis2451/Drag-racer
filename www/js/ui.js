@@ -213,9 +213,18 @@
   // the clock (opens Home: the bed, the bench, the bills)
   function clockBtn() {
     if (!DR.Cal || !G.state || !G.state.started) return null;
-    return btn(DR.Cal.fmt(G.now()), function () { UI.show(UI.Home); }, 'small clockchip', { title: 'Home: sleep, work, bills' });
+    var b = btn('', function () { UI.show(UI.Home); }, 'small clockchip', { title: 'Home: sleep, work, bills' });
+    clockText(b);
+    return b;
   }
-  UI.clockRefresh = function () { var t = DR.Cal.fmt(G.now()); Array.prototype.forEach.call(document.querySelectorAll('.clockchip'), function (b) { b.textContent = t; }); };
+  // the date and time, with a short form (weekday and time) for narrow screens
+  function clockText(b) {
+    var t = G.now(), full = DR.Cal.fmt(t), d = DR.Cal.date(t);
+    b.innerHTML = '';
+    b.appendChild(h('span', { class: 'ck-full' }, full));
+    b.appendChild(h('span', { class: 'ck-short' }, DR.Cal.WD[d.wd] + ' ' + full.split('•').pop().trim()));
+  }
+  UI.clockRefresh = function () { Array.prototype.forEach.call(document.querySelectorAll('.clockchip'), clockText); };
   function top(title, back, extra) {
     return h('div', { class: 'top' },
       back ? btn('◀', back, 'back') : null,

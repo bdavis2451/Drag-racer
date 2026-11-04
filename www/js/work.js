@@ -147,8 +147,9 @@
   UI.workPrompt = function (inst) {
     var card = W.card(inst), close;
     if (!card) return;
+    var atShop = !G.carJobs(inst.uid).length;
     close = UI.modal([h('div', { class: 'pix acc' }, 'THE ' + DR.CARS[inst.carId].name.toUpperCase() + ' ISN\'T READY'),
-      h('p', { class: 'gsmall' }, 'It has work waiting. Do it yourself (free, takes your time) or have the shop do it (costs money, takes the car).'), card,
+      h('p', { class: 'gsmall' }, atShop ? 'It\'s at the shop. Race another car, or wait for it.' : 'It has work waiting. Do it yourself (free, takes your time) or have the shop do it (costs money, takes the car).'), card,
       h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('Close', function () { close(); }))]);
     // a choice made in the card closes the dialog
     card.addEventListener('click', function (e) { if (e.target.closest('button')) setTimeout(close, 0); }, true);

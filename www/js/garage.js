@@ -831,7 +831,7 @@
           h('div', { class: 'name' }, h('div', {}, q.name + ' (' + dn + ')'), sub),
           q.issue ? null : btn((q.swap ? 'Swap engines' : 'Move over') + (cost ? ' ' + DR.money(cost) : ''), function () {
             var go = function () { var r = G.moveOver(q.donor, bayCat, inst); UI.toast(r.msg); if (r.ok) A.click(); UI.refresh(); };
-            if (q.swap) UI.confirm('Swap engines? The ' + q.name + ' (and its engine parts) comes out of the ' + dn + ' and goes in this car; your ' + DR.ENGINES[inst.engine].name + ' (and its parts) goes in the ' + dn + '.' + (q.fee ? ' The shop work for both installs: ' + DR.money(q.fee) + '.' : '') + ' Both cars go on the bench.', go, 'Swap');
+            if (q.swap) UI.confirm('Swap engines? The ' + q.name + ' (and its engine parts) comes out of the ' + dn + ' and goes in this car; your ' + DR.ENGINES[inst.engine].name + ' (and its parts) goes in the ' + dn + '.' + (q.fee ? ' The shop work for both installs: ' + DR.money(q.fee) + '.' : '') + ' Both cars get the work: do it yourself or pay the shop.', go, 'Swap');
             else UI.confirm('Move the ' + q.name + ' from the ' + dn + ' to this car? The ' + dn + ' goes back to its factory part' + (q.cost ? ' (a used one, ' + DR.money(q.cost) + ')' : '') + '.', go, 'Move');
           }, 'small go')));
       });
