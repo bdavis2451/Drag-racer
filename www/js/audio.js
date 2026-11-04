@@ -47,7 +47,10 @@
       A.verbIn = verb;   // distant cars send extra signal here
     } catch (e) { /* no reverb on this device */ }
   };
-  A.resume = function () { if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); };
+  // 'suspended' (no tap yet) or iOS's 'interrupted' (a call, Siri, the app in
+  // the background): any tap brings it back
+  A.resume = function () { if (A.ctx && A.ctx.state !== 'running' && A.ctx.state !== 'closed') { try { A.ctx.resume(); } catch (e) { /* not yet */ } } };
+  ['touchend', 'pointerdown', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { A.resume(); }, { passive: true, capture: true }); });
   A.setOn = function (on) { A.on = on; if (!on) A.stopAll(); };
   A.volume = 1;
   A.setVolume = function (v) { A.volume = v; if (A.master) A.master.gain.value = 0.55 * v; };

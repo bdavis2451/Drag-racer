@@ -360,17 +360,34 @@
     var url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
     return ctx.audioWorklet.addModule(url).then(function () { return true; }, function () { return false; });
   };
+  // Engine sound: 'full' (the modelled engine and recorded loops on the
+  // audio thread) or 'simple' (plain Web Audio oscillators and filters).
+  // iPhones and iPads start on simple: their Safari has gone silent for the
+  // whole race on the full engine.
+  A.isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  A.quality = function () { var s = DR.Game && DR.Game.state && DR.Game.state.settings, q = s && s.engSound; return q || (A.isIOS ? 'simple' : 'full'); };
+  A.applyQuality = function () { var simple = A.quality() === 'simple'; A.forceSynth = simple; A.noSamples = simple; };
   var baseInit = A.init;
   A.init = function () {
     var had = !!A.ctx;
     baseInit();
+    A.applyQuality();
     if (had || !A.ctx) return;
+    if (A.forceSynth) return;                 // simple: no audio-thread code at all
     A.wkPending = true;
     A.loadWorklet(A.ctx).then(function (ok) {
       A.wk = ok; A.wkPending = false;
       var q = A.wkQueue; A.wkQueue = [];
       q.forEach(function (fn) { fn(); });
     });
+  };
+  // switched in Settings: full loads the audio-thread engine now if it never was
+  A.setQuality = function (q) {
+    var s = DR.Game.state.settings; s.engSound = q; DR.Game.save(); A.applyQuality();
+    if (q === 'full' && A.ctx && !A.wk && !A.wkPending) {
+      A.wkPending = true;
+      A.loadWorklet(A.ctx).then(function (ok) { A.wk = ok; A.wkPending = false; var qq = A.wkQueue; A.wkQueue = []; qq.forEach(function (fn) { fn(); }); });
+    }
   };
   // Run fn once the audio engine is ready (immediately if it already is).
   A.whenReady = function (fn) { if (A.wkPending) A.wkQueue.push(fn); else fn(); };
