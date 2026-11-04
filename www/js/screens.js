@@ -428,6 +428,35 @@
       h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))), G.car() ? h('span', { class: 'dim gsmall' }, '−' + DR.money(DR.runCost(G.spec(G.car())).total) + ' run') : null,
         btn('Race', function () { if (lock || issue) return UI.toast(lock || issue); DR.Race.raceDay(DR.Race.eventCfg(ev, 0)); }, 'erace ' + (lock || issue ? 'disabled' : 'red'))));
   }
+  UI.eventCard = eventCard;
+  // An event day: everything running at the strip (or on the street) at
+  // once, on one page. Pick a race; after it, you're back here till the
+  // event closes.
+  UI.EventDay = function (arg) {
+    var now = G.now(), e = G.dayAgenda(arg.d0).filter(function (x) { return x.event === arg.event; })[0], title = DR.EVENT_DAYS[arg.event];
+    var back = function () { UI.show(UI.RaceMenu, 'week'); }, body;
+    if (!e) {
+      UI.eventReturn = null;
+      body = h('div', { class: 'col', style: { gap: '8px' } }, h('div', { class: 'dim' }, 'Nothing left to race at this one: it\'s over, or you\'ve won it all.'), btn('Back to your week', back, 'primary'));
+    } else {
+      var on = e.t <= now && now < e.end, ids = [];
+      e.items.forEach(function (it) { it.evs.forEach(function (ev) { ids.push(ev.id); }); });
+      UI.eventReturn = { ids: ids, end: e.end, name: title, go: function () { UI.show(UI.EventDay, arg); } };
+      var head = h('div', { class: 'evdayhead' + (on ? ' on' : '') },
+        h('div', { class: 'grow' }, h('div', { class: 'pix small acc' }, title.toUpperCase()), h('div', { class: 'gsmall acc' }, on ? 'ON NOW • till ' + DR.Cal.hourText(Math.floor(e.end % 24)) : DR.Cal.fmt(e.t, { long: true }) + ' (in ' + DR.Cal.dur(e.t - now) + ')'),
+          h('div', { class: 'gsmall dim' }, 'Enter as many as your car fits: each race takes its own time. A second car can run what this one can\'t.')),
+        on ? null : btn('Go there (' + DR.Cal.dur(e.t - now) + ')', function () { UI.goThere(e.t, title, function () { UI.refresh(); }); }, 'small go'));
+      var warns = [], cards = [];
+      e.items.forEach(function (it) {
+        var why = null; try { why = it.why ? it.why() : null; } catch (x) { /* ignore */ }
+        if (why) warns.push(h('div', { class: 'row', style: { alignItems: 'center', gap: '8px' } }, h('span', { class: 'gsmall warn grow' }, '⚠ ' + it.short + ': ' + why.msg), btn(why.fix[0], why.fix[1], 'small')));
+        it.evs.forEach(function (ev) { cards.push(eventCard(ev)); });
+      });
+      body = [head].concat(warns, [h('div', { class: 'egrid' }, cards)]);
+    }
+    return h('div', { class: 'screen' }, UI.top('RACE DAY', back, h('span', { class: 'topcar' }, bestText(G.car()))),
+      h('div', { class: 'evdaybody' }, body));
+  };
   function sponsorPicker(si) {
     var offers = G.sponsorOffers(si), close;
     var rows = offers.map(function (o) {

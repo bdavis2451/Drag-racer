@@ -1024,3 +1024,8 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .checkout { flex: none; padding: 4px 8px 0; }
 .workcard { flex-wrap: wrap; row-gap: 4px; }
 .workcard .btn { white-space: nowrap; }
+/* an event day: every race on at once, on one page */
+.evdaybody { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.evdayhead { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: #22242c; box-shadow: inset 0 0 0 2px #3b3f4c; }
+.evdayhead.on { background: #1e2a1e; box-shadow: inset 0 0 0 2px #39ff14; }
+.evdaysec { display: flex; flex-direction: column; gap: 6px; }

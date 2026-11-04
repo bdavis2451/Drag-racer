@@ -823,7 +823,7 @@
       // round), a money breakdown, unlock chips and a few short notes
       var moneyDelta = 0, firstWin = false, news = [], money = [], unlocks = [], notes = [];
       var damaged = you.sim.blown ? { engine: true } : you.sim.broke ? (you.sim.brokeWhat === 'axle' ? { axle: true } : you.sim.brokeWhat === 'chassis' ? { chassis: true } : { trans: true }) : null;
-      var ev = cfg.ev, nextRound = null;
+      var ev = cfg.ev, nextRound = null, evBack = them && ev && UI.eventReturn && UI.eventReturn.ids.indexOf(ev.id) >= 0 && G.now() < UI.eventReturn.end ? UI.eventReturn : null;
       if (cfg.mode === 'career' && win) {
         if (DR.multiRound(ev) && cfg.round < ev.opps.length - 1) {
           nextRound = cfg.round + 1;
@@ -961,8 +961,9 @@
             var nc = DR.Race.eventCfg(ev, nextRound); nc.driver = cfg.driver;
             if (bk) DR.Race.raceDay(nc); else DR.Race.start(nc);
           }, 'primary') : null,
-          !damaged && nextRound == null ? btn(them ? (cfg.mode === 'street' ? 'Back to Street' : 'Back to Career') : 'Run Again', function () {
-            if (them) UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career');
+          !damaged && nextRound == null ? btn(them ? (evBack ? 'Back to Race Day' : cfg.mode === 'street' ? 'Back to Street' : 'Back to Career') : 'Run Again', function () {
+            if (them && evBack) evBack.go();
+            else if (them) UI.show(UI.RaceMenu, UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career');
             else DR.Race.start(cfg);
           }, 'primary') : null,
           // broke something: fix it and go again from here
@@ -991,7 +992,7 @@
       root.appendChild(slip);
       controls.style.display = 'none';
       slipEl = slip;
-      root._back = testDrive ? function () { UI.show(UI.Dealer); } : function () { UI.show(UI.RaceMenu, cfg.mode === 'test' ? 'test' : UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career'); };
+      root._back = testDrive ? function () { UI.show(UI.Dealer); } : evBack ? evBack.go : function () { UI.show(UI.RaceMenu, cfg.mode === 'test' ? 'test' : UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career'); };
     }
 
     // unlocks as chips under three small headings, with "+N more" past a few

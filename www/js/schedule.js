@@ -300,6 +300,30 @@
     return { msg: issues[0], fix: fixFor(issues[0]) };
   }
   DR.carWhy = carWhy;
+  // ---------------------------------------------------------------- event days
+  // Races that run at the strip (or on the street) at the same time are one
+  // event: "Sunday at Pixel Dragway" holds the bracket day and the class
+  // races, Saturday holds every class's Saturday races. The event's page
+  // lists them all; enter as many as your car fits, one after another.
+  var FAM = { sun: 'sun', side: 'sun', sat: 'sat', satn: 'satn', fri: 'fri' };
+  DR.EVENT_DAYS = { sun: 'Sunday at Pixel Dragway', sat: 'Saturday at the strip', satn: 'Saturday night under the lights', fri: 'Friday street night' };
+  function eventDays(out, d0) {
+    var groups = {}, rest = [];
+    out.forEach(function (e) {
+      var f = e.evs && FAM[e.slot];
+      if (!f) return rest.push(e);
+      (groups[f] = groups[f] || []).push(e);
+    });
+    Object.keys(groups).forEach(function (f) {
+      var items = groups[f], t = Math.min.apply(null, items.map(function (e) { return e.t; })), end = Math.max.apply(null, items.map(function (e) { return e.end; }));
+      var n = items.reduce(function (a, e) { return a + e.evs.filter(function (ev) { return !G.eventWon(ev); }).length; }, 0);
+      rest.push({ t: t, end: end, slot: items[0].slot, kind: 'drag', career: true, event: f, d0: d0, items: items,
+        label: DR.EVENT_DAYS[f], sub: n + ' race' + (n === 1 ? '' : 's') + ': ' + items.map(function (e) { return e.short; }).join(', '),
+        go: function () { UI.show(UI.EventDay, { event: f, d0: d0 }); },
+        why: function () { var ws = items.map(function (e) { try { return e.why ? e.why() : null; } catch (x) { return null; } }); return ws.every(Boolean) ? ws[0] : null; } });
+    });
+    return rest;
+  }
   G.dayAgenda = function (d0) {
     var out = [], c = G.careerState();
     // career: the career's own (it shows on This Week); why: can't-enter check
@@ -309,7 +333,9 @@
       Object.keys(SCORED).forEach(function (slot) {
         var evs = DR.raceDayEvents(si, slot), open = evs.filter(function (ev) { return !G.eventLock(ev); }), todo = open.filter(function (ev) { return !G.eventWon(ev); });
         if (!todo.length) return;
+        var n0 = out.length;
         add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, 'vs ' + todo.map(function (ev) { return ev.opps[ev.opps.length - 1].name; }).join(', '), true, function () { return carWhy(todo); });
+        if (out.length > n0) { out[n0].evs = open; out[n0].short = DR.STAGES[si].name; }
       });
       var st = DR.STAGES[si];
       if (!G.eventWon(st.boss) && !G.eventLock(st.boss)) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); }, '', true, function () { return carWhy([st.boss]); });
@@ -318,7 +344,10 @@
         var issue = G.car() ? G.carIssue(G.car(), ev) : 'No car';
         if (issue) { UI.toast(issue); return UI.show(UI.RaceMenu, 'career'); }
         if (ev.type === 'show') DR.enterShow(DR.showById(ev.show), ev); else DR.Race.raceDay(DR.Race.eventCfg(ev, 0));
-      }, '', true, function () { return carWhy([ev]); }); });
+      }, '', true, function () { return carWhy([ev]); });
+        var last = out[out.length - 1];
+        if (ev.type === 'class' && last && last.label === DR.CLASSES[ev.cls].name + ' class race' && !last.evs) { last.evs = [ev]; last.short = DR.CLASSES[ev.cls].name + ' class'; }
+      });
     }
     if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }, '', true, function () { return carWhy([K.ev]); }); });
     // the circuit career's race days, the Night Series, an invitation
@@ -338,7 +367,7 @@
     if (CAL.date(d0).d === 1) out.push({ t: d0, end: d0, kind: 'bill', career: true, label: 'Bills due: ' + DR.money(G.weeklyBills()), go: function () { UI.show(UI.Home); } });
     if (G.bank) G.bank().loans.forEach(function (l) { if (l.kind === 'title' && CAL.dayStart(l.due) === d0) out.push({ t: l.due, end: l.due, kind: 'bill', career: true, label: 'Title loan due: ' + DR.money(G.owedOn(l)), go: function () { UI.bankModal(); } }); });
     if (G.extraAgenda) out = out.concat(G.extraAgenda(d0) || []);
-    return out.sort(function (a, b) { return a.t - b.t; });
+    return eventDays(out, d0).sort(function (a, b) { return a.t - b.t; });
   };
   var KCOL = { grudge: '#ff4a3a', drag: '#ff6a00', king: '#ffd700', circuit: '#8a5cff', show: '#ff2bd6', test: '#3aa0ff', bill: '#c8102e', host: '#39ff14', wander: '#00e5ff', club: '#e8e8e8', series: '#2fb3a8' };
   DR.KCOL = KCOL;
