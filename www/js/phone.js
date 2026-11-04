@@ -21,6 +21,7 @@
     cup: ['ray', function (n) { return 'Your team won the ' + (G.cupName ? G.cupName(n) : 'Cup') + '! The road course people will sell you their good stuff now: brakes, bars, wings.' + (n + 1 < DR.STAGES.length ? ' Next up for them: ' + G.cclassName(n + 1).replace(/^Circuit \d+: /, '') + '.' : ''); }],
     invite: ['street', function (iv) { return (iv && iv.team ? iv.team : 'A team') + ' here. Two of ours against two of yours and one more crew, ' + (iv ? DR.TRACKS[iv.track].name : 'this weekend') + '. Team points. You in? (Race > Events)'; }, true],
     firstrace: ['ray', function () { return 'Saw your slip. Don\'t look at the ET, look at the 60 foot. That\'s where races are won and where yours isn\'t yet.'; }],
+    nitrous: ['ray', function () { return 'Lost one? Half that field is on the bottle. A 50-shot dry kit is $500 and the cheapest horsepower there is (Upgrade > Parts > Power Adders). Spray it once the car\'s hooked, not off the line, and mind your injectors.'; }],
     firstwin: ['ray', function () { return 'A win! Frame the slip. Then spend the money on tires, not a wing.'; }],
     stage: ['track', function (n) { return 'Congratulations: you\'re moving up to ' + stageName(n) + '. New race days are on the board. The cars get quicker from here.'; }],
     stageRay: ['ray', function (n) { return n >= 4 ? 'People at the track ask me if I\'m your uncle now. Used to be the other way round. Proud of you.' : n >= 2 ? 'You\'re running with ' + stageName(n) + ' now. Keep the car together and let them break theirs.' : 'Next class up. Same advice: fix what broke, then add power.'; }],
@@ -36,7 +37,7 @@
     hint: ['street', function (t) { return t; }, true],
     couchrent: ['ray', function () { return 'You\'re winning now, kid, so here\'s the deal: ' + DR.money(DR.COUCH_RENT) + ' a month toward the lights and the shop. Couch stays yours. If you\'re short, I\'ll run a tab.'; }],
     nephew: ['ray', function () { return 'My nephew Danny\'s been bugging me to race. He\'s green, but he\'s on your team now: he\'ll drive your circuit races (Race > Career > Circuit) while you run the strip. Pays by the race. Hire better drivers when you can.'; }],
-    bailout: ['ray', function () { return 'Saw your bank balance. Put $2,000 in it. Once, kid. Next time you\'re in the red, sell something: a car, the parts on the shelf. That\'s how the rest of us did it.'; }],
+    bailout: ['ray', function () { return 'Saw your bank balance. Put ' + DR.money(DR.BAILOUT) + ' in it. Once, kid. Next time you\'re in the red it\'s the bank, or selling something: a car, the parts on the shelf. That\'s how the rest of us did it.'; }],
     evicted: ['ray', function () { return 'Landlord called me, kid. Couch is made up. Pay your rent first next time, then buy parts.'; }, true],
     ticket: ['ray', function (d) { return (d && d.fine >= 600 ? 'A ' + DR.money(d.fine) + ' stop? ' : 'Another ticket. ') + 'That\'s what trailers are for.'; }, true]
   };
@@ -115,6 +116,8 @@
     if (s.stats.races >= 1) hit('firstrace');
     if (s.stats.races >= 2) hit('circuit');
     if (s.stats.wins >= 1) hit('firstwin');
+    // the first loss, on a car with no nitrous: Ray says what everyone runs
+    if (s.stats.races > s.stats.wins && !(s.cars || []).some(function (x) { return x.parts && x.parts.nitrous; })) hit('nitrous');
     for (var n = 1; n <= (c.stage || 0); n++) { hit('stage', n); if (n === c.stage) hit('stageRay', n); }
     if (s.cars.length >= 2) hit('secondcar');
     if (s.cars.some(function (x) { return x.won; })) hit('pinkwon');
@@ -125,20 +128,37 @@
     if (t && (t.history || []).some(function (x) { return x.pos === 1; })) hit('circuitwin');
     return out;
   }
-  // The first time the bank goes negative, Ray covers it with $2,000. Once.
+  // The first time the bank goes negative, Ray covers it. Once. He says so
+  // in person (a screen, when you're off the strip), and by text.
+  DR.BAILOUT = 4000;
   function bailout() {
     var s = G.state;
     if (!s || !s.started || s.money >= 0 || s.bailedOut) return;
-    s.bailedOut = true; s.money += 2000; G.save();
+    s.bailedOut = true; s.bailoutSeen = { was: s.money }; s.money += DR.BAILOUT; G.save();
     P.send('bailout');
+    setTimeout(bailoutScreen, 300);
   }
+  function bailoutScreen() {
+    var s = G.state, b = s && s.bailoutSeen;
+    if (!b || b.shown) return;
+    if (document.querySelector('.screen.race') || document.querySelector('.modal') || UI.tutorialOn) return;   // later: next screen
+    b.shown = true; G.save();
+    var close = UI.modal([h('div', { class: 'pix acc' }, 'UNCLE RAY'),
+      h('p', {}, 'You went into the red: ' + DR.money(b.was) + '. Ray saw it.'),
+      h('p', {}, '"I put ' + DR.money(DR.BAILOUT) + ' in your account. Once, kid. You\'re at ' + DR.money(G.state.money) + ' now. Next time you\'re short it\'s the bank, or selling something: a car, the parts on the shelf. Don\'t make me regret it."'),
+      h('p', { class: 'gsmall dim' }, 'Ray bails you out once. After that: a bank loan (Home > Bank), or sell parts and cars.'),
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } },
+        UI.bankModal ? btn('Bank', function () { close(); UI.bankModal(); }) : null,
+        btn('Thanks, Ray', function () { close(); }, 'primary'))]);
+  }
+  P.bailoutScreen = bailoutScreen;
   ['pay', 'earn'].forEach(function (fn) { var o = G[fn]; G[fn] = function () { var r = o.apply(this, arguments); bailout(); return r; }; });
   P.bailout = bailout;
   // a new career starts with Ray
   var origNew = G.newGame;
   G.newGame = function () { var out = origNew.apply(this, arguments); G.state.phone = { msgs: [], sent: {}, queue: [] }; lastAt = Date.now() - (P.GAP - 6) * 1000; P.send('intro'); return out; };
   var origShow = UI.show;
-  UI.show = function () { var out = origShow.apply(this, arguments); if (G.state && G.state.started) { st(); checks(false); bailout(); setTimeout(pump, 600); } return out; };
+  UI.show = function () { var out = origShow.apply(this, arguments); if (G.state && G.state.started) { st(); checks(false); bailout(); setTimeout(bailoutScreen, 450); setTimeout(pump, 600); } return out; };
 
   // ---------------------------------------------------------------- ui
   var btnEl = null;

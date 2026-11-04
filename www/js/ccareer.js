@@ -81,7 +81,7 @@
     var c = C();
     if (ev.stage > G.cstage()) return 'Win the ' + G.cupName(ev.stage - 1) + ' first (circuit class ' + ev.stage + ')';
     var w = G.cupWins(ev.stage);
-    if (w < ev.needWins) return 'Meet the goal at ' + (ev.needWins - w) + ' more circuit race day' + (ev.needWins - w > 1 ? 's' : '') + ' in this stage';
+    if (w < ev.needWins) return 'Meet the goal at ' + (ev.needWins - w) + ' more circuit race day' + (ev.needWins - w > 1 ? 's' : '') + ' in this class';
     if (T.active().some(function (r) { return r.ev === ev.id; })) return 'Your team is racing it now';
     return '';
   };

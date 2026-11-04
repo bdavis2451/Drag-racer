@@ -212,7 +212,7 @@
   function stageChips() {
     return h('div', { class: 'schips' }, DR.STAGES.map(function (st, si) {
       var un = G.stageUnlocked(si), boss = G.stageDone(si);
-      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Beat the King of ' + DR.STAGES[si - 1].name + ' first'); selStage = si; selPlace = null; UI.refresh(); }, un ? '' : 'nofit');
+      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Class ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Beat the King of ' + DR.STAGES[si - 1].name + ' first'); selStage = si; selPlace = null; UI.refresh(); }, un ? '' : 'nofit');
     }));
   }
   function nextEvent(st) {
@@ -368,7 +368,7 @@
       var vis = G.eventVisible(ev), won = G.eventWon(ev), lock = vis && G.eventLock(ev);
       var cls = 'rnode t-' + ev.type + (won ? ' won' : '') + (!vis ? ' hidden' : lock ? ' locked' : '') + (ev === next ? ' next' : '') + (ev === selEv ? ' sel' : '');
       var label = !vis ? '?' : ev.cls ? DR.CLASSES[ev.cls].name.split(' ')[0].toUpperCase() : NODE_GLYPH[ev.type] || ev.type;
-      return h('div', { class: cls, onclick: function () { if (!vis) return UI.toast('Win more races in this stage to reveal this one'); selEv = ev; A.click(); UI.refresh(); } },
+      return h('div', { class: cls, onclick: function () { if (!vis) return UI.toast('Win more races in this class to reveal this one'); selEv = ev; A.click(); UI.refresh(); } },
         h('span', { class: 'rglyph' }, label), won ? h('span', { class: 'rmark good' }, '✔') : lock && vis ? h('span', { class: 'rmark' }, '🔒') : null);
     }
     var road = h('div', { class: 'road' }, cols.map(function (k, i) {
@@ -471,7 +471,7 @@
         o.disc || o.fuelDisc ? h('div', { class: 'acc gsmall' }, o.disc ? Math.round(o.disc.pct * 100) + '% off ' + (DR.UNLOCK_NAMES[o.disc.grp] || o.disc.grp).toLowerCase() + ' parts while signed' : Math.round(o.fuelDisc * 100) + '% off race fuel while signed') : null,
         btn('Sign', function () { G.signSponsor(si, o); A.cash(); close(); UI.toast('Signed with ' + o.name + '! Fulfil the contract to earn a free car.'); UI.refresh(); }, 'small go'));
     });
-    close = UI.modal([h('h2', {}, 'Stage ' + (si + 1) + ' sponsors'), h('p', { class: 'dim' }, 'You can only sign one per stage, so choose carefully.'), h('div', { class: 'col' }, rows), btn('Not yet', function () { close(); }, 'small')]);
+    close = UI.modal([h('h2', {}, 'Class ' + (si + 1) + ' sponsors'), h('p', { class: 'dim' }, 'You can only sign one per class, so choose carefully.'), h('div', { class: 'col' }, rows), btn('Not yet', function () { close(); }, 'small')]);
   }
 
   // a circuit venue on the map: what races there, and the way in
@@ -489,7 +489,7 @@
   function streetView(inst, p) {
     var head = h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'STREET SPOT • ' + (p.dist === 'quarter' ? '1/4' : '1/8') + ' MILE • ' + (p.grip >= 0.9 ? 'NO-PREP' : 'STREET') + ' • NIGHT'),
       h('div', { class: 'pix acc' }, p.name), h('div', { class: 'dim' }, p.blurb)));
-    if (!spotOpen(p)) return h('div', {}, head, h('div', { class: 'warnbox' }, '🔒 Opens in stage ' + (p.stage + 1) + ' of the career.'));
+    if (!spotOpen(p)) return h('div', {}, head, h('div', { class: 'warnbox' }, '🔒 Opens in class ' + (p.stage + 1) + ' of the career.'));
     var dist = p.dist === 'quarter' ? DR.QUARTER : DR.EIGHTH;
     if (p.bets.indexOf(betSel) < 0) betSel = p.bets.filter(function (b) { return b <= G.state.money; }).pop() || p.bets[0];
     if (!streetOpps) streetOpps = G.streetOpponents(G.estimate(inst, dist, p.grip).et, dist, p.grip);

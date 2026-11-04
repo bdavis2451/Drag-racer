@@ -1048,3 +1048,9 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 @media (max-height: 480px) {
   .slip .slipbtns { position: sticky; bottom: -10px; z-index: 2; background: #1f2027; padding: 6px 0 8px; box-shadow: 0 -8px 10px rgba(0,0,0,.45); }
 }
+/* tire shake: a flashing badge on the race screen while the tires hop */
+.shakewarn { position: absolute; left: 50%; top: 32%; transform: translate(-50%, -50%); display: none; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 14px; background: #c8102e; color: #fff; box-shadow: 0 0 0 3px #000, 0 0 0 5px #ffcc00; pointer-events: none; z-index: 5; }
+.shakewarn.on { display: flex; animation: shakewarn 0.11s steps(2) infinite; }
+.shakewarn .pix { font-size: 14px; letter-spacing: 1px; }
+@keyframes shakewarn { 0% { transform: translate(-50%, -50%); background: #c8102e; } 50% { transform: translate(calc(-50% + 2px), calc(-50% - 2px)); background: #e8301e; } }

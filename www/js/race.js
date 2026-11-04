@@ -353,7 +353,8 @@
     var stageBar = h('div', { class: 'stagebar' });
     var quitBtn = btn('✖', function () { quit(); }, 'small back quit');
     var controls = h('div', { class: 'controls' }, gasBtn, actBtn, nosBtn, stageBar, quitBtn);
-    var root = h('div', { class: 'screen race' + (drvAI ? ' drvmode' : '') }, cv, hud, controls);
+    var shakeEl = h('div', { class: 'shakewarn' }, h('span', { class: 'pix' }, 'TIRE SHAKE'), h('span', { class: 'gsmall' }, 'LIFT!'));
+    var root = h('div', { class: 'screen race' + (drvAI ? ' drvmode' : '') }, cv, hud, controls, shakeEl);
     if (drvAI) controls.appendChild(h('div', { class: 'drvtag' }, h('span', { class: 'dim' }, 'DRIVER'), h('span', { class: 'acc' }, drv.name)));
 
     // ---------------------------------------------------------------- input
@@ -483,6 +484,17 @@
 
     function playerThrottle() { return input.gasHeld ? input.gas : 0; }
 
+    // The first run that shakes the tires: what it was and what to do
+    function shakeTip() {
+      var seen = G.state.tips || (G.state.tips = {});
+      if (seen.shake || document.querySelector('.modal')) return;
+      seen.shake = true; G.save();
+      var close = UI.modal([h('h2', {}, 'TIRE SHAKE'),
+        h('p', {}, 'Your tires wrapped up and started hopping. Ride it out at full throttle and it hammers the driveline until something gives: usually an axle.'),
+        h('p', {}, 'Pedal it: the moment it starts, lift off the gas for a split second, then get back in. The car settles and goes.'),
+        h('p', {}, 'To stop it happening at all: a little less tire pressure, a softer launch (lower launch RPM, or the Slide pedal in Settings), and later traction control and a suspension setup that plants the tires (Upgrade > Setup).'),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Got it', function () { close(); }, 'primary'))]);
+    }
     // First race ever: how to leave the line, once, as the tree comes down
     // (the race waits while it's up)
     var tipOpen = false;
@@ -682,6 +694,7 @@
       scene.drawForeground(ctx, camX);
       scene.light(ctx, camX, lamps, parts);
       drawHud();
+      shakeFeel();
       handleEvents();
       racers.forEach(function (r) {
         if (r.voice) A.update(r.voice, r.sim.rpm(), Math.max(r.sim.thr, r.burn * 0.9), r.sim.boost, tireSpin(r), r.S.fiType, soundState(r));
@@ -773,6 +786,21 @@
       });
     }
     function note(t) { subEl.textContent = t; flash.t = 1.6; }
+    // Tire shake you can see and feel: a flashing badge, and the phone
+    // buzzing at the hop rate (stronger when it's hard). Off in the settings.
+    var buzzAt = 0, buzzing = false;
+    function shakeFeel() {
+      var sh = you.sim.shake || 0, on = phase === 'race' && !you.sim.finished && sh > 0.3;
+      if (on !== shakeEl.classList.contains('on')) shakeEl.classList.toggle('on', on);
+      var canBuzz = settings.vibrate !== false && navigator.vibrate && !drvAI;
+      if (!canBuzz) return;
+      var now = performance.now();
+      if (on && now - buzzAt > 420) {
+        var p = sh > 0.75 ? 70 : 45, gap = 111 - p;
+        try { navigator.vibrate([p, gap, p, gap, p, gap, p]); } catch (e) { /* not allowed yet */ }
+        buzzAt = now; buzzing = true;
+      } else if (!on && buzzing) { try { navigator.vibrate(0); } catch (e) { /* ignore */ } buzzing = false; }
+    }
 
     function drawHud() {
       var sim = you.sim, Sx = you.S;
@@ -996,6 +1024,9 @@
       slip.firstChild.appendChild(peekBtn);
       if (win) A.cash();
       root.appendChild(slip);
+      if (shakeEl.classList.contains('on')) shakeEl.classList.remove('on');
+      if (buzzing) { try { navigator.vibrate(0); } catch (e) { /* ignore */ } buzzing = false; }
+      if (!testDrive && !drvAI && (you.sim.shakeMax || 0) > 0.5 && !(G.state.tips || {}).shake) setTimeout(shakeTip, 900);
       controls.style.display = 'none';
       slipEl = slip;
       root._back = testDrive ? function () { UI.show(UI.Dealer); } : evBack ? evBack.go : function () { UI.show(UI.RaceMenu, cfg.mode === 'test' ? 'test' : UI.raceTab === 'map' ? 'map' : cfg.mode === 'street' ? 'street' : 'career'); };

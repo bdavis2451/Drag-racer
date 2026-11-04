@@ -419,7 +419,7 @@
     // the five places to go along the bottom (Race on the right, under the thumb)
     var c = G.careerState(), st = DR.STAGES[c.stage], sp = c.sponsor[c.stage];
     var status = h('div', { class: 'gstatus gcareer', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
-      h('span', { class: 'acc' }, 'Stage ' + (c.stage + 1) + ': ' + st.name),
+      h('span', { class: 'acc' }, 'Class ' + (c.stage + 1) + ': ' + st.name),
       h('span', {}, G.stageWins(c.stage) + '/' + st.events.length + ' wins'),
       G.cupWins && G.cstage ? h('span', { class: '' }, 'Circuit ' + (G.cstage() + 1) + ': ' + G.cupWins(G.cstage()) + '/4') : null,
       h('span', { class: sp ? '' : 'warn' }, sp ? DR.sponsorById(sp.id).name : 'No sponsor yet'));

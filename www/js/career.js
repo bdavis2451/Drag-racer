@@ -294,7 +294,7 @@
     var c = C();
     if (!G.stageDone(si) || c.stage > si || si + 1 >= DR.STAGES.length) return '';
     c.stage = si + 1; G.save();
-    return 'Stage ' + (si + 2) + ' unlocked: ' + DR.STAGES[si + 1].name;
+    return 'Class ' + (si + 2) + ' unlocked: ' + DR.STAGES[si + 1].name;
   };
   G.stageWins = function (si) { var w = 0; DR.STAGES[si].events.forEach(function (ev) { if (C().won[ev.id]) w++; }); return w; };
   G.eventWon = function (ev) { return !!C().won[ev.id]; };
@@ -340,7 +340,7 @@
     var c = C(), st = DR.STAGES[ev.stage];
     if (ev.stage > c.stage) return 'Beat the King of ' + DR.STAGES[ev.stage - 1].name + ' first';
     var wins = G.stageWins(ev.stage);
-    if (wins < ev.needWins) return 'Win ' + (ev.needWins - wins) + ' more race' + (ev.needWins - wins > 1 ? 's' : '') + ' in this stage';
+    if (wins < ev.needWins) return 'Win ' + (ev.needWins - wins) + ' more race' + (ev.needWins - wins > 1 ? 's' : '') + ' in this class';
     if (ev.type === 'boss') {
       var sp = c.sponsor[ev.stage];
       if (!sp) return 'Sign a sponsor first';
