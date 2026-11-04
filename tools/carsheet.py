@@ -23,6 +23,9 @@ Config (tools/carsheets/<id>.json):
   lenM      the car's real length in metres
   paint     {"hue": [from, to], "minSat": s, "minVal": v} body paint hue range
             (wraps through 0 for reds: [0.94, 0.04])
+  windows   (optional) [[[x0, y0, x1, y1], [seed x, y], ...], ...]: windows whose
+            insides keep the art's colours (seats, reflections) instead of
+            being keyed as paint; frameV: how dark the window frame is
 """
 import json, sys, os, colorsys
 from collections import deque
@@ -217,6 +220,50 @@ def build(cfg, prev_dir=None, crops=None):
             add = cand & nb
             if not add.any(): break
             b['paint'] = P | add; cand &= ~add
+    # ---- windows: a seat, a headrest or a reflection behind the glass in the
+    # paint's own tone (a grey, white or black car) would be keyed as paint
+    # and take the body colour in game. "windows" (stock car, sheet pixels):
+    # [[box x0, y0, x1, y1], [seed x, y], ...]: each window is flood-filled
+    # from its seeds up to its dark frame (darker than "frameV"), inside the
+    # box, and nothing in it is paint: it keeps the art's own colours.
+    b0 = builds[0]; b0['win'] = np.zeros_like(b0['a'])
+    fv = cfg.get('frameV', 0.16)
+    for win in cfg.get('windows', []):
+        clip, seeds = win[0], win[1:]
+        if len(clip) == 4 and not isinstance(clip[0], list): clip = [[clip[0], clip[1]], [clip[2], clip[1]], [clip[2], clip[3]], [clip[0], clip[3]]]
+        cm = Image.new('L', (b0['a'].shape[1], b0['a'].shape[0]), 0); ImageDraw.Draw(cm).polygon([tuple(q) for q in clip], fill=255, outline=255)
+        inside = np.asarray(cm) > 0
+        xs_ = [q[0] for q in clip]; ys_ = [q[1] for q in clip]; x0, y0, x1, y1 = min(xs_), min(ys_), max(xs_), max(ys_)
+        open_ = (b0['hsv'][..., 2] >= fv) & b0['a'] & inside
+        q = deque()
+        for sx, sy in seeds:
+            if open_[sy, sx] and not b0['win'][sy, sx]: b0['win'][sy, sx] = True; q.append((sy, sx))
+        while q:
+            y, x = q.popleft()
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if y0 <= ny <= y1 and x0 <= nx <= x1 and open_[ny, nx] and not b0['win'][ny, nx]:
+                    b0['win'][ny, nx] = True; q.append((ny, nx))
+    if cfg.get('windows'):
+        print('windows: %d px, %d of them were paint' % (b0['win'].sum(), (b0['win'] & b0['paint']).sum()))
+        b0['paint'] &= ~b0['win']
+        if prev_dir:
+            s_ = 5; H_, W_ = b0['a'].shape
+            im = Image.new('RGB', (W_ * s_, H_ * s_), (70, 70, 85)); d_ = ImageDraw.Draw(im)
+            for y in range(H_):
+                for x in range(W_):
+                    if not b0['a'][y, x]: continue
+                    c_ = tuple(int(v_) for v_ in b0['rgb'][y, x])
+                    if b0['win'][y, x]: c_ = (min(255, c_[0] // 2 + 128), c_[1] // 2, min(255, c_[2] // 2 + 128))
+                    d_.rectangle([x * s_, y * s_, x * s_ + s_ - 1, y * s_ + s_ - 1], fill=c_)
+            for gx in range(0, W_, 5): d_.line([gx * s_, 0, gx * s_, H_ * s_], fill=(110, 110, 50) if gx % 10 else (200, 200, 0))
+            for gy in range(0, H_, 5): d_.line([0, gy * s_, W_ * s_, gy * s_], fill=(110, 110, 50) if gy % 10 else (200, 200, 0))
+            for gx in range(0, W_, 10): d_.text((gx * s_ + 2, 2), str(gx), fill=(255, 255, 0))
+            for gy in range(10, H_, 10): d_.text((2, gy * s_ + 1), str(gy), fill=(255, 255, 0))
+            for win in cfg['windows']:
+                clip = win[0]
+                if len(clip) == 4 and not isinstance(clip[0], list): clip = [[clip[0], clip[1]], [clip[2], clip[1]], [clip[2], clip[3]], [clip[0], clip[3]]]
+                d_.polygon([(q[0] * s_, q[1] * s_) for q in clip], outline=(0, 255, 255))
+            im.save(os.path.join(prev_dir, 'win_%s.png' % cfg['id']))
     base_v = float(np.median(builds[0]['hsv'][..., 2][builds[0]['paint']]))
     for b in builds:
         # brightness smoothed over neighbouring paint pixels (5x5), so the

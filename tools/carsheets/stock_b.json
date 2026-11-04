@@ -1,18 +1,319 @@
-{ "sheet": "tools/carsheets/stock_b.webp", "count": 15, "key": "magenta",
-  "cars": [
-    { "slot": 1,  "id": "silvia",    "lenM": 4.5, "paint": { "neutral": [0.55, 1.0], "maxSat": 0.12 } },
-    { "slot": 2,  "id": "z35",       "lenM": 4.3, "paint": { "hue": [0.02, 0.1], "minSat": 0.5 } },
-    { "slot": 3,  "id": "nova",      "lenM": 4.8, "paint": { "hue": [0.56, 0.7], "minSat": 0.7, "minVal": 0.18 } },
-    { "slot": 4,  "id": "m3",        "lenM": 4.5, "paint": { "neutral": [0.42, 0.9], "maxSat": 0.12 } },
-    { "slot": 5,  "id": "belair",    "lenM": 5.0, "paint": { "hue": [0.42, 0.56], "minSat": 0.4 } },
-    { "slot": 6,  "id": "s2k",       "lenM": 4.1, "paint": { "hue": [0.09, 0.18], "minSat": 0.45 } },
-    { "slot": 7,  "id": "vette5",    "lenM": 4.6, "paint": { "hue": [0.94, 0.04], "minSat": 0.45 } },
-    { "slot": 8,  "id": "sti",       "lenM": 4.5, "paint": { "hue": [0.56, 0.7], "minSat": 0.6, "minVal": 0.45 } },
-    { "slot": 9,  "id": "cobra03",   "lenM": 4.6, "paint": { "neutral": [0.06, 0.34], "maxSat": 0.22 } },
-    { "slot": 10, "id": "evo",       "lenM": 4.5, "paint": { "neutral": [0.55, 1.0], "maxSat": 0.12 } },
-    { "slot": 11, "id": "camss",     "lenM": 4.8, "paint": { "hue": [0.09, 0.18], "minSat": 0.45 } },
-    { "slot": 12, "id": "lightning", "lenM": 5.3, "paint": { "neutral": [0.06, 0.34], "maxSat": 0.22 } },
-    { "slot": 13, "id": "willys",    "lenM": 4.3, "sameWheels": false, "paint": { "hue": [0.9, 0.05], "minSat": 0.45 } },
-    { "slot": 14, "id": "rx7",       "lenM": 4.3, "paint": { "hue": [0.94, 0.04], "minSat": 0.45 } },
-    { "slot": 15, "id": "gnx",       "lenM": 5.0, "paint": { "neutral": [0.06, 0.34], "maxSat": 0.22 } }
-  ] }
+{
+ "sheet": "tools/carsheets/stock_b.webp",
+ "count": 15,
+ "key": "magenta",
+ "cars": [
+  {
+   "slot": 1,
+   "id": "silvia",
+   "lenM": 4.5,
+   "paint": {
+    "neutral": [
+     0.55,
+     1.0
+    ],
+    "maxSat": 0.12
+   }
+  },
+  {
+   "slot": 2,
+   "id": "z35",
+   "lenM": 4.3,
+   "paint": {
+    "hue": [
+     0.02,
+     0.1
+    ],
+    "minSat": 0.5
+   }
+  },
+  {
+   "slot": 3,
+   "id": "nova",
+   "lenM": 4.8,
+   "paint": {
+    "hue": [
+     0.56,
+     0.7
+    ],
+    "minSat": 0.7,
+    "minVal": 0.18
+   }
+  },
+  {
+   "slot": 4,
+   "id": "m3",
+   "lenM": 4.5,
+   "paint": {
+    "neutral": [
+     0.42,
+     0.9
+    ],
+    "maxSat": 0.12
+   }
+  },
+  {
+   "slot": 5,
+   "id": "belair",
+   "lenM": 5.0,
+   "paint": {
+    "hue": [
+     0.42,
+     0.56
+    ],
+    "minSat": 0.4
+   }
+  },
+  {
+   "slot": 6,
+   "id": "s2k",
+   "lenM": 4.1,
+   "paint": {
+    "hue": [
+     0.09,
+     0.18
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 7,
+   "id": "vette5",
+   "lenM": 4.6,
+   "paint": {
+    "hue": [
+     0.94,
+     0.04
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 8,
+   "id": "sti",
+   "lenM": 4.5,
+   "paint": {
+    "hue": [
+     0.56,
+     0.7
+    ],
+    "minSat": 0.6,
+    "minVal": 0.45
+   }
+  },
+  {
+   "slot": 9,
+   "id": "cobra03",
+   "lenM": 4.6,
+   "paint": {
+    "neutral": [
+     0.06,
+     0.34
+    ],
+    "maxSat": 0.22
+   },
+   "frameV": 0.06,
+   "windows": [
+    [
+     [
+      [
+       116,
+       40
+      ],
+      [
+       122,
+       28
+      ],
+      [
+       132,
+       20
+      ],
+      [
+       146,
+       17
+      ],
+      [
+       150,
+       17
+      ],
+      [
+       150,
+       44
+      ],
+      [
+       116,
+       44
+      ]
+     ],
+     [
+      135,
+      32
+     ]
+    ],
+    [
+     [
+      [
+       150,
+       14
+      ],
+      [
+       222,
+       14
+      ],
+      [
+       232,
+       30
+      ],
+      [
+       230,
+       45
+      ],
+      [
+       150,
+       45
+      ]
+     ],
+     [
+      180,
+      25
+     ],
+     [
+      155,
+      30
+     ]
+    ]
+   ]
+  },
+  {
+   "slot": 10,
+   "id": "evo",
+   "lenM": 4.5,
+   "paint": {
+    "neutral": [
+     0.55,
+     1.0
+    ],
+    "maxSat": 0.12
+   }
+  },
+  {
+   "slot": 11,
+   "id": "camss",
+   "lenM": 4.8,
+   "paint": {
+    "hue": [
+     0.09,
+     0.18
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 12,
+   "id": "lightning",
+   "lenM": 5.3,
+   "paint": {
+    "neutral": [
+     0.06,
+     0.34
+    ],
+    "maxSat": 0.22
+   },
+   "frameV": 0.06,
+   "windows": [
+    [
+     [
+      [
+       208,
+       15
+      ],
+      [
+       266,
+       15
+      ],
+      [
+       282,
+       44
+      ],
+      [
+       282,
+       57
+      ],
+      [
+       208,
+       57
+      ]
+     ],
+     [
+      240,
+      35
+     ],
+     [
+      212,
+      35
+     ]
+    ]
+   ]
+  },
+  {
+   "slot": 13,
+   "id": "willys",
+   "lenM": 4.3,
+   "sameWheels": false,
+   "paint": {
+    "hue": [
+     0.9,
+     0.05
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 14,
+   "id": "rx7",
+   "lenM": 4.3,
+   "paint": {
+    "hue": [
+     0.94,
+     0.04
+    ],
+    "minSat": 0.45
+   }
+  },
+  {
+   "slot": 15,
+   "id": "gnx",
+   "lenM": 5.0,
+   "paint": {
+    "neutral": [
+     0.06,
+     0.34
+    ],
+    "maxSat": 0.22
+   },
+   "frameV": 0.06,
+   "windows": [
+    [
+     [
+      137,
+      12,
+      262,
+      50
+     ],
+     [
+      150,
+      30
+     ],
+     [
+      210,
+      30
+     ],
+     [
+      180,
+      35
+     ]
+    ]
+   ]
+  }
+ ]
+}
