@@ -276,7 +276,7 @@
     var p = style.split(':'), carId = p[1], k = +p[2], B = DR.BITMAP_CARS[carId], sh = sheetOf(B.sheet);
     var src, cx, cy, sr;
     var fromCar = k === 0 || !!B.builds;
-    if (B.builds) { cx = B.builds[k].wheelR[0]; cy = B.builds[k].wheelR[1]; sr = B.builds[k].wheelR[2]; }
+    if (B.builds) { k = Math.min(k, B.builds.length - 1); cx = B.builds[k].wheelR[0]; cy = B.builds[k].wheelR[1]; sr = B.builds[k].wheelR[2]; }
     else if (k === 0) { cx = B.wheelR[0]; cy = B.wheelR[1]; sr = B.wheelR[2]; }
     else { src = B.wheels[k - 1]; cx = (src[0] + src[2]) / 2; cy = (src[1] + src[3]) / 2; sr = (src[2] - src[0] + 1) / 2; }
     var R = Math.ceil(r) + 1, S = R * 2 + 1, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
@@ -309,16 +309,66 @@
   var BUILD_RIMS = { mesh: 1, pony: 1, turbine: 2, split: 2, deep: 3, drag: 3 };
   function buildOf(B, look) {
     var vis = look.vis || {}, lvl = Math.max(vis.fbumper || 0, vis.rbumper || 0, vis.skirt || 0, vis.hood || 0);
-    var bd = B.builds[Math.min(3, lvl)], spT = vis.spoiler || (look.wing ? look.wing + 1 : 0), lists = [];
+    var bd = B.builds[Math.min(B.builds.length - 1, lvl)], spT = vis.spoiler || (look.wing ? look.wing + 1 : 0), lists = [];
     if (spT && B.wings[spT - 1] && B.wings[spT - 1].length) {
       var ox = Math.round(bd.wheelR[0]), oy = bd.roof;
       lists.push(B.wings[spT - 1].map(function (q) { return [ox + q[0], oy + q[1], q[2]]; }));
     }
-    var rims = {}; for (var k in BUILD_RIMS) rims[k] = BUILD_RIMS[k];
+    // a stock-only sheet has just its own wheel: aftermarket rims are drawn
+    var rims = {}; if (B.builds.length > 1) for (var k in BUILD_RIMS) rims[k] = BUILD_RIMS[k];
     return { sheet: B.sheet, dens: B.dens, body: [bd.rect[0], bd.rect[1], bd.rect[2]], ground: bd.ground,
       tireM: DR.TIRES[DR.CARS[look.carId].tire].r, wheelR: bd.wheelR, wheelF: bd.wheelF, keep: [],
       tail: bd.tail, head: bd.head, exhaust: bd.exhaust, belt: bd.belt, rocker: bd.rocker, hood: [bd.rect[0], bd.rect[2]],
-      livery: bd.livery, rims: rims, builds: B.builds, overlays: lists };
+      livery: bd.livery, rims: rims, builds: B.builds, overlays: lists, stockOnly: B.builds.length === 1 };
+  }
+
+  // A stock-only bitmap car wears the same generated body kit as the drawn
+  // cars (bodyKit, from the car's own outline), turned into pixel lists in
+  // sheet coordinates: [x, y, 'rrggbb' or 'pN' for paint]
+  function bitmapKit(B, look, sh) {
+    var vis = Object.assign({}, look.vis || {}), lk = look;
+    if (look.wing && !vis.spoiler) { vis.spoiler = Math.min(3, look.wing + 1); lk = Object.assign({}, look, { wing: 0 }); }
+    if (!['fbumper', 'rbumper', 'skirt', 'spoiler', 'hood', 'roof', 'tips'].some(function (k) { return vis[k]; }) && vis.vinyl !== 1) return [];
+    var x0 = B.body[0], x1 = B.body[2], gy = B.ground, us = (x1 - x0 + 1) / 100;
+    function ux(sx) { return (sx + 0.5 - x0) / us; }
+    function uy(sy) { return (gy - sy - 0.5) / us; }
+    // the outline's top edge, as a polygon in body units
+    var shell = [], tops = {};
+    for (var sx = x0; sx <= x1; sx++) {
+      for (var sy = B.body[1]; sy <= gy; sy++) if (sget(sh, sx, sy)) { tops[sx] = sy; shell.push([ux(sx), uy(sy) + 0.5 / us]); break; }
+    }
+    shell.push([100, 0], [0, 0]);
+    // the bumpers' bottom edges (lowest body pixel near each end): lips and
+    // diffusers hang from there; skirts from the sill
+    function lowIn(ua, ub) { var lo = -1; for (var X = Math.round(x0 + ua * us); X <= Math.round(x0 + ub * us); X++) for (var Y = gy; Y >= B.body[1]; Y--) if (sget(sh, X, Y)) { lo = Math.max(lo, Y); break; } return lo < 0 ? 4 : uy(lo) + 0.9; }
+    var bf = lowIn(94, 99), br = lowIn(1, 6), bump = function (a, b, y) { return { stock: { pts: [[a, y], [b, y], [b, y + 8], [a, y + 8]] } }; };
+    var A = { wr: ux(B.wheelR[0]), wf: ux(B.wheelF[0]), rocker: uy(B.rocker) + 1.2, wheelScale: 1, kit: { fbumper: bump(90, 100, bf), rbumper: bump(0, 10, br) },
+      hood: [ux(B.wheelF[0]) - 14, 97], exhaust: [ux(B.exhaust[0]), uy(B.exhaust[1])] };
+    var parts = [], details = [], uk = (x1 - x0 + 1) / (DR.PPM * (B.dens || 1)) * PPM / 100;
+    bodyKit(vis, A, shell, parts, details, lk, uk);
+    var out = [];
+    function hex(c) { return c.map(function (v) { return ('0' + Math.round(v).toString(16)).slice(-2); }).join(''); }
+    function fill(pts, col) {
+      var bb = bbox(pts), sxa = Math.floor(x0 + bb[0] * us), sxb = Math.ceil(x0 + bb[2] * us), sya = Math.floor(gy - bb[3] * us), syb = Math.ceil(gy - bb[1] * us);
+      var inside = function (X, Y) { return inPoly(pts, ux(X), uy(Y)); };
+      for (var Y = sya; Y <= syb; Y++) for (var X = sxa; X <= sxb; X++) {
+        if (!inside(X, Y)) continue;
+        var c = col(X, Y, { top: !inside(X, Y - 1), bot: !inside(X, Y + 1) });
+        if (c) out.push([X, Y, c]);
+      }
+    }
+    var MATK = {
+      paint: function (X, Y, e) { return 'p' + (e.top ? 1 : e.bot ? 5 : 3); },
+      trim: function (X, Y, e) { return hex(plastic(e.top ? 0.8 : e.bot ? -0.5 : 0, 18)); },
+      carbon: function (X, Y, e) { return e.top ? '5a5c64' : ((X >> 1) + (Y >> 1)) % 2 ? '2a2b30' : '3a3c42'; },
+      chrome: function (X, Y, e) { return hex(chrome(e.top ? 0.8 : e.bot ? -0.5 : 0.25)); },
+      red: function () { return 'c81e1e'; },
+      vent: function (X, Y, e) { return e.top ? '040406' : '0e0e11'; },
+      decal: function (X, Y, e) { return e.top || e.bot ? '141418' : (Y % 3 ? 'f0f0ec' : '141418'); }
+    };
+    parts.forEach(function (p) { fill(p.pts, MATK[p.mat] || MATK.trim); });
+    details.forEach(function (d) { fill(d[1], MATK[d[0]] || MATK.vent); });
+    return out;
   }
 
   function buildBitmapSprite(look, key, B) {
@@ -330,6 +380,7 @@
     // the EG sheet's built cars wear (street build: tier 1, race build:
     // tiers 2-3; neither car has a roof scoop or visible tips)
     var K = B.kit, kitLists = (B.overlays || []).slice(), spT = vis.spoiler || (look.wing ? look.wing : 0);
+    if (B.stockOnly) { var pk = bitmapKit(B, look, sh); if (pk.length) kitLists.push(pk); }
     if (K) {
       var kitParts = [];
       if (spT) kitParts.push(spT === 1 ? K.spoiler[0] : K.spoiler[1]);

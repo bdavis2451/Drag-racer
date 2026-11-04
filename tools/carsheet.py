@@ -134,14 +134,17 @@ def hsv(rgb):
 
 def is_paint(hv, p):
     h, s, v = hv[..., 0], hv[..., 1], hv[..., 2]
+    if 'neutral' in p:
+        lo, hi = p['neutral']
+        return (s <= p.get('maxSat', 0.18)) & (v >= lo) & (v <= hi)
     lo, hi = p['hue']
     inh = (h >= lo) | (h <= hi) if lo > hi else (h >= lo) & (h <= hi)
     return inh & (s >= p.get('minSat', 0.45)) & (v >= p.get('minVal', 0.18))
 
 
-def build(cfg, prev_dir=None):
-    img = np.asarray(Image.open(cfg['sheet']).convert('RGBA'))
-    crops = cut_builds(img)
+def build(cfg, prev_dir=None, crops=None):
+    if crops is None:
+        crops = cut_builds(np.asarray(Image.open(cfg['sheet']).convert('RGBA')))
     info = [wheels(c) for c in crops]
     wb = [w[1][0] - w[0][0] for w, g in info]
     stock_len = crops[0].shape[1]
@@ -161,12 +164,21 @@ def build(cfg, prev_dir=None):
             r_ = min((wr[2] + wf[2]) * f / 2, sr * 1.03)
             for w_ in (builds[-1]['wheelR'], builds[-1]['wheelF']):
                 w_[2] = r_; w_[1] = min(w_[1], builds[-1]['ground'] - r_)
+        if len(crops) == 1:
+            # one stock car: the same tires front and rear; a fit that takes
+            # in the arch reads large, so the smaller one
+            r_ = min(builds[-1]['wheelR'][2], builds[-1]['wheelF'][2])
+            for w_ in (builds[-1]['wheelR'], builds[-1]['wheelF']):
+                w_[2] = r_; w_[1] = builds[-1]['ground'] - r_
         print('%-6s sheet wheelbase %.1f  scale %.3f  size %dx%d  wheels r %.1f / %.1f' % (NAMES[i], wb[i], f, a.shape[1], a.shape[0], builds[-1]['wheelR'][2], builds[-1]['wheelF'][2]))
 
     # ---- paint: body-colour pixels become ramp steps by brightness, judged
     # against the stock car's paint (so every build shades the same)
     for b in builds:
         b['hsv'] = hsv(b['rgb']); b['paint'] = is_paint(b['hsv'], cfg['paint']) & b['a']
+        yy, xx = np.mgrid[0:b['a'].shape[0], 0:b['a'].shape[1]]
+        for w_ in (b['wheelR'], b['wheelF']):
+            b['paint'] &= (xx + 0.5 - w_[0]) ** 2 + (yy + 0.5 - w_[1]) ** 2 > (w_[2] * 0.9) ** 2
     base_v = float(np.median(builds[0]['hsv'][..., 2][builds[0]['paint']]))
     for b in builds:
         # brightness smoothed over neighbouring paint pixels (5x5), so the
@@ -308,14 +320,14 @@ def build(cfg, prev_dir=None):
         c = flat[i]
         if c not in idx: idx[c] = len(pal); pal.append(c)
         n = idx[c]; toks.append(B64[n >> 6] + B64[n & 63] + B64[j - i - 1]); i = j
-    js = ('// %s sprite sheet: four builds (stock, street, widebody, race), made by\n'
-          '// tools/carsheet.py from tools/carsheets/%s.png. Paint is p0..p6 (the\n'
+    js = ('// %s sprite sheet: ' + ('four builds (stock, street, widebody, race)' if len(builds) == 4 else 'the stock car (body kits drawn on in game)') + ', made by\n'
+          '// tools/carsheet.py from tools/carsheets/%s. Paint is p0..p6 (the\n'
           '// paint ramp); runs are [palette index: 2 chars, run - 1: 1 char], base 64.\n'
           'DR.SHEETS = DR.SHEETS || {};\n'
           'DR.SHEETS.%s = { w: %d, h: %d, enc: 3, pal: %s,\n  rle: \'%s\' };\n'
           'DR.BITMAP_CARS = DR.BITMAP_CARS || {};\n'
           'DR.BITMAP_CARS.%s = { sheet: \'%s\', dens: %d,\n  builds: %s,\n  wings: %s };\n') % (
-        cfg['id'], cfg['id'], cfg['id'], AW, AH, json.dumps(pal), ''.join(toks),
+        cfg['id'], cfg.get('src', cfg['id'] + '.png'), cfg['id'], AW, AH, json.dumps(pal), ''.join(toks),
         cfg['carId'], cfg['id'], DENS, json.dumps(meta), json.dumps(wing_lists, separators=(',', ':')))
     out = os.path.join(os.path.dirname(__file__), '..', 'www', 'js', 'sheet_%s.js' % cfg['id'])
     open(out, 'w').write(js)
@@ -338,6 +350,50 @@ def build(cfg, prev_dir=None):
         img2.save(os.path.join(prev_dir, 'atlas_%s.png' % cfg['id']))
 
 
+def cut_grid(img, n):
+    """A sheet of stock cars in rows (left to right, top to bottom): each car
+    as an RGBA crop, with any part of it that floats free (a wing) kept."""
+    a = img[..., 3] > 127
+    comps = components(a, 150)
+    big = [c for c in comps if len(c) >= 3000]
+    assert len(big) >= n, 'found %d cars, expected %d' % (len(big), n)
+    big = big[:n]
+    boxes = []
+    for c in big:
+        ys, xs = zip(*c); boxes.append([min(xs), min(ys), max(xs), max(ys), list(c)])
+    for c in comps:
+        if len(c) >= 3000: continue
+        ys, xs = zip(*c); cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+        for b in boxes:
+            if b[0] - 25 <= cx <= b[2] + 25 and b[1] - 25 <= cy <= b[3] + 25:
+                b[4].extend(c); b[0] = min(b[0], min(xs)); b[1] = min(b[1], min(ys)); b[2] = max(b[2], max(xs)); b[3] = max(b[3], max(ys)); break
+    # rows: by the cars' vertical centres, split where there's a gap
+    boxes.sort(key=lambda b: (b[1] + b[3]) / 2)
+    rows = [[boxes[0]]]
+    for b in boxes[1:]:
+        if (b[1] + b[3]) / 2 - (rows[-1][-1][1] + rows[-1][-1][3]) / 2 > 60: rows.append([b])
+        else: rows[-1].append(b)
+    out = []
+    for r in rows:
+        for b in sorted(r, key=lambda b: b[0]):
+            x0, y0, x1, y1, pts = b
+            crop = np.zeros((y1 - y0 + 1, x1 - x0 + 1, 4), np.uint8)
+            ys, xs = np.array([q[0] for q in pts]), np.array([q[1] for q in pts])
+            crop[ys - y0, xs - x0] = img[ys, xs]
+            out.append(crop)
+    return out
+
+
+def grid(cfg, prev_dir=None):
+    img = np.asarray(Image.open(cfg['sheet']).convert('RGBA'))
+    crops = cut_grid(img, cfg['count'])
+    for car in cfg['cars']:
+        c = dict(car); c.setdefault('carId', c['id']); c['src'] = os.path.basename(cfg['sheet'])
+        print('== #%d %s' % (car['slot'], car['id']))
+        build(c, prev_dir, [crops[car['slot'] - 1]])
+
+
 if __name__ == '__main__':
     cfg = json.load(open(sys.argv[1]))
     if sys.argv[2] == 'build': build(cfg, sys.argv[3] if len(sys.argv) > 3 else None)
+    if sys.argv[2] == 'grid': grid(cfg, sys.argv[3] if len(sys.argv) > 3 else None)
