@@ -314,4 +314,40 @@
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '6px' } }, btn('Close', function () { close(); }, 'primary'))]);
     upd();
   };
+  // ---------------------------------------------------------------- game over
+  // Ray bails you out once; after that it's the bank or selling things. Down
+  // to -$10,000 and nobody's lending: the career's over.
+  DR.GAME_OVER_AT = -10000;
+  function checkBroke() {
+    var s = G.state;
+    if (!s || !s.started || s.gameOver || s.money > DR.GAME_OVER_AT) return;
+    s.gameOver = { at: G.now ? G.now() : 0, money: s.money }; G.save();
+    if (!document.querySelector('.screen.race')) setTimeout(function () { UI.show(UI.GameOver); }, 50);
+  }
+  ['pay', 'earn'].forEach(function (fn) { var o = G[fn]; G[fn] = function () { var r = o.apply(this, arguments); checkBroke(); return r; }; });
+  UI.GameOver = function () {
+    var s = G.state, go = s.gameOver || { money: s.money }, c = G.careerState ? G.careerState() : {}, st = DR.STAGES[Math.min(c.stage || 0, DR.STAGES.length - 1)];
+    var best = null; (s.cars || []).forEach(function (x) { if (x.best && x.best.q && (!best || x.best.q < best)) best = x.best.q; });
+    function row(a, b) { return h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'dim' }, a), h('span', {}, b)); }
+    return h('div', { class: 'screen gameover' },
+      h('div', { class: 'content', style: { display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+        h('div', { class: 'panel col', style: { maxWidth: '520px', width: '100%', gap: '8px' } },
+          h('div', { class: 'logo', style: { fontSize: '28px', color: '#ff4a3a' } }, 'GAME OVER'),
+          h('p', {}, 'You\'re ' + DR.money(-go.money) + ' in the hole. Ray already bailed you out once, and nobody else is lending. The repo truck takes the cars; the parts go to cover what you owe.'),
+          row('Reached', 'Class ' + ((c.stage || 0) + 1) + ': ' + (st ? st.name : '')),
+          row('Races', (s.stats.races || 0) + ' (' + (s.stats.wins || 0) + ' wins)'),
+          row('Money earned', DR.money(s.stats.earned || 0)),
+          row('Best 1/4 mile', best ? best.toFixed(3) + ' s' : 'none'),
+          row('Career ended', go.at ? DR.Cal.fmt(go.at, { long: true }) : ''),
+          h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px', marginTop: '6px', flexWrap: 'wrap' } },
+            btn('Restore a backup', function () { UI.show(UI.Settings, UI.GameOver); }),
+            btn('Start a new career', function () { UI.show(UI.Starter); }, 'primary')))));
+  };
+  // a finished career stays finished: every screen but these leads back here
+  var show0 = UI.show;
+  UI.show = function (fn) {
+    var s = G.state;
+    if (s && s.started && s.gameOver && [UI.GameOver, UI.Title, UI.Starter, UI.Settings, UI.Help].indexOf(fn) < 0) return show0.call(this, UI.GameOver);
+    return show0.apply(this, arguments);
+  };
 })();

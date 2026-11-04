@@ -406,11 +406,11 @@
     if (inst.damage) {
       var cost = G.repairCost(inst);
       dmg = h('div', { class: 'gdmg warnbox' }, (inst.damage.engine ? 'ENGINE BLOWN! ' : inst.damage.axle ? 'BROKEN AXLE! ' : inst.damage.chassis ? 'CRACKED CHASSIS! ' : 'TRANSMISSION BROKEN! ') + 'Repair: ' + DR.money(cost) + ' ',
-        btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money'); }, 'small go'),
+        btn('Repair', function () { if (G.repair(inst)) { A.cash(); UI.refresh(); } else UI.toast('Not enough money: the bank (Home > Bank) lends, or sell parts or a car'); }, 'small go'),
         btn('Bill', function () {
           var bill = G.repairBill(inst), close = UI.modal([h('div', { class: 'pix acc' }, 'SHOP BILL'),
             bill.lines.map(function (l) { return h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', {}, l[0]), h('span', {}, DR.money(l[1]))); }),
-            cost < bill.total ? h('div', { class: 'dim gsmall' }, 'The shop takes what you have: ' + DR.money(cost) + '.') : null,
+            !G.canAfford(cost) ? h('div', { class: 'warn gsmall' }, 'You\'re ' + DR.money(cost - G.state.money) + ' short: the bank (Home > Bank) lends, or sell parts or a car.') : null,
             h('div', { class: 'row', style: { justifyContent: 'space-between', borderTop: '1px solid #444', marginTop: '4px' } }, h('span', { class: 'acc' }, 'Total'), h('span', { class: 'acc' }, DR.money(bill.total))),
             h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Close', function () { close(); }))]);
         }, 'small'));

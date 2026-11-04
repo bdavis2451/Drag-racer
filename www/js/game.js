@@ -662,13 +662,8 @@
   };
 
   // ---------------------------------------------------------------- damage
-  // no other car that runs: the shop takes whatever you have, so a blown
-  // engine can never leave you stuck with nothing to race
-  G.mercyRepair = function (inst) { return !G.state.cars.some(function (c) { return c !== inst && !c.damage; }); };
-  G.repairCost = function (inst) {
-    var full = fullRepairCost(inst);
-    return G.mercyRepair(inst) ? Math.min(full, Math.max(0, G.state.money)) : full;
-  };
+  // the full bill, always: short on money, it's the bank or selling something
+  G.repairCost = function (inst) { return fullRepairCost(inst); };
   function fullRepairCost(inst) { return G.repairBill(inst).total; }
   // The shop's bill after a breakage, line by line: the teardown, the parts
   // the failure took out (your own parts, at their price) and the labour.
@@ -695,11 +690,8 @@
   };
   G.repair = function (inst) {
     var c = G.repairCost(inst);
-    // your only car: the shop takes what you have, even if that's nothing
-    // (in the red after a ticket) - never a dead end
-    if (!G.canAfford(c) && !(c <= 0 && G.mercyRepair(inst))) return false;
-    if (c > 0) G.pay(c);
-    inst.damage = null; G.save(); return true;
+    if (!G.canAfford(c)) return false;
+    G.pay(c); inst.damage = null; G.save(); return true;
   };
 
   // ---------------------------------------------------------------- rivals
