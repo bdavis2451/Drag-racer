@@ -248,11 +248,12 @@
     c.jobs.forEach(function (j) { uids[j.uid] = 1; });
     c.shop.forEach(function (j) { if (j.until > G.now()) uids[j.uid] = 1; });
     var cards = Object.keys(uids).map(function (uid) { var car = G.state.cars.filter(function (x) { return x.uid === +uid; })[0]; return car && UI.workCard ? h('div', {}, h('div', { class: 'gsmall acc' }, DR.CARS[car.carId].name), UI.workCard(car)) : null; }).filter(Boolean);
-    return cards.length ? h('div', { class: 'col' }, cards) : h('div', { class: 'dim gsmall' }, 'No work waiting. Parts you fit ask you then: do it yourself, or the shop.');
+    return cards.length ? h('div', { class: 'col' }, cards) : h('div', { class: 'dim gsmall' }, 'Nothing waiting. When you fit parts you choose: wrench it yourself (free, takes time) or pay the shop.');
   }
   UI.benchCard = benchCard;
   function billsCard() {
     var b = G.billsPreview(), tot = b.reduce(function (a, x) { return a + x[1]; }, 0), next = CAL.firstOfNextMonth(G.now());
+    if (!tot) return h('div', { class: 'gsmall dim' }, 'Nothing due on the 1st' + (G.couchRent && !G.couchRent() && G.home().id === 'uncle' ? ': Ray\'s couch is free till you\'ve beaten class 2.' : '.'));
     return h('div', { class: 'col' }, h('div', { class: 'gsmall' }, 'Due ' + CAL.fmt(next, { noTime: true }) + ' (' + CAL.dur(next - G.now()) + '): ', h('b', { class: tot > G.state.money ? 'bad' : 'acc' }, DR.money(tot))),
       b.map(function (x) { return h('div', { class: 'row jobrow' }, h('span', { class: 'grow dim' }, x[0]), h('span', {}, DR.money(x[1]))); }));
   }

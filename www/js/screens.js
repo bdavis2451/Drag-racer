@@ -132,9 +132,11 @@
   UI.nextUp = function () {
     if (!G.dayAgenda) return null;
     var now = G.now(), list = careerAgenda(10).filter(function (e) { return e.kind !== 'bill'; });
+    UI.nextUp.shown = null;
     if (!list.length) return null;
     if (nextSkip >= list.length) nextSkip = 0;
     var best = list[nextSkip], on = best.t <= now, why = whyOf(best);
+    UI.nextUp.shown = best;
     var skip = list.length > 1 ? btn('Skip', function () { nextSkip = (nextSkip + 1) % list.length; UI.refresh(); }, 'small') : null;
     return h('div', { class: 'nextup' + (why ? ' blocked' : '') }, h('i', { class: 'caldot', style: { background: (DR.KCOL || {})[best.kind] || '#888' } }),
       h('div', { class: 'grow' }, h('div', { class: 'gsmall acc' }, (on ? 'ON NOW' : 'NEXT UP • ' + DR.Cal.fmt(best.t) + ' (in ' + DR.Cal.dur(best.t - now) + ')') + (nextSkip ? ' • ' + (nextSkip + 1) + ' of ' + list.length : '')),
@@ -146,28 +148,28 @@
   // events live in their tabs (Street, Events); everything's on the
   // Month view.
   function weekView() {
-    var now = G.now(), d0 = DR.Cal.dayStart(now), days = [];
+    var now = G.now(), d0 = DR.Cal.dayStart(now), days = [], top = UI.nextUp(), shown = UI.nextUp.shown;
     for (var k = 0; k < 8; k++) {
-      var d = d0 + k * 24, ag = G.dayAgenda(d).filter(function (e) { return (e.career || e.kind === 'host') && (e.end > now || e.end === e.t); });
+      var d = d0 + k * 24, ag = G.dayAgenda(d).filter(function (e) { return (e.career || e.kind === 'host') && (e.end > now || e.end === e.t) && !(shown && e.t === shown.t && e.label === shown.label); });
       if (!ag.length) continue;
       var parts = [['DAY', ag.filter(function (e) { return e.t % 24 < 17; })], ['NIGHT', ag.filter(function (e) { return e.t % 24 >= 17; })]];
-      days.push(h('div', { class: 'wkday' }, h('div', { class: 'plvl' }, k === 0 ? 'TODAY • ' + DR.Cal.fmt(d, { noTime: true }) : DR.Cal.fmt(d, { long: true, noTime: true })),
+      days.push(h('div', { class: 'wkday' }, h('div', { class: 'plvl' }, k === 0 ? 'TODAY' : k === 1 ? 'TOMORROW • ' + DR.Cal.fmt(d, { noTime: true }) : DR.Cal.fmt(d, { long: true, noTime: true })),
         parts.map(function (pt) {
           if (!pt[1].length) return null;
-          return h('div', { class: 'wkpart' }, h('div', { class: 'wkdn' + (pt[0] === 'NIGHT' ? ' night' : '') }, pt[0]), pt[1].map(function (e) {
-            var why = whyOf(e);
+          return h('div', { class: 'wkpart' }, h('div', { class: 'wkdn' + (pt[0] === 'NIGHT' ? ' night' : '') }, pt[0]), h('div', { class: 'wkrows' }, pt[1].map(function (e) {
+            var why = whyOf(e), time = e.end > e.t ? DR.Cal.hourText(Math.floor(e.t % 24)) + '–' + DR.Cal.hourText(Math.floor(e.end % 24)) : '';
             return h('div', { class: 'calev' }, h('i', { class: 'caldot', style: { background: DR.KCOL[e.kind] || '#888' } }),
-              h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, (e.end > e.t ? DR.Cal.hourText(Math.floor(e.t % 24)) + '–' + DR.Cal.hourText(Math.floor(e.end % 24)) : '') + (e.sub ? ' • ' + e.sub : '')),
-                why ? h('div', { class: 'gsmall warn' }, '⚠ ' + why.msg) : null),
+              h('div', { class: 'grow' }, h('div', {}, e.label), why ? h('div', { class: 'gsmall warn' }, '⚠ ' + why.msg) : h('div', { class: 'gsmall dim' }, time + (e.sub ? ' • ' + e.sub : ''))),
               why ? btn(why.fix[0], why.fix[1], 'small') : goBtn(e));
-          }));
+          })));
         })));
     }
     return h('div', {},
-      UI.nextUp(),
-      h('div', { class: 'row', style: { gap: '6px', alignItems: 'center', margin: '4px 0' } }, h('span', { class: 'gsmall dim grow' }, 'Your career\'s week. Test & tune any day the strip\'s open (Practice); street nights, Grudge Night (Street) and club meets, series and shows (Events) in their tabs.'),
-        btn('Month view', function () { UI.show(UI.Calendar); }, 'small'), btn('Home', function () { UI.show(UI.Home); }, 'small')),
-      days.length ? days : h('div', { class: 'dim' }, 'Nothing on your career this week.'));
+      h('div', { class: 'row wkhead' }, h('span', { class: 'pix acc grow' }, 'YOUR WEEK'),
+        btn('Month', function () { UI.show(UI.Calendar); }, 'small'), btn('Home', function () { UI.show(UI.Home); }, 'small')),
+      top,
+      days.length ? days : h('div', { class: 'dim' }, top ? 'Nothing else on your career this week.' : 'Nothing on your career this week.'),
+      h('div', { class: 'gsmall dim wkfoot' }, 'Test & tune: Practice • street & Grudge Night: Street • clubs, series, shows: Events'));
   }
   // Practice: the strip's test & tune and licenses, the circuit test lap
   function practiceView(inst) {
@@ -258,8 +260,8 @@
     if (stakes.indexOf(grudgeStake) < 0) grudgeStake = stakes[0];
     var on = G.slotOpen && G.slotOpen('grudge'), when = G.whenText ? G.whenText('grudge') : '';
     var head = h('div', { class: 'row grudgehead', style: { gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
-      h('span', { class: 'pix small acc' }, 'GRUDGE NIGHT'), h('span', { class: 'gsmall' + (on ? ' good' : ' dim') }, on ? 'ON NOW at Pixel Dragway' : 'Wednesdays 6 to 11 PM • next ' + when),
-      h('span', { class: 'gsmall dim grow' }, 'Settle it legally: prepped eighth mile, no cops. A win is +' + DR.GRUDGE_REP + ' class rep.'),
+      h('div', { class: 'grow' }, h('div', {}, h('span', { class: 'pix small acc' }, 'GRUDGE NIGHT '), h('span', { class: 'gsmall' + (on ? ' good' : ' dim') }, on ? 'on now at Pixel Dragway' : 'Wed 6–11 PM • next ' + when)),
+        h('div', { class: 'gsmall dim' }, 'Street beefs settled on the strip\'s eighth mile, no cops. Win the stake and +' + DR.GRUDGE_REP + ' class rep.')),
       btn(grudgeOpen ? 'Hide' : 'Open', function () { grudgeOpen = !grudgeOpen; UI.refresh(); }, 'small'));
     if (!grudgeOpen) return h('div', { class: 'trkcard grudge' }, head);
     if (!grudgeOpps) grudgeOpps = G.streetOpponents(G.estimate(inst, DR.EIGHTH, 1).et, DR.EIGHTH, 1);
@@ -320,7 +322,7 @@
         h('span', { class: 'gsmall dim grow' }, kingDone ? 'class done' : 'the King opens the next class'));
     }
     var body = careerTab === 'ladder' ? ladderView(selStage) : careerTab === 'kings' ? kingsView() : circ ? UI.circuitCareerView(selCStage) : raceDaysView(c);
-    return h('div', {}, UI.nextUp ? UI.nextUp() : null, chips, careerTab === 'kings' ? null : status, tabs, body);
+    return h('div', {}, chips, careerTab === 'kings' ? null : status, tabs, body);
   }
   // the ladder: #5 up to #1, then the King. Call out the rival above you
   // once your rep in the class is high enough.
@@ -521,7 +523,7 @@
           btn('Run', function () { DR.Race.start(r[3]); }, 'small go'))));
     });
     return h('div', {}, h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'DRAG TEST & TUNE'), h('div', { class: 'pix acc' }, 'Solo passes'),
-      h('div', { class: 'dim' }, 'No money on the line - dial in your tune. Your best times are saved. Test & tune runs Wednesday and Friday evenings and weekend days' + (G.whenText ? ' (' + (G.slotOpen('tnt') ? 'on now' : 'next: ' + G.whenText('tnt')) + ')' : '') + '.'))), UI.licenseCard ? UI.licenseCard(inst) : null, grid);
+      h('div', { class: 'dim' }, 'Nothing on the line: dial in your tune; best times are kept. Open weekdays noon–10 PM, weekends 9–5' + (G.whenText ? ' (' + (G.slotOpen('tnt') ? 'on now' : 'next: ' + G.whenText('tnt')) + ')' : '') + '.'))), UI.licenseCard ? UI.licenseCard(inst) : null, grid);
   }
 
   // ---------------------------------------------------------------- TUNE

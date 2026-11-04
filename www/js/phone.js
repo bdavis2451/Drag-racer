@@ -16,7 +16,7 @@
   function stageName(n) { return DR.STAGES[n] ? DR.STAGES[n].name : ''; }
   // key: [from, text(data)]; once-only unless `again`
   var SCRIPT = {
-    intro: ['ray', function () { return 'Couch is yours, kid. Bay three too, as long as you sweep up and don\'t touch my lathe. Your car runs. Barely. Go find out how barely: test and tune is Wednesday and Friday nights.'; }],
+    intro: ['ray', function () { return 'Couch is yours, kid. Bay three too, as long as you sweep up and don\'t touch my lathe. Your car runs. Barely. Go find out how barely: the strip\'s open for test and tune most days.'; }],
     circuit: ['ray', function () { return 'Danny says he\'s ready for the Sunday Track Day. Your team\'s circuit races are under Race > Career > Circuit, and they pay. Better drivers are on the Team board when you can afford them.'; }],
     cup: ['ray', function (n) { return 'Your team won the ' + (G.cupName ? G.cupName(n) : 'Cup') + '! The road course people will sell you their good stuff now: brakes, bars, wings.' + (n + 1 < DR.STAGES.length ? ' Next up for them: ' + G.cclassName(n + 1).replace(/^Circuit \d+: /, '') + '.' : ''); }],
     invite: ['street', function (iv) { return (iv && iv.team ? iv.team : 'A team') + ' here. Two of ours against two of yours and one more crew, ' + (iv ? DR.TRACKS[iv.track].name : 'this weekend') + '. Team points. You in? (Race > Events)'; }, true],
@@ -98,7 +98,8 @@
     var f = P.FROM[m.from] || P.FROM.ray, old = document.getElementById('phonenote');
     if (old) old.parentNode.removeChild(old);
     var el = h('div', { id: 'phonenote', class: 'phonenote', onclick: function () { el.parentNode && el.parentNode.removeChild(el); P.open(m.from); } },
-      h('div', { class: 'pnhead' }, h('span', {}, '📱'), h('span', { style: { color: f.col } }, f.name), h('span', { class: 'dim' }, 'now')),
+      h('div', { class: 'pnhead' }, h('span', {}, '📱'), h('span', { style: { color: f.col } }, f.name), h('span', { class: 'dim grow' }, 'now'),
+        h('span', { class: 'pnx', title: 'Dismiss', onclick: function (e) { e.stopPropagation(); el.classList.remove('show'); setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300); } }, '✕')),
       h('div', { class: 'pnbody' }, m.text.length > 96 ? m.text.slice(0, 94) + '…' : m.text),
       h('div', { class: 'pnhint dim' }, 'Tap to read'));
     document.body.appendChild(el);

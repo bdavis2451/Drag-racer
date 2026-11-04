@@ -715,7 +715,7 @@
       O('Grandma Edna', 'pip', null, {}, {}, 0.25, '#ff8fb8'),
       O('Tyler', 'ronin', null, BOLT, {}, 0.4, '#3a7bd2'),
       O('Jess', 'monte', null, {}, {}, 0.5, '#2fb3a8'),
-      O('Danny', 'mira', null, P(BOLT, { headers: 'h1', cams: 'c1', ecu: 'ecu1', rtires: 'st_225' }), {}, 0.55, '#151515'),
+      O('Dusty', 'mira', null, P(BOLT, { headers: 'h1', cams: 'c1', ecu: 'ecu1', rtires: 'st_225' }), {}, 0.55, '#151515'),
       O('Mullet Mike', 'fox', null, P(BOLT, { headers: 'h2' }), {}, 0.6, '#c01515')
     ]},
     { name: 'Bracket Bandits', opps: [

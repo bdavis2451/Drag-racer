@@ -309,7 +309,7 @@
       Object.keys(SCORED).forEach(function (slot) {
         var evs = DR.raceDayEvents(si, slot), open = evs.filter(function (ev) { return !G.eventLock(ev); }), todo = open.filter(function (ev) { return !G.eventWon(ev); });
         if (!todo.length) return;
-        add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, todo.map(function (ev) { return ev.opps[ev.opps.length - 1].name; }).join(', '), true, function () { return carWhy(todo); });
+        add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, 'vs ' + todo.map(function (ev) { return ev.opps[ev.opps.length - 1].name; }).join(', '), true, function () { return carWhy(todo); });
       });
       var st = DR.STAGES[si];
       if (!G.eventWon(st.boss) && !G.eventLock(st.boss)) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); }, '', true, function () { return carWhy([st.boss]); });
