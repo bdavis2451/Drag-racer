@@ -70,7 +70,7 @@ def cut_builds(img):
     return out
 
 
-def wheels(crop):
+def wheels(crop, lift=1):
     """[rear, front] wheel circles (cx, cy, r) from the tire footprints: the
     lowest pixel of each column right around a contact patch can only be
     tire, and a circle through those points is the tire."""
@@ -80,7 +80,7 @@ def wheels(crop):
     for x in range(a.shape[1]):
         col = np.where(a[:, x])[0]
         if len(col): low[x] = col.max()
-    cols = [x for x, v in low.items() if v >= ground - 1]
+    cols = [x for x, v in low.items() if v >= ground - lift]
     groups = []
     for x in cols:
         if groups and x - groups[-1][-1] <= 3: groups[-1].append(x)
@@ -117,8 +117,8 @@ def wheels(crop):
         ang = np.linspace(np.radians(195), np.radians(345), 40)
         best_ = (0, None)
         for cxx in np.arange(cx - 4, cx + 4.5, 1.0):
-            for rr in np.arange(0.07 * wb, 0.2 * wb, 0.5):
-                cyy = ground + 1 - rr
+            for rr, dy in [(rr_, dy_) for rr_ in np.arange((0.03 if lift > 1 else 0.07) * wb, 0.2 * wb, 0.5) for dy_ in range(lift + 1)]:
+                cyy = ground + 1 - rr - dy
                 def frac(m, f0, f1):
                     n = k = 0
                     for f in np.linspace(f0, f1, 4):
@@ -166,7 +166,7 @@ def is_paint(hv, p):
 def build(cfg, prev_dir=None, crops=None):
     if crops is None:
         crops = cut_builds(np.asarray(Image.open(cfg['sheet']).convert('RGBA')))
-    info = [wheels(c) for c in crops]
+    info = [wheels(c, cfg.get('lift', 1)) for c in crops]
     wb = [w[1][0] - w[0][0] for w, g in info]
     stock_len = crops[0].shape[1]
     f0 = cfg['lenM'] * PPM * DENS / stock_len
@@ -410,8 +410,17 @@ def keyed(img, key):
     blended into it, become transparent."""
     out = img.copy(); c = img[..., :3].astype(int)
     if key == 'magenta':
-        m = np.minimum(c[..., 0], c[..., 2]) - c[..., 1]
-        out[..., 3] = np.where(m > 70, 0, 255).astype(np.uint8)
+        m = np.minimum(c[..., 0], c[..., 2]) - c[..., 1] > 70
+        # only the background itself: magenta joined to the sheet's edge (a
+        # purple window inside a car stays)
+        mi = Image.fromarray(np.where(m, 255, 0).astype(np.uint8)).copy()
+        for x, y in ((0, 0), (mi.width - 1, 0), (0, mi.height - 1), (mi.width - 1, mi.height - 1)):
+            if mi.getpixel((x, y)) == 255: ImageDraw.floodfill(mi, (x, y), 128)
+        bgm = np.asarray(mi) == 128
+        # and the fringe: magenta-ish pixels touching the background
+        grow = bgm.copy(); grow[1:] |= bgm[:-1]; grow[:-1] |= bgm[1:]; grow[:, 1:] |= bgm[:, :-1]; grow[:, :-1] |= bgm[:, 1:]
+        fringe = grow & (np.minimum(c[..., 0], c[..., 2]) - c[..., 1] > 40)
+        out[..., 3] = np.where(bgm | fringe, 0, 255).astype(np.uint8)
     return out
 
 
