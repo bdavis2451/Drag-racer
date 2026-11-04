@@ -249,9 +249,11 @@ def build(cfg, prev_dir=None, crops=None):
     # the body (a roof's sheen on a dark car) too bright for the paint key,
     # left grey on any colour. Grey pixels inside, up to maxV bright, become
     # paint (the brightest steps of the ramp).
-    for poly, maxv in cfg.get('paintAreas', []):
+    # (with a third entry 'any': every colour inside, a stray blob in the art)
+    for pa in cfg.get('paintAreas', []):
+        poly, maxv, anyc = pa[0], pa[1], len(pa) > 2 and pa[2] == 'any'
         cm = Image.new('L', (b0['a'].shape[1], b0['a'].shape[0]), 0); ImageDraw.Draw(cm).polygon([tuple(q) for q in poly], fill=255, outline=255)
-        hv = b0['hsv']; add = (np.asarray(cm) > 0) & b0['a'] & (hv[..., 1] < 0.3) & (hv[..., 2] >= 0.12) & (hv[..., 2] <= maxv) & ~b0['win'] & ~b0['paint']
+        hv = b0['hsv']; add = (np.asarray(cm) > 0) & b0['a'] & ((hv[..., 1] < 0.3) | anyc) & (hv[..., 2] >= 0.12) & (hv[..., 2] <= maxv) & ~b0['win'] & ~b0['paint']
         print('paint area: %d px added' % add.sum())
         b0['paint'] |= add
     if cfg.get('despeck'):
