@@ -124,12 +124,17 @@
   W.confirmDiy = function (inst, then) {
     var p = W.diyPlan(inst.uid); if (!p) return;
     var miss = W.misses(G.now(), p.end), close;
+    // one tap: just do it, unless there's something to know first (a race
+    // day you'd miss, or the 1st and its bills on the way)
+    function go() { var news = W.doItMyself(inst.uid); A.click && A.click(); news.unshift('🔧 Done ' + CAL.fmt(G.now()) + ': the ' + nm(inst.uid) + ' is back together (' + (p.sessions.length > 1 ? plural(p.sessions.length, 'day') : CAL.dur(p.hours)) + ').'); UI.timeNews(news); UI.refresh(); if (then) then(); }
+    var bills = CAL.firstOfNextMonth(G.now()) <= p.end && (G.billsPreview ? G.billsPreview() : []).some(function (b) { return b[1] > 0; });
+    if (!miss.length && !bills) return go();
     close = UI.modal([h('div', { class: 'pix acc' }, 'DO IT YOURSELF'),
       h('p', {}, 'The ' + nm(inst.uid) + ': ' + CAL.dur(p.hours) + ' of work. ' + (p.sessions.length === 1 ? 'You\'ll have it done ' + CAL.fmt(p.end) + '.' : 'About ' + plural(p.sessions.length, 'day') + ' of wrenching (up to ' + W.DAY + ' hours a day), done ' + CAL.fmt(p.end) + '.') + (p.long ? ' One long ' + W.LONG + '-hour day in there (once a month).' : '')),
       h('p', { class: 'gsmall' }, G.skipText(p.end, true)),
       miss.length ? h('p', { class: 'gsmall warn' }, 'You\'ll miss: ' + miss.join(', ') + '.') : null,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } }, btn('Cancel', function () { close(); }),
-        btn('Wrench it', function () { close(); var news = W.doItMyself(inst.uid); A.click && A.click(); news.unshift('🔧 Done: the ' + nm(inst.uid) + ' is back together.'); UI.timeNews(news); UI.refresh(); if (then) then(); }, 'primary'))]);
+        btn('Wrench it', function () { close(); go(); }, 'primary'))]);
   };
   W.confirmShop = function (inst) {
     var p = W.shopPlan(inst.uid); if (!p) return;
