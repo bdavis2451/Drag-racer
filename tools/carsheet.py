@@ -26,6 +26,8 @@ Config (tools/carsheets/<id>.json):
   windows   (optional) [[[x0, y0, x1, y1], [seed x, y], ...], ...]: windows whose
             insides keep the art's colours (seats, reflections) instead of
             being keyed as paint; frameV: how dark the window frame is
+  paintAreas (optional) [[outline, maxV], ...]: grey highlights inside the
+            outline, up to maxV bright, made paint (a dark car's roof sheen)
 """
 import json, sys, os, colorsys
 from collections import deque
@@ -243,6 +245,26 @@ def build(cfg, prev_dir=None, crops=None):
             for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
                 if y0 <= ny <= y1 and x0 <= nx <= x1 and open_[ny, nx] and not b0['win'][ny, nx]:
                     b0['win'][ny, nx] = True; q.append((ny, nx))
+    # "paintAreas": [[outline, maxV], ...]: the other way round: highlights on
+    # the body (a roof's sheen on a dark car) too bright for the paint key,
+    # left grey on any colour. Grey pixels inside, up to maxV bright, become
+    # paint (the brightest steps of the ramp).
+    for poly, maxv in cfg.get('paintAreas', []):
+        cm = Image.new('L', (b0['a'].shape[1], b0['a'].shape[0]), 0); ImageDraw.Draw(cm).polygon([tuple(q) for q in poly], fill=255, outline=255)
+        hv = b0['hsv']; add = (np.asarray(cm) > 0) & b0['a'] & (hv[..., 1] < 0.3) & (hv[..., 2] >= 0.12) & (hv[..., 2] <= maxv) & ~b0['win'] & ~b0['paint']
+        print('paint area: %d px added' % add.sum())
+        b0['paint'] |= add
+    if cfg.get('despeck'):
+        # "despeck": a lone grey pixel with paint all round (a stray highlight
+        # dot) becomes paint
+        # (or a pair of them: paint on three sides each)
+        hv = b0['hsv']; tot = 0
+        for _ in range(2):
+            P = b0['paint']; nb = np.zeros(P.shape, int)
+            nb[1:] += P[:-1]; nb[:-1] += P[1:]; nb[:, 1:] += P[:, :-1]; nb[:, :-1] += P[:, 1:]
+            add = (nb >= 3) & ~P & b0['a'] & (hv[..., 1] < 0.3) & ~b0['win']
+            tot += add.sum(); b0['paint'] = P | add
+        print('despeck: %d px' % tot)
     if cfg.get('windows'):
         print('windows: %d px, %d of them were paint' % (b0['win'].sum(), (b0['win'] & b0['paint']).sum()))
         b0['paint'] &= ~b0['win']
