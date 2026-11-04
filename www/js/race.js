@@ -71,7 +71,9 @@
       var ev = cfg.ev, isBk = ev && ev.type === 'bracket', dialIn = null, pinkCb = null;
       if (isBk) {
         var key = dist === 'quarter' ? 'q' : 'e', lastP = (inst.log || []).filter(function (x) { return x.dist === key && !x.out && x.sp[key === 'q' ? '1/4' : '1/8']; })[0];
-        var dflt = lastP ? Math.ceil(lastP.sp[key === 'q' ? '1/4' : '1/8'][0] * 20) / 20 : inst.best && inst.best[key] ? Math.ceil(inst.best[key] * 20) / 20 : '';
+        // a suggestion a little under your last time (rounded down, never up:
+        // running quicker than your dial is a breakout)
+        var dflt = lastP ? Math.floor(lastP.sp[key === 'q' ? '1/4' : '1/8'][0] * 20) / 20 : inst.best && inst.best[key] ? Math.floor(inst.best[key] * 20) / 20 : '';
         dialIn = h('input', { type: 'number', step: '0.01', min: '3', max: '30', value: dflt, class: 'tinput', style: { maxWidth: '110px' } });
       }
       var canPink = ev && ev.type === 'callout' && G.state.cars.length > 1;
