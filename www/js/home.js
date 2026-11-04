@@ -315,13 +315,20 @@
     upd();
   };
   // ---------------------------------------------------------------- game over
-  // Ray bails you out once; after that it's the bank or selling things. Down
-  // to -$10,000 and nobody's lending: the career's over.
-  DR.GAME_OVER_AT = -10000;
+  // Ray bails you out once; after that it's the bank or selling things. The
+  // career's over only when it all runs out at once: Ray's $4,000 is spent,
+  // the bank's already owed over $5,000, you're down to one car, and you're
+  // $10,000 in the hole.
+  DR.GAME_OVER_AT = -10000; DR.GAME_OVER_LOANS = 5000;
+  G.loansOwed = function () { return G.bank ? G.bank().loans.reduce(function (a, l) { return a + G.owedOn(l); }, 0) : 0; };
+  G.gameOverCheck = function () {
+    var s = G.state;
+    return !!(s && s.started && s.bailedOut && s.money <= DR.GAME_OVER_AT && (s.cars || []).length <= 1 && G.loansOwed() > DR.GAME_OVER_LOANS);
+  };
   function checkBroke() {
     var s = G.state;
-    if (!s || !s.started || s.gameOver || s.money > DR.GAME_OVER_AT) return;
-    s.gameOver = { at: G.now ? G.now() : 0, money: s.money }; G.save();
+    if (!s || s.gameOver || !G.gameOverCheck()) return;
+    s.gameOver = { at: G.now ? G.now() : 0, money: s.money, loans: G.loansOwed() }; G.save();
     if (!document.querySelector('.screen.race')) setTimeout(function () { UI.show(UI.GameOver); }, 50);
   }
   ['pay', 'earn'].forEach(function (fn) { var o = G[fn]; G[fn] = function () { var r = o.apply(this, arguments); checkBroke(); return r; }; });
@@ -333,7 +340,7 @@
       h('div', { class: 'content', style: { display: 'flex', alignItems: 'center', justifyContent: 'center' } },
         h('div', { class: 'panel col', style: { maxWidth: '520px', width: '100%', gap: '8px' } },
           h('div', { class: 'logo', style: { fontSize: '28px', color: '#ff4a3a' } }, 'GAME OVER'),
-          h('p', {}, 'You\'re ' + DR.money(-go.money) + ' in the hole. Ray already bailed you out once, and nobody else is lending. The repo truck takes the cars; the parts go to cover what you owe.'),
+          h('p', {}, 'You\'re ' + DR.money(-go.money) + ' in the hole' + (go.loans ? ' with ' + DR.money(go.loans) + ' owed to the bank' : '') + ', down to your last car. Ray already bailed you out once, and nobody else is lending. The repo truck takes the car; the parts go to cover what you owe.'),
           row('Reached', 'Class ' + ((c.stage || 0) + 1) + ': ' + (st ? st.name : '')),
           row('Races', (s.stats.races || 0) + ' (' + (s.stats.wins || 0) + ' wins)'),
           row('Money earned', DR.money(s.stats.earned || 0)),
@@ -347,6 +354,7 @@
   var show0 = UI.show;
   UI.show = function (fn) {
     var s = G.state;
+    if (s && s.started && !s.gameOver && fn !== UI.GameOver) checkBroke();
     if (s && s.started && s.gameOver && [UI.GameOver, UI.Title, UI.Starter, UI.Settings, UI.Help].indexOf(fn) < 0) return show0.call(this, UI.GameOver);
     return show0.apply(this, arguments);
   };

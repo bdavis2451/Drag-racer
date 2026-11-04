@@ -4,7 +4,7 @@
 // ===========================================================================
 (function () {
   var DR = globalThis.DR;
-  var A = DR.Audio = { ctx: null, on: true, master: null, voices: [], WK_GAIN: 0.5 };
+  var A = DR.Audio = { ctx: null, on: true, master: null, voices: [], WK_GAIN: 0.5, SYNTH_TRIM: 0.62 };
 
   A.init = function () {
     if (A.ctx || !A.on) return;
@@ -166,8 +166,10 @@
     v.bright = P.bright * EXHAUST.bright[ex] * HEADERS.bright[hd] * (build.turbo ? 0.82 : 1) * (1 + build.cam * 0.04);
     v.lope = CAM_LOPE[build.cam] * (/^v[68]/.test(layout) ? 1 : 0.6);
     v.crackle = Math.max(EXHAUST.crackle[ex] * (build.turbo ? 0.5 : 1), build.antilag ? 0.8 : 0);
-    v.out = c.createGain(); v.out.gain.value = 0; v.out.connect(A.master);
+    v.out = c.createGain(); v.out.gain.value = 0;
     v.wk = A.wk && !A.forceSynth;
+    // the simple (synth) voice runs hotter than the modelled one: trim it to match
+    if (!v.wk) { v.trim = c.createGain(); v.trim.gain.value = A.SYNTH_TRIM; }
     if (v.wk) {
       // physically modelled engine & exhaust on the audio thread (enginesim.js)
       v.node = new AudioWorkletNode(c, 'pd-engine', { numberOfInputs: 0, outputChannelCount: [2] });
@@ -208,7 +210,7 @@
     v.bus.connect(v.air);
     if (v.pan) { v.air.connect(v.pan); v.pan.connect(A.master); } else v.air.connect(A.master);
     if (A.verbIn) { v.send = c.createGain(); v.send.gain.value = 0; v.air.connect(v.send); v.send.connect(A.verbIn); }
-    v.out.disconnect(); v.out.connect(v.bus);
+    v.out.disconnect(); if (v.trim) { v.out.connect(v.trim); v.trim.connect(v.bus); } else v.out.connect(v.bus);
     // tires: a wavering tonal squeal plus a low roar, mixed by tire compound
     v.tn = noiseSrc();
     v.tf = c.createBiquadFilter(); v.tf.type = 'bandpass'; v.tf.frequency.value = 1150; v.tf.Q.value = 6;
