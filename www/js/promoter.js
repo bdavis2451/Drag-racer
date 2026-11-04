@@ -232,7 +232,7 @@
         h('div', { class: 'plvl secthead' }, 'BOOKED'),
         up.length ? h('div', { class: 'col' }, up.map(function (e) {
           return h('div', { class: 'calev' }, h('i', { class: 'caldot', style: { background: DR.KCOL.host } }), h('div', { class: 'grow' }, h('div', {}, P.title(e)), h('div', { class: 'gsmall dim' }, CAL.fmt(e.t) + ' • ' + DR.money(e.purse) + ' purse • ' + DR.money(e.fee) + ' entry • ' + P.PROMO[e.promo][0])),
-            G.now() >= e.t ? btn('Run the night', function () { P.nightOf(e); }, 'small go') : btn('Go (' + CAL.dur(e.t - G.now()) + ')', function () { UI.timeNews(G.advanceTo(e.t)); P.nightOf(e); }, 'small'),
+            G.now() >= e.t ? btn('Run the night', function () { P.nightOf(e); }, 'small go') : btn('Go (' + CAL.dur(e.t - G.now()) + ')', function () { UI.goThere(e.t, P.title(e), function () { P.nightOf(e); }); }, 'small'),
             btn('Cancel', function () { UI.confirm('Cancel it? You get half the booking back and your rep takes a knock.', function () { P.cancel(e.id); UI.refresh(); }, 'Cancel it'); }, 'small red'));
         })) : h('div', { class: 'dim' }, 'Nothing booked.'),
         s.hist.length ? h('div', { class: 'plvl secthead' }, 'PAST EVENTS') : null,

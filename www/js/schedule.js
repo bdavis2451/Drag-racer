@@ -1,12 +1,13 @@
 // ===========================================================================
-// SCHEDULE — what happens when. Every kind of event has its days and hours
-// (the real rhythm of a racing week): street nights on Friday, the strip on
-// Saturday (day and under the lights), brackets and car shows on Sunday,
-// circuit race days on Sunday with open races Thursday nights, test & tune
-// on Wednesday and Friday evenings and weekend days, the dyno shop's hours,
-// callouts and street spots any night. The class King holds court on the
-// 2nd and 4th Saturday night; the bracket King the last Sunday, the No-Prep
-// King the last Friday night.
+// SCHEDULE — what happens when, the rhythm of a real racing week. Weekdays
+// are the garage's and the underground's: test & tune and the dyno by day,
+// street spots and callouts Monday, Tuesday, Thursday and Friday nights,
+// and Wednesday night is Grudge Night at the strip (street racing, settled
+// legally). The weekend's sanctioned: Friday's big street night and the
+// no-prep, Saturday at the strip (day and under the lights), Sunday's
+// brackets, class races and circuit race days, and the car shows Sunday
+// night. The class King holds court on the 2nd and 4th Saturday night; the
+// bracket King the last Sunday, the No-Prep King the last Friday night.
 // A career race day (ProStreet): the stage's races in one window, scored.
 // Every run scores points (a win, a good light, the margin; a close loss
 // still scores); the best run of each race counts. Beat the WIN score for
@@ -26,10 +27,11 @@
     satn:   { name: 'Saturday night under the lights', where: 'Pixel Dragway', win: [{ wd: [6], from: 19, to: 23.5 }] },
     sun:    { name: 'Sunday bracket day', where: 'Pixel Dragway', win: [{ wd: [0], from: 10, to: 16 }] },
     side:   { name: 'Sunday class races', where: 'Pixel Dragway', win: [{ wd: [0], from: 12, to: 17 }] },
-    show:   { name: 'Sunday car show', where: 'the show', win: [{ wd: [0], from: 11, to: 17 }] },
+    show:   { name: 'Sunday night car show', where: 'the show', win: [{ wd: [0], from: 17, to: 22 }] },
     meet:   { name: 'Friday night car meet', where: 'the grocery store lot', win: [{ wd: [5], from: 19, to: 23 }] },
-    night:  { name: 'any night', where: 'the street', win: [{ wd: [0, 1, 2, 3, 4, 5, 6], from: 21, to: 27 }] },
-    tnt:    { name: 'test & tune', where: 'Pixel Dragway', win: [{ wd: [3, 5], from: 17, to: 22 }, { wd: [6, 0], from: 9, to: 17 }] },
+    night:  { name: 'Monday, Tuesday, Thursday and Friday nights', where: 'the street', win: [{ wd: [1, 2, 4, 5], from: 21, to: 27 }] },
+    grudge: { name: 'Wednesday nights', where: 'Pixel Dragway', win: [{ wd: [3], from: 18, to: 23 }] },
+    tnt:    { name: 'whenever the strip\'s open (weekdays noon to 10 PM, weekends 9 to 5)', where: 'Pixel Dragway', win: [{ wd: [1, 2, 3, 4, 5], from: 12, to: 22 }, { wd: [6, 0], from: 9, to: 17 }] },
     dyno:   { name: 'dyno shop hours', where: 'the dyno shop', win: [{ wd: [1, 2, 3, 4, 5, 6], from: 8, to: 18 }] },
     cup:    { name: 'Sunday circuit race day', where: 'the circuits', win: [{ wd: [0], from: 10, to: 18 }] },
     circ:   { name: 'circuit open races', where: 'the circuits', win: [{ wd: [0], from: 10, to: 18 }, { wd: [4], from: 18, to: 23 }] },
@@ -96,20 +98,40 @@
     if (!w || w.open) return go();
     var close;
     close = UI.modal([h('div', { class: 'pix acc' }, 'NOT ON RIGHT NOW'),
-      h('p', {}, what + ' runs ' + DR.slotName(slot) + (DR.SLOTS[slot].where ? ' at ' + DR.SLOTS[slot].where : '') + '. Next: ' + CAL.fmt(w.start, { long: true }) + ', in ' + CAL.dur(w.start - G.now()) + '.'),
-      G.benchHours() ? h('p', { class: 'dim gsmall' }, 'Going now leaves the ' + CAL.dur(G.benchHours()) + ' on your bench untouched. (Work on it first from Home.)') : null,
+      h('p', {}, what + ' runs ' + DR.slotName(slot) + (DR.SLOTS[slot].where ? ' at ' + DR.SLOTS[slot].where : '') + '. Next: ' + CAL.fmt(w.start, { long: true }) + '.'),
+      h('p', { class: 'gsmall' }, G.skipText(w.start)),
       h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } },
         btn('Cancel', function () { close(); }),
         UI.Calendar ? btn('Calendar', function () { close(); UI.show(UI.Calendar); }) : null,
         btn('Go there (' + CAL.dur(w.start - G.now()) + ')', function () { close(); var news = G.advanceTo(w.start); UI.timeNews(news); go(); }, 'primary'))]);
   }
   G.slotGate = gate;
+  // What jumping the clock to t skips, in a line: how long, and the 1st of
+  // the month (its bills) if it passes one.
+  G.skipText = function (t, noWork) {
+    var now = G.now(), dt = t - now, out = 'The clock jumps to ' + CAL.fmt(t) + ' (' + CAL.dur(dt) + ').';
+    var first = CAL.firstOfNextMonth(now);
+    if (first <= t) {
+      var bills = (G.billsPreview ? G.billsPreview() : []).reduce(function (a, b) { return a + (b[1] || 0); }, 0);
+      out += ' You\'ll pass the 1st' + (bills ? ': bills ' + DR.money(bills) + '.' : ' (no bills due).');
+    }
+    if (!noWork && G.benchHours && G.benchHours()) out += ' Garage work you haven\'t done waits (' + CAL.dur(G.benchHours()) + ').';
+    return out;
+  };
+  // Go to something later: say what the jump skips first (anything within
+  // the half hour just goes)
+  UI.goThere = function (t, label, go) {
+    if (DR.SCHED_OFF || t - G.now() < 0.5) { if (t > G.now()) UI.timeNews(G.advanceTo(t)); return go(); }
+    var close = UI.modal([h('div', { class: 'pix acc' }, 'GO TO ' + String(label).toUpperCase()), h('p', {}, G.skipText(t)),
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } }, btn('Cancel', function () { close(); }),
+        btn('Go', function () { close(); UI.timeNews(G.advanceTo(t)); go(); }, 'primary'))]);
+  };
   function wrap(obj, name, fn) { var o = obj && obj[name]; if (!o) return; obj[name] = function () { var self = this, args = arguments; return fn.call(this, function () { return o.apply(self, args); }, args); }; }
   // career race days, callouts, Kings, street spots
   wrap(DR.Race, 'raceDay', function (go, a) {
-    var cfg = a[0] || {}, slot = cfg.mode === 'career' && !(cfg.round > 0) ? DR.evSlot(cfg.ev) : cfg.mode === 'street' ? 'night' : null;
+    var cfg = a[0] || {}, slot = cfg.mode === 'career' && !(cfg.round > 0) ? DR.evSlot(cfg.ev) : cfg.grudge ? 'grudge' : cfg.mode === 'street' ? 'night' : null;
     if (!slot || cfg.hosted || cfg.wander) return go();
-    return gate(slot, cfg.mode === 'street' ? 'Street racing' : DR.raceDayName ? DR.raceDayName(cfg.ev) : 'That race', go);
+    return gate(slot, cfg.grudge ? 'Grudge Night' : cfg.mode === 'street' ? 'Street racing' : DR.raceDayName ? DR.raceDayName(cfg.ev) : 'That race', go);
   });
   wrap(DR.Race, 'careerEvent', function (go, a) { var ev = a[0], round = a[1]; if (round > 0) return go(); return gate(DR.evSlot(ev), DR.raceDayName(ev), go); });
   // test & tune passes (yours or the tuner's); a dealer test drive is any time
@@ -152,10 +174,13 @@
     if (cfg.inst) return { news: [] };   // a dealer test drive
     var hours = cfg.mode === 'street' ? 1 : cfg.mode === 'test' ? 0.25 : 0.5, out = { news: [] };
     if (DR.RD_SCORING && cfg.mode === 'career' && cfg.ev && !cfg.ev.hosted && !cfg.ev.special && !r.testDrive) out = scoreRun(cfg, r);
+    // a grudge settled at the strip: class rep for the win
+    if (cfg.grudge && r.win) { var c = G.careerState(); c.rep = c.rep || {}; c.rep[c.stage] = (c.rep[c.stage] || 0) + DR.GRUDGE_REP; out.news.push('Grudge settled: +' + DR.GRUDGE_REP + ' class rep'); }
     var news = G.advance(hours);
     out.news = out.news.concat(news);
     return out;
   };
+  DR.GRUDGE_REP = 4;
 
   // ---------------------------------------------------------------- race days (scored)
   // the stage's races in a slot: one race day (the Saturday strip day, the
@@ -215,7 +240,7 @@
   var REWARDS = [
     { id: 'cash', name: 'Bonus purse', blurb: function (d) { return DR.money(Math.max(200, Math.round(d.purse * 0.25 / 50) * 50)) + ' from the promoter.'; },
       give: function (d) { var v = Math.max(200, Math.round(d.purse * 0.25 / 50) * 50); G.earn(v); return 'Bonus purse: +' + DR.money(v); } },
-    { id: 'service', name: 'Fresh rubber', blurb: function () { return 'New drive tires and a clutch on the house (still an hour or six on the bench).'; },
+    { id: 'service', name: 'Fresh rubber', blurb: function () { return 'New drive tires and a clutch on the house (still an hour or six of work to fit them).'; },
       give: function () { var inst = G.car(), cats = G.WEAR_CATS.filter(function (c) { return c !== 'clutch' || DR.partApplies('clutch', inst); }), m = G.state.money; G.state.money += 1e7; G.service(inst, cats); G.state.money = m; return 'Fresh tires' + (cats.length > 1 ? ' and clutch' : '') + ' on the house'; } },
     { id: 'rep', name: 'Street cred', blurb: function () { return '+15 rep in this class: callouts sooner.'; },
       give: function (d) { var c = G.careerState(); c.rep = c.rep || {}; c.rep[d.si] = (c.rep[d.si] || 0) + 15; return '+15 class rep'; } },
@@ -256,39 +281,66 @@
 
   // ---------------------------------------------------------------- the calendar
   // what's on a day: [{ t, end, kind, label, go }]
+  // Why the car you're in can't run something, and what fixes it:
+  // { msg, fix: [label, fn] } or null
+  function fixFor(msg) {
+    if (/licen/i.test(msg)) return ['Licenses', function () { UI.show(UI.RaceMenu, 'practice'); }];
+    if (/star/i.test(msg)) return ['Style', function () { UI.openSection('style'); }];
+    if (/repair|broken|fix your car/i.test(msg)) return ['Garage', function () { UI.show(UI.Garage); }];
+    if (/shop|bench|work/i.test(msg)) return ['Home', function () { UI.show(UI.Home); }];
+    return ['Upgrade', function () { UI.openSection('upgrade'); }];
+  }
+  function carWhy(evs) {
+    var car = G.car();
+    if (!car) return { msg: 'You need a car', fix: ['Dealer', function () { UI.show(UI.Dealer); }] };
+    if (car.damage) return { msg: 'Your ' + DR.CARS[car.carId].name + ' is broken', fix: ['Garage', function () { UI.show(UI.Garage); }] };
+    if (G.carBusy && G.carBusy(car)) return { msg: 'Your ' + DR.CARS[car.carId].name + ' is being worked on', fix: ['Home', function () { UI.show(UI.Home); }] };
+    var issues = evs.map(function (ev) { return G.carIssue(car, ev); });
+    if (!issues.every(Boolean)) return null;
+    return { msg: issues[0], fix: fixFor(issues[0]) };
+  }
+  DR.carWhy = carWhy;
   G.dayAgenda = function (d0) {
     var out = [], c = G.careerState();
-    function add(slot, kind, label, go, sub) { var w = windowOn(slot, d0); if (w) out.push({ t: w.start, end: w.end, slot: slot, kind: kind, label: label, sub: sub || '', go: go }); }
+    // career: the career's own (it shows on This Week); why: can't-enter check
+    function add(slot, kind, label, go, sub, career, why) { var w = windowOn(slot, d0); if (w) out.push({ t: w.start, end: w.end, slot: slot, kind: kind, label: label, sub: sub || '', go: go, career: !!career, why: why || null }); }
     // the drag career: race days for every stage open, with their races
     for (var si = 0; si <= c.stage && si < DR.STAGES.length; si++) {
       Object.keys(SCORED).forEach(function (slot) {
         var evs = DR.raceDayEvents(si, slot), open = evs.filter(function (ev) { return !G.eventLock(ev); }), todo = open.filter(function (ev) { return !G.eventWon(ev); });
         if (!todo.length) return;
-        add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, todo.map(function (ev) { return ev.opps[ev.opps.length - 1].name; }).join(', '));
+        add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, todo.map(function (ev) { return ev.opps[ev.opps.length - 1].name; }).join(', '), true, function () { return carWhy(todo); });
       });
       var st = DR.STAGES[si];
-      if (!G.eventWon(st.boss) && !G.eventLock(st.boss)) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); });
+      if (!G.eventWon(st.boss) && !G.eventLock(st.boss)) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); }, '', true, function () { return carWhy([st.boss]); });
       st.side.forEach(function (ev) { if ((ev.type === 'class' || ev.type === 'show') && G.eventVisible(ev) && !G.eventLock(ev) && !G.eventWon(ev)) add(DR.evSlot(ev), ev.type === 'show' ? 'show' : 'drag', ev.type === 'show' ? DR.showGoal(ev) : DR.CLASSES[ev.cls].name + ' class race', function () {
         // straight to it: the show itself, or the class race (if the car can run it)
         var issue = G.car() ? G.carIssue(G.car(), ev) : 'No car';
         if (issue) { UI.toast(issue); return UI.show(UI.RaceMenu, 'career'); }
         if (ev.type === 'show') DR.enterShow(DR.showById(ev.show), ev); else DR.Race.raceDay(DR.Race.eventCfg(ev, 0));
-      }); });
+      }, '', true, function () { return carWhy([ev]); }); });
     }
-    if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }); });
+    if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }, '', true, function () { return carWhy([K.ev]); }); });
     // the circuit career's race days, the Night Series, an invitation
-    if (DR.CSTAGES) { var cs = DR.CSTAGES[Math.min(c.stage, DR.CSTAGES.length - 1)], todoC = cs.all.filter(function (ev) { return !c.cwon[ev.id] && !G.cupLock(ev); }); if (todoC.length) add('cup', 'circuit', 'Circuit race day', function () { UI.careerSub = 'circuit'; UI.show(UI.RaceMenu, 'career'); }, todoC.map(function (ev) { return ev.name; }).join(', ')); }
+    if (DR.CSTAGES) { var cs = DR.CSTAGES[Math.min(G.cstage ? G.cstage() : c.stage, DR.CSTAGES.length - 1)], todoC = cs.all.filter(function (ev) { return !c.cwon[ev.id] && !G.cupLock(ev); }); if (todoC.length) add('cup', 'circuit', G.cclassName(cs.cup.stage) + ' race day', function () { UI.careerSub = 'circuit'; UI.show(UI.RaceMenu, 'career'); }, todoC.map(function (ev) { return ev.name; }).join(', ') + ' (your team)', true, function () {
+      var T = DR.Team, s = T && T.state();
+      if (!s || !s.drivers.length) return { msg: 'Your team needs a circuit driver', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
+      if (s.drivers.every(function (d) { return T.driverBusy(d.id); })) return { msg: 'Your drivers are all racing', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
+      if (!G.state.cars.some(function (x) { return !x.damage && !T.carAway(x.uid) && !(G.carBusy && G.carBusy(x)); })) return { msg: 'No car free to send', fix: ['Garage', function () { UI.show(UI.Garage); }] };
+      return null;
+    }); }
     if (DR.Team) {
       var se = DR.Team.series && DR.Team.series(); if (se && !se.done) add('series', 'circuit', 'Night Series round ' + (se.round + 1), function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });
       var iv = DR.Team.invite && DR.Team.invite(); if (iv) add('cup', 'circuit', 'Team race invitation (' + iv.team + ')', function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });
     }
     add('tnt', 'test', 'Test & tune', function () { UI.show(UI.RaceMenu, 'test'); });
-    if (CAL.date(d0).d === 1) out.push({ t: d0, end: d0, kind: 'bill', label: 'Bills due: ' + DR.money(G.weeklyBills()), go: function () { UI.show(UI.Home); } });
-    if (G.bank) G.bank().loans.forEach(function (l) { if (l.kind === 'title' && CAL.dayStart(l.due) === d0) out.push({ t: l.due, end: l.due, kind: 'bill', label: 'Title loan due: ' + DR.money(G.owedOn(l)), go: function () { UI.bankModal(); } }); });
+    add('grudge', 'grudge', 'Grudge Night at the strip', function () { UI.show(UI.RaceMenu, 'map'); });
+    if (CAL.date(d0).d === 1) out.push({ t: d0, end: d0, kind: 'bill', career: true, label: 'Bills due: ' + DR.money(G.weeklyBills()), go: function () { UI.show(UI.Home); } });
+    if (G.bank) G.bank().loans.forEach(function (l) { if (l.kind === 'title' && CAL.dayStart(l.due) === d0) out.push({ t: l.due, end: l.due, kind: 'bill', career: true, label: 'Title loan due: ' + DR.money(G.owedOn(l)), go: function () { UI.bankModal(); } }); });
     if (G.extraAgenda) out = out.concat(G.extraAgenda(d0) || []);
     return out.sort(function (a, b) { return a.t - b.t; });
   };
-  var KCOL = { drag: '#ff6a00', king: '#ffd700', circuit: '#8a5cff', show: '#ff2bd6', test: '#3aa0ff', bill: '#c8102e', host: '#39ff14', wander: '#00e5ff', club: '#e8e8e8', series: '#2fb3a8' };
+  var KCOL = { grudge: '#ff4a3a', drag: '#ff6a00', king: '#ffd700', circuit: '#8a5cff', show: '#ff2bd6', test: '#3aa0ff', bill: '#c8102e', host: '#39ff14', wander: '#00e5ff', club: '#e8e8e8', series: '#2fb3a8' };
   DR.KCOL = KCOL;
   var calMonth = null, calSel = null;
   UI.Calendar = function () {
@@ -308,14 +360,14 @@
     var ag = G.dayAgenda(calSel), dayEnd = calSel + 24;
     var list = h('div', { class: 'calday' }, h('div', { class: 'pix acc' }, CAL.fmt(calSel, { long: true, noTime: true })),
       ag.length ? ag.map(function (e) {
-        var on = e.t <= now && now < e.end, past = e.end <= now && e.end !== e.t;
+        var on = e.t <= now && now < e.end, past = e.end <= now && e.end !== e.t, why = !past && e.why ? e.why() : null;
         return h('div', { class: 'calev' + (past ? ' past' : '') }, h('i', { class: 'caldot', style: { background: KCOL[e.kind] || '#888' } }),
           h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, (e.end > e.t ? CAL.hourText(Math.floor(e.t % 24)) + '–' + CAL.hourText(Math.floor(e.end % 24)) : '') + (e.sub ? ' • ' + e.sub : ''))),
-          past ? null : on ? btn('Go', function () { e.go(); }, 'small go') : btn(e.t > now ? 'Go (' + CAL.dur(e.t - now) + ')' : 'Go', function () { if (e.t > now) UI.timeNews(G.advanceTo(e.t)); e.go(); }, 'small'));
+          past ? null : why ? h('div', { class: 'row', style: { gap: '4px', alignItems: 'center' } }, h('span', { class: 'gsmall warn' }, '⚠ ' + why.msg), btn(why.fix[0], why.fix[1], 'small')) : on ? btn('Go', function () { e.go(); }, 'small go') : btn(e.t > now ? 'Go (' + CAL.dur(e.t - now) + ')' : 'Go', function () { if (e.t > now) return UI.goThere(e.t, e.label, e.go); e.go(); }, 'small'));
       }) : h('div', { class: 'dim' }, 'Nothing on. Wrench, rest, or race the street at night (Race > Street).'),
-      h('div', { class: 'gsmall dim', style: { marginTop: '6px' } }, 'Street spots and callouts: any night, 9 PM–3 AM. The dyno shop: Mon–Sat, 8–6.'));
+      h('div', { class: 'gsmall dim', style: { marginTop: '6px' } }, 'Street spots and callouts: Mon, Tue, Thu and Fri nights, 9 PM–3 AM. Grudge Night: Wednesdays, 6–11 PM. The dyno shop: Mon–Sat, 8–6.'));
     var nav = h('div', { class: 'row calnav' }, btn('◀', function () { calMonth--; UI.refresh(); }, 'small'), h('div', { class: 'pix acc grow', style: { textAlign: 'center' } }, CAL.MONL[m] + ' ' + y), btn('▶', function () { calMonth++; UI.refresh(); }, 'small'));
-    var legend = h('div', { class: 'gsmall callegend' }, [['drag', 'Drag race day'], ['king', 'King'], ['circuit', 'Circuit'], ['show', 'Show'], ['test', 'Test & tune'], ['host', 'Your event'], ['wander', 'Wanderer'], ['club', 'Club'], ['bill', 'Bills']].map(function (x) { return h('span', {}, h('i', { class: 'caldot', style: { background: KCOL[x[0]] } }), x[1]); }));
+    var legend = h('div', { class: 'gsmall callegend' }, [['drag', 'Drag race day'], ['king', 'King'], ['grudge', 'Grudge Night'], ['circuit', 'Circuit'], ['show', 'Show'], ['test', 'Test & tune'], ['host', 'Your event'], ['wander', 'Wanderer'], ['club', 'Club'], ['bill', 'Bills']].map(function (x) { return h('span', {}, h('i', { class: 'caldot', style: { background: KCOL[x[0]] } }), x[1]); }));
     var cur = G.raceDayNow();
     return h('div', { class: 'screen' }, UI.top('CALENDAR', function () { UI.show(UI.Home); }),
       h('div', { class: 'content' },

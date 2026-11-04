@@ -421,7 +421,7 @@
     var status = h('div', { class: 'gstatus gcareer', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
       h('span', { class: 'acc' }, 'Stage ' + (c.stage + 1) + ': ' + st.name),
       h('span', {}, G.stageWins(c.stage) + '/' + st.events.length + ' wins'),
-      G.cupWins ? h('span', { class: G.cupWon(c.stage) ? 'good' : '' }, 'Circuit ' + (G.cupWon(c.stage) ? 'Cup ✔' : G.cupWins(c.stage) + '/4')) : null,
+      G.cupWins && G.cstage ? h('span', { class: '' }, 'Circuit ' + (G.cstage() + 1) + ': ' + G.cupWins(G.cstage()) + '/4') : null,
       h('span', { class: sp ? '' : 'warn' }, sp ? DR.sponsorById(sp.id).name : 'No sponsor yet'));
     // the race team at a glance: how many cars are out racing
     var live = DR.Team ? DR.Team.active().length : 0;
@@ -462,19 +462,11 @@
   // home at a glance, and the car's work in the bay
   function homeChip() {
     if (!G.home) return null;
-    var bh = G.benchHours ? G.benchHours() : 0;
-    return h('div', { class: 'gstatus ghome', onclick: function () { UI.show(UI.Home); } }, h('span', { class: 'acc' }, '⌂ Home'), h('span', {}, bh ? CAL_dur(bh) + ' on the bench' : 'sleep • bills • bank'));
+    return h('div', { class: 'gstatus ghome', onclick: function () { UI.show(UI.Home); } }, h('span', { class: 'acc' }, '⌂ Home'), h('span', {}, 'sleep • bills • bank'));
   }
   function CAL_dur(x) { return DR.Cal.dur(x); }
-  function bayBanner(inst) {
-    var b = G.carBusy && G.carBusy(inst); if (!b) return null;
-    var q = G.rushQuote(inst.uid);
-    // one line: how many jobs and the first couple (the full list is at Home)
-    var summary = b.jobs.length + ' job' + (b.jobs.length > 1 ? 's' : '') + ': ' + b.jobs.slice(0, 2).join(', ') + (b.jobs.length > 2 ? ' +' + (b.jobs.length - 2) + ' more' : '');
-    return h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'IN THE BAY'), h('span', { class: 'grow gsmall bayjobs', title: b.jobs.join(', '), onclick: function () { UI.show(UI.Home); } }, summary),
-      b.own ? btn('Work on it (' + DR.Cal.dur(b.bench) + ')', function () { UI.passTime(b.bench, b.bench); }, 'small go') : h('span', { class: 'gsmall' }, 'Shop: ' + DR.Cal.dur(b.shop)),
-      q.h ? btn('Shop ' + DR.money(q.cost) + ', ' + DR.Cal.dur(q.done), function () { UI.confirm('Have the shop finish it? ' + DR.money(q.cost) + ' (' + DR.Cal.dur(q.h) + ' book time at ' + DR.money(DR.Cal.SHOP_RATE) + '/h), done in ' + DR.Cal.dur(q.done) + '.', function () { var w = G.rush(inst.uid); if (w) return UI.toast(w); A.cash(); UI.refresh(); }, 'Pay'); }, 'small') : null);
-  }
+  // the car's garage work: do it yourself or the shop (work.js)
+  function bayBanner(inst) { return UI.workCard ? UI.workCard(inst, true) : null; }
 
   // ---------------------------------------------------------------- PARTS SHOP
   var shopGroup = 'engine', shopCat = 'intake', partsGroup = 'engine';

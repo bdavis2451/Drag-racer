@@ -27,6 +27,13 @@
   DR.STORAGE = 250;        // a car in a storage unit, a month
   DR.RENT_GRACE = 1;       // months owed before the next 1st brings eviction
   DR.LIEN_AFTER = 2;       // unpaid storage months before a lien sale
+  // The couch is free while you find your feet; once you've beaten class 2
+  // (the strip's or the circuit's), Ray asks for something toward the bills.
+  // Family: what you can't pay goes on your tab, no late fee, no eviction.
+  DR.COUCH_RENT = 400;
+  G.couchRent = function () { var c = G.careerState(); return (c.stage || 0) >= 2 || (G.cstage ? G.cstage() : 0) >= 2 ? DR.COUCH_RENT : 0; };
+  Object.defineProperty(DR.HOMES[0], 'rent', { get: function () { return G.state && G.state.started ? G.couchRent() : 0; } });
+  DR.HOMES[0].blurb = 'The couch in the office and one bay of the shop. Free while you find your feet; once you\'ve beaten class 2 (strip or circuit), $' + DR.COUCH_RENT + ' a month toward the bills.';
   DR.homeById = function (id) { return DR.HOMES.filter(function (x) { return x.id === id; })[0] || DR.HOMES[0]; };
 
   // a save from before homes: the smallest place that holds its cars
@@ -54,14 +61,14 @@
   G.salary = function (tu) { return tu.wage * 4; };
 
   // moving: a month's rent as the deposit, back when you leave on good terms
-  G.moveCost = function (id) { var to = DR.homeById(id), s = st(); return to.rent - s.deposit + s.owed; };
+  G.moveCost = function (id) { var to = DR.homeById(id), s = st(); return (to.id === 'uncle' ? 0 : to.rent) - s.deposit + s.owed; };
   G.moveHome = function (id) {
     var s = st(), to = DR.homeById(id);
     if (to.id === s.id) return 'You live here';
     var cost = G.moveCost(id);
     if (cost > 0 && !G.canAfford(cost)) return 'Moving in takes ' + DR.money(cost) + (s.deposit ? ' (your deposit back counted)' : '') + (s.owed ? ' and the rent you owe' : '');
     if (cost > 0) G.pay(cost); else if (cost < 0) G.earn(-cost);
-    s.id = to.id; s.deposit = to.rent; s.owed = 0; s.missed = 0;
+    s.id = to.id; s.deposit = to.id === 'uncle' ? 0 : to.rent; s.owed = 0; s.missed = 0;
     G.save();
     return '';
   };
@@ -75,7 +82,9 @@
     if (hm.rent && s.free > 0) { s.free--; news.push('🧾 Rent: this month\'s on the house (moving-in special)'); }
     else if (hm.rent) {
       var due = hm.rent + s.owed;
-      if (G.canAfford(due)) { pay(s.owed ? 'Rent and what you owed' : 'Rent', due); s.owed = 0; s.missed = 0; }
+      if (hm.id === 'uncle' && DR.Phone) DR.Phone.send('ray', 'couchrent');
+      if (G.canAfford(due)) { pay(s.owed ? (hm.id === 'uncle' ? 'Ray, for the bills, and your tab' : 'Rent and what you owed') : (hm.id === 'uncle' ? 'Ray, for the bills' : 'Rent'), due); s.owed = 0; s.missed = 0; }
+      else if (hm.id === 'uncle') { s.owed = due; news.push('🧾 Ray\'s ' + DR.money(hm.rent) + ' goes on your tab (' + DR.money(s.owed) + ' now). He\'s family; he\'ll wait.'); }
       else {
         s.missed++;
         if (s.missed > DR.RENT_GRACE) {
@@ -232,21 +241,14 @@
   }
   UI.sleepModal = sleepModal;
   // the bench: jobs in the order you'll do them, and what the shop has
+  // the garage work: each car with work waiting (do it yourself or the
+  // shop), or at the shop till it's ready
   function benchCard() {
-    var c = G.calState(), out = [], per = {};
-    if (!c.jobs.length && !c.shop.length) return h('div', { class: 'dim gsmall' }, 'Nothing on the bench.');
-    function name(uid) { var car = G.state.cars.filter(function (x) { return x.uid === uid; })[0]; return car ? DR.CARS[car.carId].name : 'A car'; }
-    // the buttons first, then a line a car, then every job (scrolls)
-    var bh = G.benchHours();
-    c.jobs.forEach(function (j) { var p = per[j.uid] || (per[j.uid] = { n: 0, h: 0 }); p.n++; p.h += j.h; });
-    Object.keys(per).forEach(function (uid) { out.push(h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, name(+uid)), h('span', { class: 'dim' }, per[uid].n + ' job' + (per[uid].n > 1 ? 's' : '') + ', ' + CAL.dur(per[uid].h)),
-      btn('Shop', function () { var q = G.rushQuote(+uid); UI.confirm('Have the shop do the ' + name(+uid) + '\'s ' + per[uid].n + ' job' + (per[uid].n > 1 ? 's' : '') + '? ' + DR.money(q.cost) + ', done in ' + CAL.dur(q.done) + '.', function () { var w = G.rush(+uid); if (w) return UI.toast(w); UI.refresh(); }, 'Pay'); }, 'small'))); });
-    c.shop.forEach(function (j) { out.push(h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, name(j.uid) + ' at the shop'), h('span', { class: 'acc' }, CAL.dur(j.until - c.t)))); });
-    var all = h('details', { class: 'joblist' }, h('summary', { class: 'gsmall dim' }, 'All ' + c.jobs.length + ' jobs, in order'),
-      h('div', { class: 'jobscroll' }, c.jobs.map(function (j) { return h('div', { class: 'row jobrow' }, h('span', { class: 'grow' }, j.label), h('span', { class: 'dim' }, CAL.dur(j.h))); })));
-    return h('div', { class: 'col' }, bh ? h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', marginBottom: '4px' } },
-      btn('Work till it\'s done (' + CAL.dur(bh) + ')', function () { pass(bh, bh); }, 'small go'),
-      bh > 4 ? btn('Work 4 hours', function () { pass(4, 4); }, 'small') : null) : null, out, c.jobs.length > 1 ? all : null);
+    var c = G.calState(), uids = {};
+    c.jobs.forEach(function (j) { uids[j.uid] = 1; });
+    c.shop.forEach(function (j) { if (j.until > G.now()) uids[j.uid] = 1; });
+    var cards = Object.keys(uids).map(function (uid) { var car = G.state.cars.filter(function (x) { return x.uid === +uid; })[0]; return car && UI.workCard ? h('div', {}, h('div', { class: 'gsmall acc' }, DR.CARS[car.carId].name), UI.workCard(car)) : null; }).filter(Boolean);
+    return cards.length ? h('div', { class: 'col' }, cards) : h('div', { class: 'dim gsmall' }, 'No work waiting. Parts you fit ask you then: do it yourself, or the shop.');
   }
   UI.benchCard = benchCard;
   function billsCard() {
@@ -265,7 +267,7 @@
     var side = h('div', { class: 'homeside' },
       h('div', { class: 'pix acc homeclock' }, CAL.fmt(G.now())),
       h('div', { class: 'gsmall dim' }, hm.name + ' • ' + Math.min(G.state.cars.length, hm.bays) + '/' + hm.bays + ' bays' + (hm.rent ? ' • ' + DR.money(hm.rent) + '/mo' : '')),
-      h('div', { class: 'plvl' }, 'THE BENCH'), benchCard(),
+      h('div', { class: 'plvl' }, 'GARAGE WORK'), benchCard(),
       h('div', { class: 'plvl' }, 'BILLS'), billsCard(),
       h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', marginTop: '6px' } },
         btn('Sleep / wait', sleepModal, 'small'), btn('Bank', function () { UI.bankModal(); }, 'small'), UI.Calendar ? btn('Calendar', function () { UI.show(UI.Calendar); }, 'small') : null,

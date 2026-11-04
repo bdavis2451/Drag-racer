@@ -286,11 +286,10 @@
   };
 
   G.stageUnlocked = function (si) { return si <= C().stage; };
-  // A stage is done when both its drag King and its Circuit Cup are won
-  // (ProStreet-style: the career needs both disciplines). The next one
-  // opens then, whichever came last.
+  // A drag class is done when its King is beaten; the next one opens then.
+  // (The circuit has its own ladder: ccareer.js.)
   G.cupWon = G.cupWon || function () { return true; };
-  G.stageDone = function (si) { var st = DR.STAGES[si]; return !!C().won[st.boss.id] && G.cupWon(si); };
+  G.stageDone = function (si) { var st = DR.STAGES[si]; return !!C().won[st.boss.id]; };
   G.tryAdvance = function (si) {
     var c = C();
     if (!G.stageDone(si) || c.stage > si || si + 1 >= DR.STAGES.length) return '';
@@ -339,7 +338,7 @@
   // Why an event cannot be raced yet ('' = it can).
   G.eventLock = function (ev) {
     var c = C(), st = DR.STAGES[ev.stage];
-    if (ev.stage > c.stage) return 'Finish stage ' + ev.stage + ': its King and its Circuit Cup';
+    if (ev.stage > c.stage) return 'Beat the King of ' + DR.STAGES[ev.stage - 1].name + ' first';
     var wins = G.stageWins(ev.stage);
     if (wins < ev.needWins) return 'Win ' + (ev.needWins - wins) + ' more race' + (ev.needWins - wins > 1 ? 's' : '') + ' in this stage';
     if (ev.type === 'boss') {
@@ -567,7 +566,7 @@
         if (ev.stage + 1 < DR.STAGES.length) {
           var adv = G.tryAdvance(ev.stage);
           if (adv) { lines.push(adv.toUpperCase()); out.banner = adv; }
-          else { out.banner = 'King beaten! Win the ' + (G.cupName ? G.cupName(ev.stage) : 'Circuit Cup') + ' (Race > Career > Circuit) to open stage ' + (ev.stage + 2); lines.push(out.banner); }
+          else { out.banner = 'King beaten!'; lines.push(out.banner); }
         } else { lines.push('YOU ARE THE KING OF THE STRIP!'); out.banner = 'You are the King of the Strip!'; }
       }
       st.all.forEach(function (x) { if (!c.won[x.id] && G.eventVisible(x) && !G.eventLock(x) && before.indexOf(x.id) < 0) newlyVisible.push(x); });

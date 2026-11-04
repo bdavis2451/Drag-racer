@@ -3,7 +3,8 @@
 // career from race days that mixed disciplines and asked you to win them
 // all; here each stage has its drag race days (career.js) and four circuit
 // race days run by your Race Team, ending in the stage's Circuit Cup. The
-// next stage opens when both the drag King and the Circuit Cup are won.
+// circuit has its own class ladder: a Cup opens the next circuit class,
+// apart from the strip (a King opens the next drag class).
 //  * Circuit wins open circuit and shared parts (DR.PART_DISC: brakes,
 //    anti-roll bars, aero, cooling, sequential boxes, track tires) and the
 //    road-course cars; drag wins open drag and shared parts.
@@ -32,6 +33,9 @@
     ['Midnight Freeway Run', 'Hangar Invitational', 'Canyon Supercar Duel', 'Supercar Trophy Round'],
     ['Downtown Unlimited', 'Canyon King of the Hill', 'Route 99 Unlimited', 'Airfield Grand Prix']
   ];
+  // the circuit ladder's own classes, and their Cups
+  var CNAMES = ['Track Day Novice', 'Club Racer', 'Sport Series', 'GT Challenge', 'Supercar Trophy', 'Unlimited GP'];
+  var CUPS = ['Novice Cup', 'Club Championship', 'Sport Series Cup', 'GT Challenge Cup', 'Supercar Trophy Cup', 'Unlimited Grand Prix'];
   var RIVALS = [
     { name: 'Maddie "Apex" Cole', col: '#ff6a00', team: 'Late Apex' },
     { name: 'Dev Okafor', col: '#3aa0ff', team: 'Kerbside' },
@@ -50,7 +54,7 @@
     for (var i = 0; i < 5; i++) {
       var tid = VENUES[si][i], ev = {
         id: 'c' + si + '.' + i, stage: si, idx: i, cup: i === 4, cls: cls.id, track: tid,
-        name: i === 4 ? st.name + ' Circuit Cup' : NAMES[si][i],
+        name: i === 4 ? CUPS[si] : NAMES[si][i],
         laps: T.lapsAt(cls, tid) + (i === 4 ? 2 : 0), top: TOP[i], needWins: NEED[i], pace: PACE[i],
         ai: [Math.max(10, cls.ai[0] + AI[i][0]), Math.min(97, cls.ai[1] + AI[i][1])],
         cash: Math.round(st.base * CASH[i] / 10) * 10, fee: Math.round(st.base * 0.35 / 10) * 10,
@@ -63,6 +67,11 @@
     }
     return { events: evs.slice(0, 4), cup: evs[4], all: evs };
   });
+  // The circuit career has its own class (c.cstage), apart from the drag
+  // class (c.stage): win a class's Circuit Cup and the next circuit class
+  // opens, whatever you've done on the strip (and the other way round).
+  G.cstage = function () { var c = C(); if (c.cstage == null) c.cstage = c.stage || 0; return c.cstage; };
+  G.cclassName = function (si) { return 'Circuit ' + (si + 1) + ': ' + CNAMES[si]; };
   G.cupEvent = function (id) { var p = String(id).slice(1).split('.'), cs = DR.CSTAGES[+p[0]]; return cs ? cs.all[+p[1]] : null; };
   G.cupWon = function (si) { var cs = DR.CSTAGES[si]; return !!(cs && C().cwon[cs.cup.id]); };
   G.cupName = function (si) { return DR.CSTAGES[si].cup.name; };
@@ -70,7 +79,7 @@
   // why a circuit race day can't be entered yet ('' = it can)
   G.cupLock = function (ev) {
     var c = C();
-    if (ev.stage > c.stage) return 'Finish stage ' + ev.stage + ' first';
+    if (ev.stage > G.cstage()) return 'Win the ' + G.cupName(ev.stage - 1) + ' first (circuit class ' + ev.stage + ')';
     var w = G.cupWins(ev.stage);
     if (w < ev.needWins) return 'Meet the goal at ' + (ev.needWins - w) + ' more circuit race day' + (ev.needWins - w > 1 ? 's' : '') + ' in this stage';
     if (T.active().some(function (r) { return r.ev === ev.id; })) return 'Your team is racing it now';
@@ -87,8 +96,8 @@
       c.cwon[ev.id] = true;
       ev.unlocks.forEach(function (u) { G.applyUnlock(u); out.unlocks.push(DR.unlockText(u)); });
       if (ev.cup) {
-        var adv = G.tryAdvance(ev.stage);
-        out.note = adv ? adv.toUpperCase() : 'CUP WON! Beat the King of ' + DR.STAGES[ev.stage].name + ' on the strip to open stage ' + (ev.stage + 2);
+        if (G.cstage() === ev.stage && ev.stage + 1 < DR.CSTAGES.length) { c.cstage = ev.stage + 1; out.note = 'CUP WON! ' + G.cclassName(ev.stage + 1).toUpperCase() + ' IS OPEN'; }
+        else out.note = 'CUP WON!';
         if (DR.Phone) DR.Phone.send('ray', 'cup', ev.stage);
       } else out.note = 'goal met';
     }
@@ -113,14 +122,17 @@
     return carWhere0(carId);
   };
   // Saves from before: the stages already behind them count as done on the
-  // circuit too (their Cups and race days, with what those open).
+  // circuit too (their Cups and race days, with what those open). Once: a
+  // save from before the circuit had its own class starts it level with the
+  // drag class.
   var sync0 = G.syncUnlocks;
   G.syncUnlocks = function () {
     sync0();
     var c = C();
+    if (c.cstage == null) c.cstage = c.stage || 0;
     DR.CSTAGES.forEach(function (cs, si) {
       cs.all.forEach(function (ev) {
-        if (si < c.stage) c.cwon[ev.id] = true;
+        if (si < c.cstage) c.cwon[ev.id] = true;
         if (c.cwon[ev.id]) ev.unlocks.forEach(G.applyUnlock);
       });
     });

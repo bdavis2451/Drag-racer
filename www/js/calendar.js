@@ -4,10 +4,9 @@
 // clock only moves when you do something that takes time (race, wrench,
 // sleep, wait). Nothing skips time for you.
 //  * The clock: hours since midnight before Friday, March 3 2006.
-//  * Garage work takes time. Fitting a part queues the job on your bench;
-//    the car stays in the bay until the work's done. You do the work when
-//    you choose to (Work on it), or pay the shop to do it (they're quicker,
-//    and it's not your time).
+//  * Garage work takes time. Fitting a part queues the job for that car;
+//    the car stays in the bay until the work's done. You choose (work.js):
+//    do it yourself (the clock moves while you wrench) or pay the shop.
 //  * Days and months pass: hooks run for each (bills on the 1st, loans,
 //    the race team's dates, events coming and going).
 //  * The bank: a bank loan (monthly payments, a credit score that sets
@@ -141,7 +140,7 @@
   };
   G.busyText = function (inst) {
     var b = G.carBusy(inst); if (!b) return '';
-    return 'In the bay: ' + (b.own ? CAL.dur(b.own) + ' of work on your bench' + (b.bench > b.own ? ' (' + CAL.dur(b.bench - b.own) + ' ahead of it)' : '') : '') + (b.shop ? (b.own ? '; ' : '') + 'the shop is done in ' + CAL.dur(b.shop) : '') + '.';
+    return 'In the bay: ' + (b.own ? CAL.dur(b.own) + ' of work waiting (do it yourself or the shop)' : '') + (b.shop ? (b.own ? '; ' : '') + 'the shop is done in ' + CAL.dur(b.shop) : '') + '.';
   };
   // the shop takes the car's bench jobs: book hours at the shop rate, done
   // in about half the time (two techs and a lift)
@@ -290,11 +289,11 @@
 
   // ---------------------------------------------------------------- a car in the bay
   // can't be raced, run on the dyno or taken to a tuner till the work's done
-  function busyMsg(inst) { var b = G.carBusy(inst); return b ? 'The ' + DR.CARS[inst.carId].name + ' is in the bay: ' + (b.own ? CAL.dur(b.own) + ' of work left on it (Work on it, or have the shop finish it)' : 'the shop has it for ' + CAL.dur(b.shop)) : ''; }
+  function busyMsg(inst) { var b = G.carBusy(inst); return b ? 'The ' + DR.CARS[inst.carId].name + (b.own ? ' has ' + CAL.dur(b.own) + ' of work waiting: do it yourself or have the shop do it' : ' is at the shop till ' + CAL.fmt(G.now() + b.shop)) : ''; }
   G.busyMsg = busyMsg;
   function gate(obj, name, pick) {
     var o = obj && obj[name]; if (!o) return;
-    obj[name] = function () { var inst = pick.apply(this, arguments); var m = inst && busyMsg(inst); if (m) { DR.UI.toast(m); return; } return o.apply(this, arguments); };
+    obj[name] = function () { var inst = pick.apply(this, arguments); var m = inst && busyMsg(inst); if (m) { if (DR.UI.workPrompt) DR.UI.workPrompt(inst); else DR.UI.toast(m); return; } return o.apply(this, arguments); };
   }
   gate(DR.Race, 'start', function (cfg) { return cfg && cfg.inst ? null : G.car(); });
   gate(DR.Race, 'raceDay', function () { return G.car(); });
@@ -319,7 +318,7 @@
       var h = UI.h, b = G.carBusy(inst);
       return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'dyno'), h('div', { class: 'content' }, h('div', { class: 'awaybox' },
         h('div', { class: 'pix acc' }, 'In the bay'), h('div', {}, m + '.'),
-        h('div', { class: 'row' }, b.own ? UI.btn('Work on it (' + CAL.dur(b.bench) + ')', function () { UI.passTime(b.bench, b.bench); }, 'primary') : null, UI.btn('Garage', function () { UI.show(UI.Garage); })))));
+        UI.workCard ? UI.workCard(inst) : null, h('div', { class: 'row' }, UI.btn('Garage', function () { UI.show(UI.Garage); })))));
     };
   }
 

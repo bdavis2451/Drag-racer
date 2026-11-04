@@ -114,41 +114,60 @@
     if (G.state.lic && G.state.lic.test) out.practice = '!';
     return out;
   }
-  // the next thing you can go and race
+  // the career's own events, in time order (This Week, Next Up)
+  function careerAgenda(days, fromK) {
+    var now = G.now(), d0 = DR.Cal.dayStart(now), out = [];
+    for (var k = fromK || 0; k < days; k++) G.dayAgenda(d0 + k * 24).forEach(function (e) { if ((e.career || e.kind === 'host') && (e.end > now || e.end === e.t)) out.push(e); });
+    return out.sort(function (a, b) { return a.t - b.t; });
+  }
+  function whyOf(e) { try { return e.why ? e.why() : null; } catch (x) { return null; } }
+  // the button for an entry: Go (on now), Go there (later), or what's in the way
+  function goBtn(e, cls) {
+    var now = G.now(), on = e.t <= now && now < e.end;
+    return on || e.end === e.t ? btn('Go', function () { e.go(); }, 'small go' + (cls || '')) : btn('Go (' + DR.Cal.dur(e.t - now) + ')', function () { UI.goThere(e.t, e.label, e.go); }, 'small' + (cls || ''));
+  }
+  // the next thing you can go and race (Skip shows the one after; one you
+  // can't enter yet says why and what fixes it)
+  var nextSkip = 0;
   UI.nextUp = function () {
     if (!G.dayAgenda) return null;
-    var now = G.now(), d0 = DR.Cal.dayStart(now), best = null;
-    for (var k = -1; k < 10 && !best; k++) G.dayAgenda(d0 + k * 24).forEach(function (e) {
-      if (['test', 'bill', 'wander'].indexOf(e.kind) >= 0 || e.end <= now) return;
-      if (!best || e.t < best.t) best = e;
-    });
-    if (!best) return null;
-    var on = best.t <= now;
-    return h('div', { class: 'nextup' }, h('i', { class: 'caldot', style: { background: (DR.KCOL || {})[best.kind] || '#888' } }),
-      h('div', { class: 'grow' }, h('div', { class: 'gsmall acc' }, on ? 'ON NOW' : 'NEXT UP • ' + DR.Cal.fmt(best.t) + ' (in ' + DR.Cal.dur(best.t - now) + ')'), h('div', {}, best.label), best.sub ? h('div', { class: 'gsmall dim' }, best.sub) : null),
-      btn(on ? 'Go' : 'Go there', function () { if (best.t > G.now()) UI.timeNews(G.advanceTo(best.t)); best.go(); }, 'small go'));
+    var now = G.now(), list = careerAgenda(10).filter(function (e) { return e.kind !== 'bill'; });
+    if (!list.length) return null;
+    if (nextSkip >= list.length) nextSkip = 0;
+    var best = list[nextSkip], on = best.t <= now, why = whyOf(best);
+    var skip = list.length > 1 ? btn('Skip', function () { nextSkip = (nextSkip + 1) % list.length; UI.refresh(); }, 'small') : null;
+    return h('div', { class: 'nextup' + (why ? ' blocked' : '') }, h('i', { class: 'caldot', style: { background: (DR.KCOL || {})[best.kind] || '#888' } }),
+      h('div', { class: 'grow' }, h('div', { class: 'gsmall acc' }, (on ? 'ON NOW' : 'NEXT UP • ' + DR.Cal.fmt(best.t) + ' (in ' + DR.Cal.dur(best.t - now) + ')') + (nextSkip ? ' • ' + (nextSkip + 1) + ' of ' + list.length : '')),
+        h('div', {}, best.label), why ? h('div', { class: 'gsmall warn' }, '⚠ ' + why.msg) : best.sub ? h('div', { class: 'gsmall dim' }, best.sub) : null),
+      skip, why ? btn(why.fix[0], why.fix[1], 'small go') : goBtn(best));
   };
-  // This Week: next up, then each day's events
+  // This Week: the career's days (your race days, Kings, your team's
+  // circuit race day, bills), each day as its Day and its Night. Side
+  // events live in their tabs (Street, Events); everything's on the
+  // Month view.
   function weekView() {
     var now = G.now(), d0 = DR.Cal.dayStart(now), days = [];
     for (var k = 0; k < 8; k++) {
-      var d = d0 + k * 24, ag = G.dayAgenda(d).filter(function (e) { return e.end > now || e.end === e.t; });
+      var d = d0 + k * 24, ag = G.dayAgenda(d).filter(function (e) { return (e.career || e.kind === 'host') && (e.end > now || e.end === e.t); });
       if (!ag.length) continue;
+      var parts = [['DAY', ag.filter(function (e) { return e.t % 24 < 17; })], ['NIGHT', ag.filter(function (e) { return e.t % 24 >= 17; })]];
       days.push(h('div', { class: 'wkday' }, h('div', { class: 'plvl' }, k === 0 ? 'TODAY • ' + DR.Cal.fmt(d, { noTime: true }) : DR.Cal.fmt(d, { long: true, noTime: true })),
-        ag.map(function (e) {
-          var on = e.t <= now && now < e.end;
-          return h('div', { class: 'calev' }, h('i', { class: 'caldot', style: { background: DR.KCOL[e.kind] || '#888' } }),
-            h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, (e.end > e.t ? DR.Cal.hourText(Math.floor(e.t % 24)) + '–' + DR.Cal.hourText(Math.floor(e.end % 24)) : '') + (e.sub ? ' • ' + e.sub : ''))),
-            on ? btn('Go', function () { e.go(); }, 'small go') : btn('Go (' + DR.Cal.dur(e.t - now) + ')', function () { UI.timeNews(G.advanceTo(e.t)); e.go(); }, 'small'));
+        parts.map(function (pt) {
+          if (!pt[1].length) return null;
+          return h('div', { class: 'wkpart' }, h('div', { class: 'wkdn' + (pt[0] === 'NIGHT' ? ' night' : '') }, pt[0]), pt[1].map(function (e) {
+            var why = whyOf(e);
+            return h('div', { class: 'calev' }, h('i', { class: 'caldot', style: { background: DR.KCOL[e.kind] || '#888' } }),
+              h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, (e.end > e.t ? DR.Cal.hourText(Math.floor(e.t % 24)) + '–' + DR.Cal.hourText(Math.floor(e.end % 24)) : '') + (e.sub ? ' • ' + e.sub : '')),
+                why ? h('div', { class: 'gsmall warn' }, '⚠ ' + why.msg) : null),
+              why ? btn(why.fix[0], why.fix[1], 'small') : goBtn(e));
+          }));
         })));
     }
-    var cur = G.raceDayNow && G.raceDayNow();
     return h('div', {},
       UI.nextUp(),
-      cur ? h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'RACE DAY ON'), h('span', { class: 'grow gsmall' }, DR.STAGES[cur.si].name + ' • ' + G.dayScore(cur) + ' pts (win ' + G.dayTargets(cur).win + ', dominate ' + G.dayTargets(cur).dom + ')'), btn('Call it a day', function () { G.closeRaceDay(); UI.refresh(); }, 'small')) : null,
-      h('div', { class: 'row', style: { gap: '6px', alignItems: 'center', margin: '4px 0' } }, h('span', { class: 'gsmall dim grow' }, 'Street spots and callouts: any night, 9 PM–3 AM (Street).'),
+      h('div', { class: 'row', style: { gap: '6px', alignItems: 'center', margin: '4px 0' } }, h('span', { class: 'gsmall dim grow' }, 'Your career\'s week. Test & tune any day the strip\'s open (Practice); street nights, Grudge Night (Street) and club meets, series and shows (Events) in their tabs.'),
         btn('Month view', function () { UI.show(UI.Calendar); }, 'small'), btn('Home', function () { UI.show(UI.Home); }, 'small')),
-      days.length ? days : h('div', { class: 'dim' }, 'Nothing on this week.'));
+      days.length ? days : h('div', { class: 'dim' }, 'Nothing on your career this week.'));
   }
   // Practice: the strip's test & tune and licenses, the circuit test lap
   function practiceView(inst) {
@@ -178,7 +197,7 @@
       return arr.length ? arr.map(function (e) {
         var on = e.t <= now;
         return h('div', { class: 'calev' }, h('i', { class: 'caldot', style: { background: DR.KCOL[e.kind] } }), h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, DR.Cal.fmt(e.t) + (e.sub ? ' • ' + e.sub : ''))),
-          btn(on ? 'Go' : 'Go (' + DR.Cal.dur(e.t - now) + ')', function () { if (!on) UI.timeNews(G.advanceTo(e.t)); e.go(); }, 'small' + (on ? ' go' : '')));
+          btn(on ? 'Go' : 'Go (' + DR.Cal.dur(e.t - now) + ')', function () { if (!on) return UI.goThere(e.t, e.label, e.go); e.go(); }, 'small' + (on ? ' go' : '')));
       }) : h('div', { class: 'dim gsmall' }, empty);
     }
     var se = DR.Extras && DR.Extras.state().series;
@@ -191,7 +210,7 @@
   function stageChips() {
     return h('div', { class: 'schips' }, DR.STAGES.map(function (st, si) {
       var un = G.stageUnlocked(si), boss = G.stageDone(si);
-      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Finish stage ' + si + ': its King and its Circuit Cup'); selStage = si; selPlace = null; UI.refresh(); }, un ? '' : 'nofit');
+      return chip((boss ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), si === selStage, function () { if (!un) return UI.toast('Beat the King of ' + DR.STAGES[si - 1].name + ' first'); selStage = si; selPlace = null; UI.refresh(); }, un ? '' : 'nofit');
     }));
   }
   function nextEvent(st) {
@@ -225,8 +244,39 @@
     var spots = DR.CITY.filter(function (p) { return !p.circuit; }), open = spots.filter(spotOpen).length;
     var legend = h('div', { class: 'gsmall dim citylegend' },
       h('span', { class: 'lg g' }, 'street race'), h('span', { class: 'lg c' }, 'circuit'), h('span', { class: 'lg' }, 'opens later'), h('span', {}, open + ' / ' + spots.length + ' spots open'), h('span', {}, 'drag / pinch to zoom'));
-    return h('div', {},
+    return h('div', {}, grudgeCard(inst),
       h('div', { class: 'citywrap' }, h('div', { class: 'citymap' }, h('div', { class: 'cityframe' }, cv, zoomBar(ctl)), legend), h('div', { class: 'cityside' }, place.circuit ? circuitSpot(place) : streetView(inst, place))));
+  }
+  // Grudge Night: Wednesdays at the strip, street racing settled legally. A
+  // prepped eighth mile, no cops: pick a grudge, put up a stake. A win is
+  // class rep (it counts toward calling out the ladder); it isn't a career
+  // race.
+  var grudgeOpen = false, grudgeOpps = null, grudgeStake = null;
+  function grudgeCard(inst) {
+    var c = G.careerState(), base = DR.STAGES[Math.min(c.stage, DR.STAGES.length - 1)].base;
+    var stakes = [0.1, 0.25, 0.5].map(function (f) { return Math.max(50, Math.round(base * f / 50) * 50); });
+    if (stakes.indexOf(grudgeStake) < 0) grudgeStake = stakes[0];
+    var on = G.slotOpen && G.slotOpen('grudge'), when = G.whenText ? G.whenText('grudge') : '';
+    var head = h('div', { class: 'row grudgehead', style: { gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+      h('span', { class: 'pix small acc' }, 'GRUDGE NIGHT'), h('span', { class: 'gsmall' + (on ? ' good' : ' dim') }, on ? 'ON NOW at Pixel Dragway' : 'Wednesdays 6 to 11 PM • next ' + when),
+      h('span', { class: 'gsmall dim grow' }, 'Settle it legally: prepped eighth mile, no cops. A win is +' + DR.GRUDGE_REP + ' class rep.'),
+      btn(grudgeOpen ? 'Hide' : 'Open', function () { grudgeOpen = !grudgeOpen; UI.refresh(); }, 'small'));
+    if (!grudgeOpen) return h('div', { class: 'trkcard grudge' }, head);
+    if (!grudgeOpps) grudgeOpps = G.streetOpponents(G.estimate(inst, DR.EIGHTH, 1).et, DR.EIGHTH, 1);
+    var grid = h('div', { class: 'egrid' }, grudgeOpps.map(function (o) {
+      var oi = G.oppInst(o), oS = G.spec(oi);
+      return h('div', { class: 'ecard t-street' }, h('div', { class: 'ecvwrap' }, oppCanvas(oi), h('span', { class: 'etype' }, 'GRUDGE')),
+        h('div', { class: 'acc ename' }, o.name), h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name + ' • about ' + Math.round((oS.peakHp + oS.nosHp) / 25) * 25 + ' hp'),
+        h('div', { class: 'efoot' }, h('span', { class: 'price' }, 'Win ' + DR.money(grudgeStake)),
+          btn('Race', function () {
+            if (G.state.money < grudgeStake) return UI.toast('You can\'t cover a ' + DR.money(grudgeStake) + ' stake');
+            var opp = o; grudgeOpps = null;
+            DR.Race.raceDay({ mode: 'street', grudge: true, opp: opp, dist: DR.EIGHTH, theme: 'strip', grip: 1, bet: grudgeStake }, 'Grudge Night • ' + DR.money(grudgeStake));
+          }, 'small red')));
+    }));
+    return h('div', { class: 'trkcard grudge' }, head,
+      h('div', { class: 'schips' }, h('span', { class: 'pix small', style: { alignSelf: 'center' } }, 'STAKE'), stakes.map(function (b) { return chip(DR.money(b), b === grudgeStake, function () { grudgeStake = b; UI.refresh(); }, b > G.state.money ? 'disabled' : ''); })),
+      grid, h('div', { style: { marginTop: '6px' } }, btn('Other grudges', function () { grudgeOpps = null; UI.refresh(); }, 'small')));
   }
   function zoomBar(ctl) {
     return h('div', { class: 'cityzoom' }, btn('+', function () { ctl.zoomBy(1.5); }, 'small'), btn('−', function () { ctl.zoomBy(1 / 1.5); }, 'small'), btn('⤢', function () { ctl.reset(); }, 'small'));
@@ -237,7 +287,7 @@
   // and the boss at the end. Tap a stop to see it on the right.
   var selEv = null;
   var NODE_GLYPH = { quarter: '1/4', eighth: '1/8', street: 'ST', knockout: 'KO', sponsor: 'SPON', showcase: 'NP', show: 'SHOW', boss: 'KING', 'class': 'SIDE', bracket: 'BKT' };
-  var careerTab = 'days';
+  var careerTab = 'days', selCStage = null;
   // the class page: its race days, its ladder, and the Kings
   function careerView() {
     var c = G.careerState();
@@ -249,15 +299,28 @@
       chip('Circuit', careerTab === 'circuit', function () { careerTab = 'circuit'; UI.refresh(); }),
       chip('Kings', careerTab === 'kings', function () { careerTab = 'kings'; UI.refresh(); }),
       h('span', { class: 'gsmall acc', style: { marginLeft: 'auto' } }, 'Class rep ' + G.rep(selStage)));
-    // the stage at a glance: both halves, once
-    var st = DR.STAGES[selStage], kingDone = G.eventWon(st.boss), cupDone = G.cupWon(selStage);
-    var status = G.cupWins ? h('div', { class: 'cupline' },
-      h('span', { class: 'acc' }, st.name), h('span', { class: 'gsmall' }, G.stageWins(selStage) + '/' + st.events.length + ' strip'),
-      h('span', { class: 'gsmall' }, G.cupWins(selStage) + '/4 circuit'),
-      h('span', { class: kingDone ? 'good' : 'dim' }, (kingDone ? '✔' : '✗') + ' King'), h('span', { class: cupDone ? 'good' : 'dim' }, (cupDone ? '✔' : '✗') + ' Cup'),
-      h('span', { class: 'gsmall dim grow' }, G.stageDone(selStage) ? 'stage done' : 'both open the next stage')) : null;
-    var body = careerTab === 'ladder' ? ladderView(selStage) : careerTab === 'kings' ? kingsView() : careerTab === 'circuit' && UI.circuitCareerView ? UI.circuitCareerView(selStage) : raceDaysView(c);
-    return h('div', {}, UI.nextUp ? UI.nextUp() : null, careerTab === 'kings' ? null : stageChips(), status, tabs, body);
+    // the class at a glance. The strip and the circuit are two ladders: a
+    // King opens the next drag class, a Cup the next circuit class.
+    var circ = careerTab === 'circuit' && UI.circuitCareerView && G.cstage, st = DR.STAGES[selStage], kingDone = G.eventWon(st.boss), status, chips;
+    if (circ) {
+      var cs = G.cstage();
+      if (selCStage == null || selCStage > cs) selCStage = cs;
+      chips = h('div', { class: 'schips' }, DR.CSTAGES.map(function (x, si) {
+        var un = si <= cs, done = G.cupWon(si);
+        return chip((done ? '✔ ' : un ? '' : '🔒 ') + 'Circuit ' + (si + 1), si === selCStage, function () { if (!un) return UI.toast('Win the ' + G.cupName(si - 1) + ' first'); selCStage = si; UI.refresh(); }, un ? '' : 'nofit');
+      }));
+      var cupDone = G.cupWon(selCStage);
+      status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, G.cclassName(selCStage)), h('span', { class: 'gsmall' }, G.cupWins(selCStage) + '/4 race days'),
+        h('span', { class: cupDone ? 'good' : 'dim' }, (cupDone ? '✔' : '✗') + ' ' + G.cupName(selCStage)),
+        h('span', { class: 'gsmall dim grow' }, cupDone ? 'class done' : 'the Cup opens the next circuit class'));
+    } else {
+      chips = careerTab === 'kings' ? null : stageChips();
+      status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, st.name), h('span', { class: 'gsmall' }, G.stageWins(selStage) + '/' + st.events.length + ' race days'),
+        h('span', { class: kingDone ? 'good' : 'dim' }, (kingDone ? '✔' : '✗') + ' King'),
+        h('span', { class: 'gsmall dim grow' }, kingDone ? 'class done' : 'the King opens the next class'));
+    }
+    var body = careerTab === 'ladder' ? ladderView(selStage) : careerTab === 'kings' ? kingsView() : circ ? UI.circuitCareerView(selCStage) : raceDaysView(c);
+    return h('div', {}, UI.nextUp ? UI.nextUp() : null, chips, careerTab === 'kings' ? null : status, tabs, body);
   }
   // the ladder: #5 up to #1, then the King. Call out the rival above you
   // once your rep in the class is high enough.

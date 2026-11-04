@@ -168,6 +168,18 @@
   };
 
   T.racesToNewBoard = function () { var s = st(); return Math.max(0, T.REFRESH_EVERY - (s.done - s.boardAt)); };
+  // A new career comes with Ray's nephew: a rookie circuit driver, free to
+  // sign, paid by the race like anyone. The circuit career is the team's;
+  // he means it can start the first Sunday.
+  var newGame0 = G.newGame;
+  G.newGame = function () {
+    var out = newGame0.apply(this, arguments), s = st();
+    var d = makeDriver(30); d.name = 'Danny Ortiz'; d.age = 19; d.pot = Math.max(d.pot, 62); d.fee = 0; d.wage = T.wage(d); d.nephew = true;
+    d.id = 'd' + (s.nid++); d.hired = Date.now(); s.drivers.push(d);
+    G.save();
+    if (DR.Phone) setTimeout(function () { DR.Phone.send('ray', 'nephew'); }, 0);
+    return out;
+  };
   T.hire = function (i) {
     var s = st(), d = s.board[i];
     if (!d) return 'Gone';
@@ -462,7 +474,7 @@
     var s = st(), n = Math.min(3, s.drivers.length);
     if (T.invite()) return null;
     if (!force && Math.random() >= T.INVITE_P[n]) return null;
-    var c = G.careerState(), cls = T.classById(T.stageClass(c.stage)), tid = pick(['pixel'].concat(T.SERIES));
+    var c = G.careerState(), cls = T.classById(T.stageClass(G.cstage ? G.cstage() : c.stage)), tid = pick(['pixel'].concat(T.SERIES));
     s.invite = { cls: cls.id, track: tid, team: pick(TEAMS), exp: s.done + T.INVITE_FOR };
     if (DR.Phone) DR.Phone.send('street', 'invite', s.invite);
     return s.invite;

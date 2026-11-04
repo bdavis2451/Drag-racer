@@ -112,7 +112,7 @@
   // why a callout can't be raced ('' = it can)
   G.calloutLock = function (ev) {
     var si = ev.stage, pos = G.ladderPos(si);
-    if (si > C().stage) return 'Finish the previous stage (its King and its Circuit Cup)';
+    if (si > C().stage) return 'Beat the King of ' + DR.STAGES[si - 1].name + ' first';
     if (ev.rung < pos) return '';                         // already beaten: a rematch
     if (ev.rung > pos) return 'Beat #' + (5 - pos) + ' first';
     var need = DR.LADDER_REP[ev.rung], have = G.rep(si);

@@ -17,8 +17,8 @@
   // key: [from, text(data)]; once-only unless `again`
   var SCRIPT = {
     intro: ['ray', function () { return 'Couch is yours, kid. Bay three too, as long as you sweep up and don\'t touch my lathe. Your car runs. Barely. Go find out how barely: test and tune is Wednesday and Friday nights.'; }],
-    circuit: ['ray', function () { return 'One more thing. Nobody moves up around here on straight lines alone: every class has a Circuit Cup too, and you\'ll need a driver for it. Rookies are cheap on the Team board (it\'s on the garage). Hire one, send them to the Sunday Track Day.'; }],
-    cup: ['ray', function (n) { return 'Your team won the ' + DR.STAGES[n].name + ' Circuit Cup! The road course people will sell you their good stuff now: brakes, bars, wings.'; }],
+    circuit: ['ray', function () { return 'Danny says he\'s ready for the Sunday Track Day. Your team\'s circuit races are under Race > Career > Circuit, and they pay. Better drivers are on the Team board when you can afford them.'; }],
+    cup: ['ray', function (n) { return 'Your team won the ' + (G.cupName ? G.cupName(n) : 'Cup') + '! The road course people will sell you their good stuff now: brakes, bars, wings.' + (n + 1 < DR.STAGES.length ? ' Next up for them: ' + G.cclassName(n + 1).replace(/^Circuit \d+: /, '') + '.' : ''); }],
     invite: ['street', function (iv) { return (iv && iv.team ? iv.team : 'A team') + ' here. Two of ours against two of yours and one more crew, ' + (iv ? DR.TRACKS[iv.track].name : 'this weekend') + '. Team points. You in? (Race > Events)'; }, true],
     firstrace: ['ray', function () { return 'Saw your slip. Don\'t look at the ET, look at the 60 foot. That\'s where races are won and where yours isn\'t yet.'; }],
     firstwin: ['ray', function () { return 'A win! Frame the slip. Then spend the money on tires, not a wing.'; }],
@@ -34,6 +34,8 @@
     repo: ['ray', function () { return 'Heard about the car. Lenders don\'t care how fast it was, kid. Borrow less than you can lose.'; }, true],
     promoter: ['ray', function () { return 'First event in the black! Your granddad ran Friday nights at the old airfield, you know. Keep the porta-johns clean and the purse honest and they\'ll keep coming.'; }],
     hint: ['street', function (t) { return t; }, true],
+    couchrent: ['ray', function () { return 'You\'re winning now, kid, so here\'s the deal: ' + DR.money(DR.COUCH_RENT) + ' a month toward the lights and the shop. Couch stays yours. If you\'re short, I\'ll run a tab.'; }],
+    nephew: ['ray', function () { return 'My nephew Danny\'s been bugging me to race. He\'s green, but he\'s on your team now: he\'ll drive your circuit races (Race > Career > Circuit) while you run the strip. Pays by the race. Hire better drivers when you can.'; }],
     bailout: ['ray', function () { return 'Saw your bank balance. Put $2,000 in it. Once, kid. Next time you\'re in the red, sell something: a car, the parts on the shelf. That\'s how the rest of us did it.'; }],
     evicted: ['ray', function () { return 'Landlord called me, kid. Couch is made up. Pay your rent first next time, then buy parts.'; }, true],
     ticket: ['ray', function (d) { return (d && d.fine >= 600 ? 'A ' + DR.money(d.fine) + ' stop? ' : 'Another ticket. ') + 'That\'s what trailers are for.'; }, true]
@@ -118,7 +120,7 @@
     if (c.kings && Object.keys(c.kings).length) hit('king');
     if (s.started && s.money < 150 && s.stats.races >= 3) hit('broke');
     var t = s.team;
-    if (t && ((t.drivers || []).length + (t.ddrivers || []).length + (t.tuners || []).length)) hit('hire');
+    if (t && ((t.drivers || []).filter(function (d) { return !d.nephew; }).length + (t.ddrivers || []).length + (t.tuners || []).length)) hit('hire');
     if (t && (t.history || []).some(function (x) { return x.pos === 1; })) hit('circuitwin');
     return out;
   }

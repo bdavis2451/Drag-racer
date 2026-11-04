@@ -836,7 +836,7 @@
           h('td', { class: 'num' }, x.prize ? '+' + DR.money(x.prize) : '—'));
       }))));
     }
-    out.push(h('div', { class: 'gsmall dim trknote' }, 'Races run at 4x real time; ⏩ 4× time speeds a race up 4x more (16x), from the race card or while you watch. While a car is at the track it can\'t be drag raced, worked on, shown or sold. Open races pay prize money; the career\'s circuit race days (above) open circuit parts and the road-course cars, and each stage\'s Circuit Cup is half of what opens the next stage.'));
+    out.push(h('div', { class: 'gsmall dim trknote' }, 'Races run at 4x real time; ⏩ 4× time speeds a race up 4x more (16x), from the race card or while you watch. While a car is at the track it can\'t be drag raced, worked on, shown or sold. Open races pay prize money; the career\'s circuit race days (above) open circuit parts and the road-course cars, and each class\'s Cup opens the next circuit class.'));
     return h('div', {}, out);
   }
 
@@ -847,11 +847,12 @@
   function careerCard(si) {
     var T = TM(), c = G.careerState(), embed = si != null;
     if (embed) cupStage = si;
-    if (cupStage == null || cupStage > c.stage) cupStage = c.stage;
+    var cst = G.cstage ? G.cstage() : c.stage;
+    if (cupStage == null || cupStage > cst) cupStage = cst;
     var cs = DR.CSTAGES[cupStage], st = DR.STAGES[cupStage], kingWon = G.eventWon(st.boss);
     var chips = h('div', { class: 'schips' }, DR.STAGES.map(function (x, si) {
-      var un = si <= c.stage, done = G.cupWon(si);
-      return btn((done ? '✔ ' : un ? '' : '🔒 ') + 'Stage ' + (si + 1), function () { if (!un) return UI.toast('Finish stage ' + si + ' first'); cupStage = si; UI.refresh(); }, 'chip' + (si === cupStage ? ' on' : '') + (un ? '' : ' nofit'));
+      var un = si <= cst, done = G.cupWon(si);
+      return btn((done ? '✔ ' : un ? '' : '🔒 ') + 'Circuit ' + (si + 1), function () { if (!un) return UI.toast('Win the ' + G.cupName(si - 1) + ' first'); cupStage = si; UI.refresh(); }, 'chip' + (si === cupStage ? ' on' : '') + (un ? '' : ' nofit'));
     }));
     var grid = h('div', { class: 'egrid' }, cs.all.map(function (ev) {
       var won = !!c.cwon[ev.id], lock = G.cupLock(ev), cls = T.classById(ev.cls), live = T.active().filter(function (r) { return r.ev === ev.id; })[0];
@@ -865,10 +866,9 @@
         h('div', { class: 'efoot' }, lock ? h('span', { class: 'gsmall dim' }, '🔒 ' + lock) : h('span', {}),
           live ? btn('Watch', function () { UI.watchRace = live.id; UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); }, 'small go') : lock ? null : btn(won ? 'Rerun' : 'Enter', function () { gateC('cup', ev.name, function () { entryModal(cls, ev.track, false, false, ev); }); }, 'small go')));
     }));
-    var need = h('div', { class: 'gsmall' }, 'Stage ' + (cupStage + 1) + ' is done when both are won: ',
-      h('span', { class: kingWon ? 'good' : 'dim' }, (kingWon ? '✔ ' : '✗ ') + 'the King of ' + st.name + ' (drag)'), ' and ', h('span', { class: G.cupWon(cupStage) ? 'good' : 'dim' }, (G.cupWon(cupStage) ? '✔ ' : '✗ ') + 'the ' + cs.cup.name), '.');
-    if (embed) return h('div', {}, h('div', { class: 'gsmall dim' }, 'Run by your circuit drivers on Sunday race days. Early race days ask for a podium, later ones the win; the Cup is half of what opens the next stage.'), grid);
-    return h('div', {}, h('div', { class: 'plvl secthead' }, 'CAREER • ' + st.name + ' • circuit race days'), chips, need, grid);
+    var need = h('div', { class: 'gsmall' }, h('span', { class: G.cupWon(cupStage) ? 'good' : 'dim' }, (G.cupWon(cupStage) ? '✔ ' : '✗ ') + 'the ' + cs.cup.name), ' opens the next circuit class.');
+    if (embed) return h('div', {}, h('div', { class: 'gsmall dim' }, 'Your team\'s side: your circuit drivers race these on Sunday race days. Early race days ask for a podium, later ones the win; the Cup opens the next circuit class.'), grid);
+    return h('div', {}, h('div', { class: 'plvl secthead' }, 'CAREER • ' + G.cclassName(cupStage) + ' • circuit race days'), chips, need, grid);
   }
 
   // the Night Series: start a season, or its table and next round
