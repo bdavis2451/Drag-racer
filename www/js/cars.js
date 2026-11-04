@@ -219,6 +219,21 @@
     return [w + l, w + l, w + 4 + l];
   }
 
+  // Seats and glass inside the windows that the art's paint key caught
+  // (sheet pixels): 'seat' boxes draw paint there as the seats, 'glass'
+  // boxes as the glass beside it; tone 'light' for a white / silver car.
+  DR.SEAT_FIX = {
+    camaro6: { seat: [[155, 10, 180, 40]] },
+    charger: { seat: [[185, 16, 204, 46]] },
+    cobra03: { seat: [[148, 18, 166, 44], [122, 22, 148, 44]] },
+    gnx: { seat: [[172, 20, 190, 52], [246, 42, 256, 52]] },
+    hellcat: { seat: [[158, 20, 184, 44]] },
+    monte: { seat: [[186, 14, 200, 46], [128, 30, 145, 47]] },
+    lightning: { seat: [[204, 20, 218, 56]] },
+    stang15: { glass: [[118, 22, 142, 35], [158, 15, 206, 22]] },
+    r34: { glass: [[108, 16, 226, 44], [226, 16, 248, 40]] }
+  };
+
   // ------------------------------------------------------------ bitmap cars
   // A car drawn from a hand-made sprite sheet (DR.SHEETS) instead of the
   // polygon art: its paint is recoloured onto the player's paint ramp, its
@@ -423,10 +438,32 @@
       return a * a + b * b < cutR * cutR || c2 * c2 + b * b < cutF * cutF;
     }
 
+    // ---- seats and glass the art's paint key caught: on a car whose paint
+    // was keyed by colour, a seat or a glass reflection in that colour came
+    // out as paint and took the body colour. DR.SEAT_FIX boxes (sheet
+    // pixels) put them back: seats in the car's own neutral tone, glass from
+    // the nearest real glass beside it.
+    var fix = DR.SEAT_FIX[look.carId] || {};
+    function inBoxes(list, sx, sy) { return (list || []).some(function (r) { return sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3]; }); }
+    function glassy(c) { if (!c || c.p != null) return false; var hv = rgb2hsv(c); return hv[0] > 0.5 && hv[0] < 0.75 && hv[1] > 0.08 && hv[2] > 0.12; }
+    var SEATV = fix.tone === 'light' ? [0.9, 0.82, 0.74, 0.66, 0.56, 0.46, 0.36] : [0.34, 0.29, 0.24, 0.2, 0.16, 0.12, 0.08];
+    function seatCol(step) { var v = SEATV[Math.max(0, Math.min(6, step))] * 255; return [v * 0.97, v * 0.98, Math.min(255, v * 1.06)]; }
+    function glassNear(sx, sy) {
+      for (var k = 1; k < 30; k++) { var a = sget(sh, sx - k, sy), b2 = sget(sh, sx + k, sy); if (glassy(a)) return a; if (glassy(b2)) return b2; }
+      return [52, 50, 96];
+    }
+
     // ---- the body
     for (var sy = y0; sy <= gy; sy++) for (var sx = x0; sx <= x1; sx++) {
       var c = sget(sh, sx, sy);
       if (!c) continue;
+      if (c.p != null && (inBoxes(fix.seat, sx, sy) || inBoxes(fix.glass, sx, sy))) {
+        c = inBoxes(fix.seat, sx, sy) ? seatCol(c.p) : glassNear(sx, sy).slice();
+        if (DR.SEAT_DEBUG) c = [255, 0, 255];
+        else if (vis.tint) c = mix(c, [18, 22, 30], vis.tint === 2 ? 0.72 : 0.42);
+        put(body, lx(sx), ly(sy), c);
+        continue;
+      }
       var px = lx(sx), py = ly(sy);
       if (sy >= gy - 5 && Math.abs(c[0] - c[1]) < 6 && Math.abs(c[1] - c[2]) < 6 && c[0] > 100 && c[0] < 150) continue;   // the sheet's ground shadow
       if (inWheel(sx, sy)) { put(under, px, py, [14, 14, 17]); continue; }                                           // wheel well
