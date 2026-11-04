@@ -9,3 +9,4 @@ android/capacitor-cordova-android-plugins/build/
 *.apk
 *.aab
 .DS_Store
+__pycache__/
