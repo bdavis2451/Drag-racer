@@ -622,14 +622,13 @@
       var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; G.save(); recalc(); }, def.fmt || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; G.save(); UI.refresh(); } : null);
       row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F); knock limit ' + S.knock + ' psi.' : '')));
-      // jets: how the plugs read in a day's and a night's air (a pro data
-      // logger's wideband gives the air/fuel ratio)
+      // jets: how the plugs read (any data logger brings a wideband: the
+      // exact air/fuel ratio)
       if (def.key === 'jets') {
-        var wb = (DR.getOption('logger', inst).log || 0) >= 3, rdD = DR.carbRead(S, 29), rdN = DR.carbRead(S, 18);
-        var rl = function (lbl, r) { return h('div', { class: 'help' }, '• ' + lbl + ': ' + r.text + (wb ? ' (' + r.afr + ':1)' : '')); };
-        row.appendChild(h('div', { class: 'boostwhy' }, h('div', { class: 'plvl' }, 'PLUG READING' + (wb ? ' + WIDEBAND' : '') + ' (' + S.carb.name.toUpperCase() + ')'),
-          rl('Hot day (84°F)', rdD), rl('Cool night (64°F)', rdN),
-          G.state.settings.sim ? null : h('div', { class: 'help dim' }, 'Best power is right on to a touch rich (about 12.5-12.8:1). The tuner can jet it for you.')));
+        var wb = (DR.getOption('logger', inst).log || 0) >= 1, rd = DR.carbRead(S, DR.AMBIENT_C);
+        row.appendChild(h('div', { class: 'boostwhy' }, h('div', { class: 'plvl' }, (wb ? 'WIDEBAND' : 'PLUG READING') + ' (' + S.carb.name.toUpperCase() + ')'),
+          h('div', { class: 'help' }, '• Plugs: ' + rd.text + (wb ? '. Wideband: ' + rd.afr + ':1' : '')),
+          G.state.settings.sim ? null : h('div', { class: 'help dim' }, 'Best power is right on to a touch rich (about 12.5-12.8:1).' + (wb ? '' : ' A data logger adds a wideband for the exact number.') + ' The tuner can jet it for you.')));
       }
       // what sets the boost range, part by part
       if (def.key === 'boost') row.appendChild(h('div', { class: 'boostwhy' }, h('div', { class: 'plvl' }, 'RANGE ' + (S.boostMin || 0) + '-' + S.maxBoost + ' PSI: WHY'), DR.boostWhy(S).map(function (l) { return h('div', { class: 'help' }, '• ' + l); })));
@@ -793,6 +792,7 @@
       if (voice) return;
       if (!run.paid) {
         if (inst.damage) return UI.toast('Repair your car first!');
+        if (S.noRun) return UI.toast(DR.noRunText(S));
         if (!G.canAfford(fee)) return UI.toast('A pull costs ' + DR.money(fee));
         G.pay(fee); UI.updMoney(); run.paid = true;
         if (dy) inst.dynoPrev = dy;

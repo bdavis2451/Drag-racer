@@ -1,6 +1,6 @@
 # Feature: Carburetors (redo)
 
-Status: **plan settled 2026-11-06; waiting on a go to build.**
+Status: **built 2026-11-06, on the preview; not pushed live (waiting on the owner).**
 Shipped v1 on 2026-11-05 (commit 70a8c4a): ~20 carb-section options. Owner
 found it bloated and wants multiport EFI in the Intake Manifold section.
 
@@ -93,7 +93,30 @@ Dominator; mechanical vs electric pumps); haynes.com and fordsix.com
 (blow-through); jalopnik.com, go-parts.com (pump pressures); rennlist.com,
 stangnet.com, thetuningschool.com (sniffer vs bung).
 
-## Build notes (fill in when building)
+## Build notes
 
-- v1 code: parts.js `C.carb`, physics.js buildSpec carb block +
-  `DR.carbJetErr/carbMix/carbRead`, tuner.js 'jets', screens.js plug box.
+- parts.js: `C.intake` 'mpi' (lvl 3, $2,000, engine-scaled); `C.throttle`
+  'tbm' (mpiOnly); carb pumps fpm1/fpe1/fpe2 (carbPump), EFI pumps flagged
+  efiPump; `MPI_V8`/`MPI_SMALL` are what the manifold makes the induction.
+  `DR.hasMpi`, `DR.carbFed`, `DR.mpiMissing`, `DR.noRunText`; `DR.carbOf`
+  returns the MPI setup when the manifold is on.
+- Filtering: carb list (cbt with turbo/centrifugal, cblow with Roots/screw,
+  small vs V8, `only`), generic list (mpi on carb engines; tbm with MPI; no
+  stock injectors/TB/ECU and no flash/chip ECU with MPI; carb vs EFI pumps).
+  The fitted part always shows.
+- partApplies: carb hidden with MPI; injectors/throttle/ECU need MPI on a
+  carb engine.
+- physics: TBI/MPI no longer bring a pump; `S.noRun` = missing parts
+  (blocks Race.start, race-day "To the lanes", dyno pulls). Weather no longer
+  moves jetting (Sim airK line removed); jets help text updated.
+- Wideband = any data logger (log >= 1): Tune box and tuner read AFR;
+  without, the tuner uses plugs + a sniffer (errs ~0.6 size rich, noisier).
+- Packages: carb tiers end at the alcohol carb (no conversion); fuel picks
+  only from options that show for the car.
+- Saves (game.js `carbV2`, runs before sanitize): mpfi/mpfis -> intake mpi +
+  inj0/tbm/ecu2 (if missing) + fp1; TBI with a carb/stock pump -> fp1; carb
+  cars fp0/fp1 -> fpe1, fp2/fp3 -> fpe2; inventory mpfi -> intake mpi.
+  Known gap: a converted car's previous performance intake is replaced.
+- Tests: carb2.js (filters, MPI, TBI, migration), rival snapshot 0 diffs,
+  qolsmoke, c1, c2, pkgsmoke, legal1, drv, carbrace, mvb2 clean. tuner.js
+  harness is stale (old "Hire a Tuner" button), unrelated.

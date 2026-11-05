@@ -147,13 +147,15 @@
     while (ss.items.length) {
       var it = ss.items[0], S, l;
       if (it.k === 'jets') {
-        // jets for the parts, set for the strip's usual air (between a hot
-        // afternoon and a cool night); a careful tuner leaves it a touch rich
+        // jets for the parts; a careful tuner leaves it a touch rich. With a
+        // data logger's wideband they read it exactly; without, plugs and a
+        // tailpipe sniffer (it reads a little lean, so they err rich)
         S = G.spec(inst);
-        var j = S.jets, airRef = 23.5, set = Math.round(j.need - j.tK * (airRef - DR.AMBIENT_C) + ss.agg.psi * 0.25 + (1 - ss.who.eng / 100) * gauss() * 0.6);
+        var wbT = (DR.getOption('logger', inst).log || 0) >= 1;
+        var j = S.jets, set = Math.round(j.need + ss.agg.psi * 0.25 + (wbT ? 0 : 0.6) + (1 - ss.who.eng / 100) * gauss() * (wbT ? 0.4 : 0.8));
         setTune(ss, 'jets', set); ss.items.shift(); S = G.spec(inst);
-        var rd0 = DR.carbRead(S, airRef);
-        return pull(ss, (j.mech ? 'Pill & nozzles ' : 'Jets ') + fmt('jets', set), 'Plugs read ' + rd0.text + ' (' + rd0.afr + ':1 on the wideband).', S);
+        var rd0 = DR.carbRead(S, DR.AMBIENT_C);
+        return pull(ss, (j.mech ? 'Pill & nozzles ' : 'Jets ') + fmt('jets', set), 'Plugs read ' + rd0.text + (wbT ? ' (' + rd0.afr + ':1 on the wideband).' : ' (the tailpipe sniffer says about ' + (Math.round((rd0.afr + 0.3) * 10) / 10) + ':1).'), S);
       }
       if (it.k === 'boost') {
         var step = ss.who.eng >= 70 ? 1.5 : ss.who.eng >= 45 ? 1 : 0.5, bd = def('boost'), S1 = G.spec(inst);

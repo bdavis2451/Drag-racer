@@ -279,8 +279,11 @@
     S.carb = cb ? { name: cOpt.name.replace(' (Factory)', ''), efi: efi, cfm: cOpt.cfm || 0, sec: cOpt.sec || '', fb: !!cOpt.fb } : null;
     S.carbW = cb && cOpt.cfm ? cOpt.cfm * DR.CARB_HP * DR.HP : 0;
     if (cb) {
-      if (efi === 'tbi') { S.fuelInj = cOpt.fuel * (fiU0().type === 'none' ? 1 : 575 / 650); if (!pump.fuel) S.fuelPump = Math.max(stockPump, cOpt.fuel); }
-      else if (efi === 'mpfi') { if (!inj.fuel) S.fuelInj = cOpt.fuel; if (!pump.fuel) S.fuelPump = Math.max(stockPump, 650); }
+      if (efi === 'tbi') S.fuelInj = cOpt.fuel * (fiU0().type === 'none' ? 1 : 575 / 650);
+      else if (efi === 'mpfi') { if (!inj.fuel) S.fuelInj = cOpt.fuel; }
+      // fuel injection on a carb engine needs its parts and an EFI pump
+      // before it runs (the shop and the lanes say what's missing)
+      if (efi === 'tbi' || efi === 'mpfi') { var miss = DR.mpiMissing(inst); if (miss.length) S.noRun = miss; }
       else S.fuelInj = Math.max(stockInj, (cOpt.cfm || 0) * DR.CARB_HP * 1.6);
     }
     S.stockFuel = !inj.fuel && !pump.fuel;
@@ -608,7 +611,7 @@
     { key: 'jets', label: 'Jets', unit: '', step: 1, min: function () { return -6; }, max: function () { return 8; },
       show: function (S) { return !!S.jets; }, req: 'Carbureted engines (or mechanical injection) only', group: 'Engine',
       fmt: function (v, S) { return (v > 0 ? '+' : '') + v + ' size' + (Math.abs(v) === 1 ? '' : 's'); },
-      help: 'Main jet size against the carb\'s out-of-the-box jets (each size is about 2% fuel). Bigger heads, cams and headers need bigger jets; hot, thin air wants smaller, cool night air bigger. Lean costs power and can burn a piston; a touch rich is safe.' },
+      help: 'Main jet size against the carb\'s out-of-the-box jets (each size is about 2% fuel). Bigger heads, cams and headers need bigger jets. Lean costs power and can burn a piston; a touch rich is safe.' },
     { key: 'revLimit', label: 'Rev Limiter', unit: 'rpm', step: 100, min: revMin, max: revMax,
       show: function (S) { return S.ecu >= 2 || S.revAdj; }, req: 'Requires a Standalone ECU (a Flash tune raises it automatically), or on a carbureted engine a CDI ignition box', group: 'Engine',
       help: 'Past your valvetrain or bottom-end limit the valves float and the engine may let go.' },
@@ -932,7 +935,7 @@
     this.track = (opts.grip || 1.0) * (this.cond ? DR.surfaceGrip(this.cond, S.tire.kind) : 1);
     this.trackT = this.cond ? this.cond.trackT : 25;
     this.airK = this.cond ? DR.airPower(this.cond, S) : 1;
-    if (this.cond && S.jets) this.airK *= DR.carbMix(S, this.cond.air) / (S.mixK25 || 1);
+    // (jetting doesn't drift with the weather for now: it's set by the parts)
     // between rounds: an engine still heat-soaked from the last pass (C over
     // its normal running temperature; the ECU pulls timing past ~8 C) and a
     // nitrous bottle that has lost pressure as it emptied and cooled

@@ -30,6 +30,7 @@
     // sim mode went from on to off by default: older saves start with it off once (Settings turns it back on)
     if (!s.simDefault2) { s.settings.sim = false; s.simDefault2 = true; }
     try { retired(s); } catch (e) { /* keep what loaded */ }
+    try { carbV2(s); } catch (e) { /* keep what loaded */ }
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
     // older saves could put a rear-drive gearbox in a front-drive car: it
     // becomes the matching transaxle (and the other way around)
@@ -130,6 +131,29 @@
   // v4 -> v5: a new first league (Backroad Beaters) went in ahead of the
   // others. Races won and sponsors move up one stage; a save already under
   // way starts in the stage it was in (the new league is there to race).
+  // The carb rework (v2): the port EFI conversion moved from the carb slot to
+  // the intake manifold (a multiport manifold), the kits stopped bringing a
+  // pump, and carb cars got carb fuel pumps. Cars keep running as they did.
+  function carbV2(s) {
+    if (s.carbV2) return;
+    (s.cars || []).forEach(function (c) {
+      var p = c.parts || (c.parts = {}), eng = DR.ENGINES[c.engine || DR.CARS[c.carId].engine];
+      if (!eng || !eng.carb) return;
+      var conv = p.carb === 'mpfi' || p.carb === 'mpfis', tbi = p.carb === 'tbi' || p.carb === 'tbi2';
+      if (conv) {
+        delete p.carb; p.intake = 'mpi';
+        if (!p.injectors || p.injectors === 'stock') p.injectors = 'inj0';
+        if (!p.throttle || p.throttle === 'stock') p.throttle = 'tbm';
+        if (!p.ecu || p.ecu === 'stock' || p.ecu === 'ecu0' || p.ecu === 'ecu1') p.ecu = 'ecu2';
+      }
+      var pump = p.fuelpump || 'stock';
+      if (conv || tbi) { if (pump === 'stock' || pump === 'fpm1' || pump === 'fpe1' || pump === 'fpe2') p.fuelpump = 'fp1'; }
+      else if (pump === 'fp0' || pump === 'fp1') p.fuelpump = 'fpe1';
+      else if (pump === 'fp2' || pump === 'fp3') p.fuelpump = 'fpe2';
+    });
+    (s.inv || []).forEach(function (it) { if (it.cat === 'carb' && (it.id === 'mpfi' || it.id === 'mpfis')) { it.cat = 'intake'; it.id = 'mpi'; } });
+    s.carbV2 = true;
+  }
   function migrate4(s) {
     var c = s.career;
     if (c && c.won) {
@@ -275,8 +299,8 @@
       if (item.cat === 'wastegate' || item.cat === 'bov') return 'Needs a turbo';
       if (item.cat === 'nosctrl' || item.cat === 'nosheat') return 'Needs a nitrous kit';
       if (item.cat === 'headers') return 'A turbo car takes a turbo manifold instead (Power Adders)';
-      if (item.cat === 'injectors' || item.cat === 'ecu') return 'This engine is carbureted: it needs a port EFI conversion first (Fuel & Spark)';
-      if (item.cat === 'carb') return 'Only for an engine that came with a carburetor';
+      if (item.cat === 'injectors' || item.cat === 'ecu' || item.cat === 'throttle') return 'This engine is carbureted: it needs a Multiport EFI Manifold first (Intake Manifold)';
+      if (item.cat === 'carb') return DR.hasMpi(inst) ? 'This engine runs port fuel injection now (Multiport EFI Manifold)' : 'Only for an engine that came with a carburetor';
       return 'Does not fit this car';
     }
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';

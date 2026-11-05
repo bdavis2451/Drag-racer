@@ -19,6 +19,7 @@
       var inst = cfg.inst || G.car();
       if (!cfg.cond) cfg.cond = DR.Race.cond(cfg);
       if (inst.damage) { UI.toast('Repair your car first!'); return; }
+      var nr = G.spec(inst).noRun; if (nr) { UI.toast(DR.noRunText({ noRun: nr })); return; }
       if (loading) return;            // already on the way: a second tap does nothing
       // show that the tap landed before the (slow) race screen is built; the
       // veil also eats any extra taps so none reach the STAGE button
@@ -78,7 +79,7 @@
         return h('div', { class: 'rdrow' }, h('span', { class: 'acc' }, (opps.length > 1 ? 'R' + (i + 1) + ' ' : '') + o.name), h('span', { class: 'dim' }, DR.CARS[o.carId].name),
           h('span', {}, 'posted ' + est.et.toFixed(2) + ' @ ' + Math.round(est.trap) + ' mph'));
       });
-      var ws = G.wearList(inst), tech = cfg.mode === 'career' ? G.techIssue(inst, cfg.ev) : '';
+      var ws = G.wearList(inst), tech = S.noRun ? DR.noRunText(S) : cfg.mode === 'career' ? G.techIssue(inst, cfg.ev) : '';
       // bracket: your dial-in (your call: the logbook has your passes), and
       // the other car's, a hair slower than what it runs
       var ev = cfg.ev, isBk = ev && ev.type === 'bracket', dialIn = null, pinkCb = null;

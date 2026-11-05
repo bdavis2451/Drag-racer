@@ -70,10 +70,15 @@
     opt('stock', 'Stock Intake Manifold', 0, { bw: 0 }),
     opt('i1', 'Port-Matched Stock Manifold', 500, { bw: 0.03 }, 'Gasket-matched and cleaned up.'),
     opt('i2', 'Performance Manifold', 1100, { bw: 0.05, low: 0.01 }, 'Bigger plenum and runners. Moves the torque up a little.'),
-    opt('i3', 'Race Sheet-Metal Manifold', 2200, { bw: 0.07, low: 0.04 }, 'Short runners for high rpm. Gives up some low-end.')
+    opt('i3', 'Race Sheet-Metal Manifold', 2200, { bw: 0.07, low: 0.04 }, 'Short runners for high rpm. Gives up some low-end.'),
+    // a carbureted engine converted to port fuel injection: the manifold
+    // takes an injector at every port; the injectors, a throttle body and a
+    // standalone ECU are bought in their own sections (it won't run without)
+    opt('mpi', 'Multiport EFI Manifold', 2000, { lvl: 3, bw: 0, mpi: true }, 'Converts the carburetor to port fuel injection: an injector at every port, so every cylinder gets the same mixture. Needs fuel injectors, a throttle body, an ECU and an EFI fuel pump to run.')
   ]};
   C.throttle = { name: 'Throttle Body', engineScaled: true, options: [
     opt('stock', 'Stock Throttle Body', 0, { bw: 0 }),
+    opt('tbm', 'EFI Throttle Body', 300, { bw: 0, mpiOnly: true }, 'A throttle body for a multiport conversion.'),
     opt('tb1', 'Ported Throttle Body', 200, { bw: 0.005 }),
     opt('tb2', 'Big-Bore Throttle Body', 450, { bw: 0.01 }, 'A bigger blade for big-cam and boosted builds.'),
     opt('tb3', 'Billet Race Throttle Body', 900, { bw: 0.02 }, 'Never the restriction.')
@@ -176,23 +181,25 @@
     opt('c750dp', 'Holley 750 Double Pumper', 650, { cfm: 750, sec: 'dp', jet0: 1 }, 'Mechanical secondaries and two accelerator pumps: it hits hard the instant you floor it.'),
     opt('c850dp', 'Holley 850 Double Pumper', 760, { cfm: 850, sec: 'dp', jet0: 1 }, 'For a built small block or a big block. Too big for a mild engine: it bogs off the line.'),
     opt('c1050', 'Holley 1050 Dominator', 1300, { lvl: 3, cfm: 1050, sec: 'dp', jet0: 1 }, 'Four-barrel race carb with a bigger flange (and adapter): built big blocks and high-rpm small blocks.'),
-    opt('c1250a', 'Alcohol Dominator 1250', 1800, { lvl: 4, cfm: 1250, sec: 'dp', alc: true, jet0: 1 }, 'Built for E85 or methanol: huge jets and needle-and-seats to flow the extra fuel.'),
+    opt('c1250a', 'Alcohol Dominator 1250', 1800, { lvl: 4, cfm: 1250, sec: 'dp', alc: true, jet0: 1 }, 'Built for E85 or methanol: huge jets and needle-and-seats to flow the extra fuel. On gasoline it runs rich and slow.'),
     opt('ctr750', 'Dual 750s on a Tunnel Ram', 3400, { lvl: 4, cfm: 1500, sec: 'dp', dual: true, low: 0.06, jet0: 1 }, 'Two double pumpers on a tall tunnel-ram intake: a big top end, soft below 3500 rpm. Sticks through the hood.'),
     opt('ctr1050', 'Dual 1050 Dominators on a Tunnel Ram', 5800, { lvl: 5, cfm: 2100, sec: 'dp', dual: true, low: 0.08, jet0: 1 }, 'What carbureted Pro Stock engines ran until 2016: enough air for 1500+ hp.'),
     opt('cbt', 'Blow-Through 950 + Boost Regulator', 1600, { lvl: 3, cfm: 950, sec: 'dp', boost: 22, blow: true, jet0: 1 }, 'A sealed carb a turbo or centrifugal blower can blow through, with a boost-referenced fuel regulator. Good to about 22 psi.'),
     opt('cblow', 'Dual 750 Blower Carbs', 2400, { lvl: 3, cfm: 1500, sec: 'dp', dual: true, boost: 22, blower: true, jet0: 1 }, 'Two carbs set up to sit on top of a Roots or screw blower: the gasser look.'),
     opt('c2x4', 'Dual Carter WCFB 4-Barrels (1957)', 1800, { cfm: 1000, sec: 'air', dual: true, jet0: 0, only: ['v8_283'] }, 'The 1957 dual-quad option (245-270 hp in period) on its factory manifold.'),
     opt('ramjet', 'Rochester Ramjet Fuel Injection (1957)', 4000, { lvl: 3, cfm: 650, efi: 'mech', pw: 1.03, jet0: 0, only: ['v8_283'] }, 'GM\'s mechanical fuel injection, the "Fuelie" that made 283 hp from 283 cubic inches in 1957. Metered by a nozzle-and-pill setup you size like jets.'),
-    opt('hilborn', 'Hilborn 8-Stack Mechanical Injection', 4500, { lvl: 4, cfm: 1800, efi: 'mech', pw: 1.015, low: 0.08, alc: true, boost: 40, blower: true, jet0: 0 }, 'A stack per cylinder and a constant-flow pump: a little more power than dual quads, a lot of top end, made for alcohol. Sits on a blower too. Sized by its pill, set like jets.'),
-    opt('tbi', 'Holley Sniper 2 Throttle-Body EFI', 1800, { lvl: 3, cfm: 1000, efi: 'tbi', fuel: 650, boost: 15, blow: true, blower: true, pw: 1.01 }, 'Bolts on where the carb was and tunes itself: no jets, the same mixture day or night. Comes with a 58 psi in-line pump. Good for 650 hp (575 boosted).'),
-    opt('tbi2', 'Holley Super Sniper EFI (1200 hp)', 3200, { lvl: 4, cfm: 1700, efi: 'tbi', fuel: 1200, boost: 30, blow: true, blower: true, pw: 1.01 }, 'The big self-tuning throttle body, four huge injectors, good for 1200 hp. Pump included.'),
-    opt('mpfi', 'Port EFI Conversion', 2800, { lvl: 3, efi: 'mpfi', fuel: 600, boost: 40, blow: true, blower: true, pw: 1.025 }, 'A new intake that takes an injector at every port, rails, sensors and a standalone ECU. Every cylinder gets the same mixture. The injector, fuel pump and ECU upgrades open up.'),
+    opt('hilborn', 'Hilborn 8-Stack Mechanical Injection', 4500, { lvl: 4, cfm: 1800, efi: 'mech', pw: 1.015, low: 0.08, alc: true, boost: 40, blower: true, jet0: 0 }, 'A stack per cylinder and a constant-flow pump: a little more power than dual quads, a lot of top end, made for alcohol. Sits on a blower too. Sized by its pill, set like jets. Built for alcohol, and its constant-flow fuel needs a belt-driven pump.'),
+    opt('tbi', 'Holley Sniper 2 Throttle-Body EFI', 1800, { lvl: 3, cfm: 1000, efi: 'tbi', fuel: 650, boost: 15, blow: true, blower: true, pw: 1.01 }, 'Bolts on where the carb was and tunes itself: no jets. Good for 650 hp (575 boosted). Needs an EFI fuel pump (Fuel Pump & Lines).'),
+    opt('tbi2', 'Holley Super Sniper EFI (1200 hp)', 3200, { lvl: 4, cfm: 1700, efi: 'tbi', fuel: 1200, boost: 30, blow: true, blower: true, pw: 1.01 }, 'The big self-tuning throttle body, four huge injectors, good for 1200 hp. Needs an EFI fuel pump.'),
     // an air-cooled VW
     opt('cs1', 'Weber 34 ICT', 180, { cfm: 110, sec: 'dp', small: true, jet0: 0 }, 'A bigger single carb on the factory manifold.'),
     opt('cs2', 'Dual Kadron 40mm', 650, { cfm: 200, sec: 'dp', small: true, dual: true, jet0: 1 }, 'A carb on each head: what most built Beetles run.'),
-    opt('cs3', 'Dual Weber IDF 44s', 1400, { lvl: 3, cfm: 290, sec: 'dp', small: true, dual: true, jet0: 1 }, 'Two big twin-choke Webers: the classic hot air-cooled setup.'),
-    opt('mpfis', 'Port EFI Conversion (air-cooled)', 1900, { lvl: 3, efi: 'mpfi', fuel: 300, boost: 30, blow: true, small: true, pw: 1.025 }, 'Port injection, a throttle body and a standalone ECU for the air-cooled four. The injector, fuel pump and ECU upgrades open up.')
+    opt('cs3', 'Dual Weber IDF 44s', 1400, { lvl: 3, cfm: 290, sec: 'dp', small: true, dual: true, jet0: 1 }, 'Two big twin-choke Webers: the classic hot air-cooled setup.')
   ]};
+
+  // what a multiport manifold makes the induction (V8 / air-cooled)
+  var MPI_V8 = { id: 'mpi', name: 'Multiport EFI', efi: 'mpfi', fuel: 600, boost: 40, blow: true, blower: true, pw: 1.025 };
+  var MPI_SMALL = { id: 'mpi', name: 'Multiport EFI', efi: 'mpfi', fuel: 300, boost: 30, blow: true, small: true, pw: 1.025 };
 
   // Fuel: the smaller of the injectors and the pump sets the power the fuel
   // system feeds (hp on gasoline; alcohol needs more flow).
@@ -209,10 +216,16 @@
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
-    opt('fp0', '190 lph Pump + Rising-Rate Regulator', 180, { fuel: 430 }, 'Feeds 430 hp on gasoline.'),
-    opt('fp1', '255 lph In-Tank Pump', 300, { fuel: 650 }, 'Feeds 650 hp on gasoline.'),
-    opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100 }, 'Feeds 1100 hp on gasoline.'),
-    opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800 }, 'Feeds 1800 hp on gasoline.'),
+    // a carburetor wants 4-7 psi: an engine-driven mechanical pump, or a
+    // low-pressure electric one with a regulator
+    opt('fpm1', 'High-Volume Mechanical Pump', 150, { fuel: 450, carbPump: true }, 'A bigger engine-driven pump. Feeds 450 hp on gasoline.'),
+    opt('fpe1', 'Carb Electric Pump + Regulator', 300, { fuel: 750, carbPump: true }, 'A low-pressure electric pump, regulated to 7 psi for the carb. Feeds 750 hp on gasoline.'),
+    opt('fpe2', 'Billet Carb Electric Pump', 700, { fuel: 1200, carbPump: true }, 'A big low-pressure race pump. Feeds 1200 hp on gasoline.'),
+    // fuel injection wants 40-60 psi
+    opt('fp0', '190 lph Pump + Rising-Rate Regulator', 180, { fuel: 430, efiPump: true }, 'Feeds 430 hp on gasoline.'),
+    opt('fp1', '255 lph In-Tank Pump', 300, { fuel: 650, efiPump: true }, 'Feeds 650 hp on gasoline.'),
+    opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100, efiPump: true }, 'Feeds 1100 hp on gasoline.'),
+    opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800, efiPump: true }, 'Feeds 1800 hp on gasoline.'),
     opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'About 12 gallons a minute. Feeds 5000 hp on gasoline, about 2750 on methanol.'),
     opt('fp5', 'Big Belt-Driven Pump (20 GPM)', 7500, { lvl: 5, fuel: 8500 }, 'About 20 gallons a minute, the size alcohol-burning Pro Mods run. Feeds 8500 hp on gasoline, about 4700 on methanol.')
   ]};
@@ -234,9 +247,9 @@
   // tell you what to change; it shows you what the car did.
   C.logger = { name: 'Data Logger', options: [
     opt('stock', 'No Data Logger', 0, { log: 0 }, 'Just the timeslip.'),
-    opt('dl1', 'Basic Data Logger', 500, { log: 1 }, 'Records engine rpm, speed and gear through every pass.'),
+    opt('dl1', 'Basic Data Logger', 500, { log: 1 }, 'Records engine rpm, speed and gear through every pass, with a wideband O2 sensor in the header: you (and the tuner) read the exact air/fuel ratio.'),
     opt('dl2', 'Race Data Logger', 1500, { lvl: 2, log: 2 }, 'Adds driveshaft speed (so you can see wheelspin against the car\'s speed), boost and throttle.'),
-    opt('dl3', 'Pro Data Acquisition', 4000, { lvl: 3, log: 3 }, 'Adds a wideband air/fuel sensor, the timing the ECU pulled, g-force and rear shock travel.')
+    opt('dl3', 'Pro Data Acquisition', 4000, { lvl: 3, log: 3 }, 'Adds air/fuel logging through the pass, the timing the ECU pulled, g-force and rear shock travel.')
   ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
     opt('stock', 'Stock ECU', 0, { bw: 0, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),
@@ -728,7 +741,15 @@
     }
     if (cat === 'carb') {
       var ce = DR.ENGINES[inst.engine || car.engine], fc = ce.carb || {}, ceId = inst.engine || car.engine;
-      return C.carb.options.filter(function (o) { return o.id === 'stock' || (!!o.small === !!fc.small && (!o.only || o.only.indexOf(ceId) >= 0)); }).map(function (o) {
+      // only what fits this engine and its power adder (the one fitted always shows)
+      var fiT = DR.FI[DR.partId('fi', inst)].type, curC = DR.partId('carb', inst);
+      return C.carb.options.filter(function (o) {
+        if (o.id === 'stock' || o.id === curC) return true;
+        if (!!o.small !== !!fc.small || (o.only && o.only.indexOf(ceId) < 0)) return false;
+        if (o.id === 'cbt') return fiT === 'turbo' || fiT === 'cent';
+        if (o.id === 'cblow') return fiT === 'roots' || fiT === 'screw';
+        return true;
+      }).map(function (o) {
         if (o.id === 'stock') return Object.assign({}, o, fc, { id: 'stock', name: (fc.name || 'Factory Carburetor') + ' (Factory)', price: 0, lvl: 0, factory: true,
           desc: 'What it came with: about ' + Math.round((fc.cfm || 0) * DR.CARB_HP) + ' hp of airflow.' + (fc.fb ? ' Its feedback circuit trims the mixture a little for the weather.' : '') });
         var x = Object.assign({}, o, { lvl: lvlOf(o) });
@@ -739,11 +760,24 @@
     var c = C[cat], mul = c.engineScaled ? DR.enginePriceMul(inst.engine || car.engine) : 1;
     var eng = DR.ENGINES[inst.engine || car.engine], rot = eng.rotary && ROTARY[cat];
     var engId = inst.engine || car.engine;
+    var cbE = !inst.ai && eng.carb, mpiOn = DR.hasMpi(inst), curId = DR.partId(cat, inst), fedCarb = cbE && DR.carbFed(inst);
     return c.options.map(function (o, i) {
       if (o.only && o.only.indexOf(engId) < 0) return null;   // made for one engine
+      // carbureted engines: the multiport manifold; after it, no factory
+      // injectors / throttle body / ECU to keep (the cheapest is the base);
+      // carb pumps for a carb, EFI pumps for injection
+      if (mpiOn && o.id === 'stock' && (cat === 'injectors' || cat === 'throttle' || cat === 'ecu')) return null;
+      if (o.id !== curId) {
+        if (o.mpi && !cbE) return null;
+        if (o.mpiOnly && !mpiOn) return null;
+        if (mpiOn && o.id === 'stock' && (cat === 'injectors' || cat === 'throttle' || cat === 'ecu')) return null;
+        if (mpiOn && cat === 'ecu' && (o.id === 'ecu0' || o.id === 'ecu1')) return null;
+        if (cat === 'fuelpump' && (fedCarb ? o.efiPump : o.carbPump)) return null;
+      }
       if (rot) { var r = rot.options[i]; o = Object.assign({}, o, { name: r[0], desc: r[1] }, r[2] || {}); }
       var x = Object.assign({}, o, { price: Math.round(o.price * mul / 50) * 50, lvl: lvlOf(o) });
       if (o.hold) x.desc = (o.desc ? o.desc + ' ' : '') + 'About ' + Math.round(eng.safe * o.hold / 10) * 10 + ' hp on this engine.';
+      if (cat === 'fuelpump' && o.id === 'stock' && cbE) { x.name = 'Stock Mechanical Pump'; x.desc = 'The engine-driven pump it came with.'; }
       if (o.tune === 'hard' || (o.tune === true && cat !== 'ecu')) x.desc = (x.desc ? x.desc + ' ' : '') + 'Needs an ECU tune (flash or standalone).';
       if (o.tune === 'soft') x.desc = (x.desc ? x.desc + ' ' : '') + 'Runs on the stock tune, but only makes about half its gain without one.';
       return x;
@@ -789,9 +823,27 @@
   // engine) and what's on it now ({ carb: the option, efi: '' | 'tbi' |
   // 'mpfi' | 'mech' })
   DR.CARB_HP = 0.82;
+  DR.hasMpi = function (inst) { return !inst.ai && !!inst.parts && inst.parts.intake === 'mpi' && !!DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb; };
+  // fed like a carb (a carb or mechanical injection), or by EFI pressure
+  DR.carbFed = function (inst) { var cb = DR.carbOf(inst); return !!cb && cb.efi !== 'tbi' && cb.efi !== 'mpfi'; };
+  // what a multiport conversion still needs before the engine runs
+  DR.mpiMissing = function (inst) {
+    var cb = DR.carbOf(inst); if (!cb || !cb.efi || cb.efi === 'mech') return [];
+    var miss = [];
+    if (cb.efi === 'mpfi') {
+      if (DR.partId('injectors', inst) === 'stock') miss.push('fuel injectors');
+      if (DR.partId('throttle', inst) === 'stock') miss.push('a throttle body');
+      if (!DR.getOption('ecu', inst).tune || DR.partId('ecu', inst) === 'ecu1') miss.push('a standalone ECU');
+    }
+    var pid = DR.partId('fuelpump', inst);
+    if (!DR.getOption('fuelpump', inst).efiPump && pid !== 'fp4' && pid !== 'fp5') miss.push('an EFI fuel pump');
+    return miss;
+  };
+  DR.noRunText = function (S) { var m = S.noRun || []; return 'It won\'t run yet: the fuel injection needs ' + (m.length > 1 ? m.slice(0, -1).join(', ') + ' and ' + m[m.length - 1] : m[0]) + '.'; };
   DR.carbOf = function (inst) {
     var e = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine];
     if (!e.carb) return null;
+    if (DR.hasMpi(inst)) { var mo = e.carb.small ? MPI_SMALL : MPI_V8; return { factory: e.carb, opt: mo, efi: 'mpfi' }; }
     var o = DR.getOption('carb', inst);
     return { factory: e.carb, opt: o, efi: o.efi || '' };
   };
@@ -799,10 +851,10 @@
     var nf = NOT_FOR[DR.engineKind(inst)];
     if (nf && nf[cat]) return false;
     // (rival builds come set up as if fuel-injected)
-    if (cat === 'carb') return !inst.ai && !!DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb;
-    // a carbureted engine has no injectors or ECU until it's converted to
-    // port injection (a throttle-body kit brings its own)
-    if ((cat === 'injectors' || cat === 'ecu') && !inst.ai) { var cb = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb; if (cb && (!inst.parts || !inst.parts.carb || (C.carb.options.filter(function (o) { return o.id === inst.parts.carb; })[0] || {}).efi !== 'mpfi')) return false; }
+    if (cat === 'carb') return !inst.ai && !!DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb && !DR.hasMpi(inst);
+    // a carbureted engine has no injectors, throttle body or ECU until it's
+    // converted to port injection (a multiport manifold)
+    if ((cat === 'injectors' || cat === 'ecu' || cat === 'throttle') && !inst.ai && DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb && !DR.hasMpi(inst)) return false;
     var c = C[cat];
     if (!c) return true;
     var tr = DR.TRANS[DR.partId('trans', inst)];
@@ -920,8 +972,9 @@
     // nothing to do if what's fitted already feeds it
     var now = DR.buildSpec(inst);
     if ((cat === 'injectors' ? now.fuelInj : now.fuelPump) >= need) return null;
-    var opts = C[cat].options;
-    for (var i = Math.max(1, min); i < opts.length; i++) if (opts[i].fuel >= need) return opts[i].id;
+    if (!DR.partApplies(cat, inst)) return null;
+    var fed = DR.carbFed(inst), opts = C[cat].options.filter(function (o) { return o.id !== 'stock' && !(cat === 'fuelpump' && (fed ? o.efiPump : o.carbPump)); });
+    for (var i = Math.max(0, min - 1); i < opts.length; i++) if (opts[i].fuel >= need) return opts[i].id;
     return opts[opts.length - 1].id;
   }; }
   // E85 only through something that can flow it (an alcohol carb or EFI)
@@ -930,7 +983,8 @@
   // the E85 tier, then port EFI; never a smaller carb than it has
   function carbFor(tier) { return function (inst) {
     var cb = DR.carbOf(inst); if (!cb) return null;
-    var list = cb.factory.small ? ['cs1', 'cs2', 'cs3', 'mpfis'] : ['c750dp', 'c850dp', 'c1250a', 'mpfi'], id = list[tier];
+    if (cb.efi === 'mpfi') return null;   // already converted
+    var list = cb.factory.small ? ['cs1', 'cs2', 'cs3', 'cs3'] : ['c750dp', 'c850dp', 'c1250a', 'c1250a'], id = list[tier];
     var o = DR.getOption('carb', inst, id);
     if (o.cfm && (cb.opt.cfm || 0) >= o.cfm && !cb.opt.efi) return tier === 2 && !cb.opt.alc ? 'c1250a' : null;
     return id;
