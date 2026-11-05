@@ -524,6 +524,13 @@
     if (nm.length > 2 || (nm.length === 2 && nm[0][0] === nm[1][0])) return nm[nm.length - 1];
     return nm.length > 1 && nm[1].length <= 2 ? nm[0] + ' ' + nm[1] : nm[0];
   }
+  // 'Beat Dusty', or, when that rival ends more than one race in the class,
+  // the race too ('Beat Dusty (Knockout)')
+  function beatTag(ev) {
+    var who = shortName(ev.opps[ev.opps.length - 1].name), T = DR.EVENT_TYPES[ev.type];
+    var same = DR.STAGES[ev.stage].all.filter(function (x) { return x.opps && x.opps.length && x.type !== 'boss' && shortName(x.opps[x.opps.length - 1].name) === who; });
+    return 'Beat ' + who + (same.length > 1 && T ? ' (' + T.name + ')' : '');
+  }
   // Where a part level opens: the first career race whose win unlocks it
   // ('Beat Tony B', 'S2 boss'), for the shop's lock tags.
   G.unlockWhere = function (cat, lvl, id) {
@@ -536,7 +543,7 @@
         var hit = evs[i].unlocks.some(function (u) { var p = u.split(':'); return p[0] === 'perf' && (p[1] === grp || p[1] === 'all') && +p[2] >= lvl; });
         if (hit) {
           if (evs[i].type === 'boss') return 'S' + (si + 1) + ' boss';
-          return 'Beat ' + shortName(evs[i].opps[evs[i].opps.length - 1].name);
+          return beatTag(evs[i]);
         }
       }
     }
@@ -548,7 +555,7 @@
     if (!id) return '';
     var p = id.split('.'), st = DR.STAGES[+p[0]], ev = p[1] === 'boss' ? st.boss : st.events[+p[1]];
     if (ev.type === 'boss') return 'S' + (+p[0] + 1) + ' boss';
-    return 'S' + (+p[0] + 1) + ': beat ' + shortName(ev.opps[ev.opps.length - 1].name);
+    return 'S' + (+p[0] + 1) + ': b' + beatTag(ev).slice(1);
   };
   // Called when an event is won (for a knockout: the final round).
   // Returns {cash, lines}.
