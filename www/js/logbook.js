@@ -64,7 +64,7 @@
       rt: me.red ? -1 : me.rt != null ? +me.rt.toFixed(3) : null, sp: sp,
       out: sim.crashed ? 'CRASH' : sim.blown ? 'BLOWN' : sim.broke ? 'BROKE' : sim.finished ? '' : 'DNF', res: info.result,
       tune: tune, parts: Object.assign({}, inst.parts), engine: inst.engine,
-      tires: w.rtires ? Math.round(w.rtires.w * 100) : 0, water: Math.round(info.water || 0), shake: sim.shakeMax > 0.5 ? 1 : 0
+      tires: w.rtires ? Math.round(w.rtires.w * 100) : 0, lift: sim.lifted ? 1 : 0, water: Math.round(info.water || 0), shake: sim.shakeMax > 0.5 ? 1 : 0
     };
     inst.log = inst.log || [];
     inst.log.unshift(e);

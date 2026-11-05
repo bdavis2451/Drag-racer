@@ -1445,7 +1445,11 @@
       var Fd = 0.5 * DR.RHO * S.cda * this.v * this.v;
       var Fr = this.v > 0.05 ? S.crr * mg : 0;
       var aN = (Fx - Fd - Fr) / (m + 2 * 1.2 / (r * r));
+      // the brakes before the stripe (a bracket racer giving some back)
+      var brkIn = inp && inp.brake > 0 ? Math.min(1, inp.brake) : 0;
+      if (brkIn) aN -= brkIn * 6.5;
       this.v += aN * dt;
+      if (brkIn && this.ww * r > this.v) this.ww = Math.max(0, this.v) / r;
       if (this.v < 0) { this.v = 0; aN = Math.max(aN, 0); }
       this.a += (aN - this.a) * Math.min(1, dt / 0.012);
       if (this.crashed) { this.v *= Math.exp(-dt * 1.5); }
@@ -1583,7 +1587,39 @@
     var trig = S.trType === 'auto' ? Math.max(lineRpm / 0.95, rpm >= S.limit - 60 ? rpm : 0) : sim.locked ? rpm : lineRpm;
     if (!sim.shifting && sim.sinceShift > 0.25 && trig >= shiftAt) sim.shiftUp();
     inp.nos = sim.gear >= 1 || sim.t > 1.5;
+    if (this.bk) this.stripe(sim, inp);
     return inp;
+  };
+
+  // Bracket racing: from about the 1000-ft mark the driver watches the other
+  // lane. Ahead: lift (and brake if it's a lot) to take the stripe by a few
+  // hundredths without running under the dial. Beaten: dump it near the
+  // line, so the other car may break out. Never quicker than the dial.
+  // c: consistency (how close they cut it, how well they read the gap),
+  // r: reaction (how soon they judge it). peek() is the race's view of both
+  // lanes: { lead (s, + = ahead on the package), et (this car's projected ET) }.
+  DR.AIDriver.bracket = function (c, r, dial, dist, peek, rnd) {
+    rnd = rnd || Math.random;
+    var g = (rnd() + rnd() + rnd() - 1.5) / 0.5;   // roughly normal
+    return { dial: dial, dist: dist, peek: peek, margin: 0.008 + (1 - c) * 0.03, err: g * (0.004 + (1 - c) * 0.025), judgeAt: 0.6 + (1 - r) * 0.15 };
+  };
+  DR.AIDriver.prototype.stripe = function (sim, inp) {
+    var b = this.bk, left = b.dist - sim.x;
+    if (!sim.launched || sim.finished || sim.crashed || sim.x < b.dist * b.judgeAt) return;
+    var o = b.peek && b.peek();
+    if (!o) return;
+    var lead = o.lead == null ? 0 : o.lead + b.err, thr = 1, brk = 0;
+    if (lead > b.margin) {
+      thr = 0;
+      if (lead > b.margin + 0.06 && left < 90) brk = Math.min(0.6, (lead - b.margin) * 3);
+    } else if (lead < -0.04 && left < 25) { thr = 0; brk = 0.8; }
+    if (o.et < b.dial + 0.004) { thr = 0; if (o.et < b.dial - 0.01 && left < 60) brk = Math.max(brk, 0.5); }
+    if (sim.v < 12) brk = 0;   // giving it back, not stopping
+    inp.throttle = Math.min(inp.throttle, thr);
+    if (brk) inp.brake = brk;
+    if (!thr) inp.nos = false;
+    this.stripeOn = !thr || brk > 0;
+    if (this.stripeOn) sim.lifted = true;   // not a full pass: the logbook marks it
   };
 
   // Headless run with a good driver: used for ET estimates and opponents.

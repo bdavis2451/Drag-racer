@@ -53,6 +53,19 @@
     // Race day: before you go to the lanes, the day's conditions, who you're
     // up against (their car and the time they've posted), tech, and the
     // state of your consumables.
+    // A hired driver's dial-in: the car's last full pass at this length (if
+    // it's still built the same), moved for today's weather against that
+    // day's, with a small cushion the less consistent they are (they drive
+    // the stripe if it runs quick). No pass yet: a time-trial pass of theirs.
+    driverDial: function (inst, d, cfg, cond) {
+      var key = cfg.dist > DR.EIGHTH + 1 ? 'q' : 'e', mark = key === 'q' ? '1/4' : '1/8';
+      var grip = (cfg.grip || 1) / (DR.Race.SURF_BASE[cond.surface] || 1);
+      var est = function (cd) { return G.estimate(inst, cfg.dist, grip, cd).et; };
+      var same = JSON.stringify(inst.parts), lastP = (inst.log || []).filter(function (x) { return x.dist === key && !x.out && !x.lift && x.sp[mark] && x.engine === inst.engine && JSON.stringify(x.parts) === same; })[0];
+      var base = lastP ? lastP.sp[mark][0] : DR.Race.trial(inst, d.lau / 100, cfg, cond);
+      if (lastP && lastP.cond) base += est(cond) - est(Object.assign({}, cond, { surface: lastP.cond.s, night: !!lastP.cond.n, air: lastP.cond.a, trackT: lastP.cond.t }));
+      return (Math.round((base + (1 - d.con / 100) * 0.03) * 100) / 100).toFixed(2);
+    },
     raceDay: function (cfg, title) {
       // every way in goes through the event's lock (a sponsor race needs the sponsor, ...)
       var lk = cfg.mode === 'career' && cfg.ev && !(cfg.round > 0) && G.eventLock(cfg.ev);
@@ -70,7 +83,7 @@
       // the other car's, a hair slower than what it runs
       var ev = cfg.ev, isBk = ev && ev.type === 'bracket', dialIn = null, pinkCb = null;
       if (isBk) {
-        var key = dist === 'quarter' ? 'q' : 'e', lastP = (inst.log || []).filter(function (x) { return x.dist === key && !x.out && x.sp[key === 'q' ? '1/4' : '1/8']; })[0];
+        var key = dist === 'quarter' ? 'q' : 'e', lastP = (inst.log || []).filter(function (x) { return x.dist === key && !x.out && !x.lift && x.sp[key === 'q' ? '1/4' : '1/8']; })[0];
         // a suggestion a little under your last time (rounded down, never up:
         // running quicker than your dial is a breakout)
         var dflt = lastP ? Math.floor(lastP.sp[key === 'q' ? '1/4' : '1/8'][0] * 20) / 20 : inst.best && inst.best[key] ? Math.floor(inst.best[key] * 20) / 20 : '';
@@ -86,12 +99,23 @@
         if (cfg.driver && G.canAfford((DR.Team.staff(cfg.driver) || {}).wage || 0)) seat.value = cfg.driver;
         if (pinkCb) pinkCb.addEventListener('change', function () { if (pinkCb.checked) seat.value = ''; seat.disabled = pinkCb.checked; });
       }
+      // bracket: a hired driver picks their own dial (you can change it)
+      var dialNote = isBk ? h('span', { class: 'dim gsmall' }, 'Run quicker than it and you lose.') : null;
+      if (isBk && seat) {
+        var dialFor = function () {
+          var d = seat.value && DR.Team.staff(seat.value);
+          dialIn.value = d ? DR.Race.driverDial(inst, d, cfg, cond) : dflt;
+          dialNote.textContent = d ? d.name.split(' ')[0] + '\'s dial, from your logbook and today\'s weather. Run quicker than it and you lose.' : 'Run quicker than it and you lose.';
+        };
+        seat.addEventListener('change', dialFor);
+        if (seat.value) dialFor();
+      }
       var techLine = cfg.theme !== 'strip' ? 'No tech on the street' : tech ? tech : 'Passed' + (S.tech ? ' (' + ['', 'roll bar', 'roll cage'][Math.min(2, S.tech)] + ')' : '');
       close = UI.modal([h('div', { class: 'pix acc' }, 'RACE DAY'),
         h('div', { class: 'pix' }, title || (cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name : 'Street race')),
         h('div', { class: 'dim' }, (dist === 'quarter' ? '1/4 mile' : '1/8 mile') + ' • ' + DR.condLabel(cond)),
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'ENTRY LIST'), entries,
-        isBk ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'YOUR DIAL-IN'), dialIn, h('span', { class: 'dim gsmall' }, 'Run quicker than it and you lose.')) : null,
+        isBk ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'YOUR DIAL-IN'), dialIn, dialNote) : null,
         canPink ? h('label', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, pinkCb, h('span', { class: 'bad' }, 'Race for pink slips: win their car, or lose yours')) : null,
         ev && ev.type === 'callout' && !canPink ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'Pink slips need a second car in your garage.') : null,
         ev && (ev.type === 'boss' || ev.king) ? h('div', { class: 'acc', style: { marginTop: '4px' } }, 'The King races for their car.') : null,
@@ -113,7 +137,10 @@
               // don't break out (a bigger cushion the less consistent they are)
               var o = opps[cfg.round || 0], sk = o.skill || 0.5, oi = G.oppInst(o);
               var tt = Math.min(DR.Race.trial(oi, sk, cfg, cond), DR.Race.trial(oi, sk, cfg, cond));
-              cfg.bracket = { dial: [Math.round(d * 100) / 100, Math.round((tt - 0.01 - (1 - sk) * 0.15) * 100) / 100] };
+              // from class 3 they drive the stripe, so they dial honest (a
+              // small cushion) and lift if they run quick
+              var od = ev.stage >= 2 ? tt + (1 - sk) * 0.03 : tt - 0.01 - (1 - sk) * 0.15;
+              cfg.bracket = { dial: [Math.round(d * 100) / 100, Math.round(od * 100) / 100] };
             }
             if (pinkCb && pinkCb.checked) cfg.pinks = true;
             cfg.driver = seat && seat.value && !cfg.pinks ? seat.value : null;
@@ -402,6 +429,30 @@
     // difference between the two dials (a handicap start on a full tree)
     var bk = cfg.bracket || null, off = [0, 0];
     if (bk) { var mxd = Math.max(bk.dial[0], bk.dial[1]); off = [mxd - bk.dial[0], mxd - bk.dial[1]]; }
+    // bracket finish-line driving: your hired driver, and rivals from class 3
+    if (bk && opp) {
+      // when a lane will cross the stripe, from its speed and pull right now
+      var projFin = function (r) {
+        var s = r.sim;
+        if (s.finished) return s.finishTime;
+        if (!s.launched || s.crashed) return Infinity;
+        var left = Math.max(0, cfg.dist - s.x), v = Math.max(s.v, 1), a = Math.max(0, s.a || 0);
+        return s.time + (a > 0.05 ? (Math.sqrt(v * v + 2 * a * left) - v) / a : left / v);
+      };
+      var peekFor = function (me, them, dMe, dThem) {
+        return function () {
+          var fm = projFin(me), ft = projFin(them);
+          if (me.greenT == null || !isFinite(fm)) return null;
+          var pm = fm - me.greenT - dMe, pt = them.greenT == null ? Infinity : ft - them.greenT - dThem;
+          // the other car out of it (broke, crashed, never left): no one to
+          // race, just don't break out
+          var out = them.sim.crashed || them.sim.blown || them.sim.broke || !isFinite(pt);
+          return { lead: out ? null : pt - pm, et: me.sim.etStart != null ? fm - me.sim.etStart : 99 };
+        };
+      };
+      if (drvAI) drvAI.bk = DR.AIDriver.bracket(drv.con / 100, drv.rt / 100, bk.dial[0], cfg.dist, peekFor(you, opp, bk.dial[0], bk.dial[1]));
+      if (ai && cfg.ev && cfg.ev.stage >= 2) { var osk = cfg.opp.skill || 0.5; ai.bk = DR.AIDriver.bracket(osk, osk, bk.dial[1], cfg.dist, peekFor(opp, you, bk.dial[1], bk.dial[0])); }
+    }
     var treeStart = 0, greenAt = null, redLight = false, oppRed = false;
     // read-only view of the race for automated play-testing
     DR.Race._dbg = function () { return { you: you, opp: opp, phase: phase, green: greenAt !== null, red: redLight, tree: tree }; };
@@ -603,8 +654,9 @@
       var n = Math.max(1, Math.round(dt / DT)), sdt = dt / n;
       for (var k = 0; k < n; k++) {
         clock += sdt;
-        // tree sequence (times relative to tree start)
-        if (phase === 'tree') {
+        // tree sequence (times relative to tree start); a bracket's quicker
+        // car gets its green after the other one has already left
+        if (phase === 'tree' || (phase === 'race' && bk && treeStart != null && !(tree.greenL[0] && tree.greenL[1]))) {
           var t = clock - treeStart;
           if (settings.proTree && !bk) { if (t >= 0) { tree.amber = 3; tree.amberL = [3, 3]; } if (t >= 0.4 && greenAt === null) goGreen(); }
           else {
