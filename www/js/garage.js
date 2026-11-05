@@ -511,14 +511,14 @@
     var grid = h('div', { class: 'pgrid' });
     DR.partOptions(cat, inst).forEach(function (o) {
       if (!o.price) return;
-      var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(cat, o.id), locked = !G.partUnlocked(cat, lvl, o.id);
+      var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(cat, o.id), tubeOn = cat === 'weight' && DR.getOption('chassis', inst).tube, locked = tubeOn || !G.partUnlocked(cat, lvl, o.id);
       grid.appendChild(h('div', { class: 'pcard l' + lvl + (locked ? ' locked' : '') + (installed ? ' inst' : ''), onclick: function () { partModal(inst, cat, o.id); } },
         h('div', { class: 'pic' }, iconEl(DR.iconCat(cat, inst), lvl, o.id, 48)),
         h('div', { class: 'plvl' }, DR.LEVEL_NAMES[lvl]),
         h('div', { class: 'pname' }, o.name),
         // what it does for this car, at a glance
         !locked && !installed && DR.partApplies(cat, inst) ? gainLine(inst, cat, o.id) : null,
-        h('div', { class: 'pfoot' }, locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl, o.id)) : h('span', { class: 'price' + (G.canAfford(G.partPrice(cat, o) + (o.install || 0)) ? '' : ' bad') }, DR.money(G.partPrice(cat, o) + (o.install || 0)) + (o.install ? ' fitted' : '') + (G.partDiscount(cat) ? ' (sponsor)' : '')),
+        h('div', { class: 'pfoot' }, tubeOn ? h('span', { class: 'tag' }, 'TUBE CHASSIS FITTED') : locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl, o.id)) : h('span', { class: 'price' + (G.canAfford(G.partPrice(cat, o) + (o.install || 0)) ? '' : ' bad') }, DR.money(G.partPrice(cat, o) + (o.install || 0)) + (o.install ? ' fitted' : '') + (G.partDiscount(cat) ? ' (sponsor)' : '')),
           installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(cat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
@@ -630,6 +630,7 @@
     var close;
     var price = G.partPrice(cat, opt), total = price + (opt.install || 0);
     function buy(andInstall) {
+      if (cat === 'weight' && DR.getOption('chassis', inst).tube) return UI.toast('A tube chassis is already as light as it gets');
       if (!G.canAfford(andInstall ? total : price)) return UI.toast('Not enough money');
       var item = G.buyPart(cat, id); A.cash();
       if (andInstall) { var r = G.installPart(inst, item.uid); UI.toast(r.msg); } else UI.toast(opt.name + ' added to your inventory');

@@ -2,6 +2,17 @@
 
 Short notes for testing, newest first.
 
+## Street tunes, setup pick, tube chassis
+- The tuner can tune on the Street, the Strip, or Both (1.7x). Each tune is
+  saved as a setup ("Strip tune", "Street tune").
+- After "To the lanes", a pop-up asks which setup to run (free to switch).
+- Street nights warn when the car runs its strip tune or slicks.
+- Lose a street race to wheelspin and the tuner texts with advice (once).
+- The tube chassis moved to Chassis / Roll Cage. With it on, the weight
+  reduction stages gray out. Past the roll cage, the chassis warning points
+  to it, with a button.
+- Try: book the tuner for Both, then race a street race with the Street tune.
+
 ## Repair banner
 - Fixed: the damage banner (Repair / Bill) could sit under the class box and
   the stats panel on a phone. It now sits on top.

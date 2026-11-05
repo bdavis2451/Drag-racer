@@ -1,6 +1,6 @@
 # Feature: Tube chassis / cracked-chassis guidance
 
-Status: **decided; plan below, waiting on a go.**
+Status: **shipped 2026-11-06.**
 
 ## Problem
 Past what the body takes, the car can crack its chassis on launch. The risk
@@ -32,3 +32,15 @@ D. Help text only.
 - Risk note: below the cage, as now; with the cage on and still too much
   power, "past even a roll cage: a tube chassis (Chassis / Roll Cage) takes
   any power", with a button that opens that section of the shop.
+
+## Build notes
+- parts.js: chassis 'ct' (tube: wr .24, low .03, stiff 1, kg 26, tech 2);
+  weight 'w4' kept for rival builds only (aiOnly, hidden from the shop).
+- physics: `wt` = the chassis option when it's a tube; `S.caged` when the
+  cage (shellK 3) is on; the note then names the tube chassis.
+- ui.js riskBox: a "Tube chassis" button (opens Parts at chassis) when caged.
+- game.js: weight parts won't fit with a tube chassis; fitting the tube
+  sends the weight stage to inventory; save `tubeV2`: w4 -> chassis ct,
+  the old chassis part to inventory, inventory w4 -> ct.
+- garage.js: weight cards gray out ("TUBE CHASSIS FITTED"), buying blocked.
+- Tests: tubest.js, cagenote.js; rival snapshot 0 diffs.

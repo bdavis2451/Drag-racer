@@ -1,6 +1,6 @@
 # Feature: Street tunes and switching tunes
 
-Status: **decided; plan below, waiting on a go.**
+Status: **shipped 2026-11-06.**
 
 ## Problem
 The tester must win a street race to unlock parts and can't hook. The hired
@@ -53,3 +53,18 @@ tester doesn't use the Tune screen.
 - Time-specific tunes for bracket racing: the tuner tunes to a target ET
   (e.g. "8.50 prepped", "9.10 street") and they're saved as setups.
   Expensive, to keep it balanced.
+
+## Build notes
+- tuner.js: `TU.WHERE` (prep: quarter, day; street: eighth, night, street
+  surface), `TU.BOTH_K` 0.7. Session `surf`, `costK`; score/simPass/runPass
+  use the surface. Booking "WHERE": Strip / Street / Both (1.7x). Both runs
+  the strip session (engine + track), then a street session (track jobs
+  only) at 0.7x the day fee. Each finish saves a setup ("Strip tune" /
+  "Street tune") and sets `inst.activeSetup`.
+- race.js: `DR.Race.pickSetup` pop-up after "To the lanes" (round 1 only,
+  only if the car has setups); `DR.Race.tractionHint` on the race-day screen
+  for a non-prepped surface with a strip tune or slicks.
+- Tune screen: Load/Save set `activeSetup`; a hand edit clears it.
+- physics: `sim.wspin` = seconds of real wheelspin in the first 60 m;
+  race.js: a street loss with > 0.4 s sends the tuner's text (once).
+- Tests: tubest.js (sessions, setups, hint, pop-up); regressions clean.

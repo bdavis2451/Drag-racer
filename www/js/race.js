@@ -67,6 +67,31 @@
       if (lastP && lastP.cond) base += est(cond) - est(Object.assign({}, cond, { surface: lastP.cond.s, night: !!lastP.cond.n, air: lastP.cond.a, trackT: lastP.cond.t }));
       return (Math.round((base + (1 - d.con / 100) * 0.03) * 100) / 100).toFixed(2);
     },
+    // On a street (or no-prep) night: why a strip-tuned car on slicks may not
+    // hook, and what to do about it
+    tractionHint: function (inst, S, cond) {
+      if (!cond || cond.surface === 'prep') return null;
+      var why = [];
+      if (inst.activeSetup === 'Strip tune') why.push('it runs its strip tune');
+      if (S.tire.kind === 'Slick') why.push('it\'s on slicks');
+      if (!why.length) return null;
+      var hasStreet = (inst.setups || []).some(function (x) { return x.name === 'Street tune'; });
+      return h('div', { class: 'warn gsmall', style: { marginTop: '6px' } }, '⚠ The street has far less grip than the strip, and ' + why.join(' and ') + ': expect wheelspin. ' +
+        (hasStreet ? 'Pick your Street tune next.' : 'Book a street tune (Upgrade > Tune > Tuner, Street)' + (S.tire.kind === 'Slick' ? ', and drag radials hook better here than slicks.' : '.')));
+    },
+    // Right after a race is accepted: which setup to run (if there are any)
+    pickSetup: function (inst, cond, go) {
+      var list = inst.setups || [];
+      if (!list.length) return go();
+      var close, cur = inst.activeSetup;
+      function use(st) { if (st) { inst.tune = JSON.parse(JSON.stringify(st.tune)); inst.activeSetup = st.name; G.save(); } close(); go(); }
+      var street = cond && cond.surface !== 'prep';
+      close = UI.modal([h('div', { class: 'pix acc' }, 'WHICH SETUP?'),
+        h('div', { class: 'dim gsmall' }, (street ? 'A street night: ' : 'A prepped strip: ') + 'pick the tune to run. Switching is free.'),
+        h('div', { class: 'col', style: { gap: '6px', marginTop: '6px' } },
+          btn('Keep what\'s on the car' + (cur ? ' (' + cur + ')' : ''), function () { use(null); }, 'primary'),
+          list.map(function (st) { return btn(st.name + (st.name === cur ? ' ✓' : ''), function () { use(st); }); }))]);
+    },
     raceDay: function (cfg, title) {
       // every way in goes through the event's lock (a sponsor race needs the sponsor, ...)
       var lk = cfg.mode === 'career' && cfg.ev && !(cfg.round > 0) && G.eventLock(cfg.ev);
@@ -125,6 +150,7 @@
         DR.sideBetRow ? DR.sideBetRow(cfg) : null,
         youOnly && drivers.length ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'You drive this one yourself.') : null,
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'TECH'), h('div', { class: tech ? 'bad' : '' }, techLine),
+        DR.Race.tractionHint(inst, S, cond),
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'YOUR CAR'),
         h('div', { class: 'dim' }, ws.map(function (x) { return (x.cat === 'rtires' ? 'Tires ' : 'Clutch ') + Math.round(x.w * 100) + '% worn'; }).join(' • ') + ' • fuel about ' + DR.money(DR.runCost(S).total) + ' a pass'),
         h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px', marginTop: '10px' } },
@@ -145,7 +171,7 @@
             }
             if (pinkCb && pinkCb.checked) cfg.pinks = true;
             cfg.driver = seat && seat.value && !cfg.pinks ? seat.value : null;
-            close(); DR.Race.start(cfg);
+            close(); if (cfg.round > 0) DR.Race.start(cfg); else DR.Race.pickSetup(inst, cond, function () { DR.Race.start(cfg); });
           }, 'primary' + (tech ? ' disabled' : '')))]);
     },
     // The surface and time of day for a race. Street spots and the strip
@@ -913,6 +939,8 @@
       // what the slip shows besides the times: news (stage unlocked, next
       // round), a money breakdown, unlock chips and a few short notes
       var moneyDelta = 0, firstWin = false, news = [], money = [], unlocks = [], notes = [];
+      // lost on the street to wheelspin: the tuner offers a street tune (once)
+      if (win === false && !testDrive && cfg.cond && cfg.cond.surface !== 'prep' && (you.sim.wspin || 0) > 0.4 && DR.Phone) DR.Phone.send('tuner', 'streettune');
       var damaged = you.sim.blown ? { engine: true } : you.sim.broke ? (you.sim.brokeWhat === 'axle' ? { axle: true } : you.sim.brokeWhat === 'chassis' ? { chassis: true } : { trans: true }) : null;
       var ev = cfg.ev, nextRound = null, evBack = them && ev && UI.eventReturn && UI.eventReturn.ids.indexOf(ev.id) >= 0 && G.now() < UI.eventReturn.end ? UI.eventReturn : null;
       if (cfg.mode === 'career' && win) {

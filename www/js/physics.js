@@ -195,7 +195,7 @@
     var trId = DR.partId('trans', inst), tr = DR.TRANS[trId];
     var clutch = o('clutch'), conv = o('converter'), fly = o('flywheel'), shaft = o('driveshaft'), diff = o('diff');
     var layout = o('layout'), springs = o('springs'), shocks = o('shocks'), rs = o('rearsusp'), bar = o('wheeliebar');
-    var aero = o('aero'), wheels = o('wheels'), ftires = o('ftires'), wt = o('weight');
+    var aero = o('aero'), wheels = o('wheels'), ftires = o('ftires'), wt = o('chassis').tube ? o('chassis') : o('weight');
     var tman = o('tmanifold'), dpipe = o('downpipe'), theat = o('theat');
     var gset = o('gears'), pul = o('pulleys'), coolP = o('cooling'), hstud = o('headstud'), wmi = o('wmi'), mounts = o('mounts'), safe = o('safety');
     var tireId = DR.partId('rtires', inst), tire = DR.TIRES[tireId], stockTire = DR.TIRES[car.tire];
@@ -548,8 +548,9 @@
     // what the body takes before it twists (hp, nitrous included), and the
     // safety gear tech inspection sees (0 none, 1 roll bar, 2 cage). A tube
     // chassis has both covered.
-    var tube = DR.partId('weight', inst) === 'w4' || car.shell === Infinity;
+    var tube = DR.partId('weight', inst) === 'w4' || !!chas.tube || car.shell === Infinity;
     S.shell = tube ? Infinity : car.shell * (chas.shellK || 1);
+    S.caged = (chas.shellK || 1) >= 3;   // the best cage there is: next is a tube chassis
     S.tech = tube ? 2 : chas.tech || 0;
     S.risk = DR.riskOf(S);
     return S;
@@ -876,7 +877,7 @@
     // the body: past what the shell takes it twists on the launch and cracks
     r.chassis = 0;
     var shellX = (S.peakHp + S.nosHp) / (S.shell || Infinity);
-    if (shellX > 1) { r.chassis = Math.min(0.6, (shellX - 1) * 0.9); r.notes.push('Power is ' + Math.round(shellX * 100) + '% of what the body takes - fit subframe connectors, a roll bar or a cage'); }
+    if (shellX > 1) { r.chassis = Math.min(0.6, (shellX - 1) * 0.9); r.notes.push(S.caged ? 'Power is ' + Math.round(shellX * 100) + '% of what even the roll cage takes - a tube chassis (Chassis / Roll Cage) takes any power' : 'Power is ' + Math.round(shellX * 100) + '% of what the body takes - fit subframe connectors, a roll bar or a cage'); }
     r.engine = Math.min(0.9, r.engine);
     return r;
   };
@@ -1460,6 +1461,8 @@
       if (tf) {
         this.slip = Math.max(0, tf.s);
         this.F = Fx;
+        // real wheelspin in the first 60 m (seconds of it), for the tuner's advice
+        if (this.x < 60 && tf.s > S.tslip * 3) this.wspin = (this.wspin || 0) + dt;
         var slipV = Math.max(0, this.ww * r - this.v);
         this.tireT += Math.abs(Fx) * slipV * dt * 3.5e-5 * (30 / S.tire.m);
         this.tireE += Math.abs(Fx) * slipV * dt;

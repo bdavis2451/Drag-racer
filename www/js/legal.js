@@ -37,7 +37,7 @@
   L.undrivable = function (inst) {
     var car = DR.CARS[inst.carId], S = G.spec(inst);
     if (car.cat === 'Pro') return 'a pure race car: no lights, no plates, no cooling for traffic';
-    if (DR.partId('weight', inst) === 'w4') return 'a tube chassis can\'t be registered for the road';
+    if (DR.partId('weight', inst) === 'w4' || DR.partId('chassis', inst) === 'ct') return 'a tube chassis can\'t be registered for the road';
     if ((S.peakHp + (S.nosHp || 0)) > S.coolHp * 1.8) return 'it would overheat in traffic: it makes far more power than its radiator was made for';
     return '';
   };

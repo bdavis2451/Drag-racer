@@ -88,11 +88,17 @@
 
   // ---------------------------------------------------------------- session
   // who: { name, eng, chs, dat, staff (team tuner object) | freelance tier }
-  TU.session = function (inst, who, jobs, agg, drvId) {
+  // where the tuning happens: the prepped strip (quarter mile), or the
+  // street at night (eighth mile, street surface)
+  TU.WHERE = { prep: { name: 'Strip', setup: 'Strip tune', night: false, dist: function () { return DR.QUARTER; } },
+    street: { name: 'Street', setup: 'Street tune', night: true, dist: function () { return DR.EIGHTH; } } };
+  TU.BOTH_K = 0.7;   // the second surface of a Strip + Street booking (1.7x in all)
+  function condOf(ss) { return DR.conditions(ss.surf || 'prep', TU.WHERE[ss.surf || 'prep'].night); }
+  TU.session = function (inst, who, jobs, agg, drvId, surf) {
     var t0 = JSON.parse(JSON.stringify(inst.tune || {}));
     var S0 = G.spec(inst), d0 = DR.fullTune(inst, S0);
     var ss = { inst: inst, who: who, jobs: jobs, agg: TU.AGG[agg] || TU.AGG.bal, t0: t0, d0: d0, log: [], cost: { labor: 0, driver: 0, dyno: 0, fuel: 0, track: 0, parts: 0 },
-      pulls: [], passes: 0, best: null, items: [], phase: 'dyno', dayPaid: false, dynoPaid: false };
+      pulls: [], passes: 0, best: null, items: [], phase: 'dyno', dayPaid: false, dynoPaid: false, surf: surf || 'prep', costK: 1, aggKey: agg, drvId: drvId };
     // who'll drive the passes: the tuner sets the car up for them
     var drs = DR.Team && DR.Team.dragDrivers ? DR.Team.dragDrivers() : [];
     ss.drv = drvId === 'me' ? null : (drvId && DR.Team.staff(drvId)) || drs[0] || null;
@@ -271,10 +277,10 @@
     if (GB[k] != null) gbSet(t, ss.inst, GB[k], v); else t[k] = v;
     var key = JSON.stringify(t); ss.memo = ss.memo || {};
     if (ss.memo[key] != null) return ss.memo[key];
-    var S = DR.buildSpec(ss.inst, t), cond = DR.conditions('prep', false), sum = 0;
+    var S = DR.buildSpec(ss.inst, t), cond = condOf(ss), sum = 0, dist = TU.WHERE[ss.surf || 'prep'].dist();
     ss.finfo = ss.finfo || {};
     [0.7, 1, 1.3].forEach(function (sr) {
-      var sim = new DR.Sim(S, { cond: cond, shakeRnd: sr, dist: DR.QUARTER, tireT: S.tire.topt });
+      var sim = new DR.Sim(S, { cond: cond, shakeRnd: sr, dist: dist, tireT: S.tire.topt });
       var ai = modelDriver(ss), dt = 1 / 400, tG = -1.2;
       while (!sim.finished && tG < 40 && !sim.crashed && !sim.blown) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
       sum += sim.finished ? sim.et : 30;
@@ -333,7 +339,7 @@
   TU.record = function (ss, pass, res) {
     var S = G.spec(ss.inst), fuel = DR.runCost(S).total;
     G.pay(fuel + TU.TRACK_FEE); ss.cost.fuel += fuel; ss.cost.track += TU.TRACK_FEE; ss.passes++;
-    if (!ss.who.staff && !ss.dayPaid) { G.pay(ss.who.day); ss.cost.labor += ss.who.day; ss.dayPaid = true; }
+    if (!ss.who.staff && !ss.dayPaid) { var dayFee = Math.round(ss.who.day * (ss.costK || 1) / 10) * 10; G.pay(dayFee); ss.cost.labor += dayFee; ss.dayPaid = true; }
     var note, et = res.et;
     ss.log.push({ pass: pass.label, et: res.et, sixty: res.sixty, aborted: res.aborted });
     // a bad pass: a tuner who reads data well doesn't learn from it
@@ -380,9 +386,9 @@
     return ch;
   };
   // a pass made by one of your drag drivers, off screen
-  TU.simPass = function (inst, drvId) {
-    var d = DR.Team.staff(drvId), S = G.spec(inst), cond = DR.conditions('prep', false);
-    var sim = new DR.Sim(S, { cond: cond, shakeRnd: 0.6 + Math.random() * 0.8, dist: DR.QUARTER, tireT: S.tire.topt });
+  TU.simPass = function (inst, drvId, surf) {
+    var d = DR.Team.staff(drvId), S = G.spec(inst), w = TU.WHERE[surf || 'prep'], cond = DR.conditions(surf || 'prep', w.night);
+    var sim = new DR.Sim(S, { cond: cond, shakeRnd: 0.6 + Math.random() * 0.8, dist: w.dist(), tireT: S.tire.topt });
     var ai = DR.AIDriver.fromDrag(d), dt = 1 / 400, tG = -1.2;
     while (!sim.finished && tG < 60 && !sim.crashed && !sim.blown && !sim.broke) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
     sim.tireE += S.peakHp * 745.7 * 0.9;     // their burnout
@@ -400,7 +406,7 @@
   TU.open = function (inst) {
     if (inst.damage) return UI.toast('Repair your car first!');
     if (TU.active && TU.active.inst === inst) return passPrompt(TU.active);
-    var staff = DR.Team && DR.Team.tuner('drag'), whoSel = staff ? 'staff' : 'local', jobs = { engine: true, chassis: true, launch: true, drive: false, nitrous: false }, agg = 'bal', close;
+    var staff = DR.Team && DR.Team.tuner('drag'), whoSel = staff ? 'staff' : 'local', jobs = { engine: true, chassis: true, launch: true, drive: false, nitrous: false }, agg = 'bal', where = 'prep', close;
     var S = G.spec(inst), quote = h('div', { class: 'dim gsmall' }), scope = h('div', { class: 'gsmall' }), go;
     var drivers = DR.Team ? DR.Team.dragDrivers() : [], drvSel = drivers.length ? drivers[0].id : 'me';
     function covers() {
@@ -419,7 +425,7 @@
       var w = who(), js = chosen(), eng = js.indexOf('engine') >= 0, trk = js.some(function (j) { return j !== 'engine'; });
       var dynoCost = !eng ? 0 : w.staff ? DR.dynoFee(S) + ' a pull (about 4-10 pulls)' : DR.money(Math.round((w.dyno + S.peakHp) / 50) * 50) + ' for the dyno tune';
       quote.textContent = (eng ? 'Dyno: ' + (w.staff ? DR.money(DR.dynoFee(S)) + ' a pull, about 4-10 pulls. ' : dynoCost + '. ') : '') +
-        (trk ? 'Track: ' + (w.staff ? '' : DR.money(w.day) + ' for the day, ') + DR.money(DR.runCost(S).total + TU.TRACK_FEE) + ' a pass (fuel and the test-and-tune ticket), about ' + (2 + js.length * 2) + ' passes, each one wearing the car.' : '');
+        (trk ? (where === 'both' ? 'Strip, then street: ' : where === 'street' ? 'Street: ' : 'Track: ') + (w.staff ? '' : DR.money(Math.round(w.day * (where === 'both' ? 1 + TU.BOTH_K : 1) / 10) * 10) + ' for the ' + (where === 'both' ? 'two tunes' : 'day') + ', ') + DR.money(DR.runCost(S).total + TU.TRACK_FEE) + ' a pass (fuel and the ticket), about ' + (2 + js.length * 2) * (where === 'both' ? 2 : 1) + ' passes, each one wearing the car.' : '');
       go.disabled = !js.length;
       scope.textContent = covers();
     }
@@ -430,7 +436,9 @@
       }));
     }
     go = btn('Start', function () {
-      var ss = TU.session(inst, who(), chosen(), agg, drvSel);
+      var js = chosen(), trackJobs = js.filter(function (j) { return j !== 'engine'; });
+      var ss = TU.session(inst, who(), js, agg, drvSel, where === 'street' ? 'street' : 'prep');
+      if (where === 'both' && trackJobs.length) ss.then = { jobs: trackJobs };
       TU.active = ss; close();
       if (ss.phase === 'dyno') dynoPhase(ss); else passPrompt(ss);
     }, 'primary');
@@ -441,6 +449,9 @@
       h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'WHO DRIVES'),
       radio('drv', drivers.map(function (d) { return [d.id, d.name]; }).concat([['me', 'Me']]), drvSel, function (v) { drvSel = v; }),
       h('div', { class: 'dim gsmall' }, 'The tuner tunes the car to run flat out, so whoever drives never has to lift: the 2-step, boost by gear and the traction control do that work. A more consistent driver\'s slips are easier to read.'),
+      h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'WHERE'),
+      radio('where', [['prep', 'Strip (prepped)'], ['street', 'Street'], ['both', 'Both (' + Math.round((1 + TU.BOTH_K) * 10) / 10 + 'x)']], where, function (v) { where = v; }),
+      h('div', { class: 'dim gsmall' }, 'The street has far less grip than a prepped strip: a strip tune spins there. Each tune is saved as a setup you pick before a race.'),
       h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'HOW FAR TO GO'),
       h('div', { class: 'col' }, TU.JOBS.filter(function (j) { return j.id !== 'nitrous' || S.nosW; }).map(function (j) {
         var cb = h('input', { type: 'checkbox', checked: !!jobs[j.id] });
@@ -537,7 +548,8 @@
         }, 'primary' + (G.canAfford(cost) ? '' : ' disabled')))]);
   }
   function runPass(ss, drvId) {
-    DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, night: false, surface: 'prep', driver: drvId, tuner: { label: ss.cur.label }, back: 'tune' });
+    if (ss.surf === 'street') DR.Race.start({ mode: 'test', dist: DR.EIGHTH, theme: 'street', grip: DR.Race.SURF_BASE.street, night: true, surface: 'street', driver: drvId, tuner: { label: ss.cur.label }, back: 'tune' });
+    else DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, night: false, surface: 'prep', driver: drvId, tuner: { label: ss.cur.label }, back: 'tune' });
   }
   // a driver is paid for the day, once a session
   function payDriver(ss, drvId) {
@@ -549,7 +561,7 @@
   }
   function simPass(ss, drvId) {
     payDriver(ss, drvId);
-    var res = TU.simPass(ss.inst, drvId), noteTxt = TU.record(ss, ss.cur, res);
+    var res = TU.simPass(ss.inst, drvId, ss.surf), noteTxt = TU.record(ss, ss.cur, res);
     if (res.broke) ss.broke = true;
     UI.toast(ss.cur.label + ': ' + (res.et < 90 ? res.et.toFixed(3) : 'DNF') + '. ' + noteTxt);
     if (res.broke) return notes(ss);
@@ -565,9 +577,20 @@
   TU.resume = function () { var ss = TU.active; if (!ss) return; UI.show(UI.Tune); setTimeout(function () { passPrompt(ss); }, 60); };
   TU.end = function () { var ss = TU.active; if (!ss) return; UI.show(UI.Tune); setTimeout(function () { notes(ss); }, 60); };
 
+  // the tuner's result is kept as a setup sheet ('Strip tune' / 'Street tune')
+  function saveSetup(ss) {
+    var inst = ss.inst, nm = TU.WHERE[ss.surf || 'prep'].setup, list = inst.setups || (inst.setups = []);
+    var same = list.filter(function (x) { return x.name === nm; })[0], tune = JSON.parse(JSON.stringify(inst.tune));
+    if (same) same.tune = tune; else { if (list.length >= 10) list.shift(); list.push({ name: nm, tune: tune }); }
+    inst.activeSetup = nm; G.save();
+    return nm;
+  }
+  TU.saveSetup = saveSetup;
   function notes(ss) {
     var ch = TU.finish(ss), close, n = 0;
     TU.active = null;
+    var saved = ss.broke || ss.inst.damage ? null : saveSetup(ss);
+    var then = ss.then && !ss.broke && !ss.inst.damage ? ss.then : null;
     var total = ss.cost.labor + ss.cost.driver + ss.cost.dyno + ss.cost.fuel + ss.cost.track + ss.cost.parts;
     close = UI.modal([h('div', { class: 'pix acc' }, 'TUNER\'S NOTES • ' + ss.who.name.toUpperCase()),
       h('div', { class: 'tunerlog' }, ss.log.map(function (x) {
@@ -578,9 +601,14 @@
       })),
       h('p', {}, Object.keys(ch).length ? 'Set: ' + Object.keys(ch).map(function (k) { return label(k) + ' ' + fmt(k, ch[k]); }).join(' • ') : 'Nothing changed.'),
       ss.broke || ss.inst.damage ? h('p', { class: 'bad' }, 'The car is broken. It needs a repair.') : null,
+      saved ? h('p', { class: 'acc' }, 'Saved as your "' + saved + '" setup (Tune > Setups): pick it before a race.') : null,
+      then ? h('p', {}, 'Next: the street tune, at ' + Math.round(TU.BOTH_K * 100) + '% of the price.') : null,
       h('p', { class: 'dim' }, ss.pulls.length + ' pulls, ' + ss.passes + ' passes: ' +
         [ss.cost.labor ? DR.money(ss.cost.labor) + ' tuner' : '', ss.cost.driver ? DR.money(ss.cost.driver) + ' driver' : '', ss.cost.dyno ? DR.money(ss.cost.dyno) + ' dyno time' : '', ss.cost.fuel ? DR.money(ss.cost.fuel) + ' fuel' : '', ss.cost.track ? DR.money(ss.cost.track) + ' track' : '', ss.cost.parts ? DR.money(ss.cost.parts) + ' parts' : ''].filter(Boolean).join(' + ') + ' = ' + DR.money(total)),
-      h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('OK', function () { close(); UI.refresh(); }, 'primary'))]);
+      h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn(then ? 'On to the street' : 'OK', function () {
+        close(); UI.refresh();
+        if (then) { var s2 = TU.session(ss.inst, ss.who, then.jobs, ss.aggKey, ss.drvId, 'street'); s2.costK = TU.BOTH_K; TU.active = s2; setTimeout(function () { passPrompt(s2); }, 60); }
+      }, 'primary'))]);
   }
 
   // ---------------------------------------------------------------- circuit

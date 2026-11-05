@@ -11,7 +11,8 @@
   P.FROM = {
     ray: { name: 'Uncle Ray', col: '#ffcc00' },
     track: { name: 'Pixel Dragway', col: '#3aa0ff' },
-    street: { name: 'Unknown number', col: '#ff2bd6' }
+    street: { name: 'Unknown number', col: '#ff2bd6' },
+    tuner: { name: 'Your tuner', col: '#46e07a' }
   };
   function stageName(n) { return DR.STAGES[n] ? DR.STAGES[n].name : ''; }
   // key: [from, text(data)]; once-only unless `again`
@@ -35,6 +36,7 @@
     repo: ['ray', function () { return 'Heard about the car. Lenders don\'t care how fast it was, kid. Borrow less than you can lose.'; }, true],
     promoter: ['ray', function () { return 'First event in the black! Your granddad ran Friday nights at the old airfield, you know. Keep the porta-johns clean and the purse honest and they\'ll keep coming.'; }],
     hint: ['street', function (t) { return t; }, true],
+    streettune: ['tuner', function () { return 'Saw that one go up in smoke. The street hasn\'t got half the grip of the strip, and the car\'s set up for the strip. Book me for a street tune (Upgrade > Tune > Tuner, pick Street) and pick it before your street races.'; }],
     couchrent: ['ray', function () { return 'You\'re winning now, kid, so here\'s the deal: ' + DR.money(DR.COUCH_RENT) + ' a month toward the lights and the shop. Couch stays yours. If you\'re short, I\'ll run a tab.'; }],
     nephew: ['ray', function () { return 'My nephew Danny\'s been bugging me to race. He\'s green, but he\'s on your team now: he\'ll drive your circuit races (Race > Career > Circuit) while you run the strip. Pays by the race. Hire better drivers when you can.'; }],
     bailout: ['ray', function () { return 'Saw your bank balance. Put ' + DR.money(DR.BAILOUT) + ' in it. Once, kid. Next time you\'re in the red it\'s the bank, or selling something: a car, the parts on the shelf. That\'s how the rest of us did it.'; }],

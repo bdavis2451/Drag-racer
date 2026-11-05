@@ -302,7 +302,8 @@
     if (r.engine > 0.001) out.push(h('div', { class: 'warnbox' }, 'Engine failure risk: ' + Math.round(r.engine * 100) + '% per run'));
     if (r.trans > 0.001) out.push(h('div', { class: 'warnbox' }, 'Transmission failure risk: ' + Math.round(r.trans * 100) + '% per run'));
     if (r.axle > 0.001) out.push(h('div', { class: 'warnbox' }, 'Broken axle risk: ' + Math.round(r.axle * 100) + '% per run'));
-    if (r.chassis > 0.001) out.push(h('div', { class: 'warnbox' }, 'Cracked chassis risk: ' + Math.round(r.chassis * 100) + '% per run'));
+    if (r.chassis > 0.001) out.push(h('div', { class: 'warnbox' }, 'Cracked chassis risk: ' + Math.round(r.chassis * 100) + '% per run',
+      S.caged && UI.Parts ? btn('Tube chassis', function () { Array.prototype.forEach.call(document.querySelectorAll('.modal'), function (m) { m.remove(); }); UI.show(UI.Parts, 'chassis'); }, 'small go') : null));
     r.notes.forEach(function (n) { out.push(h('div', { class: 'dim', style: { fontSize: '16px' } }, '• ' + n)); });
     return out;
   }

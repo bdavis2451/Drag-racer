@@ -619,7 +619,7 @@
           h('div', { class: 'help' }, def.help)));
         return;
       }
-      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; G.save(); recalc(); }, def.fmt || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),
+      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; delete inst.activeSetup; G.save(); recalc(); }, def.fmt || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; G.save(); UI.refresh(); } : null);
       row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F); knock limit ' + S.knock + ' psi.' : '')));
       // jets: how the plugs read (any data logger brings a wideband: the
@@ -665,13 +665,14 @@
       h('div', { class: 'col', style: { gap: '4px', margin: '6px 0' } }, list.length ? list.map(function (st, i) {
         return h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } },
           h('div', { class: 'grow' }, h('div', {}, st.name), h('div', { class: 'dim gsmall' }, summary(st.tune))),
-          btn('Load', function () { inst.tune = JSON.parse(JSON.stringify(st.tune)); G.save(); close(); UI.toast('Loaded ' + st.name); UI.refresh(); }, 'small go'),
+          btn('Load', function () { inst.tune = JSON.parse(JSON.stringify(st.tune)); inst.activeSetup = st.name; G.save(); close(); UI.toast('Loaded ' + st.name); UI.refresh(); }, 'small go'),
           btn('✕', function () { list.splice(i, 1); G.save(); close(); setupsModal(inst); }, 'small red'));
       }) : h('div', { class: 'dim' }, 'No saved setups for this car yet.')),
       h('div', { class: 'row', style: { gap: '8px' } }, name,
         btn('Save current', function () {
           var n = (name.value || '').trim() || 'Setup ' + (list.length + 1);
           var same = list.filter(function (x) { return x.name === n; })[0];
+          inst.activeSetup = n;
           if (same) same.tune = JSON.parse(JSON.stringify(inst.tune));
           else { if (list.length >= 10) return UI.toast('Ten setups is the most: delete one first'); list.push({ name: n, tune: JSON.parse(JSON.stringify(inst.tune)) }); }
           G.save(); close(); UI.toast('Saved ' + n); setupsModal(inst);

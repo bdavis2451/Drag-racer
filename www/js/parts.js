@@ -432,7 +432,10 @@
     opt('stock', 'Stock Unibody', 0, { stiff: 0.9, kg: 0, shellK: 1 }, 'The body twists on a hard launch.'),
     opt('cg1', 'Subframe Connectors', 400, { stiff: 0.95, kg: 7, shellK: 1.3 }, 'Ties the front and rear frame rails together: the shell takes 30% more power.'),
     opt('cg2', '8-Point Roll Bar', 1500, { stiff: 0.98, kg: 18, shellK: 1.8, tech: 1 }, 'Stiffer chassis, 80% more power before it twists, and tech lets you run quicker than 11.50.'),
-    opt('cg3', '25.3 Chromoly Roll Cage', 4000, { stiff: 1, kg: 26, shellK: 3, tech: 2 }, 'A rigid chassis that takes 3x the power. Tech lets you run quicker than 10.00. Every bit of anti-squat goes to the tires.')
+    opt('cg3', '25.3 Chromoly Roll Cage', 4000, { stiff: 1, kg: 26, shellK: 3, tech: 2 }, 'A rigid chassis that takes 3x the power. Tech lets you run quicker than 10.00. Every bit of anti-squat goes to the tires.'),
+    // a tube chassis takes any power, and it's as light as the car gets
+    // (no weight reduction on top: it is the weight reduction)
+    opt('ct', 'Tube Chassis', 35000, { tube: true, wr: 0.24, low: 0.03, stiff: 1, kg: 26, tech: 2 }, '-24% chassis weight and a lower CG, with a certified cage: it takes any power. Replaces the weight reduction stages.')
   ]};
   C.frontsusp = { name: 'Front Suspension', options: [
     opt('stock', 'Stock K-Member & Arms', 0, { fkg: 0 }),
@@ -480,7 +483,8 @@
     opt('w1', 'Stage 1: Interior Strip', 1000, { wr: 0.05 }, '-5% chassis weight.'),
     opt('w2', 'Stage 2: Lightweight Panels', 4000, { wr: 0.10 }, '-10% chassis weight.'),
     opt('w3', 'Stage 3: Carbon Body & Lexan', 12000, { wr: 0.16 }, '-16% chassis weight.'),
-    opt('w4', 'Stage 4: Tube Chassis', 35000, { wr: 0.24, low: 0.03 }, '-24% chassis weight and a lower CG. A tube chassis with a certified cage: it takes any power.')
+    // (rival builds only: the tube chassis is a chassis part now)
+    opt('w4', 'Stage 4: Tube Chassis', 35000, { wr: 0.24, low: 0.03, aiOnly: true }, '-24% chassis weight and a lower CG. A tube chassis with a certified cage: it takes any power.')
   ]};
   // bat: kg moved from the nose to the trunk; bkgW: kg saved
   C.battery = { name: 'Battery', options: [
@@ -600,7 +604,7 @@
     ftires: { ft1: 'drag', ft2: 'circuit' },
     rtires: { dr_245: 'drag', dr_275: 'drag', dr_315: 'drag', ets_28: 'drag', sl_31: 'drag', sl_33: 'drag', sl_36: 'drag', tr_255: 'circuit', tr_315: 'circuit', rr_slk: 'circuit' },
     cooling: { co2: 'circuit', co3: 'circuit' }, oiling: { o2: 'circuit' },
-    fueltype: { meth: 'drag' }, safety: { sf2: 'drag' }, weight: { w4: 'drag' }
+    fueltype: { meth: 'drag' }, safety: { sf2: 'drag' }, weight: { w4: 'drag' }, chassis: { ct: 'drag' }
   };
   DR.partDisc = function (cat, id) { var t = DR.PART_DISC[cat]; return t ? t[id] || t['*'] || '' : ''; };
   DR.UNLOCK_NAMES = { engine: 'Engine', power: 'Power adder', drive: 'Drivetrain', susp: 'Suspension', tires: 'Wheel & tire', body: 'Weight' };
@@ -767,6 +771,7 @@
       // injectors / throttle body / ECU to keep (the cheapest is the base);
       // carb pumps for a carb, EFI pumps for injection
       if (mpiOn && o.id === 'stock' && (cat === 'injectors' || cat === 'throttle' || cat === 'ecu')) return null;
+      if (o.aiOnly && o.id !== curId) return null;
       if (o.id !== curId) {
         if (o.mpi && !cbE) return null;
         if (o.mpiOnly && !mpiOn) return null;

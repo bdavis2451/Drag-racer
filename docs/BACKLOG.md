@@ -5,10 +5,7 @@ the top of each section.
 
 ## In progress
 
-- **Street tunes and switching.** Working file: `docs/features/street-tune.md`.
-- **Tube chassis guidance.** Working file: `docs/features/chassis-hint.md`.
-
-- **Carburetor update, redo.** Working file: `docs/features/carbs.md`.
+- Nothing right now.
 
 ## Waiting on a yes or no
 
@@ -52,6 +49,9 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- Street tunes (Strip/Street/Both 1.7x, saved setups, pick pop-up, hint,
+  tuner text) and the tube chassis move: shipped.
 
 - Bracket racing: hired drivers drive the stripe (lift/brake to win close
   without breaking out), pick their own dial (editable); rivals do it from

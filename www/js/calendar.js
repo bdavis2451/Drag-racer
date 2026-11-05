@@ -99,7 +99,7 @@
   DR.jobHours = function (cat, inst, id) {
     if (cat === 'engine') { var f = inst && id ? DR.swapFit(inst, id) : null, e = id && DR.ENGINES[id]; return 24 + (e ? 6 * (e.size || 1) : 0) + (f && f.install > 3000 ? 16 : 0); }
     if (cat === 'chassis' && id === 'cg1') return 8;
-    if (cat === 'weight' && id === 'w4') return 120;
+    if ((cat === 'weight' && id === 'w4') || (cat === 'chassis' && id === 'ct')) return 120;
     return HOURS[cat] != null ? HOURS[cat] : 2;
   };
   // put work on the bench for this car (or straight to the shop: rush)

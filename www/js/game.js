@@ -31,6 +31,7 @@
     if (!s.simDefault2) { s.settings.sim = false; s.simDefault2 = true; }
     try { retired(s); } catch (e) { /* keep what loaded */ }
     try { carbV2(s); } catch (e) { /* keep what loaded */ }
+    try { tubeV2(s); } catch (e) { /* keep what loaded */ }
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
     // older saves could put a rear-drive gearbox in a front-drive car: it
     // becomes the matching transaxle (and the other way around)
@@ -134,6 +135,18 @@
   // The carb rework (v2): the port EFI conversion moved from the carb slot to
   // the intake manifold (a multiport manifold), the kits stopped bringing a
   // pump, and carb cars got carb fuel pumps. Cars keep running as they did.
+  function tubeV2(s) {
+    if (s.tubeV2) return;
+    (s.cars || []).forEach(function (c) {
+      var p = c.parts || {};
+      if (p.weight !== 'w4') return;
+      delete p.weight;
+      if (p.chassis && p.chassis !== 'stock') s.inv.push({ uid: s.uid++, cat: 'chassis', id: p.chassis, price: (DR.getOption('chassis', c, p.chassis) || {}).price || 0 });
+      p.chassis = 'ct';
+    });
+    (s.inv || []).forEach(function (it) { if (it.cat === 'weight' && it.id === 'w4') { it.cat = 'chassis'; it.id = 'ct'; } });
+    s.tubeV2 = true;
+  }
   function carbV2(s) {
     if (s.carbV2) return;
     (s.cars || []).forEach(function (c) {
@@ -303,6 +316,7 @@
       if (item.cat === 'carb') return DR.hasMpi(inst) ? 'This engine runs port fuel injection now (Multiport EFI Manifold)' : 'Only for an engine that came with a carburetor';
       return 'Does not fit this car';
     }
+    if (item.cat === 'weight' && DR.getOption('chassis', inst).tube) return 'A tube chassis is already as light as it gets';
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
     if (item.cat === 'engine') { var fit = DR.swapFit(inst, item.id); if (fit.block) return fit.block; }
     if (item.cat === 'trans' && item.id && !DR.transFits(inst, item.id)) return DR.transMount(inst) === 'T' ? 'A rear-drive gearbox: this car takes a transaxle' : 'A transaxle only fits a car with a sideways engine and its factory driveline';
@@ -419,6 +433,8 @@
     if (fee && !G.canAfford(fee)) { inv.push(item); return { ok: false, msg: 'The install costs ' + DR.money(fee) }; }
     if (fee) G.pay(fee);
     setPart(inst, item.cat, item.id);
+    // a tube chassis replaces the weight reduction stages
+    if (item.cat === 'chassis' && DR.getOption('chassis', inst).tube && DR.partId('weight', inst) !== 'stock') setPart(inst, 'weight', 'stock');
     if (item.wear) { inst.wear = inst.wear || {}; inst.wear[item.cat] = { w: item.wear, n: item.passes || 0 }; }
     inst.spent += item.price;
     G.save();
