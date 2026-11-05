@@ -1,0 +1,27 @@
+# What changed
+
+Short notes for testing, newest first.
+
+## Bracket racing drivers
+- Hired drivers now drive the finish line in brackets: ahead, they ease off
+  to win close without breaking out. Picking a driver fills in their dial-in
+  (you can change it).
+- Class 3+ bracket rivals dial honestly and drive the stripe too: brackets
+  there are real races now.
+- Fixed: in a bracket where the rival had the quicker dial, they sometimes
+  never left the line.
+- Try: a bracket with a hired driver; check the dial they pick and the margin.
+
+## Manual valve body
+- With the Race Shifter / Manual Valve Body on an automatic, you tap SHIFT
+  for every gear (Auto-shift in Settings still does it for you).
+- Try: an automatic car with it fitted; miss a shift and it sits on the
+  limiter.
+
+## Lock tags
+- When a rival ends two races in a class, the lock tag names the race:
+  "Beat Dusty (Knockout)".
+
+## Carburetors
+- Older engines run factory carbs; carb upgrades, jetting (Tune screen and
+  the tuner), and fuel-injection conversions. Being reworked (see backlog).

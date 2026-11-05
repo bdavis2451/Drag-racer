@@ -1,0 +1,52 @@
+# Working on Pixel Drag
+
+A drag racing game (ES5, one global `DR`, `DR.Game` = `G`) shipped to GitHub
+Pages from branch `claude/android-drag-racing-game-q2vro7`. A tester plays the
+live Pages build on an iPhone: every push reaches him, so nothing goes live
+without the owner's OK.
+
+## How we build a feature
+
+1. **Research and talk first.** Research the real-world side, then discuss it
+   with the owner. No code until they agree on what's in it.
+2. **A short written plan, approved before building.** One page: what's in it
+   item by item (with prices for parts), where each thing lives in the game
+   (which shop section, which screen), what is deliberately left out, and
+   what it changes for existing saves and for rivals.
+3. **Item-by-item approval.** List the items as multiple-choice questions
+   (multi-select where it fits) so the owner ticks what goes in. Big lists:
+   the written plan plus questions on the real choices.
+4. **Smallest version first.** Ship the core, let it be played, then add.
+5. **Preview before live.** Gameplay and art changes go to the preview
+   artifact first; push to GitHub Pages only after the owner says so.
+6. **Nothing beyond the plan without asking.** A change the feature turns out
+   to need (a balance tweak, a rule, another system) becomes a question, not a
+   surprise in the report.
+7. **Ask before doing anything the owner hasn't agreed to.** Small bug fixes
+   they asked for are fine; anything else, ask.
+
+## Conventions
+
+- **Parts live where they live on a real car.** An intake part is in the
+  intake section; a part that enables others (a multiport manifold enabling
+  injectors and an ECU) unlocks them where they already are, not in a new slot.
+- Keep the catalog lean: a new option must give the player a real choice.
+- Rivals (`inst.ai`) must not change unless the plan says so: the rival
+  snapshot must stay identical.
+- Plain, short, player-facing wording; say what a thing does, not how it's
+  coded.
+
+## After every push
+
+- A short "what changed" note for the owner, written for the tester: what to
+  try and what to look out for. Add it to `docs/CHANGELOG.md`.
+- Keep `docs/BACKLOG.md` current: parked ideas, proposals waiting on a yes or
+  no, and decisions made.
+
+## Practical
+
+- Serve locally: `cd www && python3 -m http.server 8123`, open
+  `index.html?noframe=1`. Headless Chromium + Playwright are available.
+- `DR.SCHED_OFF = true` skips the calendar gates in tests.
+- Bundle for the preview: `python3 tools/bundle_web.py <out.html> --fragment`,
+  then `npx cap sync`.
