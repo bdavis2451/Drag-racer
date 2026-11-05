@@ -337,7 +337,7 @@
   C.shifter = { name: 'Shifter / Shift Kit', needsShifter: true, options: [
     opt('stock', 'Factory Shifter', 0, { shiftK: 1 }),
     opt('ss1', 'Short-Throw Shifter / Shift Kit', 300, { shiftK: 0.85 }, 'Shorter throws on a manual, firmer shifts from an automatic\'s valve body: 15% quicker shifts.'),
-    opt('ss2', 'Race Shifter / Manual Valve Body', 1000, { shiftK: 0.72 }, 'A lockout race shifter, or a full manual valve body: 28% quicker shifts.')
+    opt('ss2', 'Race Shifter / Manual Valve Body', 1000, { shiftK: 0.72, mvb: true }, 'A lockout race shifter, or a full manual valve body: 28% quicker shifts. On an automatic it no longer shifts itself: you shift it, like a manual (Auto-shift in Settings can do it for you).')
   ]};
   C.flywheel = { name: 'Flywheel / Flexplate', options: [
     opt('stock', 'Stock Flywheel', 0, { fly: 1 }),

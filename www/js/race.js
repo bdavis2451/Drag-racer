@@ -500,6 +500,14 @@
     var tipOpen = false;
     function launchTip() {
       var seen = G.state.tips || (G.state.tips = {});
+      // the first race with a manual valve body: it won't shift itself now
+      if (S.mvb && !settings.autoShift && !seen.mvb && !drvAI && !testDrive && (seen.launch || (G.state.stats && G.state.stats.races > 0))) {
+        seen.mvb = true; G.save(); tipOpen = true; input.gasHeld = false; input.gas = 0;
+        var closeM = UI.modal([h('h2', {}, 'MANUAL VALVE BODY'), h('p', {}, 'Your automatic won\'t shift itself any more: tap SHIFT for every gear, as the lights hit the top of the tach. Miss one and it sits on the rev limiter.'),
+          h('p', { class: 'dim' }, 'Auto-shift in Settings can shift it for you, at the shift RPM in your tune.'),
+          h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Got it', function () { closeM(); tipOpen = false; input.act = false; last = performance.now(); }, 'primary'))]);
+        return;
+      }
       if (seen.launch || testDrive || (G.state.stats && G.state.stats.races > 0)) return;
       if (drvAI) return;
       seen.launch = true; G.save();
@@ -637,9 +645,9 @@
           you.sim.shiftUp();
           act = false;
         }
-        // auto-shift (setting; an automatic always shifts itself); never in
-        // the first moments of the launch
-        if ((settings.autoShift || you.S.trType === 'auto') && you.sim.launched && you.sim.t > 0.6 && !you.sim.shifting && you.sim.sinceShift > 0.25) {
+        // auto-shift (setting; an automatic shifts itself, unless it has a
+        // manual valve body); never in the first moments of the launch
+        if ((settings.autoShift || (you.S.trType === 'auto' && !you.S.mvb)) && you.sim.launched && you.sim.t > 0.6 && !you.sim.shifting && you.sim.sinceShift > 0.25) {
           var Sy = you.S, line = you.sim.ww * Sy.ratios[you.sim.gear] * Sy.fd * 30 / Math.PI;
           var trig = Sy.trType === 'auto' ? Math.max(line / 0.95, you.sim.rpm() >= Sy.limit - 60 ? you.sim.rpm() : 0) : you.sim.locked ? you.sim.rpm() : line;
           if (trig >= Sy.tune.shiftRpm) you.sim.shiftUp();

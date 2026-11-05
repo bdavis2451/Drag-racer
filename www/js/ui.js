@@ -380,7 +380,7 @@
           r.addEventListener('change', function () { G.save(); A.init(); A.resume(); A.beep(660, 0.08); });
           return h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Volume')), val, r);
         })(),
-        toggle('Shifting', 'autoShift', false, true, 'Manual', 'Auto', 'Auto-shift uses the shift RPM from your tune. Automatic transmissions always shift themselves.'),
+        toggle('Shifting', 'autoShift', false, true, 'Manual', 'Auto', 'Auto-shift uses the shift RPM from your tune. Automatic transmissions shift themselves, unless they have a manual valve body.'),
         toggle('Christmas tree', 'proTree', false, true, 'Sportsman', 'Pro', 'Pro tree: all ambers flash at once, green 0.4s later.'),
         toggle('Speed units', 'units', 'mph', 'kmh', 'MPH', 'KM/H'),
         toggle('Gas pedal', 'pedal', 'hold', 'slide', 'Hold', 'Slide', 'Slide: how high you touch the pedal sets the throttle - feather it to stop wheelspin.'),

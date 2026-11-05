@@ -877,7 +877,7 @@
             S.nosHp ? line('Nitrous', o('nitrous')) : null, line('Fuel', o('fueltype')), line('ECU', o('ecu')), line('Rev limiter', S.red + ' rpm'),
             line('Last dyno', dy ? Math.round(dy.peakHp) + ' whp @ ' + dy.peakHpRpm + ', ' + Math.round(dy.peakTq) + ' lb-ft (SAE)' : 'none')]),
           sect('DRIVETRAIN', [line('Transmission', tr.name), auto ? line('Converter', o('converter') + (S.convAdj ? ' (' + S.stall + ' stall)' : '')) : line('Clutch', o('clutch')),
-            auto && S.tbrake ? line('Transbrake', 'yes') : null, line('Final drive', S.fd.toFixed(2) + ':1' + (S.qc ? ' (quick-change)' : '')), line('Differential', o('diff')), line('Layout', S.drive)])),
+            auto && S.tbrake ? line('Transbrake', 'yes') : null, S.mvb ? line('Valve body', 'manual: you shift') : null, line('Final drive', S.fd.toFixed(2) + ':1' + (S.qc ? ' (quick-change)' : '')), line('Differential', o('diff')), line('Layout', S.drive)])),
         h('div', {},
           sect('CHASSIS', [line('Weight', UI.kgLb(S.m) + ', ' + Math.round(S.f * 100) + '% front'), line('Chassis', o('chassis')), line('Rear suspension', o('rearsusp')),
             line('Shocks', o('shocks')), line('Wheelie bar', DR.partApplies('wheeliebar', inst) && DR.partId('wheeliebar', inst) !== 'stock' ? o('wheeliebar') : null), line('Safety', o('safety'))]),
