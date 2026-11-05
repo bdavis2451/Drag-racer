@@ -2,8 +2,7 @@
 
 A drag racing game (ES5, one global `DR`, `DR.Game` = `G`) shipped to GitHub
 Pages from branch `claude/android-drag-racing-game-q2vro7`. A tester plays the
-live Pages build on an iPhone: every push reaches him, so nothing goes live
-without the owner's OK.
+live Pages build on an iPhone: every push reaches him (he is our tester).
 
 ## How we build a feature
 
@@ -17,8 +16,9 @@ without the owner's OK.
    (multi-select where it fits) so the owner ticks what goes in. Big lists:
    the written plan plus questions on the real choices.
 4. **Smallest version first.** Ship the core, let it be played, then add.
-5. **Preview before live.** Gameplay and art changes go to the preview
-   artifact first; push to GitHub Pages only after the owner says so.
+5. **Push straight to the tester.** Once the owner OKs a plan, build, test
+   and push: the tester on GitHub Pages is the preview. Use the preview
+   artifact only for huge reworks.
 6. **Nothing beyond the plan without asking.** A change the feature turns out
    to need (a balance tweak, a rule, another system) becomes a question, not a
    surprise in the report.

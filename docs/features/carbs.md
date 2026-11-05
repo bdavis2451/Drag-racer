@@ -1,6 +1,6 @@
 # Feature: Carburetors (redo)
 
-Status: **built 2026-11-06, on the preview; not pushed live (waiting on the owner).**
+Status: **shipped 2026-11-06.**
 Shipped v1 on 2026-11-05 (commit 70a8c4a): ~20 carb-section options. Owner
 found it bloated and wants multiport EFI in the Intake Manifold section.
 

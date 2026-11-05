@@ -2,6 +2,16 @@
 
 Short notes for testing, newest first.
 
+## Carb rework
+- Carb parts only show where they fit: the blow-through carb with a turbo or
+  centrifugal, blower carbs with a Roots blower, small-engine carbs on small
+  engines.
+- Multiport fuel injection is now an Intake Manifold. It needs injectors, a
+  throttle body, a standalone ECU and an EFI fuel pump before the car runs.
+- Carb cars run a mechanical pump from the factory, with carb pump upgrades.
+- Any data logger shows the exact air/fuel on the Tune screen's jets.
+- Try: convert a carb car to multiport; check the shop says what's missing.
+
 ## Bracket racing drivers
 - Hired drivers now drive the finish line in brackets: ahead, they ease off
   to win close without breaking out. Picking a driver fills in their dial-in
