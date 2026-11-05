@@ -2,6 +2,11 @@
 
 Short notes for testing, newest first.
 
+## Repair banner
+- Fixed: the damage banner (Repair / Bill) could sit under the class box and
+  the stats panel on a phone. It now sits on top.
+- Try: break the car, then tap Repair in the garage.
+
 ## Carb rework
 - Carb parts only show where they fit: the blow-through carb with a turbo or
   centrifugal, blower carbs with a Roots blower, small-engine carbs on small

@@ -272,7 +272,7 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 22px; background: var
 .gsel .arrow { min-width: 40px; font-size: 14px; --bc: #d4a300; color: #1a1200; text-shadow: none; }
 .gname { text-align: center; min-width: 150px; }
 .gname .dim { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gdmg { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
+.gdmg { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; z-index: 5; max-width: calc(100% - 16px); flex-wrap: wrap; justify-content: center; }
 
 /* ---------------------------------------------------------------- parts shop */
 .shopwrap { flex: 1; display: flex; min-height: 0; }
