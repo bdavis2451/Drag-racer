@@ -1009,6 +1009,16 @@
       }
       if (cfg.mode === 'career' && win === false && cfg.pinks && !testDrive) pinkLost = true;
       if (damaged && testDrive) { notes.push(['dim', 'Good thing it was a test drive.']); damaged = null; }
+      // lost to big wheelspin: point at the traction-control ECU (or at it
+      // being switched off)
+      if (win === false && !testDrive && (you.sim.wspin || 0) > 0.6) {
+        var ecuO = DR.getOption('ecu', inst), tcOn = ecuO.ecu >= 3 && (S.tune.tcSlip || 0) > 0;
+        if (ecuO.ecu >= 3 && !tcOn) notes.push(['bad', 'Lost it to wheelspin, and the traction control is off: set Traction Control in Tune.']);
+        else if (ecuO.ecu < 3 && DR.partApplies('ecu', inst)) {
+          var tcLvl = DR.getOption('ecu', inst, 'ecu3').lvl || 4;
+          notes.push(['bad', 'Lost it to wheelspin. The Race ECU + Traction Mgmt (Upgrade > Fuel & Spark > ECU) cuts power the moment the tires spin' + (G.partUnlocked('ecu', tcLvl, 'ecu3') ? ': you have it unlocked.' : ' (unlocks: ' + G.unlockWhere('ecu', tcLvl, 'ecu3') + ').')]);
+        }
+      }
       if (damaged) {
         inst.damage = damaged;
         var what = damaged.engine ? 'Engine blown.' : damaged.axle ? 'Snapped an axle.' : damaged.chassis ? 'Cracked the chassis.' : 'Transmission broken.', fix = G.repairCost(inst);

@@ -2,6 +2,10 @@
 
 Short notes for testing, newest first.
 
+## Traction control hint
+- Lose a race to heavy wheelspin and the timeslip points to the Race ECU +
+  Traction Mgmt (or says the traction control is switched off in Tune).
+
 ## Street tunes, setup pick, tube chassis
 - The tuner can tune on the Street, the Strip, or Both (1.7x). Each tune is
   saved as a setup ("Strip tune", "Street tune").
