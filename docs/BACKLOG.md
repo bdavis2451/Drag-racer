@@ -5,11 +5,7 @@ the top of each section.
 
 ## In progress
 
-- **Carburetor update, redo.** Shipped bigger than it should have been.
-  Next: a written plan for a trimmed version, with multiport fuel injection
-  as an intake manifold (in the intake section) that unlocks injectors and
-  the ECU, instead of a carb-slot conversion. Owner approves the item list
-  before any code.
+- **Carburetor update, redo.** Working file: `docs/features/carbs.md`.
 
 ## Waiting on a yes or no
 

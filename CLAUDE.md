@@ -25,7 +25,19 @@ without the owner's OK.
 7. **Ask before doing anything the owner hasn't agreed to.** Small bug fixes
    they asked for are fine; anything else, ask.
 
+## A file per feature
+
+Every update gets a working file, `docs/features/<name>.md`, started at the
+first conversation and kept current as we talk: status, decisions, open
+questions, the plan as it stands, research notes with sources, and build
+notes (where the code lives, what was tested). It's mainly for Claude to
+work from across sessions; update it whenever a decision is made.
+
 ## Conventions
+
+- **Show options only where they fit.** A part appears for the engines and
+  mods it belongs with (like turbo manifolds only with a turbo), so the shop
+  doesn't overwhelm.
 
 - **Parts live where they live on a real car.** An intake part is in the
   intake section; a part that enables others (a multiport manifold enabling
