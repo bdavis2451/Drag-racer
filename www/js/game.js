@@ -275,6 +275,8 @@
       if (item.cat === 'wastegate' || item.cat === 'bov') return 'Needs a turbo';
       if (item.cat === 'nosctrl' || item.cat === 'nosheat') return 'Needs a nitrous kit';
       if (item.cat === 'headers') return 'A turbo car takes a turbo manifold instead (Power Adders)';
+      if (item.cat === 'injectors' || item.cat === 'ecu') return 'This engine is carbureted: it needs a port EFI conversion first (Fuel & Spark)';
+      if (item.cat === 'carb') return 'Only for an engine that came with a carburetor';
       return 'Does not fit this car';
     }
     if (item.cat === 'engine' && item.id === inst.engine) return 'Already in this car';
@@ -307,6 +309,8 @@
   // one, anything else about 20% of the cheapest new part of its kind.
   G.stockValue = function (cat, inst, id) {
     if (cat === 'engine') return Math.round(DR.ENGINES[id].price * 0.35 / 10) * 10;
+    // an original carb is worth what the restorers pay for one
+    if (cat === 'carb' && id === 'stock' && DR.ENGINES[inst.engine].carb) return DR.ENGINES[inst.engine].carb.val || 100;
     var cheapest = DR.partOptions(cat, inst).filter(function (o) { return o.price; }).sort(function (a, b) { return a.price - b.price; })[0];
     return Math.max(10, Math.round((cheapest ? cheapest.price : 100) * 0.2 / 10) * 10);
   };
@@ -339,6 +343,8 @@
   }
   function clearTune(inst, cat, fiWas) {
     if (cat === 'engine') { delete inst.tune.boost; delete inst.tune.launchRpm; delete inst.tune.shiftRpm; delete inst.tune.revLimit; }
+    // a new carb comes with its own jets
+    if (cat === 'engine' || cat === 'carb') delete inst.tune.jets;
     if (cat === 'fi' && (fiWas === 'none' || DR.partId('fi', inst) === 'none')) delete inst.tune.boost;
     if (cat === 'trans') delete inst.tune.gears;
     if (cat === 'rtires') delete inst.tune.psi;

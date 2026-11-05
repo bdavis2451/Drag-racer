@@ -77,6 +77,7 @@
     if (k === 'clLock' || k === 'nosDelay' || k === 'nosRamp') return (+v).toFixed(1) + ' s';
     if (k === 'thrRamp') return (+v).toFixed(1) + ' s';
     if (k === 'fd') return (+v).toFixed(2) + ':1';
+    if (k === 'jets') return (v > 0 ? '+' : '') + Math.round(v) + ' size' + (Math.abs(v) === 1 ? '' : 's');
     if (k === 'boost') return (+v).toFixed(1) + ' psi';
     if (k === 'psi') return (+v).toFixed(1) + ' psi';
     if (k === 'luGear') return ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][v - 1] + ' gear';
@@ -97,6 +98,7 @@
     ss.drv = drvId === 'me' ? null : (drvId && DR.Team.staff(drvId)) || drs[0] || null;
     // the dyno work
     if (jobs.indexOf('engine') >= 0) {
+      if (S0.jets) ss.items.push({ k: 'jets' });
       if (S0.fiType !== 'none' && def('boost').show(S0)) ss.items.push({ k: 'boost' });
       if (def('revLimit').show(S0)) ss.items.push({ k: 'revLimit' });
       ss.items.push({ k: 'shiftRpm' });
@@ -144,6 +146,15 @@
     var inst = ss.inst;
     while (ss.items.length) {
       var it = ss.items[0], S, l;
+      if (it.k === 'jets') {
+        // jets for the parts, set for the strip's usual air (between a hot
+        // afternoon and a cool night); a careful tuner leaves it a touch rich
+        S = G.spec(inst);
+        var j = S.jets, airRef = 23.5, set = Math.round(j.need - j.tK * (airRef - DR.AMBIENT_C) + ss.agg.psi * 0.25 + (1 - ss.who.eng / 100) * gauss() * 0.6);
+        setTune(ss, 'jets', set); ss.items.shift(); S = G.spec(inst);
+        var rd0 = DR.carbRead(S, airRef);
+        return pull(ss, (j.mech ? 'Pill & nozzles ' : 'Jets ') + fmt('jets', set), 'Plugs read ' + rd0.text + ' (' + rd0.afr + ':1 on the wideband).', S);
+      }
       if (it.k === 'boost') {
         var step = ss.who.eng >= 70 ? 1.5 : ss.who.eng >= 45 ? 1 : 0.5, bd = def('boost'), S1 = G.spec(inst);
         if (it.b == null) { it.b = val(ss, 'boost'); it.dir = 0; it.n = 0; }

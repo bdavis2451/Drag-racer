@@ -156,6 +156,44 @@
     opt('o3', '5-Stage Dry Sump + Vacuum Pump', 7000, { lvl: 5, be: 3200, pw: 0.03 }, 'Bearings live to +3200 rpm. +3% power.')
   ]};
 
+  // Induction on an engine that came with a carburetor (engine.carb): the
+  // carb's airflow (cfm) caps the power (about 0.82 hp per cfm on gasoline,
+  // more when boost pushes air through it), its jets set the mixture for
+  // the day's air (Tuning), and its secondaries how it hits off the line
+  // (vs: vacuum, soft; dp: mechanical double pumper, sharp; air: a
+  // Quadrajet / AFB air valve, in between). boost: the psi it can take
+  // (blow: a sealed blow-through carb for a turbo or centrifugal; blower:
+  // carbs on top of a Roots or screw blower). alc: made for E85 / methanol.
+  // efi: 'tbi' (throttle-body EFI: self-tuning, no jets), 'mpfi' (port
+  // injection: injectors, pump and ECU upgrades open up) or 'mech'
+  // (mechanical injection: metered by nozzles and a pill, set like jets).
+  // jet0: how far its out-of-the-box jetting sits from right for a stock
+  // engine (+ rich). small: for a small engine (an air-cooled VW).
+  C.carb = { name: 'Carburetor & Induction', options: [
+    opt('stock', 'Factory Carburetor', 0, {}),
+    opt('c600', 'Holley 600 Vacuum Secondary', 450, { cfm: 600, sec: 'vs', jet0: 0 }, 'The classic street carb: smooth and easy to live with, the secondaries open softly on the launch.'),
+    opt('c750', 'Holley 750 Vacuum Secondary', 520, { cfm: 750, sec: 'vs', jet0: 0 }, 'Enough air for a mild 350-400 hp small block. Soft secondaries off the line.'),
+    opt('c750dp', 'Holley 750 Double Pumper', 650, { cfm: 750, sec: 'dp', jet0: 1 }, 'Mechanical secondaries and two accelerator pumps: it hits hard the instant you floor it.'),
+    opt('c850dp', 'Holley 850 Double Pumper', 760, { cfm: 850, sec: 'dp', jet0: 1 }, 'For a built small block or a big block. Too big for a mild engine: it bogs off the line.'),
+    opt('c1050', 'Holley 1050 Dominator', 1300, { lvl: 3, cfm: 1050, sec: 'dp', jet0: 1 }, 'Four-barrel race carb with a bigger flange (and adapter): built big blocks and high-rpm small blocks.'),
+    opt('c1250a', 'Alcohol Dominator 1250', 1800, { lvl: 4, cfm: 1250, sec: 'dp', alc: true, jet0: 1 }, 'Built for E85 or methanol: huge jets and needle-and-seats to flow the extra fuel.'),
+    opt('ctr750', 'Dual 750s on a Tunnel Ram', 3400, { lvl: 4, cfm: 1500, sec: 'dp', dual: true, low: 0.06, jet0: 1 }, 'Two double pumpers on a tall tunnel-ram intake: a big top end, soft below 3500 rpm. Sticks through the hood.'),
+    opt('ctr1050', 'Dual 1050 Dominators on a Tunnel Ram', 5800, { lvl: 5, cfm: 2100, sec: 'dp', dual: true, low: 0.08, jet0: 1 }, 'What carbureted Pro Stock engines ran until 2016: enough air for 1500+ hp.'),
+    opt('cbt', 'Blow-Through 950 + Boost Regulator', 1600, { lvl: 3, cfm: 950, sec: 'dp', boost: 22, blow: true, jet0: 1 }, 'A sealed carb a turbo or centrifugal blower can blow through, with a boost-referenced fuel regulator. Good to about 22 psi.'),
+    opt('cblow', 'Dual 750 Blower Carbs', 2400, { lvl: 3, cfm: 1500, sec: 'dp', dual: true, boost: 22, blower: true, jet0: 1 }, 'Two carbs set up to sit on top of a Roots or screw blower: the gasser look.'),
+    opt('c2x4', 'Dual Carter WCFB 4-Barrels (1957)', 1800, { cfm: 1000, sec: 'air', dual: true, jet0: 0, only: ['v8_283'] }, 'The 1957 dual-quad option (245-270 hp in period) on its factory manifold.'),
+    opt('ramjet', 'Rochester Ramjet Fuel Injection (1957)', 4000, { lvl: 3, cfm: 650, efi: 'mech', pw: 1.03, jet0: 0, only: ['v8_283'] }, 'GM\'s mechanical fuel injection, the "Fuelie" that made 283 hp from 283 cubic inches in 1957. Metered by a nozzle-and-pill setup you size like jets.'),
+    opt('hilborn', 'Hilborn 8-Stack Mechanical Injection', 4500, { lvl: 4, cfm: 1800, efi: 'mech', pw: 1.015, low: 0.08, alc: true, boost: 40, blower: true, jet0: 0 }, 'A stack per cylinder and a constant-flow pump: a little more power than dual quads, a lot of top end, made for alcohol. Sits on a blower too. Sized by its pill, set like jets.'),
+    opt('tbi', 'Holley Sniper 2 Throttle-Body EFI', 1800, { lvl: 3, cfm: 1000, efi: 'tbi', fuel: 650, boost: 15, blow: true, blower: true, pw: 1.01 }, 'Bolts on where the carb was and tunes itself: no jets, the same mixture day or night. Comes with a 58 psi in-line pump. Good for 650 hp (575 boosted).'),
+    opt('tbi2', 'Holley Super Sniper EFI (1200 hp)', 3200, { lvl: 4, cfm: 1700, efi: 'tbi', fuel: 1200, boost: 30, blow: true, blower: true, pw: 1.01 }, 'The big self-tuning throttle body, four huge injectors, good for 1200 hp. Pump included.'),
+    opt('mpfi', 'Port EFI Conversion', 2800, { lvl: 3, efi: 'mpfi', fuel: 600, boost: 40, blow: true, blower: true, pw: 1.025 }, 'A new intake that takes an injector at every port, rails, sensors and a standalone ECU. Every cylinder gets the same mixture. The injector, fuel pump and ECU upgrades open up.'),
+    // an air-cooled VW
+    opt('cs1', 'Weber 34 ICT', 180, { cfm: 110, sec: 'dp', small: true, jet0: 0 }, 'A bigger single carb on the factory manifold.'),
+    opt('cs2', 'Dual Kadron 40mm', 650, { cfm: 200, sec: 'dp', small: true, dual: true, jet0: 1 }, 'A carb on each head: what most built Beetles run.'),
+    opt('cs3', 'Dual Weber IDF 44s', 1400, { lvl: 3, cfm: 290, sec: 'dp', small: true, dual: true, jet0: 1 }, 'Two big twin-choke Webers: the classic hot air-cooled setup.'),
+    opt('mpfis', 'Port EFI Conversion (air-cooled)', 1900, { lvl: 3, efi: 'mpfi', fuel: 300, boost: 30, blow: true, small: true, pw: 1.025 }, 'Port injection, a throttle body and a standalone ECU for the air-cooled four. The injector, fuel pump and ECU upgrades open up.')
+  ]};
+
   // Fuel: the smaller of the injectors and the pump sets the power the fuel
   // system feeds (hp on gasoline; alcohol needs more flow).
   C.injectors = { name: 'Fuel Injectors', options: [
@@ -524,7 +562,7 @@
     { id: 'engine', name: 'Bolt-Ons',      icon: 'intake',  cats: ['engine', 'airfilter', 'intake', 'throttle', 'headers', 'exhaust', 'pulleys', 'cooling'] },
     { id: 'top',    name: 'Top End',       icon: 'heads',   unlock: 'engine', cats: ['heads', 'cams', 'valvetrain', 'headstud'] },
     { id: 'bottom', name: 'Bottom End',    icon: 'pistons', unlock: 'engine', cats: ['pistons', 'rods', 'crank', 'block', 'oiling'] },
-    { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu', 'logger'] },
+    { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['carb', 'injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu', 'logger'] },
     { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'tmanifold', 'downpipe', 'theat', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
     { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
     { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
@@ -688,6 +726,16 @@
           return o;
         });
     }
+    if (cat === 'carb') {
+      var ce = DR.ENGINES[inst.engine || car.engine], fc = ce.carb || {}, ceId = inst.engine || car.engine;
+      return C.carb.options.filter(function (o) { return o.id === 'stock' || (!!o.small === !!fc.small && (!o.only || o.only.indexOf(ceId) >= 0)); }).map(function (o) {
+        if (o.id === 'stock') return Object.assign({}, o, fc, { id: 'stock', name: (fc.name || 'Factory Carburetor') + ' (Factory)', price: 0, lvl: 0, factory: true,
+          desc: 'What it came with: about ' + Math.round((fc.cfm || 0) * DR.CARB_HP) + ' hp of airflow.' + (fc.fb ? ' Its feedback circuit trims the mixture a little for the weather.' : '') });
+        var x = Object.assign({}, o, { lvl: lvlOf(o) });
+        if (o.cfm && !o.efi) x.desc += ' Flows about ' + Math.round(o.cfm * DR.CARB_HP) + ' hp.';
+        return x;
+      });
+    }
     var c = C[cat], mul = c.engineScaled ? DR.enginePriceMul(inst.engine || car.engine) : 1;
     var eng = DR.ENGINES[inst.engine || car.engine], rot = eng.rotary && ROTARY[cat];
     var engId = inst.engine || car.engine;
@@ -737,9 +785,24 @@
   DR.partExists = function (cat, inst) { var nf = NOT_FOR[DR.engineKind(inst)]; return !(nf && nf[cat]); };
   // icon for a category on this car (a rotary's 'pistons' are rotors)
   DR.iconCat = function (cat, inst) { return cat === 'pistons' && inst && DR.engineKind(inst) === 'rotary' ? 'rotor' : cat; };
+  // the engine's induction: its factory carb (null for a fuel-injected
+  // engine) and what's on it now ({ carb: the option, efi: '' | 'tbi' |
+  // 'mpfi' | 'mech' })
+  DR.CARB_HP = 0.82;
+  DR.carbOf = function (inst) {
+    var e = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine];
+    if (!e.carb) return null;
+    var o = DR.getOption('carb', inst);
+    return { factory: e.carb, opt: o, efi: o.efi || '' };
+  };
   DR.partApplies = function (cat, inst) {
     var nf = NOT_FOR[DR.engineKind(inst)];
     if (nf && nf[cat]) return false;
+    // (rival builds come set up as if fuel-injected)
+    if (cat === 'carb') return !inst.ai && !!DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb;
+    // a carbureted engine has no injectors or ECU until it's converted to
+    // port injection (a throttle-body kit brings its own)
+    if ((cat === 'injectors' || cat === 'ecu') && !inst.ai) { var cb = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb; if (cb && (!inst.parts || !inst.parts.carb || (C.carb.options.filter(function (o) { return o.id === inst.parts.carb; })[0] || {}).efi !== 'mpfi')) return false; }
     var c = C[cat];
     if (!c) return true;
     var tr = DR.TRANS[DR.partId('trans', inst)];
@@ -782,7 +845,7 @@
     'pistons', 'rods', 'crank', 'block', 'oiling', 'fi', 'ic', 'wastegate', 'bov', 'tmanifold', 'headstud', 'pulleys',
     // made for the engine too: its injectors and coils, the ECU's calibration,
     // the turbo's downpipe and heat wrap, the flywheel bolted to its crank
-    'injectors', 'ignition', 'ecu', 'downpipe', 'theat', 'flywheel'];
+    'injectors', 'ignition', 'ecu', 'downpipe', 'theat', 'flywheel', 'carb'];
   // Made for the car (its suspension pickup points, body, frame, driveline
   // length): they only go back on the same model.
   DR.CAR_BOUND = ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero', 'brakes', 'driveshaft', 'mounts', 'cooling', 'rearend', 'layout'];
@@ -861,6 +924,17 @@
     for (var i = Math.max(1, min); i < opts.length; i++) if (opts[i].fuel >= need) return opts[i].id;
     return opts[opts.length - 1].id;
   }; }
+  // E85 only through something that can flow it (an alcohol carb or EFI)
+  function e85For(inst) { var cb = DR.carbOf(inst); return !cb || cb.opt.alc || cb.efi === 'tbi' || cb.efi === 'mpfi' ? 'e85' : null; }
+  // a carbureted engine's fuel package: a bigger carb, an alcohol carb for
+  // the E85 tier, then port EFI; never a smaller carb than it has
+  function carbFor(tier) { return function (inst) {
+    var cb = DR.carbOf(inst); if (!cb) return null;
+    var list = cb.factory.small ? ['cs1', 'cs2', 'cs3', 'mpfis'] : ['c750dp', 'c850dp', 'c1250a', 'mpfi'], id = list[tier];
+    var o = DR.getOption('carb', inst, id);
+    if (o.cfm && (cb.opt.cfm || 0) >= o.cfm && !cb.opt.efi) return tier === 2 && !cb.opt.alc ? 'c1250a' : null;
+    return id;
+  }; }
   // the gear set that runs the quickest quarter with the rest of the build
   function gearsFor(inst) {
     var cur = DR.partId('gears', inst);
@@ -920,10 +994,10 @@
       [['pistons', function (i) { return boosted(i) ? 'p1' : 'p2'; }], ['rods', 'r2'], ['crank', 'k1'], ['block', 'b1'], ['oiling', 'o1']],
       [['pistons', 'p3'], ['rods', 'r3'], ['crank', 'k2'], ['block', 'b2'], ['oiling', 'o2']]],
     fuel: [
-      [['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)]],
-      [['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 2)], ['fuelpump', fuelFor('fuelpump', 2)]],
-      [['fueltype', 'e85'], ['ignition', 'ig2'], ['ecu', 'ecu2'], ['injectors', fuelFor('injectors', 3)], ['fuelpump', fuelFor('fuelpump', 3)]],
-      [['fueltype', 'e85'], ['ignition', 'ig3'], ['ecu', 'ecu3'], ['injectors', fuelFor('injectors', 4)], ['fuelpump', fuelFor('fuelpump', 4)]]],
+      [['carb', carbFor(0)], ['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 1)], ['fuelpump', fuelFor('fuelpump', 1)]],
+      [['carb', carbFor(1)], ['ignition', 'ig1'], ['ecu', 'ecu1'], ['injectors', fuelFor('injectors', 2)], ['fuelpump', fuelFor('fuelpump', 2)]],
+      [['carb', carbFor(2)], ['fueltype', e85For], ['ignition', 'ig2'], ['ecu', 'ecu2'], ['injectors', fuelFor('injectors', 3)], ['fuelpump', fuelFor('fuelpump', 3)]],
+      [['carb', carbFor(3)], ['fueltype', e85For], ['ignition', 'ig3'], ['ecu', 'ecu3'], ['injectors', fuelFor('injectors', 4)], ['fuelpump', fuelFor('fuelpump', 4)]]],
     power: [
       [['fi', turboFor(1.3)], ['ic', 'ic0'], ['wastegate', 'ws2'], ['bov', 'bov1']],
       [['fi', turboFor(1.5)], ['downpipe', 'dp1'], ['ic', 'ic1'], ['wastegate', 'wg1'], ['bov', 'bov1'], ['launch', 'l1']],

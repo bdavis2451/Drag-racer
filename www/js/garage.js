@@ -85,6 +85,11 @@
       case 'injectors':
         for (k = 0; k < 3; k++) { r(4 + k * 7, 3, 4, 3, M2); r(4 + k * 7, 6, 4, 9, ac); r(4 + k * 7, 6, 1, 9, DR.shadeHex(ac, 0.3)); r(5 + k * 7, 15, 2, 3, M3); x.fillStyle = 'rgba(120,200,255,0.8)'; x.fillRect(5 + k * 7, 19, 1, 2); x.fillRect(6 + k * 7, 20, 1, 2); }
         break;
+      case 'carb':
+        // a 4-barrel: the body and its bores, fuel bowls each end, the base plate
+        r(5, 6, 14, 11, M3); r(5, 6, 14, 1, M2); disc(9, 10, 2, BK); disc(15, 10, 2, BK); disc(9, 14, 1, BK); disc(15, 14, 1, BK);
+        r(1, 8, 4, 8, ac); r(1, 8, 4, 1, DR.shadeHex(ac, 0.35)); r(19, 8, 4, 8, ac); r(19, 8, 4, 1, DR.shadeHex(ac, 0.35));
+        r(4, 17, 16, 3, M4); r(3, 20, 18, 1, M2); break;
       case 'fuelpump':
         r(7, 4, 10, 16, M3); r(7, 4, 10, 1, M2); r(8, 6, 8, 5, ac); r(10, 1, 4, 3, M2); r(10, 20, 4, 3, M2); r(17, 12, 5, 2, '#3a4a8a'); r(2, 12, 5, 2, '#3a4a8a'); break;
       case 'ignition':

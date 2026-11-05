@@ -73,6 +73,8 @@
     // past what the compressor can flow it chokes and heats the charge:
     // power falls away instead of holding flat (small turbos run out up top)
     if (S.flowW && T * w > S.flowW) T = Math.max(Tna, S.flowW * (1 - 0.12 * Math.min(1, (T * w - S.flowW) / S.flowW)) / w);
+    // a carb (or throttle body) out of air: the top end flattens and falls
+    if (S.carbW) { var cw = S.carbW * (1 + Math.max(0, boost) / 14.7); if (T * w > cw) T = cw * (1 - 0.1 * Math.min(1, (T * w - cw) / cw)) / w; }
     T = Math.min(T, S.fuelW / w);
     return T;
   }
@@ -199,6 +201,7 @@
     var tireId = DR.partId('rtires', inst), tire = DR.TIRES[tireId], stockTire = DR.TIRES[car.tire];
     var fiId = DR.partId('fi', inst);
     var stockEng = DR.ENGINES[car.engine];
+    function fiU0() { return DR.FI[fiId]; }
 
     // ---- breathing: B (0..1) of the engine's race headroom is unlocked.
     // Power goes from stock towards bg x stock and the power peak from pk
@@ -208,7 +211,12 @@
     // parts. Rival builds (inst.ai) are always set up properly. Parts that
     // need it (part.tune): 'hard' won't run right without one, 'soft' runs
     // but leaves power on the table.
-    var ai = !!inst.ai, tuned = ai || !!ecu.tune, untuned = [];
+    // ---- induction on a carbureted engine (rival builds are set up as if
+    // fuel-injected: they come ready). A port-EFI kit brings a standalone
+    // ECU; a throttle-body kit tunes itself; a carb has no ECU at all.
+    var ai = !!inst.ai, cb = ai ? null : DR.carbOf(inst), cOpt = cb && cb.opt, efi = cb ? cb.efi : '';
+    if (cb && efi === 'mpfi' && DR.partId('ecu', inst) === 'stock') ecu = Object.assign({}, DR.getOption('ecu', inst, 'ecu2'), { name: 'Kit Standalone ECU' });
+    var tuned = ai || !!ecu.tune || (!!cb && efi !== 'mpfi'), untuned = [];
     var camK = 1;
     if (!tuned && cams.tune) { camK = cams.tune === 'soft' ? 0.5 : 0; untuned.push(cams.tune === 'soft' ? ['cams', 'Stage 1 cams on the stock tune: about half the gain, rough idle'] : ['cams', 'The stock tune can\'t run these cams: it surges and loses power']); }
     var B = clamp([air, intake, tb, exh, hdr, tman, dpipe, heads, ecu].reduce(function (a, p) { return a + (p.bw || 0); }, 0) + (cams.bw || 0) * camK, 0, 1);
@@ -219,7 +227,7 @@
     var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crKnock = -3 * (pist.cr || 0);
     // water-meth: worth most on pump or race gas; alcohol fuels already run cool
     var wmK = fuel.ff < 0.6 ? 0.15 : fuel.ff < 0.9 ? 0.4 : 1;
-    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: (fuel.cool || 0) + (wmi.cool || 0) * wmK + (theat.cool || 0),
+    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0) + (cOpt && cOpt.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: (fuel.cool || 0) + (wmi.cool || 0) * wmK + (theat.cool || 0),
       knock: fuel.knock + (e.diesel ? 0 : crKnock) + Math.round((wmi.knock || 0) * wmK * 2) / 2 };
     var S = engineCore(e, mods, 1);
     S.ai = ai;
@@ -227,7 +235,7 @@
     var untunedK = 1;
     if (!tuned && cams.tune === 'hard') untunedK *= 0.94;
     if (!tuned && inj.tune) { untunedK *= 0.88; untuned.push(['injectors', 'Bigger injectors on the stock tune: it runs pig-rich']); }
-    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) * (pul.pk || 1) * untunedK / shapePeak(S);
+    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) * (pul.pk || 1) * untunedK * (cOpt && cOpt.pw || 1) / shapePeak(S);
     S.breathing = B;
     S.carId = inst.carId; S.car = car; S.engId = engId; S.eng = e;
     S.name = car.name;
@@ -244,7 +252,8 @@
     S.partRpm = { pistons: e.red + pist.be, rods: e.red + rods.be, crank: e.red + crank.be, oiling: e.red + oil.be };
     S.mech = Math.min(S.vtLimit, S.beLimit);
     var safeRed = Math.max(e.red, S.mech - 200);
-    if (ecu.ecu >= 2) {
+    S.revAdj = !!cb && efi !== 'mpfi' && ((ign.spark || 0) >= 20 || efi === 'tbi');
+    if (ecu.ecu >= 2 || S.revAdj) {
       var tsrc = tuneOverride || inst.tune || {};
       S.red = tsrc.revLimit != null ? clamp(tsrc.revLimit, revMin(S), revMax(S)) : safeRed;
     } else if (ecu.ecu === 1) S.red = Math.min(safeRed, e.red + 800);
@@ -262,6 +271,18 @@
     var stockInj = ai ? Math.max(e.hp * 1.35 + 60, 300) : e.hp * (e.fi ? 1.15 : 1.25);
     var stockPump = ai ? stockInj : Math.max(stockEng.hp * 1.3, 180);
     S.fuelInj = inj.fuel || stockInj; S.fuelPump = pump.fuel || stockPump;
+    // ---- carburetor: its airflow caps the power (more with boost pushed
+    // through it), the jets meter the fuel (a carb's own fuel is never the
+    // limit, the pump can be); a throttle-body kit feeds what it's rated for
+    // and brings its pump, a port-EFI kit its injectors and a pump
+    S.carbNotes = [];
+    S.carb = cb ? { name: cOpt.name.replace(' (Factory)', ''), efi: efi, cfm: cOpt.cfm || 0, sec: cOpt.sec || '', fb: !!cOpt.fb } : null;
+    S.carbW = cb && cOpt.cfm ? cOpt.cfm * DR.CARB_HP * DR.HP : 0;
+    if (cb) {
+      if (efi === 'tbi') { S.fuelInj = cOpt.fuel * (fiU0().type === 'none' ? 1 : 575 / 650); if (!pump.fuel) S.fuelPump = Math.max(stockPump, cOpt.fuel); }
+      else if (efi === 'mpfi') { if (!inj.fuel) S.fuelInj = cOpt.fuel; if (!pump.fuel) S.fuelPump = Math.max(stockPump, 650); }
+      else S.fuelInj = Math.max(stockInj, (cOpt.cfm || 0) * DR.CARB_HP * 1.6);
+    }
     S.stockFuel = !inj.fuel && !pump.fuel;
     S.fuelW = Math.min(S.fuelInj, S.fuelPump) * (e.diesel ? 1 : fuel.ff) * DR.HP;
     // ignition: the factory coils light factory boost plus a few psi (about
@@ -302,6 +323,16 @@
         S.boostWhy.spring = S.boostMin; S.boostWhy.ctrl = ctrl; S.boostWhy.ctrlMax = Math.round(top * 2) / 2; S.boostWhy.creep = S.creep;
       }
     }
+    // a carb can only take boost if it's built for it: sealed for a turbo
+    // or centrifugal to blow through, or set up to sit on a Roots / screw
+    // blower (EFI takes either)
+    S.carbBoost = null;
+    if (cb && fiU.type !== 'none') {
+      var okC = (fiU.type === 'turbo' || fiU.type === 'cent') ? !!cOpt.blow : !!cOpt.blower;
+      S.carbBoost = okC ? cOpt.boost || 0 : 0;
+      S.maxBoost = Math.min(S.maxBoost, S.carbBoost); S.boostMin = Math.min(S.boostMin, S.maxBoost);
+      S.boostWhy.carb = { name: S.carb.name, psi: S.carbBoost, need: fiU.type === 'turbo' || fiU.type === 'cent' ? 'blow' : 'blower' };
+    }
     // without a tune the ECU can't fuel or time much boost: a bolt-on kit
     // past ~5 psi (a factory turbo past about factory boost) runs lean and
     // knocks
@@ -310,9 +341,16 @@
     S.boostWhy.untuned = S.untunedBoost;
     if (!tuned && fuel.tune) untuned.push(['fueltype', fuel.name + ' on a gasoline tune runs lean']);
     S.untuned = untuned; S.tuned = tuned; S.e85Lean = !tuned && !!fuel.tune;
+    S.carbAlcLean = !!cb && !!fuel.tune && !cOpt.alc && efi !== 'tbi' && efi !== 'mpfi';
     S.bovT = fiU.type === 'turbo' ? (fiU.price ? bov.bov : Math.max(0.3, bov.bov)) : 0.15;
     S.ecu = ecu.ecu;
     S.twostep = launch.twostep;
+    // on a carb a 2-step is an ignition box's job (it needs a CDI box);
+    // anti-lag needs fuel injection
+    if (cb && efi !== 'tbi' && efi !== 'mpfi' && S.twostep) {
+      if ((ign.spark || 0) < 20) { S.twostep = 0; S.carbNotes.push('A 2-step on a carbureted engine works through the ignition: it needs a CDI ignition box (Fuel & Spark)'); }
+      else S.twostep = Math.min(1, S.twostep);
+    }
     S.nosHp = Math.round(nos.nos * (nos.nos ? nheat.nosk : 1));
     S.nosRated = nos.nos;
     S.fuelId = DR.partId('fueltype', inst);
@@ -322,6 +360,7 @@
     // the fuel that feeds the spray: injectors and pump (dry), pump (wet) or
     // its own system; what's there for it is worked out with the risk
     S.nosFuel = nos.nosFuel || 'own';
+    if (cb && (!efi || efi === 'mech') && S.nosFuel === 'inj') S.nosFuel = 'pump';   // no injectors: a plate under the carb sprays its own fuel
     S.fuelFF = e.diesel ? 1 : fuel.ff;
     S.prog = nosc.prog && nos.nos > 0;
     S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly * (crank.ie || 1);
@@ -415,6 +454,29 @@
     if (S.slider) S.slider = [T.clBase / 100, T.clLock];
     S.tune = T;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
+    // ---- jetting (a carb or mechanical injection): the jets meter fuel
+    // for the air the engine pulls. Breathing parts (heads, cam, headers,
+    // a bigger carb's signal) lean it out, about 4 jet sizes from stock to
+    // a full race build; boost through a carb wants it richer; a carb runs
+    // rich in hot, thin air and lean in cool, dense air (about one size
+    // between a hot day and a cool night). One size is about 2% fuel.
+    S.jets = null;
+    if (cb && efi !== 'tbi' && efi !== 'mpfi') {
+      var need = 4 * B + (S.boostSet || 0) / 8 - (cOpt.jet0 || 0);
+      S.jets = { set: T.jets || 0, need: Math.round(need * 2) / 2, tK: cOpt.fb ? 0.045 : 0.09, mech: efi === 'mech' };
+      S.mixK25 = DR.carbMix(S, DR.AMBIENT_C);
+      S.Tpk *= S.mixK25;
+    }
+    // off the line: soft vacuum secondaries, an air valve in between, a
+    // double pumper hits clean; a carb far too big for the engine stumbles
+    S.carbHit = 1;
+    if (cb && !efi) {
+      S.carbHit = cOpt.sec === 'vs' ? 0.9 : cOpt.sec === 'air' ? 0.95 : 1;
+      // the air it can pull: cubic inches x rpm / 3456 x volumetric efficiency
+      var dem = airDisp(e) * 61.02 * Math.max(S.red, S.pkRpm + 500) * (0.85 + 0.2 * B) / 3456 * (1 + (S.boostSet || 0) / 14.7);
+      S.carbBig = !cOpt.factory && !cOpt.dual && cOpt.cfm > dem * 1.6;
+      if (S.carbBig) S.carbHit *= 0.93;
+    }
     S.boostTop = S.boostSet + (S.creep || 0);   // what it really sees up top
     // boost by gear: a cap on the target in each gear (less in the low gears
     // to stop wheelspin, the full target where the car can use it)
@@ -517,6 +579,7 @@
       launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) :
         S.spool15 ? Math.min(S.red - 700, Math.max(S.tqRpm * 0.85, spoolAt(S, (inst.tune && inst.tune.boost) || fiDef) * 0.95)) : S.tqRpm * 0.85) / 100) * 100,
       psi: S.tire.optP,
+      jets: 0,
       fd: S.fdSet || S.car.fd,
       gears: DR.boxRatios(S.transId, S.car),
       shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, DR.boxRatios(S.transId, S.car)))) / 100) * 100,
@@ -540,8 +603,12 @@
   function rideRange(S) { var sp = DR.getOption('springs', { carId: S.carId, parts: S._parts }); return sp.ride ? [Math.round(sp.ride[0] * 1000), Math.round(sp.ride[1] * 1000)] : [0, 0]; }
   // Ranges for the tuning screen. `show(S)` decides whether it is unlocked.
   DR.TUNE_DEFS = [
+    { key: 'jets', label: 'Jets', unit: '', step: 1, min: function () { return -6; }, max: function () { return 8; },
+      show: function (S) { return !!S.jets; }, req: 'Carbureted engines (or mechanical injection) only', group: 'Engine',
+      fmt: function (v, S) { return (v > 0 ? '+' : '') + v + ' size' + (Math.abs(v) === 1 ? '' : 's'); },
+      help: 'Main jet size against the carb\'s out-of-the-box jets (each size is about 2% fuel). Bigger heads, cams and headers need bigger jets; hot, thin air wants smaller, cool night air bigger. Lean costs power and can burn a piston; a touch rich is safe.' },
     { key: 'revLimit', label: 'Rev Limiter', unit: 'rpm', step: 100, min: revMin, max: revMax,
-      show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU (a Flash tune raises it automatically)', group: 'Engine',
+      show: function (S) { return S.ecu >= 2 || S.revAdj; }, req: 'Requires a Standalone ECU (a Flash tune raises it automatically), or on a carbureted engine a CDI ignition box', group: 'Engine',
       help: 'Past your valvetrain or bottom-end limit the valves float and the engine may let go.' },
     { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost; },
       show: function (S) { return S.fiType !== 'none'; }, req: 'Requires a turbo or supercharger', group: 'Engine',
@@ -674,6 +741,7 @@
     if (S.creep) out.wastegate = 'Boost creeps +' + S.creep + ' psi';
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) out.ic = 'Charge is ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F)';
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) out.fi = 'Out of breath';
+    if (S.carbW && S.peakHp >= S.carbW / DR.HP * (1 + (S.boostSet || 0) / 14.7) * 0.97) out.carb = 'Out of air';
     if (r.axle > 0.005) out.rearend = 'Axles may snap';
     if (r.trans > 0.005) out.trans = 'Too much torque';
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
@@ -753,6 +821,7 @@
       if (w.creep) out.push('The internal wastegate is too small for this engine: boost creeps ' + w.creep + ' psi over the target near redline. A ported gate halves it; an external gate stops it.');
     }
     if (w.untuned) out.push('No ECU tune: about ' + w.untuned + ' psi is all the stock tune can fuel and time. More runs lean and knocks.');
+    if (w.carb) out.push(w.carb.psi ? 'The ' + w.carb.name + ' takes up to ' + w.carb.psi + ' psi.' : 'The ' + w.carb.name + ' can\'t take boost: it needs ' + (w.carb.need === 'blow' ? 'a blow-through carb (sealed, with a boost-referenced fuel regulator)' : 'blower carbs or mechanical injection on top of the blower') + ', or EFI (Fuel & Spark).');
     return out;
   };
   DR.riskOf = function (S) {
@@ -779,6 +848,15 @@
       r.notes.push('Running lean: the ' + (fs.by === 'injectors' ? 'injectors feed' : 'fuel pump feeds') + ' ' + Math.round(fs.cap) + ' hp, the engine' + (fs.nos ? ' plus the shot' : '') + ' wants ' + Math.round(fs.need) + ' hp' + (fs.nos && S.nosFuel === 'inj' ? ' (a dry kit adds its fuel through the injectors)' : ''));
     }
     if (S.e85Lean) { r.engine += 0.45; r.notes.push('Alcohol fuel needs ~30% more fuel: on a gasoline tune it runs lean - get a tune'); }
+    if (S.carbAlcLean) { r.engine += 0.5; r.notes.push('Alcohol fuel through a gasoline carb runs dangerously lean: it needs an alcohol carb, mechanical injection or EFI'); }
+    if (S.jets) {
+      var je = DR.carbJetErr(S, DR.AMBIENT_C);
+      if (je < -1.5) { r.engine += Math.min(0.5, (-1.5 - je) * 0.12); r.notes.push('Jetted lean: about ' + Math.round(-je * 2) / 2 + ' jet sizes small for these parts - go up on the jets (Tuning), or have the tuner jet it'); }
+      else if (je > 2) r.notes.push('Jetted rich: about ' + Math.round(je * 2) / 2 + ' sizes big - it\'s safe but lazy');
+    }
+    (S.carbNotes || []).forEach(function (n) { r.notes.push(n); });
+    if (S.carbW && S.peakHp >= S.carbW / DR.HP * (1 + (S.boostSet || 0) / 14.7) * 0.97) r.notes.push('The ' + (S.carb.efi === 'tbi' ? 'throttle body' : 'carb') + ' is out of air: power is limited (a bigger carb or EFI)');
+    if (S.carbBig) r.notes.push('The carb is far too big for this engine: weak signal, it stumbles off the line');
     (S.untuned || []).forEach(function (u) { if (u[0] !== 'fueltype' && u[0] !== 'fi') r.notes.push(u[1] + ' - get an ECU flash'); });
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
@@ -826,6 +904,19 @@
   DR.airPower = function (cond, S) {
     return Math.pow((DR.AMBIENT_C + 273.15) / (cond.air + 273.15), S.fiType === 'turbo' ? 0.25 : 0.5);
   };
+  // jets: how far the mixture is from right at an air temperature (jet
+  // sizes; + rich), and what that costs (lean costs more than rich)
+  DR.carbJetErr = function (S, airC) { var j = S.jets; return j ? j.set + j.tK * (airC - DR.AMBIENT_C) - j.need : 0; };
+  DR.carbMix = function (S, airC) {
+    if (!S.jets) return 1;
+    var e = DR.carbJetErr(S, airC);
+    return Math.max(0.85, 1 - (e >= 0 ? 0.004 : 0.008) * e * e);
+  };
+  // how the plugs (or the wideband, with a pro data logger) read
+  DR.carbRead = function (S, airC) {
+    var e = DR.carbJetErr(S, airC), afr = 12.6 * (1 - 0.02 * e);
+    return { err: e, afr: Math.round(afr * 10) / 10, text: e > 1.25 ? 'rich: sooty plugs, lazy' : e > 0.4 ? 'a touch rich (safe)' : e > -0.4 ? 'right on' : e > -1.25 ? 'a touch lean' : 'lean: white plugs, it\'ll burn a piston' };
+  };
   DR.condLabel = function (cond) {
     var F = function (c) { return Math.round(c * 1.8 + 32); };
     return (DR.SURFACES[cond.surface] || DR.SURFACES.prep).name + ' • ' + (cond.night ? 'Night' : 'Day') + ' • air ' + F(cond.air) + '°F, track ' + F(cond.trackT) + '°F';
@@ -839,6 +930,7 @@
     this.track = (opts.grip || 1.0) * (this.cond ? DR.surfaceGrip(this.cond, S.tire.kind) : 1);
     this.trackT = this.cond ? this.cond.trackT : 25;
     this.airK = this.cond ? DR.airPower(this.cond, S) : 1;
+    if (this.cond && S.jets) this.airK *= DR.carbMix(S, this.cond.air) / (S.mixK25 || 1);
     // between rounds: an engine still heat-soaked from the last pass (C over
     // its normal running temperature; the ECU pulls timing past ~8 C) and a
     // nitrous bottle that has lost pressure as it emptied and cooled
@@ -1070,7 +1162,10 @@
     var Te;
     if (dead) Te = -fric * 2;
     else if (firing) {
-      Te = boostedTorque(S, rpm, this.boost) * this.airK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
+      // a carb's secondaries off the line: vacuum ones open softly, an
+      // oversized carb stumbles for a moment before the signal comes up
+      var hitK = S.carbHit && this.launched && this.t < 0.5 ? S.carbHit + (1 - S.carbHit) * this.t / 0.5 : 1;
+      Te = boostedTorque(S, rpm, this.boost) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
       // a soft cut (TC past full retard) drops cylinders: heard as a crackle
       if (this.tcRed > 0.3) this.cutT += dt * (this.tcRed - 0.3) / 0.5;
       var p = Te * wE;
