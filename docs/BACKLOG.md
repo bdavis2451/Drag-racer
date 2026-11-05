@@ -5,6 +5,9 @@ the top of each section.
 
 ## In progress
 
+- **Street tunes and switching.** Working file: `docs/features/street-tune.md`.
+- **Tube chassis guidance.** Working file: `docs/features/chassis-hint.md`.
+
 - **Carburetor update, redo.** Working file: `docs/features/carbs.md`.
 
 ## Waiting on a yes or no
@@ -23,6 +26,10 @@ the top of each section.
   is known.
 
 ## Parked ideas
+
+- **Time-specific tunes for brackets.** The tuner tunes to a target ET
+  ("8.50 prepped", "9.10 street"), saved as setups. Expensive. See
+  `docs/features/street-tune.md`.
 
 - **Career ladder and the calendar.** How the ladder and the week's race
   days fit together. Talk it through (reminder set).
