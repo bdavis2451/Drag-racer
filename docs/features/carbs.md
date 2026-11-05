@@ -1,6 +1,6 @@
 # Feature: Carburetors (redo)
 
-Status: **planning — talking it through, no code yet.**
+Status: **plan settled 2026-11-06; waiting on a go to build.**
 Shipped v1 on 2026-11-05 (commit 70a8c4a): ~20 carb-section options. Owner
 found it bloated and wants multiport EFI in the Intake Manifold section.
 
@@ -9,51 +9,52 @@ found it bloated and wants multiport EFI in the Intake Manifold section.
 - Keep jetting on the Tune screen and the tuner setting jets.
 - Keep carb launch feel (a softer hit; a much-too-big carb bogs).
 - Drop weather effects on carbs for now (jets only change with mods).
-- Multiport EFI = an intake manifold in the **Intake Manifold** section.
-  On its own the car won't run: the shop says it needs **injectors, a
-  throttle body and an ECU**. Fitted, those sections open where they are.
-- Owner likes the options themselves; the problem is how many show at once.
-  Direction: **show options only where they fit the engine and its mods**
-  (like turbo manifolds/downpipes only with a turbo), rather than cutting.
+- **Keep all v1 options, filtered** so only fitting ones show. Bad choices
+  are allowed (an 850 on a mild engine, a 1050 on a small block); absurd
+  ones are not (a Beetle carb on a 283). Filter by engine type, not size.
+- 1050 Dominator stays (already in v1).
+- Boost carbs appear like downpipes do: blow-through carb only with a turbo
+  or centrifugal; blower carbs only with a Roots/screw blower.
+- Alcohol carb and Hilborn always show on fitting V8s; the shop warns
+  they're built for alcohol.
+- Multiport EFI = an intake manifold in the **Intake Manifold** section
+  (V8 and air-cooled versions, replacing `mpfi`/`mpfis`). On its own the car
+  won't run: the shop says it needs **injectors, a throttle body and an
+  ECU**. Fitted, those sections open; their "Stock" choice is gone, the
+  cheapest is the base (440cc injectors; a new basic throttle body ~$300;
+  a standalone ECU).
+- **Reading the mixture:** the wideband is folded into the data logger: any
+  data logger (Basic and up) means you and the tuner read an exact air/fuel.
+  Without one: you read plugs; the tuner reads plugs and uses a tailpipe
+  sniffer (WOT only, reads a little lean).
+- **Fuel pumps on carb cars:** stock = mechanical; High-Volume Mechanical
+  (~$150, ~450 hp); Carb Electric Pump + Regulator (~$300, ~750 hp); Billet
+  Carb Electric (~$700, ~1,200 hp); belt-driven pumps as now. EFI pumps show
+  only with injection (throttle-body EFI needs one, like a real Sniper).
+  Saves: EFI pumps on carb cars become the nearest carb pump.
 
-## Open questions (for the owner)
-
-1. Which options to keep now that parts only show when they fit? (The first
-   cut list below may be too harsh.)
-2. Add a 1050 race carb (Dominator-style) above the 850?
-3. Split boost carbs: blow-through (turbo/centrifugal) vs draw-through
-   (carbs on top of a Roots blower)?
-4. Tuner/player air-fuel reading: tailpipe sniffer, wideband in the header,
-   or plug reading as now?
-5. Fuel pumps on carb cars: mechanical stock pump, carb-pressure electric
-   pump, belt-driven for alcohol (see research).
-
-## Plan as it stands (not approved)
+## Plan (approved items; build next)
 
 Carb section (carb engines only; factory carb always stays):
 
-| Part | Price | Shows when |
+| Part | Price | Shows on |
 |---|---|---|
-| Factory carb | — | always (removed → inventory, collector value) |
-| 750 street carb | $520 | always |
-| 850 race carb | $760 | always |
-| 1050 race carb? | ~$1,300 | big engines? (open question 2) |
-| Boost carb (blow-through) | $1,600 | turbo or centrifugal fitted |
-| Blower carbs (draw-through, on a Roots)? | $2,400 | Roots/screw fitted (question 3) |
-| Alcohol carb | $1,800 | alcohol fuel selected? |
-| Throttle-body EFI | $1,800 | always |
-| Two 4-barrels | $1,800 | 283 only |
-| 1957 Ramjet | $4,000 | 283 only |
-| Hilborn injection | $4,500 | alcohol fuel? |
-| Small-engine dual-carb kit | $650 | small engines only |
+| Holley 600 VS / 750 VS / 750 DP / 850 DP | 450 / 520 / 650 / 760 | V8 carb engines |
+| 1050 Dominator | 1,300 | V8 carb engines |
+| Alcohol Dominator 1250 | 1,800 | V8 (warns: alcohol) |
+| Dual 750s / Dual 1050s on a tunnel ram | 3,400 / 5,800 | V8 |
+| Blow-through 950 | 1,600 | turbo or centrifugal fitted |
+| Dual 750 blower carbs | 2,400 | Roots/screw fitted |
+| Dual Carter 4-barrels; Ramjet | 1,800; 4,000 | 283 only |
+| Hilborn 8-stack | 4,500 | V8 (warns: alcohol, needs a big pump) |
+| Throttle-body EFI (Sniper 2 / Super Sniper) | 1,800 / 3,200 | V8 |
+| Weber 34 / Dual Kadron / Dual IDF 44 | 180 / 650 / 1,400 | small engines |
 
-Intake Manifold section: Multiport EFI manifold, ~$2,000, carb engines only.
-Needs injectors + throttle body + ECU.
-
-Saves: removed carbs map to the nearest kept one (600/650/750 → 750 street;
-850/1050/old race → 850; two TBI sizes → one; old multiport conversion → new
-manifold + the ECU it came with). Rivals: unchanged (carbs never apply to
-rivals; rival snapshot must stay identical).
+Intake Manifold: Multiport EFI manifold (V8 ~$2,000; air-cooled ~$1,400),
+carb engines only. Injectors / Throttle Body / ECU then required.
+Data logger: Basic and up = wideband readings.
+Fuel pumps: as in decisions.
+Rivals: unchanged (rival snapshot identical).
 
 ## Research notes
 
