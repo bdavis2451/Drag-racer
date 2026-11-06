@@ -646,7 +646,10 @@
   // drag radials 40-70, slicks 30-50 (fewer the more power), a clutch's
   // discs 60-170 hard launches (bigger clutches have more friction surface).
   G.WEAR_CATS = ['rtires', 'clutch'];
-  var TIRE_LIFE = { Street: 0.8, 'Drag Radial': 0.67, Slick: 1.25, Track: 0.9, 'Race Slick': 0.8 };   // MJ per kg of tire
+  // MJ per kg of tire. Drag tires last 1.75x what they used to (real drag
+  // slicks stay useful for ~50 passes; see docs/features/tuner-v2.md)
+  var DRAG_LIFE_K = 1.75;
+  var TIRE_LIFE = { Street: 0.8 * DRAG_LIFE_K, 'Drag Radial': 0.67 * DRAG_LIFE_K, Slick: 1.25 * DRAG_LIFE_K, Track: 0.9, 'Race Slick': 0.8 };
   G.addWear = function (inst, S, sim, passes) {
     if (inst.ai) return;
     passes = passes || 1;

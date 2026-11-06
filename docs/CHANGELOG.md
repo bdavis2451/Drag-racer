@@ -2,6 +2,12 @@
 
 Short notes for testing, newest first.
 
+## Drag tires last longer
+- Drag slicks, radials and street tires wear 1.75x slower (research: real
+  drag slicks stay useful for ~50 passes). Grip loss when worn is unchanged.
+  Circuit tires unchanged.
+- Try: watch the drive-tire wear % over a race day; tell me if it feels right.
+
 ## Tuner's notes show every check
 - The tuner only makes a test pass when a setting looks worth changing;
   the ones it checked and left now show on the notes as CHECK lines ("Launch

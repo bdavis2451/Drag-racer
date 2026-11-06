@@ -151,3 +151,11 @@ Rivals (no tuner), the dyno pulls (engine items), prices, the booking UI.
   the revert + refund path.
 - Regressions: rival snapshot 0 diffs, qolsmoke, c2, drv, tubest (tuner
   Both flow), crawl mid. Then ship and note in the changelog.
+
+## Tire research and change (2026-11-06)
+- Our grip loss when worn (-11% at 68%, -20% cooked) matches the ~10% a
+  tire white paper estimates; the wear rate was too fast (cooked in ~25
+  passes vs ~50 for real drag slicks). Owner: slow it ~1.75x and see.
+- Shipped: drag tire life x1.75 (game.js TIRE_LIFE, DRAG_LIFE_K). Slicks now
+  ~50% at 25 passes, ~80% at 40, cooked at ~50.
+- Tire time-cost hint: only from a hired tuner (owner), not built yet.
