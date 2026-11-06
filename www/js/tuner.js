@@ -318,7 +318,11 @@
       if (!it.call) it.call = call(ss, it.k);
       var cur = val(ss, it.k);
       if (!it.tried) {
-        if (it.call.guess === cur) { it.tried = true; it.kept = true; }
+        if (it.call.guess === cur) {
+          it.tried = true; it.kept = true;
+          // checked, and the data says leave it: on the notes, so the work shows
+          ss.log.push({ check: label(it.k) + ' ' + fmt(it.k, cur), note: it.call.gain >= WORTH ? 'their read says leave it' : 'already right for this car: no pass needed' });
+        }
         else { it.tried = true; it.was = cur; it.unset = GB[it.k] == null && ss.inst.tune[it.k] == null; it.v = it.call.guess; setTune(ss, it.k, it.v); return { label: label(it.k) + ' ' + fmt(it.k, it.v), k: it.k, v: it.v }; }
       }
       // a tuner who reads the data well goes once more, to where the data
@@ -600,6 +604,7 @@
     close = UI.modal([h('div', { class: 'pix acc' }, 'TUNER\'S NOTES • ' + ss.who.name.toUpperCase()),
       h('div', { class: 'tunerlog' }, ss.log.map(function (x) {
         if (x.pit) return h('div', { class: 'row' }, h('span', { class: 'acc grow' }, '— ' + x.pit));
+        if (x.check) return h('div', { class: 'row' }, h('span', { class: 'dim' }, 'CHECK'), h('span', { class: 'grow' }, x.check + ': ' + x.note));
         if (x.pull) return h('div', { class: 'row' }, h('span', { class: 'dim' }, 'DYNO'), h('span', { class: 'grow' }, x.pull + ': ' + x.note), h('span', {}, Math.round(x.whp) + ' whp'));
         n++;
         return h('div', { class: 'row' }, h('span', { class: 'dim' }, '#' + n), h('span', { class: 'grow' }, x.pass + (x.note ? ' — ' + x.note : '')), h('span', { class: x.aborted ? 'bad' : '' }, x.sixty < 9 ? x.sixty.toFixed(3) + ' / ' + (x.et < 90 ? x.et.toFixed(3) : 'DNF') : 'DNF'));

@@ -2,6 +2,12 @@
 
 Short notes for testing, newest first.
 
+## Tuner's notes show every check
+- The tuner only makes a test pass when a setting looks worth changing;
+  the ones it checked and left now show on the notes as CHECK lines ("Launch
+  Throttle 100%: already right for this car"), so a short session isn't a
+  mystery.
+
 ## Setup screen: which tune you're working on
 - Setup (Tune) has a WORKING ON picker once a car has saved setups. Pick
   "Street tune" (say) and it loads; every change you make saves into it.
