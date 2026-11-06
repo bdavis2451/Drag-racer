@@ -72,14 +72,19 @@
   P.project = function (pl) {
     var V = P.VENUES[pl.venue], rep = S().rep, b = stageBase(), pr = P.PROMO[pl.promo || 0];
     var purseK = Math.min(1.6, pl.purse / (b * 4)), feeK = Math.min(2, pl.fee / Math.max(50, b * 0.5));
-    var attract = Math.max(0.05, Math.min(1.3, 0.45 + 0.5 * purseK - 0.3 * feeK + pr[2] + rep / 250)) * (pl.rule && pl.rule !== 'open' ? 0.8 : 1);
-    var mid = Math.max(2, Math.min(V.cap, Math.round(V.cap * (0.45 + rep / 200) * attract * 1.6)));
+    // racers weigh the entry against what they could win: nobody pays half
+    // the purse or more to enter, and it only fills up when the purse is
+    // many times the entry (about 8x and up)
+    var ratio = pl.fee > 0 ? pl.purse / pl.fee : 99, worth = pl.fee > 0 ? Math.max(0, Math.min(1, (ratio - 2) / 6)) : 1;
+    var attract = Math.max(0.05, Math.min(1.3, 0.45 + 0.5 * purseK - 0.3 * feeK + pr[2] + rep / 250)) * (pl.rule && pl.rule !== 'open' ? 0.8 : 1) * worth;
+    var mid = Math.max(worth > 0 ? 2 : 1, Math.min(V.cap, Math.round(V.cap * (0.45 + rep / 200) * attract * 1.6)));
     var spect = Math.round((mid * 5 + rep * 4 + purseK * 25) * V.spect * (1 + (pl.promo || 0) * 0.4));
     var costs = V.rent + V.ins + pr[1];
-    return { field: mid, lo: Math.max(2, Math.round(mid * 0.75)), hi: Math.min(V.cap, Math.round(mid * 1.25)), spect: spect, gate: spect * V.ticket, entries: (mid - 1) * pl.fee, costs: costs,
+    return { field: mid, noShow: worth <= 0, lo: Math.max(mid > 1 ? 2 : 1, Math.round(mid * 0.75)), hi: Math.min(V.cap, Math.round(mid * 1.25)), spect: spect, gate: spect * V.ticket, entries: (mid - 1) * pl.fee, costs: costs,
       net: (mid - 1) * pl.fee + spect * V.ticket - costs - pl.purse };
   };
   P.plan = function (pl) {
+    if (P.project(pl).noShow) return 'Nobody would enter: the purse has to be well over the entry fee';
     var V = P.VENUES[pl.venue], s = S();
     if (!P.permitOk()) return 'You need a promoter permit';
     if (s.rep < V.rep) return 'Venues like that want a promoter with ' + V.rep + ' rep (you: ' + Math.round(s.rep) + ')';
@@ -266,11 +271,13 @@
       var pr = P.project(pl);
       proj.innerHTML = '';
       proj.appendChild(h('div', { class: 'gsmall' }, 'Expect ' + pr.lo + '–' + pr.hi + ' cars and ~' + pr.spect + ' fans. Entries ~' + DR.money(pr.entries) + ', gate ~' + DR.money(pr.gate) + '; costs ' + DR.money(pr.costs) + ' up front, the purse ' + DR.money(pl.purse) + ' unless you win it.'));
+      if (pr.noShow) { proj.innerHTML = ''; proj.appendChild(h('div', { class: 'bad' }, 'Nobody pays ' + DR.money(pl.fee) + ' to race for ' + DR.money(pl.purse) + ': the purse has to be well over the entry (racers like it 8x or more). Raise the purse or lower the fee.')); return; }
       proj.appendChild(h('div', { class: 'pix ' + (pr.net >= 0 ? 'good' : 'bad') }, 'Projected ' + (pr.net >= 0 ? 'profit ' : 'loss ') + DR.money(Math.abs(pr.net))));
     }
     close = UI.modal([h('div', { class: 'pix acc' }, 'PLAN AN EVENT'), body, proj,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } }, btn('Cancel', function () { close(); }), btn('Book it', function () {
         if (!pl.start) return UI.toast('No free date at that venue in the next three weeks');
+        if (P.project(pl).noShow) return UI.toast('Nobody would enter: the purse has to be well over the entry fee');
         var w = P.plan(pl); if (w) return UI.toast(w); close(); A.cash && A.cash(); UI.toast('Booked: ' + CAL.fmt(pl.start)); UI.refresh();
       }, 'primary'))]);
     render();

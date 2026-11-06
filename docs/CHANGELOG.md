@@ -2,6 +2,13 @@
 
 Short notes for testing, newest first.
 
+## Promoter: entry fee vs purse
+- Fixed: a huge entry fee for a small purse still drew a full field and a
+  big projected profit. Racers now weigh the entry against the purse:
+  nobody enters when the fee is half the purse or more (booking is blocked
+  and says why), and fields only fill when the purse is about 8x the entry.
+- Try: plan an event with a high fee and watch the projection.
+
 ## Bracket dial-in box
 - Fixed: with a hired driver picked, the dial-in box was squashed to a
   sliver by the note next to it. It's full width now, the note underneath.
