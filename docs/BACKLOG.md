@@ -24,6 +24,10 @@ the top of each section.
 
 ## Parked ideas
 
+- **Engine sound by parts on recorded engines.** Recordings change with the
+  exhaust (tone, level, limiter, pops) but not headers or cams. Ideas: a
+  bigger exhaust spread with a pipe drone, cam lope at idle, header bark.
+
 - **Time-specific tunes for brackets.** The tuner tunes to a target ET
   ("8.50 prepped", "9.10 street"), saved as setups. Expensive. See
   `docs/features/street-tune.md`.

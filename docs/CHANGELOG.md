@@ -2,6 +2,10 @@
 
 Short notes for testing, newest first.
 
+## Bracket dial-in box
+- Fixed: with a hired driver picked, the dial-in box was squashed to a
+  sliver by the note next to it. It's full width now, the note underneath.
+
 ## Gears and traction control
 - The gear shop marks the set that runs your car's quickest quarter right
   now ("BEST FOR YOUR CAR"), or says the factory gears already are.

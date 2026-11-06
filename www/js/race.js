@@ -114,7 +114,7 @@
         // a suggestion a little under your last time (rounded down, never up:
         // running quicker than your dial is a breakout)
         var dflt = lastP ? Math.floor(lastP.sp[key === 'q' ? '1/4' : '1/8'][0] * 20) / 20 : inst.best && inst.best[key] ? Math.floor(inst.best[key] * 20) / 20 : '';
-        dialIn = h('input', { type: 'number', step: '0.01', min: '3', max: '30', value: dflt, class: 'tinput', style: { maxWidth: '110px' } });
+        dialIn = h('input', { type: 'number', step: '0.01', min: '3', max: '30', value: dflt, class: 'tinput', style: { width: '110px', minWidth: '90px', flex: 'none' } });
       }
       var canPink = ev && ev.type === 'callout' && G.state.cars.length > 1;
       if (canPink) pinkCb = h('input', { type: 'checkbox' });
@@ -142,7 +142,8 @@
         h('div', { class: 'pix' }, title || (cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name : 'Street race')),
         h('div', { class: 'dim' }, (dist === 'quarter' ? '1/4 mile' : '1/8 mile') + ' • ' + DR.condLabel(cond)),
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'ENTRY LIST'), entries,
-        isBk ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'YOUR DIAL-IN'), dialIn, dialNote) : null,
+        isBk ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'YOUR DIAL-IN'), dialIn) : null,
+        isBk ? dialNote : null,
         canPink ? h('label', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, pinkCb, h('span', { class: 'bad' }, 'Race for pink slips: win their car, or lose yours')) : null,
         ev && ev.type === 'callout' && !canPink ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'Pink slips need a second car in your garage.') : null,
         ev && (ev.type === 'boss' || ev.king) ? h('div', { class: 'acc', style: { marginTop: '4px' } }, 'The King races for their car.') : null,
