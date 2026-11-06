@@ -20,6 +20,7 @@
       if (!cfg.cond) cfg.cond = DR.Race.cond(cfg);
       if (inst.damage) { UI.toast('Repair your car first!'); return; }
       var nr = G.spec(inst).noRun; if (nr) { UI.toast(DR.noRunText({ noRun: nr })); return; }
+      if (G.snapshotRace && !cfg.inst) G.snapshotRace();   // for Settings > Undo last race
       if (loading) return;            // already on the way: a second tap does nothing
       // show that the tap landed before the (slow) race screen is built; the
       // veil also eats any extra taps so none reach the STAGE button

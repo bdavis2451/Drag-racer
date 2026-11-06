@@ -184,6 +184,17 @@
   // storage). G.restoreNative puts a mirrored save back before boot.
   function prefs() { var C = globalThis.Capacitor; return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.Preferences || null; }
   var mirrorT = 0;
+  // Tester tool: the whole save as it was just before the last race (one
+  // level), kept apart from the save itself
+  var UNDO_KEY = 'pixeldrag_undo_v1';
+  G.snapshotRace = function () { try { localStorage.setItem(UNDO_KEY, JSON.stringify({ at: Date.now(), car: (G.car() && DR.CARS[G.car().carId] || {}).name || '', s: G.state })); } catch (e) { /* storage full or off */ } };
+  G.undoInfo = function () { try { var u = JSON.parse(localStorage.getItem(UNDO_KEY)); return u && u.s ? u : null; } catch (e) { return null; } };
+  G.undoRace = function () {
+    var u = G.undoInfo(); if (!u) return false;
+    try { localStorage.setItem(KEY, JSON.stringify(u.s)); localStorage.removeItem(UNDO_KEY); } catch (e) { return false; }
+    G.load(); G.save();
+    return true;
+  };
   G.save = function () {
     var json;
     try { json = JSON.stringify(G.state); localStorage.setItem(KEY, json); } catch (e) { /* storage unavailable */ }

@@ -2,6 +2,12 @@
 
 Short notes for testing, newest first.
 
+## Undo last race (tester tool)
+- Settings > Undo last race puts everything back as it was just before the
+  last race (money, cars, pink slips, damage). One level, once.
+- It only covers races from this update on: a car lost before it can't be
+  brought back this way.
+
 ## Data logger
 - With a data logger, every timeslip has a "Data:" line with the one thing
   to fix (rev limiter, bog, early shift; Race logger: wheelspin, boost;

@@ -397,6 +397,12 @@
           btn('Replay', function () { DR.Tutorial.start(); }, 'small')) : null,
         G.state && G.state.started ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Tester cash'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For beta testers: $1,000 on the house.')),
           btn('+$1,000', function () { G.state.money += 1000; G.save(); if (A.cash) A.cash(); UI.toast('+$1,000'); UI.refresh(); }, 'small go')) : null,
+        G.state && G.state.started && G.undoInfo && G.undoInfo() ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Undo last race'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For beta testers: puts everything back as it was just before your last race' + (G.undoInfo().car ? ' (in the ' + G.undoInfo().car + ')' : '') + ': money, cars, pink slips, damage. Once.')),
+          btn('Undo', function () {
+            var close = UI.modal([h('div', { class: 'pix acc' }, 'UNDO LAST RACE?'), h('p', {}, 'Everything goes back to just before your last race. Anything you did since is undone too.'),
+              h('div', { class: 'row', style: { justifyContent: 'flex-end', gap: '8px' } }, btn('Cancel', function () { close(); }),
+                btn('Undo it', function () { close(); if (G.undoRace()) { UI.toast('Back to before your last race'); UI.show(UI.Garage); } else UI.toast('Nothing to undo'); }, 'primary'))]);
+          }, 'small')) : null,
         G.state && G.state.started ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Back up save'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Copies your save as text: keep it, or send it along with a bug report.')),
           btn('Copy', function () {
             var txt = G.exportSave();
