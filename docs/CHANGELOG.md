@@ -2,6 +2,16 @@
 
 Short notes for testing, newest first.
 
+## Data logger
+- With a data logger, every timeslip has a "Data:" line with the one thing
+  to fix (rev limiter, bog, early shift; Race logger: wheelspin, boost;
+  Pro: lean, traction control).
+- The tuner reads your passes from the logger (a better tune in fewer
+  passes); with a Race logger they rerun a pass the tires spun on.
+- Shop descriptions, the Logbook and Help explain what each logger does.
+- Try: fit a Race logger on the high-power car, race on the street, read the
+  Data line; book a street tune and compare.
+
 ## Traction control hint
 - Lose a race to heavy wheelspin and the timeslip points to the Race ECU +
   Traction Mgmt (or says the traction control is switched off in Tune).

@@ -1,6 +1,6 @@
 # Feature: Data logger that matters
 
-Status: **plan below, waiting on a go.**
+Status: **shipped 2026-11-06.**
 
 ## Today
 - dl1 Basic ($500): rpm, speed, gear traces in the Logbook; wideband for carb
@@ -30,3 +30,13 @@ Status: **plan below, waiting on a go.**
 3. Wording: shop descriptions say what each logger does for you; the Logbook
    says what the graphs show; a Help paragraph.
 - Rivals unchanged. No save changes.
+
+## Build notes
+- logbook.js `L.analyzer(inst, S)`: sample(sim) each step; line(sim) picks
+  spin > bog > limiter > lean > early shift > TC > boost > clean; spun().
+- race.js: `dsA` sampled next to the recorder; slip note "Data: ..."; a
+  tuner pass reports 'the tires spun' from it.
+- tuner.js: record weight +0.1 per logger level (cap 0.95); a spun pass is
+  rerun by any tuner with a Race logger; simPass flags spin (wspin > 0.3).
+- Wording: parts.js dl1-3, Logbook header, Help (Data paragraph).
+- Tests: dlog.js; rival snapshot 0 diffs; regressions + mid click-through.

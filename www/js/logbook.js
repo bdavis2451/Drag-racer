@@ -19,6 +19,55 @@
   var L = DR.Logbook = {};
   L.level = function (inst) { return DR.getOption('logger', inst).log || 0; };
 
+  // "The data says": the one most useful thing the logger caught on a pass,
+  // in plain words. Basic: rev limiter, early shifts, a bog off the line;
+  // Race adds wheelspin and when the boost came in; Pro adds a lean mixture
+  // and where the traction control pulled timing.
+  var GEARN = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th'];
+  L.analyzer = function (inst, S) {
+    var lvl = L.level(inst);
+    if (!lvl) return null;
+    var a = { lim: null, limT: 0, early: null, bogMin: 1e9, spin: null, spinEnd: null, boostAt: null, tc: null, tcEnd: null, lastGear: 0 };
+    var cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1;
+    return {
+      sample: function (sim) {
+        if (!sim.launched || sim.finished || sim.crashed) return;
+        var t = sim.t, rpm = sim.rpm(), dt = a.lastT != null ? t - a.lastT : 0; a.lastT = t;
+        if (sim.cut && !sim.shifting) { a.limT += dt; if (a.limT > 0.15 && a.lim === null) a.lim = sim.gear; } else a.limT = 0;
+        if (sim.gear !== a.lastGear) { if (a.early === null && a.prevRpm && a.prevRpm < S.peakHpRpm * 0.8) a.early = a.lastGear; a.lastGear = sim.gear; }
+        if (!sim.shifting) a.prevRpm = rpm;
+        if (t > 0.15 && t < 1.2 && sim.gear === 0) a.bogMin = Math.min(a.bogMin, rpm);
+        if (lvl >= 2) {
+          var spin = sim.slip > S.tslip * 3;
+          if (spin && a.spin === null) { a.spin = t; a.spinGear = sim.gear; }
+          if (!spin && a.spin !== null && a.spinEnd === null && t - a.spin > 0.05) a.spinEnd = t;
+          if (S.fiType !== 'none' && S.boostSet && a.boostAt === null && sim.boost >= S.boostSet * 0.9) a.boostAt = t;
+        }
+        if (lvl >= 3) {
+          if ((sim.tcRed || 0) > 0.03 && a.tc === null) a.tc = t;
+          if ((sim.tcRed || 0) <= 0.03 && a.tc !== null && a.tcEnd === null) a.tcEnd = t;
+        }
+      },
+      // the line (or '' if the pass was clean)
+      line: function (sim) {
+        var f1 = function (x) { return x.toFixed(1); };
+        if (lvl >= 2 && a.spin !== null) {
+          var end = a.spinEnd !== null ? a.spinEnd : sim.t;
+          if (end - a.spin > 0.2) return 'Spun the tires from ' + f1(a.spin) + ' to ' + f1(end) + ' s (' + GEARN[a.spinGear] + ')' + (lvl >= 3 && a.tc !== null ? '; the traction control pulled timing' : '') + '.';
+        }
+        var lr = S.tune.launchRpm || S.stall || 3000;
+        if (a.bogMin < 1e8 && a.bogMin < Math.min(lr * 0.6, S.peakTqRpm ? S.peakTqRpm * 0.6 : 1e9)) return 'Bogged off the line: the revs fell to ' + Math.round(a.bogMin / 100) * 100 + '.';
+        if (a.lim !== null) return 'Hit the rev limiter in ' + GEARN[a.lim] + ': shift sooner, or a taller gear.';
+        if (lvl >= 3 && lean > 1.03) return 'Lean at the top of the gears (' + (Math.round(12.6 * lean * 10) / 10) + ':1): the fuel system is out of breath.';
+        if (a.early !== null) return 'Shifted early in ' + GEARN[a.early] + ': it pulls harder higher up.';
+        if (lvl >= 3 && a.tc !== null) return 'The traction control pulled timing from ' + f1(a.tc) + ' to ' + f1(a.tcEnd !== null ? a.tcEnd : sim.t) + ' s.';
+        if (lvl >= 2 && a.boostAt !== null) return 'Full boost at ' + f1(a.boostAt) + ' s.';
+        return 'A clean pass: nothing to fix.';
+      },
+      spun: function () { return lvl >= 2 && a.spin !== null && ((a.spinEnd !== null ? a.spinEnd : 99) - a.spin) > 0.3; }
+    };
+  };
+
   // Records a pass at 20 Hz from the launch to the stripe.
   L.recorder = function (inst, S) {
     var lvl = L.level(inst);
@@ -97,7 +146,7 @@
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'log'),
       h('div', { class: 'content' },
         h('div', { class: 'dim gsmall' }, DR.CARS[inst.carId].name + ' • ' + log.length + ' pass' + (log.length === 1 ? '' : 'es') + ' logged • ' +
-          (lvl ? DR.getOption('logger', inst).name + ': ◆ = traces recorded (last ' + MAX_TRACES + ')' : 'No data logger fitted: timeslips only (Fuel & Spark > Data Logger)')),
+          (lvl ? DR.getOption('logger', inst).name + ': ◆ = traces recorded (last ' + MAX_TRACES + '). Tap a pass for its graphs: rpm and speed by gear' + (lvl >= 2 ? ', driveshaft vs car speed (the gap is wheelspin), boost' : '') + (lvl >= 3 ? ', air/fuel, timing pulled' : '') + '.' : 'No data logger fitted: timeslips only. A logger (Fuel & Spark > Data Logger) records every pass, says on the slip what went wrong, and helps the tuner.')),
         log.length ? h('div', { class: 'logwrap' }, tbl) : h('p', { class: 'dim' }, 'No passes yet. Every pass this car makes goes in here.')));
   };
 

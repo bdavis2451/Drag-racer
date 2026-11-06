@@ -246,10 +246,10 @@
   // data acquisition: records every pass (Upgrade > Logbook). It doesn't
   // tell you what to change; it shows you what the car did.
   C.logger = { name: 'Data Logger', options: [
-    opt('stock', 'No Data Logger', 0, { log: 0 }, 'Just the timeslip.'),
-    opt('dl1', 'Basic Data Logger', 500, { log: 1 }, 'Records engine rpm, speed and gear through every pass, with a wideband O2 sensor in the header: you (and the tuner) read the exact air/fuel ratio.'),
-    opt('dl2', 'Race Data Logger', 1500, { lvl: 2, log: 2 }, 'Adds driveshaft speed (so you can see wheelspin against the car\'s speed), boost and throttle.'),
-    opt('dl3', 'Pro Data Acquisition', 4000, { lvl: 3, log: 3 }, 'Adds air/fuel logging through the pass, the timing the ECU pulled, g-force and rear shock travel.')
+    opt('stock', 'No Data Logger', 0, { log: 0 }, 'Just the timeslip: you see the times, not why.'),
+    opt('dl1', 'Basic Data Logger', 500, { log: 1 }, 'Records every pass. The timeslip tells you what went wrong (hit the limiter, bogged off the line, shifted early), the tuner reads your passes better, and a wideband gives carb jets an exact air/fuel. Graphs in the Logbook.'),
+    opt('dl2', 'Race Data Logger', 1500, { lvl: 2, log: 2 }, 'Adds driveshaft speed: it shows exactly when and how long the tires spun (and when the boost came in). The tuner reads it better still and reruns a pass the tires spun on instead of being fooled by it.'),
+    opt('dl3', 'Pro Data Acquisition', 4000, { lvl: 3, log: 3 }, 'Adds air/fuel through the pass, the timing the traction control pulled, g-force and shock travel. The slip warns of a lean engine; the tuner gets the most out of every pass.')
   ]};
   C.ecu = { name: 'ECU / Engine Management', options: [
     opt('stock', 'Stock ECU', 0, { bw: 0, ecu: 0 }, 'Factory rev limiter, whatever your parts can take.'),

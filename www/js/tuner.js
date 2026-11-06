@@ -343,7 +343,9 @@
     var note, et = res.et;
     ss.log.push({ pass: pass.label, et: res.et, sixty: res.sixty, aborted: res.aborted });
     // a bad pass: a tuner who reads data well doesn't learn from it
-    if (res.aborted && ss.who.dat >= 45 && !pass.rerun) {
+    // (a data logger shows a spun pass for what it was: any tuner reruns it)
+    var logLvl = DR.Logbook ? DR.Logbook.level(ss.inst) : 0;
+    if (res.aborted && (ss.who.dat >= 45 || (logLvl >= 2 && res.aborted === 'the tires spun')) && !pass.rerun) {
       pass.rerun = true; ss.again = pass;
       note = 'Threw that one out (' + res.aborted + '). Run it again.';
     } else if (pass.k === null) {
@@ -353,7 +355,9 @@
       var meas = et < 90 && ss.best < 90 ? clamp(et - ss.best, -0.08, 0.08) : (et < 90 ? -0.08 : 0.08);
       // how much one slip says: less from an inconsistent driver
       var con = ss.drv ? ss.drv.con / 100 : 0.7;
-      var model = score(ss, pass.k, pass.v) - score(ss, pass.k, was), w = clamp(0.15 + 0.6 * ss.who.dat / 100 + 0.25 * (1 - con), 0.15, 0.9);
+      // the car's data logger: the tuner reads each pass from the log, not
+      // just the slip (Basic +0.1, Race +0.2, Pro +0.3)
+      var model = score(ss, pass.k, pass.v) - score(ss, pass.k, was), w = clamp(0.15 + 0.6 * ss.who.dat / 100 + 0.25 * (1 - con) + 0.1 * logLvl, 0.15, 0.95);
       // (the slip against the last pass on the setup it's being compared with)
       var judged = (1 - w) * meas + w * model, quicker = et < (ss.refEt != null ? ss.refEt : ss.best) - 0.005;
       if (judged < -0.004) {
@@ -394,11 +398,12 @@
     sim.tireE += S.peakHp * 745.7 * 0.9;     // their burnout
     G.addWear(inst, S, sim, 1);
     DR.Team.learnDrag(d, false);
-    var res = { et: sim.finished ? sim.et : 99, sixty: sim.splits['60ft'] ? sim.splits['60ft'].t : 9, aborted: abortWhy(sim) };
+    var res = { et: sim.finished ? sim.et : 99, sixty: sim.splits['60ft'] ? sim.splits['60ft'].t : 9, aborted: abortWhy(sim) || (DR.Logbook.level(inst) >= 2 && (sim.wspin || 0) > 0.3 ? 'the tires spun' : '') };
     if (sim.blown || sim.broke) { inst.damage = sim.blown ? { engine: true } : { trans: true }; res.broke = true; }
     return res;
   };
   function abortWhy(sim) { return sim.blown || sim.broke ? 'it broke' : !sim.finished ? 'didn\'t finish' : sim.shakeMax > 0.6 ? 'tire shake' : ''; }
+  // a pass the tires spun on (a Race logger or better shows it)
   TU.abortWhy = abortWhy;
 
   // ---------------------------------------------------------------- screens

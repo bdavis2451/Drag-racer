@@ -364,6 +364,8 @@
     var heat = testDrive ? { eng: 0, nosP: 1 } : G.roundHeat(inst, cfg);
     // the data logger, if the car has one
     var rec = testDrive ? null : DR.Logbook.recorder(inst, S);
+    var dsA = testDrive ? null : DR.Logbook.analyzer(inst, S);   // "the data says"
+    DR.Race.lastData = dsA;
     var you = makeRacer(inst, S, 0, cfg, fail, 'YOU', heat);
     var opp = null, ai = null;
     if (cfg.opp) {
@@ -709,6 +711,7 @@
           }
           you.sim.step(sdt, dinp);
           if (rec) rec.sample(you.sim, clock);
+          if (dsA) dsA.sample(you.sim);
           if (opp) opp.sim.step(sdt, ai.input(opp.sim, tG, sdt));
           continue;
         }
@@ -733,6 +736,7 @@
         }
         you.sim.step(sdt, { throttle: playerThrottle(), nos: input.nos });
         if (rec) rec.sample(you.sim, clock);
+        if (dsA) dsA.sample(you.sim);
         // opponent
         if (opp) {
           var inp = ai.input(opp.sim, tG, sdt);
@@ -1009,6 +1013,7 @@
       }
       if (cfg.mode === 'career' && win === false && cfg.pinks && !testDrive) pinkLost = true;
       if (damaged && testDrive) { notes.push(['dim', 'Good thing it was a test drive.']); damaged = null; }
+      if (dsA && you.sim.launched) { var dl = dsA.line(you.sim); if (dl) notes.push(['acc', 'Data: ' + dl]); }
       // lost to big wheelspin: point at the traction-control ECU (or at it
       // being switched off)
       if (win === false && !testDrive && (you.sim.wspin || 0) > 0.6) {
@@ -1041,7 +1046,7 @@
       var tuned = cfg.tuner && DR.Tuner && DR.Tuner.active && !testDrive;
       if (tuned) {
         var sx = you.sim.splits['60ft'];
-        news.push('Tuner: ' + DR.Tuner.passDone({ et: you.sim.finished ? you.sim.et : 99, sixty: sx ? sx.t : 9, aborted: DR.Tuner.abortWhy(you.sim) }, cfg.driver));
+        news.push('Tuner: ' + DR.Tuner.passDone({ et: you.sim.finished ? you.sim.et : 99, sixty: sx ? sx.t : 9, aborted: DR.Tuner.abortWhy(you.sim) || (dsA && dsA.spun() ? 'the tires spun' : '') }, cfg.driver));
       }
       G.save();
 
