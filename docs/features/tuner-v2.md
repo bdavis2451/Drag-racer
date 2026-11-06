@@ -159,3 +159,14 @@ Rivals (no tuner), the dyno pulls (engine items), prices, the booking UI.
 - Shipped: drag tire life x1.75 (game.js TIRE_LIFE, DRAG_LIFE_K). Slicks now
   ~50% at 25 passes, ~80% at 40, cooked at ~50.
 - Tire time-cost hint: only from a hired tuner (owner), not built yet.
+
+## Decided (owner, 2026-11-06): skill = accuracy, not access
+- Every tuner works every setting (no 58 / 75 gates in `TU.knows`). Skill
+  decides how close they get: lower skill misses the best value by more
+  (existing `call()` miss uses chassis skill), needs more passes, and is
+  fooled more by noisy passes (data skill).
+- Team screen: under each tuner skill bar, a plain line that changes with
+  the number, e.g. Engine "boost, rev limit, shift points: close",
+  Chassis "suspension & launch: in the ballpark", Data "reads a bad pass:
+  often fooled".
+- Part of the tuner rework; built with it.
