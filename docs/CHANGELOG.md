@@ -2,6 +2,11 @@
 
 Short notes for testing, newest first.
 
+## Setup screen: which tune you're working on
+- Setup (Tune) has a WORKING ON picker once a car has saved setups. Pick
+  "Street tune" (say) and it loads; every change you make saves into it.
+  "Unsaved tune" edits the car without touching any setup.
+
 ## Promoter: entry fee vs purse
 - Fixed: a huge entry fee for a small purse still drew a full field and a
   big projected profit. Racers now weigh the entry against the purse:

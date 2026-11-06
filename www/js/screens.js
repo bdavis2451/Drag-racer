@@ -619,7 +619,7 @@
           h('div', { class: 'help' }, def.help)));
         return;
       }
-      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; delete inst.activeSetup; G.save(); recalc(); }, def.fmt || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),
+      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; DR.syncSetup(inst); G.save(); recalc(); }, def.fmt || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; G.save(); UI.refresh(); } : null);
       row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F); knock limit ' + S.knock + ' psi.' : '')));
       // jets: how the plugs read (any data logger brings a wideband: the
@@ -638,10 +638,23 @@
     // settings that need a part sit at the bottom, one line each
     if (lockedRows.length) list.appendChild(h('div', { class: 'tlocked' }, h('h3', {}, 'NEEDS A PART (' + lockedRows.length + ')'), lockedRows));
     recalc();
+    // which saved setup the changes go into (or a loose tune)
+    var setups = inst.setups || [];
+    if (setups.length) {
+      var pick = h('select', { class: 'tinput', style: { maxWidth: '220px' } }, [h('option', { value: '' }, 'Unsaved tune')].concat(setups.map(function (st) { return h('option', { value: st.name }, st.name); })));
+      pick.value = inst.activeSetup && setups.some(function (x) { return x.name === inst.activeSetup; }) ? inst.activeSetup : '';
+      pick.addEventListener('change', function () {
+        var st = setups.filter(function (x) { return x.name === pick.value; })[0];
+        if (st) { inst.tune = JSON.parse(JSON.stringify(st.tune)); inst.activeSetup = st.name; UI.toast('Working on ' + st.name + ': changes save into it'); }
+        else delete inst.activeSetup;
+        G.save(); UI.refresh();
+      });
+      statBox.appendChild(h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' } }, h('span', { class: 'plvl' }, 'WORKING ON'), pick));
+    }
     statBox.appendChild(h('div', { class: 'row', style: { flexWrap: 'wrap', marginTop: '6px' } },
       btn('Setups', function () { setupsModal(inst); }, 'small'),
       btn('Tuner', function () { DR.Tuner.open(inst); }, 'small'),
-      btn('Reset Tune', function () { UI.confirm('Put every tuning setting back to default?', function () { inst.tune = {}; G.save(); UI.refresh(); }, 'Reset'); }, 'small red'),
+      btn('Reset Tune', function () { UI.confirm('Put every tuning setting back to default?', function () { inst.tune = {}; DR.syncSetup(inst); G.save(); UI.refresh(); }, 'Reset'); }, 'small red'),
       btn('Test Run', function () { DR.Race.start({ mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, back: 'tune' }); }, 'small go')));
     return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'tune'),
       h('div', { class: 'shopwrap' }, rail, h('div', { class: 'smain tunemain' }, h('div', { class: 'col grow' }, h('h2', {}, tuneGroup), list), statBox)));
@@ -649,6 +662,11 @@
 
   // Setup sheets: named copies of the whole tune (a strip setup, a street
   // setup, ...) to switch between in one tap.
+  // a change on the Tune screen goes into the setup being worked on
+  DR.syncSetup = function (inst) {
+    var st = inst.activeSetup && (inst.setups || []).filter(function (x) { return x.name === inst.activeSetup; })[0];
+    if (st) st.tune = JSON.parse(JSON.stringify(inst.tune)); else delete inst.activeSetup;
+  };
   function setupsModal(inst) {
     var list = inst.setups || (inst.setups = []), close;
     var name = h('input', { type: 'text', maxlength: 24, placeholder: 'Name this setup', class: 'tinput' });
