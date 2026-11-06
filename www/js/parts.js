@@ -563,6 +563,9 @@
     opt('rp1', 'Performance Gear Set', 600, { fdk: 1.12 }, 'About 12% steeper than the factory gears: quicker in every gear, a little less top speed.'),
     opt('rp2', 'Drag Gear Set', 700, { lvl: 2, fdk: 1.25 }, 'About 25% steeper: hard acceleration for the strip, shorter gears all round.'),
     opt('rp3', 'Steep Drag Gear Set', 750, { lvl: 3, fdk: 1.38 }, 'About 38% steeper: for big tires and big power, or a car that has to get off the line in a hurry.'),
+    // taller sets: a high-power quarter-mile car runs out of gear on steep ones
+    opt('rpt1', 'Tall Drag Gear Set', 750, { lvl: 3, fdk: 0.80 }, 'About 20% taller than the factory gears: for a high-power car that hits the limiter before the stripe. Softer off the line.'),
+    opt('rpt2', 'Big-Power Gear Set', 800, { lvl: 4, fdk: 0.72 }, 'About 28% taller: for a big-power car that runs out of gear in the quarter. Needs the power to pull it.'),
     opt('qc', 'Quick-Change Rear End', 4500, { lvl: 4, fdk: 1, qc: true, eff: 0.99, kg: 9 }, 'A race rear end with the gears in a quick-release cover: change the ratio in minutes, so it is set in Tuning (2.20 to 6.50). Racers bring a box of gear sets to the track. A little heavier and a hair less efficient.')
   ]};
   // Safety equipment: NHRA wants a parachute on cars over 150 mph
@@ -995,6 +998,22 @@
     return id;
   }; }
   // the gear set that runs the quickest quarter with the rest of the build
+  // the fixed gear set that runs this car's quickest quarter right now
+  // (factory gears included), for the shop's tag; cached per build
+  var bestGearMemo = {};
+  DR.bestGears = function (inst, ok) {
+    if (inst.ai || DR.getOption('gears', inst).qc) return null;
+    var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune, ok ? C.gears.options.map(function (o) { return ok(o) ? 1 : 0; }) : 0]);
+    if (bestGearMemo[key] !== undefined) return bestGearMemo[key];
+    var best = null, bestEt = 1e9;
+    C.gears.options.forEach(function (o) {
+      if (o.qc || (ok && o.price && !ok(o))) return;
+      var c = withParts(inst, { gears: o.id }); delete c.tune.fd;
+      var et = DR.playerPass(DR.buildSpec(c), 60, true);
+      if (et < bestEt - 0.005) { bestEt = et; best = o.id; }
+    });
+    return (bestGearMemo[key] = best);
+  };
   function gearsFor(inst) {
     var cur = DR.partId('gears', inst);
     if (DR.getOption('gears', inst).qc) return null;

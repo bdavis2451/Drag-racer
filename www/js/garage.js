@@ -507,7 +507,7 @@
   // The parts for sale in a slot, as cards (tap one for the details, buy,
   // fit). Factory parts aren't sold.
   function catalogGrid(inst, cat) {
-    var curId = DR.partId(cat, inst), tunedNow = G.spec(inst).tuned;
+    var curId = DR.partId(cat, inst), tunedNow = G.spec(inst).tuned, bestG = cat === 'gears' && DR.bestGears ? DR.bestGears(inst, function (o) { return G.partUnlocked('gears', lvlOf(o), o.id); }) : null;
     var grid = h('div', { class: 'pgrid' });
     DR.partOptions(cat, inst).forEach(function (o) {
       if (!o.price) return;
@@ -519,9 +519,10 @@
         // what it does for this car, at a glance
         !locked && !installed && DR.partApplies(cat, inst) ? gainLine(inst, cat, o.id) : null,
         h('div', { class: 'pfoot' }, tubeOn ? h('span', { class: 'tag' }, 'TUBE CHASSIS FITTED') : locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl, o.id)) : h('span', { class: 'price' + (G.canAfford(G.partPrice(cat, o) + (o.install || 0)) ? '' : ' bad') }, DR.money(G.partPrice(cat, o) + (o.install || 0)) + (o.install ? ' fitted' : '') + (G.partDiscount(cat) ? ' (sponsor)' : '')),
-          installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(cat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
+          cat === 'gears' && !locked && o.id === bestG ? h('span', { class: 'tag g' }, 'BEST FOR YOUR CAR') : installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(cat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
+    if (cat === 'gears' && bestG === 'stock') return h('div', {}, h('div', { class: 'good gsmall', style: { margin: '0 0 6px' } }, 'BEST FOR YOUR CAR: the factory gears run its quickest quarter right now.'), grid);
     return grid;
   }
 

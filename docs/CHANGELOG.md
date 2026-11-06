@@ -2,6 +2,15 @@
 
 Short notes for testing, newest first.
 
+## Gears and traction control
+- The gear shop marks the set that runs your car's quickest quarter right
+  now ("BEST FOR YOUR CAR"), or says the factory gears already are.
+- Two taller gear sets for big-power cars: Tall Drag (-20%) and Big-Power
+  (-28%), unlocking later.
+- The Race ECU + Traction Mgmt now comes with traction control on (12%);
+  cars that had it switched off get it turned on once.
+- Try: open the gear shop on a stock car and on a big-power car.
+
 ## Undo last race (tester tool)
 - Settings > Undo last race puts everything back as it was just before the
   last race (money, cars, pink slips, damage). One level, once.

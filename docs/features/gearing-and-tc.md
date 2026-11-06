@@ -1,6 +1,6 @@
 # Feature: Rear gear unlocks; traction control left off
 
-Status: **decided; plan below, waiting on a go.**
+Status: **shipped 2026-11-06.**
 
 ## Gearing problem
 Ring & pinion sets unlock by level like everything else, so they read as
@@ -39,3 +39,13 @@ it's fitted saying it's off; (3) the street tune always sets it.
   says runs this car's quickest quarter right now (packages' gearsFor).
 - TC: fitting the ECU sets Traction Control to 12% if it was off/unset;
   cars that already have the ECU and TC off get it turned on once (save fix).
+
+## Build notes
+- parts.js: gears rpt1 (fdk 0.80, lvl 3, $750), rpt2 (0.72, lvl 4, $800);
+  `DR.bestGears(inst, ok)` (quickest-quarter fixed set, only ones `ok`
+  allows, memoised per build).
+- garage.js catalogGrid: "BEST FOR YOUR CAR" tag on that card; a line above
+  the grid when the factory gears are best.
+- game.js setPart: fitting an ecu >= 3 sets tcSlip 12 (DR.TC_DEFAULT) if
+  off; save fix `tcV2` once.
+- Tests: gears.js / gears2.js; rival snapshot 0 diffs; regressions clean.

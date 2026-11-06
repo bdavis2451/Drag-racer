@@ -32,6 +32,9 @@
     try { retired(s); } catch (e) { /* keep what loaded */ }
     try { carbV2(s); } catch (e) { /* keep what loaded */ }
     try { tubeV2(s); } catch (e) { /* keep what loaded */ }
+    // traction control used to come switched off: cars that have the ECU and
+    // never turned it on get it on, once
+    if (!s.tcV2) { (s.cars || []).forEach(function (c) { if ((c.parts || {}).ecu === 'ecu3' && !(c.tune && c.tune.tcSlip > 0)) { c.tune = c.tune || {}; c.tune.tcSlip = DR.TC_DEFAULT || 12; } }); s.tcV2 = true; }
     try { sanitize(s); } catch (e) { /* keep what loaded */ }
     // older saves could put a rear-drive gearbox in a front-drive car: it
     // becomes the matching transaxle (and the other way around)
@@ -416,7 +419,10 @@
     }
     clearTune(inst, cat, fiWas);
     if (cat === 'layout') swapBoxKind(inst);
+    // the traction-control ECU comes with traction control switched on
+    if (cat === 'ecu' && (DR.getOption('ecu', inst).ecu || 0) >= 3 && !(inst.tune && inst.tune.tcSlip > 0)) { inst.tune = inst.tune || {}; inst.tune.tcSlip = DR.TC_DEFAULT; }
   }
+  DR.TC_DEFAULT = 12;
   // converting to (or back from) a lengthways driveline takes off a gearbox
   // that no longer fits; the conversion comes with a box of the right kind
   function swapBoxKind(inst) {
