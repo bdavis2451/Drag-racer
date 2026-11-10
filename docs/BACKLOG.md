@@ -24,6 +24,9 @@ the top of each section.
 
 ## Parked ideas
 
+- **Ghost duels (online step 1).** Race a friend's recorded run from a
+  share link. Plan and 4 open questions in `docs/features/ghost-duels.md`.
+
 - **Engine sound by parts on recorded engines.** Recordings change with the
   exhaust (tone, level, limiter, pops) but not headers or cams. Ideas: a
   bigger exhaust spread with a pipe drone, cam lope at idle, header bark.
@@ -33,7 +36,8 @@ the top of each section.
   `docs/features/street-tune.md`.
 
 - **Career ladder and the calendar.** How the ladder and the week's race
-  days fit together. Talk it through (reminder set).
+  days fit together (e.g. ladder races marked on calendar days, This Week
+  flagging a ladder race you'd miss). Back burner (owner, 2026-11-10).
 - **Engine Simulator audio.** Real or simulated engine recordings, for when
   the game is sold. Open question: how to give access to the tools.
 - **Free-to-use engine recordings.** Researched, nothing integrated.
@@ -53,6 +57,10 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- Tuner v2 (combination search, whole-range search, second sweep, real
+  passes trusted more, never slower + refund, skill = accuracy, tires
+  first, fuel limit by aggression): shipped.
 
 - Street tunes (Strip/Street/Both 1.7x, saved setups, pick pop-up, hint,
   tuner text) and the tube chassis move: shipped.

@@ -709,12 +709,21 @@
   var SKILLS = [['brk', 'Braking'], ['cor', 'Cornering'], ['con', 'Consistency']];
   var SKILLS_DRAG = [['rt', 'Reaction'], ['lau', 'Launch'], ['con', 'Consistency']];
   var SKILLS_TUNER = [['eng', 'Engine'], ['chs', 'Chassis'], ['dat', 'Data']];
+  // what a tuner's skill number means, in plain words (every tuner works
+  // every setting: skill is how close they get)
+  function tunerLine(k, v) {
+    var lvl = v >= 80 ? 0 : v >= 65 ? 1 : v >= 50 ? 2 : 3;
+    if (k === 'eng') return 'Boost, fuel, rev limit, shift points: ' + ['right to the limit', 'close to the limit', 'a safe step back', 'plays it very safe'][lvl];
+    if (k === 'chs') return 'Launch & suspension settings: ' + ['spot on', 'close', 'in the ballpark', 'often a click or two off'][lvl];
+    return 'Reading a bad pass: ' + ['rarely fooled', 'sometimes fooled', 'often fooled', 'easily fooled'][lvl];
+  }
   function bars(d) {
     return h('div', { class: 'skbars' }, (d.kind === 'drag' ? SKILLS_DRAG : d.kind === 'tuner' ? SKILLS_TUNER : SKILLS).map(function (k) {
       var v = Math.floor(d[k[0]]);
-      return h('div', { class: 'skrow' }, h('span', { class: 'k' }, k[1]),
+      var row = h('div', { class: 'skrow' }, h('span', { class: 'k' }, k[1]),
         h('span', { class: 'skbar' }, h('span', { class: 'pot', style: { width: d.pot + '%' } }), h('span', { class: 'val', style: { width: v + '%' } })),
         h('span', { class: 'v' }, String(v)));
+      return d.kind === 'tuner' ? h('div', null, row, h('div', { class: 'gsmall dim' }, tunerLine(k[0], v))) : row;
     }));
   }
   function starsEl(n) { var s = ''; for (var i = 1; i <= 5; i++) s += n >= i ? '★' : n >= i - 0.5 ? '⯪' : '☆'; return h('span', { class: 'acc dstars', title: 'Potential' }, s); }

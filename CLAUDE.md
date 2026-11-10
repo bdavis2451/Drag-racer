@@ -47,6 +47,7 @@ work from across sessions; update it whenever a decision is made.
   snapshot must stay identical.
 - Plain, short, player-facing wording; say what a thing does, not how it's
   coded.
+- When a change trades loading speed against quality, favor quality.
 
 ## After every push
 

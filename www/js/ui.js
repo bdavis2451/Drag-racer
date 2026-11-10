@@ -350,6 +350,12 @@
         h('span', { class: 'wbar' }, h('span', { class: x.w >= 0.75 ? 'bad' : x.w >= 0.5 ? 'warn' : '', style: { width: Math.max(2, pct) + '%' } })),
         h('span', { class: x.w >= 0.75 ? 'bad' : '' }, pct + '% • ' + x.n + ' pass' + (x.n === 1 ? '' : 'es')));
     }));
+    // a hired tuner says when worn slicks are costing time
+    var th = DR.Tuner && DR.Tuner.tireHint ? DR.Tuner.tireHint(inst) : '';
+    if (th) {
+      box.appendChild(h('div', { class: 'wnote warn' }, th));
+      if (!due.some(function (x) { return x.cat === 'rtires'; })) due = due.concat(list.filter(function (x) { return x.cat === 'rtires'; }));
+    }
     if (due.length) {
       var cost = due.reduce(function (a, x) { return a + x.price; }, 0);
       box.appendChild(btn('Fit fresh ' + due.map(function (x) { return x.cat === 'rtires' ? 'tires' : 'clutch'; }).join(' & ') + ' ' + DR.money(cost), function () {

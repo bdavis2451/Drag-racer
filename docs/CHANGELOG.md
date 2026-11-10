@@ -2,6 +2,30 @@
 
 Short notes for testing, newest first.
 
+## Tuner rework
+- The tuner searches each setting's whole range (2-step, gear, shift point,
+  rev limiter), works the launch as a package (2-step, tire pressure, gear,
+  boost in 1st, shift point, suspension) in one pass, and goes round a second
+  time if anything changed.
+- Real passes count for more; a change that ran slower on the slip is undone.
+- Never slower: it ends with a confirm pass. If the car isn't quicker than it
+  came in, the old tune goes back on and the session is refunded (tuner,
+  dyno, track, fuel, driver).
+- Every tuner works every setting; skill is how close they get. The Team
+  screen says what each skill number means.
+- Boost: "went lean" is now "the injectors/pump are maxed out" (with what
+  they feed on your fuel). How hard you tell them to push now sets how close
+  they run to the fuel system's limit; they never leave it lean with the
+  nitrous on.
+- Tires first: with drive tires past 25% worn the tuner asks for fresh ones
+  before tuning. With a tuner on the team, the garage and the timeslip say
+  what worn tires cost ("Aiko: these tires cost about 0.15 s a pass").
+- Tested on the tester's Monte Carlo from its 8.25 tune: "On the edge" gets
+  it to 8.12 (staff or pro tuner); "Balanced" ~8.18-8.20 (keeps more margin,
+  29 psi).
+- Try: book the tuner on the Monte Carlo, On the edge, fresh tires; then
+  Balanced. Look at the Team screen tuner card.
+
 ## Drag tires last longer
 - Drag slicks, radials and street tires wear 1.75x slower (research: real
   drag slicks stay useful for ~50 passes). Grip loss when worn is unchanged.

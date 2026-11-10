@@ -1,7 +1,7 @@
 # Tuner rework: combinations, second sweep, real passes count, never slower, no-gain-no-pay
 
-**STATUS: experiments done with the tester's exact car (2026-11-06). No
-code changed. Revised plan below; talking it through.**
+**STATUS: shipped 2026-11-10** (owner approved the full plan 2026-11-07,
+plus the fuel-limit wording and margin 2026-11-10).
 
 ## What the experiments found (tester's Monte Carlo, Leila driving, Aiko tuning)
 Bench = 8 simulated passes, median, same day/prepped conditions.
@@ -170,3 +170,44 @@ Rivals (no tuner), the dyno pulls (engine items), prices, the booking UI.
   Chassis "suspension & launch: in the ballpark", Data "reads a bad pass:
   often fooled".
 - Part of the tuner rework; built with it.
+
+## Fuel limit at ~30 psi (owner question, 2026-11-10)
+- Not really lean: E85 needs ~33% more fuel, so the 1700cc injectors and
+  brushless pump (1,800 hp on gasoline) feed ~1,350 hp. 30 psi wants 1,318
+  hp (98%). The tuner's margin (skill only) put its line at 1,309.
+- Decided: wording "the injectors/pump are maxed out: they feed about X hp
+  on E85. Bigger ... to go further"; margin by aggression (Safe 6%,
+  Balanced 3%, On the edge 0.8%) plus up to 3% for a green tuner.
+- Found in testing: with the dry 50 shot on the same injectors, 30.5 psi is
+  2.4% over, which the game scores as a 6% engine failure chance a pass.
+  The tuner now never leaves the fuel system past 1.5% short with the shot
+  (`DR.fuelShort` ratio).
+
+## Build notes (2026-11-10)
+- tuner.js:
+  - `TU.AGG[*].fuel` margins; `limits().lean` = engine demand vs cap less
+    margin, or `DR.fuelShort(S).ratio > 1.015`; `fuelWhy(S)` / `why(l, S)`.
+  - Boost item: after a big step over the line, creeps back up in 0.5 psi
+    steps from the last clean pull (`it.fine`).
+  - `revCeil(ss, S)` = min(valvetrain, bottom end) - agg.rpm - (1-eng)*150
+    (was *300); used by the rev-limit item and the shift-point grid, which
+    now reaches above the current limiter (the limiter follows the shift
+    point +100, `revWith`, in both `setTune` and `score`).
+  - `comboCall`: skill miss only on keys it moved, in fine steps
+    (sd = (1-chs/100)*1.5 clicks; GB/tcSlip index sd *0.8).
+  - `TU.tireCost(inst)` (model ET worn vs fresh, 2 sims each, memoised),
+    `TU.tireHint(inst)` (only with a drag tuner on the team, wear >= 25%,
+    cost >= 0.02 s), `TU.TIRES_FIRST = 0.25`; TIRES FIRST modal on Start
+    when a track job is booked (fit fresh / tune on these / cancel).
+- ui.js `UI.wearBox`: the tuner's tire line (+ fit fresh tires button) in
+  the garage and on the slip. css `.wearbox .wnote`.
+- circuitui.js `tunerLine(k, v)`: plain line under each tuner skill bar.
+- Results (tester's car from its 8.25 tune, fresh-ish tires, median of
+  bench): Aiko edge 8.123 (5/5), Pro edge 8.123 (4/4), Pro balanced 8.18,
+  Aiko balanced 8.20, Local balanced 8.25 (no gain, within noise). Tire
+  cost model vs Leila: 50% worn 0.15 vs 0.13 s, 70% 0.36 vs 0.38.
+- Known: a Balanced local tuner may lower the boost the car came in with
+  (its margin); the dyno happens before the baseline pass, so that cut
+  is judged by the model, not the slip.
+- Regressions: rivsnap 0 diffs (126), qolsmoke, c2, drv, tubest clean;
+  crawl mid same as before (Settings 1, pre-existing).
