@@ -316,7 +316,7 @@
     });
     Object.keys(groups).forEach(function (f) {
       var items = groups[f], t = Math.min.apply(null, items.map(function (e) { return e.t; })), end = Math.max.apply(null, items.map(function (e) { return e.end; }));
-      var n = items.reduce(function (a, e) { return a + e.evs.filter(function (ev) { return !G.eventWon(ev); }).length; }, 0);
+      var n = items.reduce(function (a, e) { return a + e.evs.filter(function (ev) { return !G.eventWon(ev) || G.countsForContract(ev); }).length; }, 0);
       rest.push({ t: t, end: end, slot: items[0].slot, kind: 'drag', career: true, event: f, d0: d0, items: items,
         label: DR.EVENT_DAYS[f], sub: n + ' race' + (n === 1 ? '' : 's') + ': ' + items.map(function (e) { return e.short; }).join(', '),
         go: function () { UI.show(UI.EventDay, { event: f, d0: d0 }); },
@@ -331,7 +331,9 @@
     // the drag career: race days for every stage open, with their races
     for (var si = 0; si <= c.stage && si < DR.STAGES.length; si++) {
       Object.keys(SCORED).forEach(function (slot) {
-        var evs = DR.raceDayEvents(si, slot), open = evs.filter(function (ev) { return !G.eventLock(ev); }), todo = open.filter(function (ev) { return !G.eventWon(ev); });
+        // still to win, or won before the sponsor was signed and a win now
+        // counts for the contract (so a contract can always be finished)
+        var evs = DR.raceDayEvents(si, slot), open = evs.filter(function (ev) { return !G.eventLock(ev); }), todo = open.filter(function (ev) { return !G.eventWon(ev) || G.countsForContract(ev); });
         if (!todo.length) return;
         var n0 = out.length;
         add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, 'vs ' + todo.map(function (ev) { return ev.opps[ev.opps.length - 1].name; }).join(', '), true, function () { return carWhy(todo); });

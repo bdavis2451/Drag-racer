@@ -393,7 +393,7 @@
   // iPhones and iPads start on simple: their Safari has gone silent for the
   // whole race on the full engine.
   A.isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  A.quality = function () { var s = DR.Game && DR.Game.state && DR.Game.state.settings, q = s && s.engSound; return q || (A.isIOS ? 'simple' : 'full'); };
+  A.quality = function () { var s = DR.Game && DR.Game.state && DR.Game.state.settings, q = s && s.engSound; return q || 'full'; };
   A.applyQuality = function () { var simple = A.quality() === 'simple'; A.forceSynth = simple; A.noSamples = simple; };
   var baseInit = A.init;
   A.init = function () {

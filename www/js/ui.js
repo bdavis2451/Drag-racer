@@ -392,7 +392,7 @@
         toggle('Speed units', 'units', 'mph', 'kmh', 'MPH', 'KM/H'),
         toggle('Gas pedal', 'pedal', 'hold', 'slide', 'Hold', 'Slide', 'Slide: how high you touch the pedal sets the throttle - feather it to stop wheelspin.'),
         toggle('Sim mode', 'sim', true, false, 'On', 'Off', 'On: no coaching or plain-English diagnosis. The game gives you gauges, timeslips and numbers and leaves the reading of them to you. Off: hints in the shop, the tune screen and on the line.'),
-        DR.Audio.setQuality ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Engine sound'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Full: the modelled engine and recorded sounds. Simple: lighter, for phones where the race goes silent (iPhones start here).')),
+        DR.Audio.setQuality ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Engine sound'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'Full: the modelled engine and recorded sounds. Simple: lighter, for phones where the race goes silent.')),
           btn('Full', function () { DR.Audio.setQuality('full'); UI.refresh(); }, 'small ' + (DR.Audio.quality() === 'full' ? 'primary' : '')),
           btn('Simple', function () { DR.Audio.setQuality('simple'); UI.refresh(); }, 'small ' + (DR.Audio.quality() === 'simple' ? 'primary' : ''))) : null,
         UI.AudioCheck ? h('div', { class: 'item' }, h('div', { class: 'name' }, h('div', {}, 'Audio check'), h('div', { class: 'dim', style: { fontSize: '16px' } }, 'For testers: short sound tests and a report to send if the race goes quiet.')),

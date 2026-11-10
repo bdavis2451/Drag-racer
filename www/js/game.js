@@ -32,6 +32,7 @@
     try { retired(s); } catch (e) { /* keep what loaded */ }
     try { carbV2(s); } catch (e) { /* keep what loaded */ }
     try { tubeV2(s); } catch (e) { /* keep what loaded */ }
+    try { vbV2(s); } catch (e) { /* keep what loaded */ }
     // traction control used to come switched off: cars that have the ECU and
     // never turned it on get it on, once
     if (!s.tcV2) { (s.cars || []).forEach(function (c) { if ((c.parts || {}).ecu === 'ecu3' && !(c.tune && c.tune.tcSlip > 0)) { c.tune = c.tune || {}; c.tune.tcSlip = DR.TC_DEFAULT || 12; } }); s.tcV2 = true; }
@@ -138,6 +139,19 @@
   // The carb rework (v2): the port EFI conversion moved from the carb slot to
   // the intake manifold (a multiport manifold), the kits stopped bringing a
   // pump, and carb cars got carb fuel pumps. Cars keep running as they did.
+  // the automatic's shift kit / manual valve body moved from the shifter to
+  // its own Valve Body section: an automatic's shifter part becomes the
+  // matching valve body
+  function vbV2(s) {
+    if (s.vbV2) return;
+    (s.cars || []).forEach(function (c) {
+      var p = c.parts || {}, vb = DR.VB_OF[p.shifter];
+      if (!vb || c.ai || DR.TRANS[DR.partId('trans', c)].type !== 'auto') return;
+      if (!p.valvebody) p.valvebody = vb;
+      delete p.shifter;
+    });
+    s.vbV2 = true;
+  }
   function tubeV2(s) {
     if (s.tubeV2) return;
     (s.cars || []).forEach(function (c) {

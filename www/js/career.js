@@ -589,6 +589,7 @@
       if (ev.type === 'sponsor') sp.spon++; else sp.street++;
       out.counted = true;
     }
+    out.contractLine = contractLine(ev, sp, out, prodOk);
     if (sp) {
       var spName = DR.sponsorById(sp.id).name;
       cash += sp.perWin; lines.push(spName + ' win bonus: ' + DR.money(sp.perWin)); out.money.push([spName, sp.perWin]);
@@ -601,6 +602,35 @@
     out.cash = cash; out.lines = lines; out.first = first;
     return out;
   };
+  // A line for the timeslip: did this win count for a contract, and if not, why
+  // ('' when no unfinished contract cares about it)
+  function contractLine(ev, sp, out, prodOk) {
+    var c = C(), K = { sponsor: ['spon', 'sponsor races'], street: ['street', 'street races'] };
+    function tally(x, t) { return K[t][1] + ' ' + Math.min(x[K[t][0]], x.contract[K[t][0]]) + '/' + x.contract[K[t][0]]; }
+    var counts = ev.type === 'sponsor' || ev.type === 'street';
+    if (counts && sp && !sp.paid && sp.contract[K[ev.type][0]]) {
+      var nm = DR.sponsorById(sp.id).name;
+      if (out.counted) return 'Counted for ' + nm + ': ' + tally(sp, ev.type) + '.';
+      if (out.noProd) { var pk = DR.SPONSOR_PERKS && DR.SPONSOR_PERKS[sp.id]; return 'Didn\'t count for ' + nm + ': they want ' + (pk && pk.prod ? pk.prod[0] : 'their product') + ' on the car.'; }
+      if (G.contractIds(sp)[ev.id]) return 'Didn\'t count for ' + nm + ': this race already counted (' + tally(sp, ev.type) + ').';
+      return 'Didn\'t count for ' + nm + ': the ' + K[ev.type][1] + ' are already done (' + tally(sp, ev.type) + ').';
+    }
+    // a race of another class, while this class's contract still wants one
+    var cur = c.sponsor[c.stage];
+    if (cur && !cur.paid && ev.stage !== c.stage) {
+      var want = counts && cur.contract[K[ev.type][0]] && cur[K[ev.type][0]] < cur.contract[K[ev.type][0]];
+      if (want) return 'Didn\'t count for ' + DR.sponsorById(cur.id).name + ': it\'s a Class ' + (ev.stage + 1) + ' race, your contract is Class ' + (c.stage + 1) + '.';
+      return '';
+    }
+    // a race of the contract's class that isn't the kind it counts
+    if (sp && !sp.paid && !counts && ev.type !== 'boss') {
+      var need = [];
+      if (sp.spon < (sp.contract.spon || 0)) need.push('sponsor');
+      if (sp.street < (sp.contract.street || 0)) need.push('street');
+      if (need.length) return 'Didn\'t count for ' + DR.sponsorById(sp.id).name + ': only ' + need.join(' and ') + ' races count.';
+    }
+    return '';
+  }
   // Stars can complete a contract too (checked when you come back to the menu).
   G.checkContracts = function () {
     var c = C(), msgs = [];

@@ -369,10 +369,10 @@
     S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly * (crank.ie || 1);
 
     // ---- drivetrain
-    S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift * (DR.partApplies('shifter', inst) ? DR.getOption('shifter', inst).shiftK || 1 : 1); S.trMaxTq = tr.maxTq;
+    S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift * ((DR.shiftOpt(inst) || {}).shiftK || 1); S.trMaxTq = tr.maxTq;
     S.tbrake = tr.type === 'auto' && !!DR.getOption('transbrake', inst).tbrake;
     // a manual valve body: the automatic holds each gear till you shift it
-    S.mvb = tr.type === 'auto' && DR.partApplies('shifter', inst) && !!DR.getOption('shifter', inst).mvb;
+    S.mvb = tr.type === 'auto' && !!(DR.shiftOpt(inst) || {}).mvb;
     S.drive = layout.layout || car.drive;
     S.eff = tr.eff * (S.drive === 'AWD' ? 0.95 : S.drive === 'FWD' ? 1.03 : 1) * (gset.eff || 1);   // FWD: no right-angle drive in the diff
     // the final drive: a gear set (fixed), or a quick-change set in Tuning

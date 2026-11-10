@@ -960,6 +960,7 @@
           money = money.concat(res.money);
           if (res.banner) news.push(res.banner);
           if (res.contract) news.push(res.contract);
+          else if (res.contractLine) notes.push([/^Counted/.test(res.contractLine) ? 'good' : 'dim', res.contractLine]);
           unlocks = res.unlocks;
           if (res.newRaces) notes.push(['dim', res.newRaces + ' new race' + (res.newRaces > 1 ? 's' : '') + ' to run']);
           // a launch bonus on the race purse (CSR's perfect-start bonus)

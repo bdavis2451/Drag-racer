@@ -2,6 +2,23 @@
 
 Short notes for testing, newest first.
 
+## Contracts, valve body, sound
+- Timeslip: after a career win, a line says whether it counted for your
+  sponsor ("Counted for Junkyard Joe's: street races 1/2") or why not
+  (already counted, the street races are done, another class's race, only
+  sponsor and street races count, or they want their product on the car).
+- This Week keeps a race you already won when a win there would still count
+  for your contract, so a contract can always be finished.
+- The race shifter and the manual valve body are two parts now. Manuals:
+  Shifter section (Short-Throw $300, Race Lockout $1,000). Automatics: a new
+  Valve Body section in Drivetrain (Shift Kit $300, still shifts itself;
+  Manual Valve Body + Ratchet Shifter $1,000, you shift it). Automatics that
+  had the old part get the matching valve body.
+- Engine sound now starts on Full on iPhones too (a phone that already
+  picked Simple in Settings keeps it).
+- Try: win a street race with a sponsor signed; open Drivetrain on an
+  automatic car and on a manual one.
+
 ## Tuner rework
 - The tuner searches each setting's whole range (2-step, gear, shift point,
   rev limiter), works the launch as a package (2-step, tire pressure, gear,

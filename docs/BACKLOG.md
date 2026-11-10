@@ -9,18 +9,9 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **Contract line on the timeslip.** After a sponsor or street win: "Counted
-  for [sponsor]: street races 1/2", or why it didn't count (already counted,
-  another class's race, not a street race).
-- **This Week keeps contract races.** A race already won that would still
-  count for the contract stays on This Week. Built, saved in git stash
-  "this-week contract reruns (awaiting OK)". Fits the ladder/calendar talk.
-- **Split race shifter and manual valve body** into two parts (today one
-  part does both: quicker shifts on a manual, you-shift on an automatic).
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
-  when it's running inside Facebook's browser (no sound there).
-- **iPhone sound default** back to Full, now the cause (the in-app browser)
-  is known.
+  when it's running inside Facebook's browser (no sound there). Owner said
+  not now (2026-11-10).
 
 ## Parked ideas
 
@@ -61,6 +52,9 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- Contract line on the timeslip, This Week keeps contract races, shifter /
+  valve body split, iPhone sound default Full: shipped 2026-11-10.
 
 - Tuner v2 (combination search, whole-range search, second sweep, real
   passes trusted more, never slower + refund, skill = accuracy, tires

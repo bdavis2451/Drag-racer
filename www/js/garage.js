@@ -164,6 +164,9 @@
       case 'shifter':
         r(4, 18, 16, 4, M3); r(4, 18, 16, 1, M2); r(11, 7, 2, 11, M1); r(12, 7, 1, 11, M2);
         disc(12, 5, 4, ac); disc(11, 4, 1, DR.shadeHex(ac, 0.4)); r(6, 20, 1, 1, BK); r(17, 20, 1, 1, BK); break;
+      case 'valvebody':
+        r(3, 6, 18, 12, M3); r(3, 6, 18, 1, M2); for (k = 0; k < 4; k++) { r(5 + k * 4, 9, 2, 6, M1); r(5 + k * 4, 9, 1, 6, M2); }
+        r(4, 17, 16, 2, M4); disc(19, 20, 2, ac); break;
       case 'flywheel':
         ring(12, 12, 11, 8, M2); for (k = 0; k < 16; k++) { var a2 = k * Math.PI / 8; r(Math.round(12 + Math.cos(a2) * 10), Math.round(12 + Math.sin(a2) * 10), 1, 1, M4); }
         disc(12, 12, 7, M3); disc(12, 12, 2, ac); break;

@@ -347,10 +347,16 @@
     opt('stock', 'None (Foot Brake)', 0, { tbrake: false }, 'The foot brake can only hold so much torque, so you have to ease into the throttle on the line, and the launch is softer.'),
     opt('tb1', 'Transbrake', 1200, { tbrake: true }, 'Locks the transmission so you can hold full throttle (and boost) on the line. Releases instantly at the launch.')
   ]};
-  C.shifter = { name: 'Shifter / Shift Kit', needsShifter: true, options: [
+  // the shifter on a manual; an automatic's shifts are set by its valve body
+  C.shifter = { name: 'Shifter', needsShifter: true, options: [
     opt('stock', 'Factory Shifter', 0, { shiftK: 1 }),
-    opt('ss1', 'Short-Throw Shifter / Shift Kit', 300, { shiftK: 0.85 }, 'Shorter throws on a manual, firmer shifts from an automatic\'s valve body: 15% quicker shifts.'),
-    opt('ss2', 'Race Shifter / Manual Valve Body', 1000, { shiftK: 0.72, mvb: true }, 'A lockout race shifter, or a full manual valve body: 28% quicker shifts. On an automatic it no longer shifts itself: you shift it, like a manual (Auto-shift in Settings can do it for you).')
+    opt('ss1', 'Short-Throw Shifter', 300, { shiftK: 0.85 }, 'Shorter throws: 15% quicker shifts.'),
+    opt('ss2', 'Race Lockout Shifter', 1000, { shiftK: 0.72 }, 'A drag shifter with lockouts so you can\'t miss a gear: 28% quicker shifts.')
+  ]};
+  C.valvebody = { name: 'Valve Body', needsConverter: true, options: [
+    opt('stock', 'Factory Valve Body', 0, { shiftK: 1 }),
+    opt('vb1', 'Shift Kit', 300, { shiftK: 0.85 }, 'Firmer, quicker shifts: 15% quicker. It still shifts itself.'),
+    opt('vb2', 'Manual Valve Body + Ratchet Shifter', 1000, { shiftK: 0.72, mvb: true }, 'A full manual valve body: 28% quicker shifts, but it no longer shifts itself: you shift it, like a manual (Auto-shift in Settings can do it for you).')
   ]};
   C.flywheel = { name: 'Flywheel / Flexplate', options: [
     opt('stock', 'Stock Flywheel', 0, { fly: 1 }),
@@ -584,7 +590,7 @@
     { id: 'bottom', name: 'Bottom End',    icon: 'pistons', unlock: 'engine', cats: ['pistons', 'rods', 'crank', 'block', 'oiling'] },
     { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['carb', 'injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu', 'logger'] },
     { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'tmanifold', 'downpipe', 'theat', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
-    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
+    { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'valvebody', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
     { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['rtires', 'wheels', 'ftires', 'brakes'] },
     { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'safety'] }
@@ -870,12 +876,24 @@
     if (c.needsConverter) return tr.type === 'auto';
     if (c.needsFI) return DR.partId('fi', inst) !== 'none';
     if (c.needsTurbo) return DR.FI[DR.partId('fi', inst)].type === 'turbo';
-    if (c.needsShifter) return tr.type === 'manual' || tr.type === 'auto';
+    if (c.needsShifter) return tr.type === 'manual';
     if (c.needsNos) return DR.partId('nitrous', inst) !== 'stock';
     if (c.notTurbo) return !!inst.ai || DR.FI[DR.partId('fi', inst)].type !== 'turbo';
     return true;
   };
 
+  // what sets the shift speed: the shifter on a manual, the valve body on an
+  // automatic (older builds kept the automatic's shift kit / manual valve
+  // body under the shifter)
+  var VB_OF = { ss1: 'vb1', ss2: 'vb2' };
+  DR.shiftOpt = function (inst) {
+    var tr = DR.TRANS[DR.partId('trans', inst)];
+    if (tr.type === 'manual') return DR.getOption('shifter', inst);
+    if (tr.type !== 'auto') return null;
+    var p = inst.parts || {}, id = p.valvebody || VB_OF[p.shifter] || 'stock';
+    return DR.getOption('valvebody', inst, id);
+  };
+  DR.VB_OF = VB_OF;
   DR.catName = function (cat, inst) {
     if (inst && ROTARY[cat] && DR.engineKind(inst) === 'rotary') return ROTARY[cat].name;
     return DR.CAT_NAMES[cat] || (C[cat] && C[cat].name) || cat;
@@ -1082,10 +1100,10 @@
       [['fi', turboFor(2.5)], ['tmanifold', 'tm1'], ['downpipe', 'dp1'], ['theat', 'th1'], ['ic', 'ic2'], ['wastegate', 'wg2'], ['bov', 'bov1'], ['launch', 'l1']],
       [['fi', turboFor(4, true)], ['tmanifold', 'tm2'], ['downpipe', 'dp2'], ['theat', 'th2'], ['ic', 'ic3'], ['wastegate', 'wg2'], ['bov', 'bov2'], ['launch', 'l2']]],
     drive: [
-      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
-      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)], ['mounts', 'mm1'], ['gears', gearsFor]],
-      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)], ['mounts', 'mm2'], ['gears', gearsFor],
+      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['valvebody', 'vb1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['valvebody', 'vb1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
+      [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['valvebody', 'vb2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)], ['mounts', 'mm1'], ['gears', gearsFor]],
+      [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['valvebody', 'vb2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)], ['mounts', 'mm2'], ['gears', gearsFor],
         // a front-driver making real power is converted to drive the rear
         ['layout', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? 'rwd' : null; }]]],
     susp: [
