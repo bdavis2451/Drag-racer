@@ -24,6 +24,10 @@ the top of each section.
 
 ## Parked ideas
 
+- **Diesel engines and upgrades rework.** Rework the diesel motors and
+  their upgrade paths. Not started: research and talk first (owner,
+  2026-11-10).
+
 - **Ghost duels (online step 1).** Race a friend's recorded run from a
   share link. Plan and 4 open questions in `docs/features/ghost-duels.md`.
 
