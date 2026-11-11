@@ -598,6 +598,7 @@
       antiSquat: DR.getOption('rearsusp', inst).as,
       barDeg: 3,
       launchThr: 100, thrRamp: 0,
+      burnRpm: S.red,
       tcSlip: 0, tcGain: 5,
       clBase: S.slider ? Math.round(S.slider[0] * 100) : 60, clLock: S.slider ? S.slider[1] : 0.9,
       nosDelay: 0.6, nosRamp: 0.5
@@ -625,6 +626,12 @@
     { key: 'launchRpm', label: 'Launch RPM (2-Step)', unit: 'rpm', step: 100, min: function (S) { return S.idle + 600; }, max: function (S) { return S.red - 200; },
       show: function (S) { return S.twostep > 0; }, req: 'Requires a 2-step launch control', group: 'Engine',
       help: 'Engine RPM held on the line. Higher = harder launch & more boost, but more wheelspin.' },
+    // a third rpm limit for the burnout box (Hondata / Haltech "3-step"):
+    // the ECU holds the revs there instead of bouncing off the main limiter
+    { key: 'burnRpm', label: 'Burnout Rev Limit', unit: 'rpm', step: 100, min: function (S) { return S.idle + 1500; }, max: function (S) { return S.red; },
+      show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU', group: 'Engine',
+      fmt: function (v, S) { return S && v >= S.red ? 'Off' : null; },
+      help: 'Holds the revs here in the burnout box instead of bouncing off the rev limiter: a steady burnout. Off = the main limiter.' },
     { key: 'launchThr', label: 'Launch Throttle', unit: '%', step: 5, min: function () { return 30; }, max: function () { return 100; },
       show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU', group: 'Engine',
       help: 'Throttle limit at the hit. Ramps to 100% over the ramp time below.' },
@@ -1052,6 +1059,23 @@
     return !!on;
   };
 
+  // how fast a tire comes up to heat in the burnout box: drag radials (thin,
+  // soft sidewalls and a thin tread) heat quickly and only want a light
+  // burnout; a big slick takes a good long one
+  Sim.burnHeat = function (tire) { return tire.kind === 'Drag Radial' ? 1.6 : tire.kind === 'Slick' ? 1 : 1.25; };
+  // a gear up in the burnout box (an automatic shifts itself as the wheels
+  // speed up; racers do most of the burnout in 2nd or 3rd)
+  Sim.prototype.burnShift = function () {
+    var S = this.S;
+    if (!this.burnMode || this.gear >= Sim.burnTop(S)) return false;
+    this.gear++;
+    if (S.trType !== 'auto') { this.burnDrop = true; }
+    this.events.push('shift');
+    return true;
+  };
+  // the highest gear for a burnout: high on a Powerglide, 2nd on a 3-speed,
+  // 3rd on anything with more gears
+  Sim.burnTop = function (S) { var n = S.ratios.length; return n <= 2 ? n - 1 : n === 3 ? 1 : 2; };
   Sim.prototype.shiftUp = function () {
     var S = this.S;
     if (!this.launched || this.shifting || this.gear >= S.ratios.length - 1 || this.crashed || this.blown) return false;
@@ -1116,6 +1140,9 @@
       }
     } else this.tcCut = 0;
     var pre = !this.launched && !this.burnMode;     // sitting on the brakes / transbrake
+    // the burnout rev limit: the ECU holds the revs with the throttle (no cut)
+    this.drvThr = thrIn;
+    if (this.burnMode && S.tune.burnRpm && S.tune.burnRpm < S.limit - 50) thrIn = Math.min(thrIn, clamp((S.tune.burnRpm - this.we * W2RPM) / 500 + 0.12, 0, 1));
     // An H-pattern shift: the driver is off the gas with the clutch in (an
     // engine left flat out on the limiter would dump the clutch in the next gear)
     if (this.shifting && S.trType === 'manual') thrIn = 0;
@@ -1265,11 +1292,11 @@
     var held = pre || this.finished && this.v < 0.5;
     if (this.burnMode) {
       this.v = 0;
-      if (thrIn < 0.1) this.ww *= Math.exp(-dt * 4);           // on the brake between hits
+      if (this.drvThr < 0.1) this.ww *= Math.exp(-dt * 4);     // on the brake between hits
       // clutch in until the revs come up (a driver revs it, then drops it)
       if (S.trType !== 'auto') {
-        if (thrIn < 0.25) { this.clT = 0; this.burnDrop = false; }
-        else if (!this.burnDrop) { if (this.we >= Math.min(S.red * 0.7, Math.max(S.tqRpm, S.idle + 2500)) * RPM2W) this.burnDrop = true; else this.clT = 0; }
+        if (this.drvThr < 0.25) { this.clT = 0; this.burnDrop = false; }
+        else if (!this.burnDrop) { if (this.we >= Math.min(S.red * 0.7, Math.max(S.tqRpm, S.idle + 2500), (S.tune.burnRpm || S.red) - 300) * RPM2W) this.burnDrop = true; else this.clT = 0; }
         // the tires hooked and it's bogging: clutch in, rev it, drop it again
         else if (this.we < (S.idle + 700) * RPM2W) { this.burnDrop = false; this.clT = 0; }
       }
@@ -1473,7 +1500,7 @@
       this.v = 0; this.a = 0; this.x = 0;
       if (tf) {
         this.slip = Math.max(0, tf.s); this.F = Fx;
-        this.tireT += Math.abs(Fx) * this.ww * r * dt * 1.1e-4 * (30 / S.tire.m);
+        this.tireT += Math.abs(Fx) * this.ww * r * dt * 1.1e-4 * (30 / S.tire.m) * Sim.burnHeat(S.tire);
         this.tireE += Math.abs(Fx) * this.ww * r * dt;
       }
     } else if (!this.launched) { this.slip = 0; this.a = 0; }

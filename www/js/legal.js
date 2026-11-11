@@ -59,7 +59,7 @@
   L.trip = function (inst, night) {
     var hv = L.haulFor(inst), out = { money: [], news: [], total: 0, how: hv };
     function pay(label, amt) { G.pay(amt); out.money.push([label, -amt]); out.total -= amt; }
-    if (hv === 'flatbed') { pay('Flatbed tow', L.FLATBED); return out; }
+    if (hv === 'flatbed') { pay('Flatbed tow', L.FLATBED); if (DR.Phone && !L.hasRig()) DR.Phone.send('ray', 'rig'); return out; }
     if (hv === 'rig') { pay('Truck & trailer (gas)', L.RIG_TRIP); return out; }
     var c = L.check(inst), chance = c.stop * (night ? 1.3 : 1);
     if (!c.pts || Math.random() >= chance) return out;
@@ -69,9 +69,9 @@
     // a ticket gets paid, even into the red
     G.pay(fine); out.total -= fine;
     seen.forEach(function (x) { out.money.push(['Ticket: ' + x.name, -x.fine]); });
-    out.news.push('PULLED OVER on the way: ' + seen.length + ' ticket' + (seen.length > 1 ? 's' : '') + ', ' + DR.money(fine) + '.');
+    out.news.push('PULLED OVER on the way: ' + seen.length + ' ticket' + (seen.length > 1 ? 's' : '') + ', ' + DR.money(fine) + '.' + (L.hasRig() ? ' Your truck & trailer would have avoided it.' : ' A truck & trailer (' + DR.money(L.RIG) + ') avoids this: nobody stops a car on a trailer.'));
     G.state.stats.tickets = (G.state.stats.tickets || 0) + 1; G.state.lastTicket = G.now ? G.now() : 0;
-    if (DR.Phone) DR.Phone.send('ray', 'ticket', { fine: fine });
+    if (DR.Phone) { DR.Phone.send('ray', 'ticket', { fine: fine }); if (!L.hasRig()) DR.Phone.send('ray', 'rig'); }
     G.save();
     return out;
   };
@@ -94,7 +94,15 @@
     opts.forEach(function (o) { var e = h('option', { value: o[0] }, o[1]); if (o[0] === 'drive' && why) e.disabled = true; sel.appendChild(e); });
     sel.value = cur;
     sel.addEventListener('change', function () { inst.haul = sel.value; G.save(); });
-    return h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' } }, h('span', { class: 'plvl' }, 'GETTING THERE'), sel,
+    // no rig yet: buy one right here, where the choice is made
+    var buy = L.hasRig() ? null : UI.btn('Buy truck & trailer ' + DR.money(L.RIG), function () {
+      UI.confirm('Buy a used 3/4-ton pickup and an open car trailer for ' + DR.money(L.RIG) + '? Tow any car to a race for ' + DR.money(L.RIG_TRIP) + ' of gas: no tow bill, no cop stops.', function () {
+        var w = L.buyRig(); if (w) return UI.toast(w);
+        inst.haul = 'rig'; G.save(); UI.toast('Truck & trailer bought: it\'s hitched up');
+        var row = buy.parentNode; if (row && row.parentNode) row.parentNode.replaceChild(L.haulPicker(inst), row);
+      }, 'Buy');
+    }, 'small' + (G.canAfford(L.RIG) ? '' : ' disabled'));
+    return h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' } }, h('span', { class: 'plvl' }, 'GETTING THERE'), sel, buy,
       c.items.length && !why ? h('span', { class: 'dim gsmall', title: c.items.map(function (x) { return x.name + ' ' + DR.money(x.fine); }).join('\n') }, c.items.length + ' thing' + (c.items.length > 1 ? 's' : '') + ' a cop could write up') : null);
   };
 })();

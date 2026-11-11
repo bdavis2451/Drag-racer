@@ -507,7 +507,7 @@
     function startBurnout() {
       if (phase !== 'pre') return;
       phase = 'burnout'; phaseT = 0;
-      you.lineLock = you.sim.burnout(true);
+      you.lineLock = you.sim.burnout(true); you.bsNoUp = false;
     }
     // Pull out of the box and creep into the beams. Each car does this on its
     // own; the tree comes down once both are staged.
@@ -519,13 +519,35 @@
       setMsg('', auto ? 'Tires are hot. Pulling up to the line...' : '');
       actLabel.textContent = 'LAUNCH'; actBtn.classList.remove('go');
     }
-    function beginRoll(r) { if (r.box === 'box' || r.box === 'burn') { r.box = 'roll'; r.rollT = 0; } }
+    function beginRoll(r) { if (r.box === 'box' || r.box === 'burn') { r.box = 'roll'; r.rollT = 0; r.from = r.off; } }
+    // AWD burnout: no line lock (the front wheels are driven too), so the car
+    // creeps through the water with all four spinning a little faster than
+    // it rolls: a short rolling burnout, less heat than a line-lock one
+    // an automatic (and any hired driver or rival) goes up a gear as the
+    // revs come up in the burnout, instead of sitting on the limiter in 1st
+    function burnShift(r, dt) {
+      var sim = r.sim, S = r.S;
+      if (!sim.burnMode) { r.bsT = 0; return; }
+      // (an automatic shifts on output speed, like it does on the street: the
+      // wheels spinning up to the shift point; or the revs at the limit)
+      var lim = Math.min(S.limit, S.tune.burnRpm || S.limit) - 250, line = sim.ww * S.ratios[sim.gear] * S.fd * 30 / Math.PI;
+      if (!r.bsNoUp && (sim.rpm() >= lim || line >= Math.min(lim, S.tune.shiftRpm || lim) * 0.9)) { r.bsT = (r.bsT || 0) + dt; if (r.bsT > 0.45) { sim.burnShift(); r.bsT = 0; } } else r.bsT = 0;
+      // not enough power to spin them in the higher gear: it kicks back down
+      // and stays there
+      if (sim.gear > 0 && sim.rpm() < Math.max(S.idle + 1200, lim * 0.55)) { r.bdT = (r.bdT || 0) + dt; if (r.bdT > 0.6) { sim.gear--; r.bsNoUp = true; r.bdT = 0; } } else r.bdT = 0;
+    }
+    function awdCreep(r, thr, dt) {
+      var lim = BOX_X + 7;
+      r.creepV = Math.max(0, Math.min(1.6 * thr, (r.creepV || 0) + dt * (thr > 0.05 ? 2 : -3)));
+      r.off = Math.min(lim, r.off + r.creepV * dt);
+      r.spinVis = (r.creepV + 7 * thr) / r.S.r;
+    }
     // roll from the box to the line: ease in, then creep through pre-stage
     function stepRoll(r, dt) {
       if (r.box !== 'roll') return;
       r.rollT += dt;
       var k = Math.min(1, r.rollT / 2.2), e = k < 0.75 ? (k / 0.75) * 0.93 : 0.93 + (k - 0.75) / 0.25 * 0.07;
-      r.off = BOX_X * (1 - e); r.burn = 0;
+      r.off = (r.from != null ? r.from : BOX_X) * (1 - e); r.burn = 0; r.spinVis = 0;
       r.wheelAng += dt * (k < 0.75 ? 6 : 1.5);
       tree.pre[r.lane] = k > 0.8;
       if (k >= 1) { r.off = 0; r.box = 'staged'; tree.staged[r.lane] = true; if (r === you || !opp || opp.box !== 'staged') A.beep(880, 0.05); }
@@ -628,19 +650,20 @@
         var tt = S.tire.topt, thr = playerThrottle();
         if (phase === 'burnout') {
           if (you.sim.burnMode) you.burn = burnAmt(you);
-          else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * dt; you.sim.tireE += S.peakHp * 745.7 * 0.25 * thr * dt; you.burn = thr * 0.5; }
+          else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * DR.Sim.burnHeat(S.tire) * dt; you.sim.tireE += S.peakHp * 745.7 * 0.25 * thr * dt; you.burn = thr * 0.5; awdCreep(you, thr, dt); }
           // coach the burnout off the tire temperature (sim mode: you judge
           // it by the smoke and the time on the gas)
           var tT = you.sim.tireT, msg;
           if (G.simMode()) msg = thr > 0.05 ? 'Spinning...' : you.spun ? 'Hit STAGE when you\'re ready.' : introSub;
           else if (tT > tt + 25) msg = 'Too hot! Ease off the gas.';
           else if (tT >= tt - 8) msg = thr > 0.05 ? 'Tires are in the window! Let off and hit STAGE.' : 'Tires are hot. Hit STAGE to pull up to the line.';
-          else if (thr > 0.05) { msg = 'Spinning... keep it pinned.'; you.spun = true; }
+          else if (thr > 0.05) { msg = S.tire.kind === 'Drag Radial' ? 'Spinning... radials heat fast: keep it short and light.' : S.tire.kind === 'Slick' ? 'Spinning... slicks want a good long burnout.' : 'Spinning... keep it pinned.'; you.spun = true; }
           else if (!you.spun) msg = introSub;
-          else msg = you.lineLock ? 'Hold GAS to spin the tires. Hit STAGE when they\'re hot.' : 'AWD: hold GAS to scrub heat in on the brakes. Hit STAGE when ready.';
+          else msg = you.lineLock ? 'Hold GAS to spin the tires. Hit STAGE when they\'re hot.' : 'AWD: no line lock. Hold GAS to roll through the water spinning all four. Hit STAGE when ready.';
           if (msg !== you.burnMsg) { you.burnMsg = msg; setMsg(vsLine, msg); }
         }
         stepSim(you, dt, thr, true);
+        if (phase === 'burnout' && (drvAI || (S.trType === 'auto' && !S.mvb))) burnShift(you, dt);
         stepRoll(you, dt);
         oppBox(dt);
         if (phase === 'stage' && you.box === 'staged') {
@@ -664,8 +687,8 @@
       } else if (opp.box === 'burn') {
         opp.burnT += dt;
         if (opp.sim.tireT < opp.burnTarget && opp.burnT < 6) {
-          if (opp.sim.burnout(true)) { stepSim(opp, dt, opp.burnT < 0.4 ? opp.burnT / 0.4 : 0.85, true); opp.burn = burnAmt(opp); }
-          else { opp.sim.tireT += DR.clamp(opp.S.peakHp / 250, 0.7, 2.6) * 8 * dt; opp.burn = 1; stepSim(opp, dt, 1, true); }
+          if (opp.sim.burnout(true)) { stepSim(opp, dt, opp.burnT < 0.4 ? opp.burnT / 0.4 : 0.85, true); burnShift(opp, dt); opp.burn = burnAmt(opp); }
+          else { opp.sim.tireT += DR.clamp(opp.S.peakHp / 250, 0.7, 2.6) * 8 * 0.6 * dt; opp.burn = 0.6; awdCreep(opp, 0.85, dt); stepSim(opp, dt, 0.85, true); }
         } else {
           opp.sim.burnout(false); opp.burn = 0; stepSim(opp, dt, 0, true);
           opp.coolT = (opp.coolT || 0) + dt;
@@ -834,7 +857,7 @@
       // rigid pitch only for wheelies; the body moves on its springs on top
       var pitch = sim.th, SUSP_VIS = 1.8;
       // wheel rotation
-      var spin = r.burn && !sim.burnMode ? 60 : sim.ww;
+      var spin = r.burn && !sim.burnMode ? (r.spinVis || 0) : sim.ww;
       r.wheelAng += spin * dt;
       if (sim.crashed) pitch = Math.min(1.6, (r.crashP = (r.crashP || sim.th) + dt * 2.5));
       DR.drawCar(ctx, spr, gx, gy, pitch, r.wheelAng, { barRad: r.S.barRad, brake: sim.brake, chute: Math.max(0, sim.chute || 0), t: clock, spin: spin, frontStill: sim.burnMode, fwd: r.S.drive === 'FWD',

@@ -2,6 +2,23 @@
 
 Short notes for testing, newest first.
 
+## Burnouts, 10-speed, setups, truck & trailer
+- Tune: a "⇉ all" button next to each setting puts it into every saved
+  setup (rev limiter once, not twice). Gear ratios and boost by gear now save
+  into the setup you're working on too.
+- New: 10R80 10-speed automatic ($6,500) and a Built one ($9,500, big power)
+  in the Transmission shop. It shifts itself (no manual valve body for it).
+- AWD burnouts: no more sitting still with four wheels spinning; the car
+  rolls slowly through the water spinning all four.
+- Automatics (and hired drivers and rivals) shift up in the burnout instead
+  of bouncing off the limiter in 1st; a weak car kicks back down.
+- Burnout Rev Limit (Tune > Engine, standalone ECU): holds a steady rpm in
+  the box. Drag radials heat quicker (short burnout), slicks want a long one.
+- Truck & trailer: buy it right on the race-day "Getting there" line; Ray
+  texts about it after your first tow or ticket; tickets mention it.
+- Try: the Mustang with the 10-speed; a burnout in an automatic, an AWD car,
+  and with the burnout limit set; a race day with no truck.
+
 ## Contracts, valve body, sound
 - Timeslip: after a career win, a line says whether it counted for your
   sponsor ("Counted for Junkyard Joe's: street races 1/2") or why not

@@ -569,6 +569,19 @@
     var rs = onReset ? h('button', { class: 'treset', title: 'Back to default', onclick: function (e) { e.stopPropagation(); onReset(); } }, '↺') : null;
     return h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, label, rs), vEl), inp);
   }
+  // copy one setting from the car into every saved setup (the ⇉ next to a
+  // setting): a rev limiter or a boost change goes into the street tune and
+  // the strip tune at once
+  function allSetupsBtn(inst, key, label) {
+    var setups = inst.setups || [];
+    if (!setups.length) return null;
+    return h('button', { class: 'treset tall', title: 'Put this setting in every saved setup', onclick: function (e) {
+      e.stopPropagation();
+      var v = inst.tune[key];
+      setups.forEach(function (st) { st.tune = st.tune || {}; if (v == null) delete st.tune[key]; else st.tune[key] = JSON.parse(JSON.stringify(v)); });
+      G.save(); UI.toast(label + ' set in all ' + setups.length + ' setup' + (setups.length > 1 ? 's' : ''));
+    } }, '⇉ all');
+  }
   UI.Tune = function () {
     memory(); remember();
     var inst = G.car(), S = G.spec(inst);
@@ -600,27 +613,29 @@
         var gg = h('div', { class: 'gear-grid' });
         S.tune.gears.forEach(function (g, gi) {
           gg.appendChild(slider('Gear ' + (gi + 1), g, 0.5, 4.5, 0.01, ':1', function (v) {
-            var arr = (inst.tune.gears || S.tune.gears).slice(); arr[gi] = v; inst.tune.gears = arr; G.save(); recalc();
+            var arr = (inst.tune.gears || S.tune.gears).slice(); arr[gi] = v; inst.tune.gears = arr; DR.syncSetup(inst); G.save(); recalc();
           }));
         });
         list.appendChild(h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, def.label,
-          inst.tune.gears ? h('button', { class: 'treset', title: 'Back to default', onclick: function () { delete inst.tune.gears; G.save(); UI.refresh(); } }, '↺') : null)), gg));
+          inst.tune.gears ? h('button', { class: 'treset', title: 'Back to default', onclick: function () { delete inst.tune.gears; DR.syncSetup(inst); G.save(); UI.refresh(); } }, '↺') : null, allSetupsBtn(inst, 'gears', def.label))), gg));
         return;
       }
       if (def.key === 'gearBoost') {
         var gb = h('div', { class: 'gear-grid' });
         S.tune.gearBoost.forEach(function (b, gi) {
           gb.appendChild(slider('Gear ' + (gi + 1), b, def.min(S), def.max(S), 0.5, 'psi', function (v) {
-            var arr = (inst.tune.gearBoost || S.tune.gearBoost).slice(); arr[gi] = v; inst.tune.gearBoost = arr; G.save(); recalc();
+            var arr = (inst.tune.gearBoost || S.tune.gearBoost).slice(); arr[gi] = v; inst.tune.gearBoost = arr; DR.syncSetup(inst); G.save(); recalc();
           }, function (v) { return v >= S.tune.boost ? 'Full (' + S.tune.boost + ')' : v.toFixed(1) + ' psi'; }));
         });
         list.appendChild(h('div', { class: 'tune-row' }, h('div', { class: 'lab' }, h('span', {}, def.label,
-          inst.tune.gearBoost ? h('button', { class: 'treset', title: 'Back to default', onclick: function () { delete inst.tune.gearBoost; G.save(); UI.refresh(); } }, '↺') : null)), gb,
+          inst.tune.gearBoost ? h('button', { class: 'treset', title: 'Back to default', onclick: function () { delete inst.tune.gearBoost; DR.syncSetup(inst); G.save(); UI.refresh(); } }, '↺') : null, allSetupsBtn(inst, 'gearBoost', def.label))), gb,
           h('div', { class: 'help' }, def.help)));
         return;
       }
-      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; DR.syncSetup(inst); G.save(); recalc(); }, def.fmt || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),
-        inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; G.save(); UI.refresh(); } : null);
+      var row = slider(def.label, S.tune[def.key], def.min(S), def.max(S), def.step, def.unit, function (v) { inst.tune[def.key] = v; DR.syncSetup(inst); G.save(); recalc(); }, (def.fmt ? function (v) { return def.fmt(v, S); } : null) || (def.key === 'tcSlip' ? function (v) { return v === 0 ? 'OFF' : null; } : null),
+        inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; DR.syncSetup(inst); G.save(); UI.refresh(); } : null);
+      var ab = allSetupsBtn(inst, def.key, def.label), labSpan = row.querySelector('.lab span');
+      if (ab && labSpan) labSpan.appendChild(ab);
       row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F); knock limit ' + S.knock + ' psi.' : '')));
       // jets: how the plugs read (any data logger brings a wideband: the
       // exact air/fuel ratio)

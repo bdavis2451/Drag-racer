@@ -9,16 +9,19 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **Playtest notes (Nov 11).** Options for tunes-in-all-setups, a 10-speed
-  automatic, AWD burnouts, burnouts shifting up, FWD high-power traction,
-  front/rear tire sections, finding the truck & trailer. See
-  `docs/features/playtest-nov.md`.
+- **Manual cars shifting in the burnout** and **picking auto or manual when
+  buying**: options in `docs/features/burnouts-10r80.md`.
 
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
   when it's running inside Facebook's browser (no sound there). Owner said
   not now (2026-11-10).
 
 ## Parked ideas
+
+- **AWD & FWD traction** (FWD falls apart at high power; 4-cylinder power
+  ceiling). Test results: `docs/features/awd-fwd-traction.md`.
+- **Wheels & tires rework** (front/rear sections by drive layout, more
+  options; owner sending screenshots). `docs/features/wheels-tires.md`.
 
 - **Diesel engines and upgrades rework.** Rework the diesel motors and
   their upgrade paths. Not started: research and talk first (owner,
@@ -57,6 +60,9 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- Nov 11 playtest: all-setups button, 10R80 (+built), AWD rolling burnout,
+  burnout upshift / rev limit / tire length, truck & trailer prompts: shipped.
 
 - Contract line on the timeslip, This Week keeps contract races, shifter /
   valve body split, iPhone sound default Full: shipped 2026-11-10.

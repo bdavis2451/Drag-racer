@@ -95,6 +95,11 @@ DR.TRANS = {
   a4:       { name: '4-Speed Automatic',         type: 'auto',   ratios: [3.06, 1.63, 1.00, 0.70],       shift: 0.28, maxTq: 550,  eff: 0.83, price: 1800, lu: true },
   a6:       { name: '6-Speed Automatic',         type: 'auto',   ratios: [4.03, 2.36, 1.53, 1.15, 0.85, 0.67], shift: 0.22, maxTq: 800,  eff: 0.84, price: 4000, lu: true },
   a8:       { name: '8-Speed Automatic',         type: 'auto',   ratios: [4.71, 3.14, 2.10, 1.67, 1.29, 1.00, 0.84, 0.67], shift: 0.14, maxTq: 1100, eff: 0.85, price: 7000, lu: true },
+  // Ford's 10R80 ('18-up Mustang GT, F-150): computer-shifted, so no
+  // manual valve body; the factory clutch packs hold ~600 rwhp, built ones
+  // (McLeod / Raybestos kits) ~1,500 hp
+  a10:      { name: '10-Speed Automatic (10R80)', type: 'auto',  ratios: [4.70, 2.99, 2.15, 1.77, 1.52, 1.28, 1.00, 0.85, 0.69, 0.64], shift: 0.10, maxTq: 900, eff: 0.85, price: 6500, lu: true, tcm: true },
+  a10_b:    { name: '10-Speed Automatic (10R80, Built)', type: 'auto', ratios: [4.70, 2.99, 2.15, 1.77, 1.52, 1.28, 1.00, 0.85, 0.69, 0.64], shift: 0.10, maxTq: 1800, eff: 0.85, price: 9500, lu: true, tcm: true },
   a3_400:   { name: '3-Speed Turbo 400 (Built)', type: 'auto',   ratios: [2.48, 1.48, 1.00],             shift: 0.20, maxTq: 2000, eff: 0.85, price: 3500 },
   pg2:      { name: 'Powerglide 2-Speed',        type: 'auto',   ratios: [1.76, 1.00],                   shift: 0.18, maxTq: 2600, eff: 0.87, price: 4500 },
   a2_pg:    { name: '2-Speed Powerglide',        type: 'auto',   ratios: [1.82, 1.00],                   shift: 0.30, maxTq: 450,  eff: 0.82, price: 900 },
@@ -130,7 +135,7 @@ DR.TRANS = {
   cl5:      { name: 'Clutchless 5-Speed (Pro Stock)', type: 'seq', ratios: [2.60, 1.90, 1.50, 1.22, 1.00], shift: 0.03, maxTq: 3200, eff: 0.92, price: 26000, adj: true },
   lenco5:   { name: 'Lenco 5-Speed Air-Shift',   type: 'seq',    ratios: [2.39, 1.69, 1.31, 1.12, 1.00], shift: 0.04, maxTq: 4500, eff: 0.91, price: 30000, adj: true }
 };
-DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'dog4', 'a4', 'a6', 'a8', 'a3_400', 'pg2', 'pg_pm', 'a3_pm', 'dct7', 'seq6', 'seq6_hd', 'cl5', 'lenco5',
+DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'dog4', 'a4', 'a6', 'a8', 'a10', 'a10_b', 'a3_400', 'pg2', 'pg_pm', 'a3_pm', 'dct7', 'seq6', 'seq6_hd', 'cl5', 'lenco5',
   'tx5', 'tx5_hd', 'tx6', 'tx6_hd', 'tx4a', 'txdct', 'txseq'];
 
 // ---------------------------------------------------------------------------

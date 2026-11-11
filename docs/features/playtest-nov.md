@@ -1,6 +1,7 @@
 # Playtest notes (Nov 11): options
 
-Status: **research done, nothing built.** Owner's notes from playing the
+Status: **decided Nov 11** (1C, 2 A+B+C, 3A, 4 A+B+D, 7 A+B+C; 5 and 6
+parked). Built in `burnouts-10r80.md`. Owner's notes from playing the
 tester's save. Each topic gives what we have now, what real racers do, then
 options (my pick marked).
 

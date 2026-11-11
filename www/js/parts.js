@@ -873,7 +873,7 @@
     if (!c) return true;
     var tr = DR.TRANS[DR.partId('trans', inst)];
     if (c.needsClutch) return tr.type !== 'auto';
-    if (c.needsConverter) return tr.type === 'auto';
+    if (c.needsConverter) return tr.type === 'auto' && !(cat === 'valvebody' && tr.tcm);
     if (c.needsFI) return DR.partId('fi', inst) !== 'none';
     if (c.needsTurbo) return DR.FI[DR.partId('fi', inst)].type === 'turbo';
     if (c.needsShifter) return tr.type === 'manual';
@@ -890,7 +890,7 @@
     var tr = DR.TRANS[DR.partId('trans', inst)];
     if (tr.type === 'manual') return DR.getOption('shifter', inst);
     if (tr.type !== 'auto') return null;
-    var p = inst.parts || {}, id = p.valvebody || VB_OF[p.shifter] || 'stock';
+    var p = inst.parts || {}, id = tr.tcm ? 'stock' : p.valvebody || VB_OF[p.shifter] || 'stock';
     return DR.getOption('valvebody', inst, id);
   };
   DR.VB_OF = VB_OF;
@@ -910,7 +910,8 @@
     var x = DR.TRANS[t];
     var kind = { manual: 'Manual', auto: 'Automatic', seq: 'Sequential', dct: 'Dual-clutch' }[x.type];
     return kind + ', ' + x.ratios.length + ' gears, ' + Math.round(x.shift * 1000) + ' ms shifts, holds ' + x.maxTq + ' Nm' +
-      (x.adj ? '. Adjustable gear ratios.' : '.') + (x.mount === 'T' ? ' A transaxle, for a sideways engine.' : '');
+      (x.adj ? '. Adjustable gear ratios.' : '.') + (x.mount === 'T' ? ' A transaxle, for a sideways engine.' : '') +
+      (x.tcm ? ' Computer-shifted: it always shifts itself (no manual valve body exists for it); a transbrake works.' : '');
   }
   function tireDesc(t) {
     var x = DR.TIRES[t];
