@@ -2,6 +2,18 @@
 
 Short notes for testing, newest first.
 
+## 2026-11-11 (later): shift a manual in the burnout
+
+- **Manual cars shift in the burnout.** While you hold GAS in the box, the
+  yellow button reads **SHIFT**: tap it for 2nd, then 3rd. Let off the gas
+  and it's **STAGE** again. Cars with a manual valve body (ratchet shifter)
+  shift the same way; regular automatics still shift themselves.
+- When the revs are up in 1st, the coach line says "Tap SHIFT for 2nd".
+
+**Try:** a manual car on slicks: hold GAS, tap SHIFT once or twice, let off,
+tap STAGE. **Look out for:** a STAGE tap that shifts instead (it only shifts
+while your finger is on the gas), or the button label not switching back.
+
 ## Burnouts, 10-speed, setups, truck & trailer
 - Tune: a "⇉ all" button next to each setting puts it into every saved
   setup (rev limiter once, not twice). Gear ratios and boost by gear now save

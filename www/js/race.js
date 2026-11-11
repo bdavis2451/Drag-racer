@@ -517,7 +517,7 @@
       you.sim.burnout(false); you.burn = 0;
       beginRoll(you);
       setMsg('', auto ? 'Tires are hot. Pulling up to the line...' : '');
-      actLabel.textContent = 'LAUNCH'; actBtn.classList.remove('go');
+      actLabel.textContent = 'LAUNCH'; actBtn.classList.remove('go'); actBtn.classList.remove('shift');
     }
     function beginRoll(r) { if (r.box === 'box' || r.box === 'burn') { r.box = 'roll'; r.rollT = 0; r.from = r.off; } }
     // AWD burnout: no line lock (the front wheels are driven too), so the car
@@ -646,6 +646,15 @@
       }
       if (phase === 'pre' || phase === 'burnout' || phase === 'stage') {
         if (phase === 'pre') { startBurnout(); actReady = Date.now() + 1000; }
+        // a manual (or a manual valve body) shifts itself in the burnout: on
+        // the gas the yellow button is SHIFT, off the gas it's STAGE
+        var canShift = phase === 'burnout' && !drvAI && you.sim.burnMode && !(S.trType === 'auto' && !S.mvb) && you.sim.gear < DR.Sim.burnTop(S);
+        var shiftNow = canShift && input.gasHeld;
+        if (act && shiftNow) { you.sim.burnShift(); act = false; }
+        if (phase === 'burnout') {
+          var wantLbl = shiftNow ? 'SHIFT' : 'STAGE';
+          if (actLabel.textContent !== wantLbl) { actLabel.textContent = wantLbl; actBtn.classList.toggle('shift', shiftNow); actBtn.classList.toggle('go', !shiftNow); }
+        }
         if (act && phase !== 'stage') startStaging();
         var tt = S.tire.topt, thr = playerThrottle();
         if (phase === 'burnout') {
@@ -657,6 +666,7 @@
           if (G.simMode()) msg = thr > 0.05 ? 'Spinning...' : you.spun ? 'Hit STAGE when you\'re ready.' : introSub;
           else if (tT > tt + 25) msg = 'Too hot! Ease off the gas.';
           else if (tT >= tt - 8) msg = thr > 0.05 ? 'Tires are in the window! Let off and hit STAGE.' : 'Tires are hot. Hit STAGE to pull up to the line.';
+          else if (thr > 0.05 && canShift && you.sim.gear === 0 && you.sim.rpm() > Math.min(S.limit, S.tune.burnRpm || S.limit) - 500) { msg = 'Tap SHIFT for 2nd to spin them faster.'; you.spun = true; }
           else if (thr > 0.05) { msg = S.tire.kind === 'Drag Radial' ? 'Spinning... radials heat fast: keep it short and light.' : S.tire.kind === 'Slick' ? 'Spinning... slicks want a good long burnout.' : 'Spinning... keep it pinned.'; you.spun = true; }
           else if (!you.spun) msg = introSub;
           else msg = you.lineLock ? 'Hold GAS to spin the tires. Hit STAGE when they\'re hot.' : 'AWD: no line lock. Hold GAS to roll through the water spinning all four. Hit STAGE when ready.';

@@ -28,7 +28,12 @@ From the Nov 11 playtest notes (`playtest-nov.md`). Owner picks: 1C, 2 A+B+C,
   first time you pay a flatbed or get a ticket; the ticket line on the slip
   says a truck & trailer avoids it.
 
-## Open question 1: manual cars shifting in the burnout (owner asked for options)
+## Question 1: manual cars shifting in the burnout: **decided a, shipped**
+Owner picked **a**. On the gas the yellow button is SHIFT (up to the burnout
+top gear, then STAGE again); off the gas it's STAGE. Applies to manuals and
+a manual valve body; a coach line suggests 2nd once 1st is near the limit.
+Code: race.js `update()` (`canShift` / `shiftNow`), Sim `burnShift`. Test:
+scratchpad `scr/burnshift.js`. Options that were offered:
 The yellow button is STAGE in the box. Options:
 - **a. One button that changes with the gas:** holding GAS it reads SHIFT (tap
   = next gear); off the gas it reads STAGE. You never stage on the gas, so
@@ -38,10 +43,8 @@ The yellow button is STAGE in the box. Options:
 - **d. Pick the burnout gear on the Tune screen** (1st / 2nd / 3rd): no
   shifting in the box.
 - **e. Swipe up on the gas pedal** to shift.
-Until decided: a player-driven manual stays in 1st (the burnout limiter
-already stops the bouncing).
 
-## Open question 2: picking auto or manual when buying (2B)
+## Question 2: picking auto or manual when buying (2B): **owner picked A** (a choice in the Buy pop-up); car list and prices to confirm
 **Now:** the dealer's Buy is a yes/no pop-up, so there's no choice.
 
 **Options for the screen:**
