@@ -9,6 +9,11 @@ the top of each section.
 
 ## Waiting on a yes or no
 
+- **Playtest notes (Nov 11).** Options for tunes-in-all-setups, a 10-speed
+  automatic, AWD burnouts, burnouts shifting up, FWD high-power traction,
+  front/rear tire sections, finding the truck & trailer. See
+  `docs/features/playtest-nov.md`.
+
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
   when it's running inside Facebook's browser (no sound there). Owner said
   not now (2026-11-10).
