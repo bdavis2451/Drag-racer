@@ -24,8 +24,8 @@ the top of each section.
   options; owner sending screenshots). `docs/features/wheels-tires.md`.
 
 - **Diesel engines and upgrades rework.** Rework the diesel motors and
-  their upgrade paths. Not started: research and talk first (owner,
-  2026-11-10).
+  their upgrade paths. Research and test results done (Nov 11), options
+  waiting on the owner: `docs/features/diesel.md`.
 
 - **Ghost duels (online step 1).** Race a friend's recorded run from a
   share link. Plan and 4 open questions in `docs/features/ghost-duels.md`.
