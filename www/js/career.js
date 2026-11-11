@@ -412,11 +412,13 @@
     var car = DR.CARS[carId];
     return car.cat !== 'Pro' && G.carUnlocked(carId) && car.price <= DR.SPONSOR_CAR_CAP[Math.min(C().stage, DR.SPONSOR_CAR_CAP.length - 1)];
   };
-  G.claimFreeCar = function (carId) {
+  // trId: the other factory gearbox (DR.TRANS_CHOICE): the sponsor pays for it
+  G.claimFreeCar = function (carId, trId) {
     var c = C();
     if (!c.freeCars || !G.slotFree() || !G.sponsorCarOk(carId)) return false;
     c.freeCars--;
-    var inst = G.newInst(carId);
+    var inst = G.newInst(carId), ch = G.transChoice(carId, trId);
+    if (ch) inst.facTrans = ch[0];
     inst.spent = 0;   // the sponsor paid: it sells for its parts only
     G.state.cars.push(inst); G.state.active = inst.uid; G.save();
     return inst;

@@ -15,6 +15,8 @@ Short notes for testing, newest first.
   real option price (e.g. '18 Mustang GT 10-speed auto +$1,595, Hellcat
   6-speed manual -$1,995, Chevelle Turbo 400 auto +$250). The one you pick is
   the car's factory gearbox. Cars you already own don't change.
+- **Free sponsor car:** the same gearbox choice, and your sponsor pays for
+  either one.
 
 **Try:** a manual car on slicks: hold GAS, tap SHIFT once or twice, let off,
 tap STAGE. **Look out for:** a STAGE tap that shifts instead (it only shifts

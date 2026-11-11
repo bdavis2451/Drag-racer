@@ -100,6 +100,7 @@ Beetle, Willys; Monte SS, GNX, Lightning, GT-R, Aventador, race cars).
   the "(Factory)" label use it; TX_EQUIV for the new boxes.
 - game.js `G.transChoice`, `G.buyCar(carId, trId)` sets `inst.facTrans` and
   adds the price difference to `spent`.
+- Free sponsor car: `buyPopup(id, true)`, `G.claimFreeCar(carId, trId)`: either box, no charge (owner, Nov 11).
 - screens.js `buyPopup(id)` / `boxLine(t)`; style.css `.boxpick`/`.boxopt`.
 - Fair passes (DR.simulate, median of 3), standard vs other box: '18 GT 12.54
   / 12.09, Hellcat 11.66 / 12.00, Chevelle 13.51 / 13.64, Bel Air 16.93 /

@@ -923,7 +923,7 @@
               DR.Race.start({ mode: 'test', inst: td, dist: DR.QUARTER, theme: 'strip', grip: 1 });
             }, 'small'),
             locked ? h('span', { class: 'tag' }, '🔒 ' + G.carUnlockWhere(id)) : G.freeCars() && G.slotFree() && G.sponsorCarOk(id) ? btn('Take free', function () {
-              UI.confirm('Take the ' + car.name + ' as your free sponsor car?', function () { G.claimFreeCar(id); UI.toast('Your sponsor bought you the ' + car.name + '!'); UI.show(UI.Garage); }, 'Take it');
+              buyPopup(id, true);
             }, 'go') : !G.slotFree() ? btn('Garage full', function () {
               UI.toast('All ' + G.carSlots() + ' bays at ' + G.home().name + ' are taken. Move somewhere bigger (My Cars > Home) or sell a car.');
             }, 'disabled') : btn('Buy', function () {
@@ -939,11 +939,17 @@
     var T = DR.TRANS[t], n = T.ratios.length + '-speed ';
     return T.type === 'manual' ? [n + 'manual', 'You shift, with a clutch.'] : T.type === 'dct' ? [n + 'dual-clutch', 'Shifts itself, very quickly.'] : [n + 'automatic', 'Shifts itself. The torque converter makes launches easier.'];
   }
-  function buyPopup(id) {
+  // free: the sponsor's free car (either gearbox, no charge)
+  function buyPopup(id, free) {
     var car = DR.CARS[id], choice = DR.TRANS_CHOICE[id] || [], pick = null;
-    if (!choice.length) return UI.confirm('Buy the ' + car.name + ' for ' + DR.money(car.price) + '?', function () { G.buyCar(id); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage); }, 'Buy');
+    function done() {
+      if (free) { G.claimFreeCar(id, pick); UI.toast('Your sponsor bought you the ' + car.name + '!'); }
+      else { G.buyCar(id, pick); A.cash(); UI.toast('You bought the ' + car.name + '!'); }
+      UI.show(UI.Garage);
+    }
+    if (!choice.length) return free ? UI.confirm('Take the ' + car.name + ' as your free sponsor car?', done, 'Take it') : UI.confirm('Buy the ' + car.name + ' for ' + DR.money(car.price) + '?', done, 'Buy');
     var opts = [[null, 0]].concat(choice), rows = h('div', { class: 'boxpick' }), q = h('p', { class: 'pix' }), buyB;
-    function price() { var c = G.transChoice(id, pick); return car.price + (c ? c[1] : 0); }
+    function price() { var c = G.transChoice(id, pick); return free ? 0 : car.price + (c ? c[1] : 0); }
     function draw() {
       rows.innerHTML = '';
       opts.forEach(function (o) {
@@ -951,17 +957,17 @@
         rows.appendChild(h('div', { class: 'boxopt' + (on ? ' on' : ''), onclick: function () { pick = o[0]; draw(); } },
           h('span', { class: 'boxdot' }, on ? '●' : '○'),
           h('span', { class: 'boxtxt' }, h('b', {}, bl[0]), h('span', { class: 'gsmall dim' }, ' ' + bl[1])),
-          h('span', { class: 'boxp' + (o[1] < 0 ? ' good' : '') }, !o[0] ? 'Standard' : o[1] > 0 ? '+' + DR.money(o[1]) : o[1] < 0 ? '-' + DR.money(-o[1]) : 'No charge')));
+          h('span', { class: 'boxp' + (o[1] < 0 || free ? ' good' : '') }, !o[0] ? 'Standard' : free ? 'Free' : o[1] > 0 ? '+' + DR.money(o[1]) : o[1] < 0 ? '-' + DR.money(-o[1]) : 'No charge')));
       });
-      q.textContent = 'Buy the ' + car.name + ' for ' + DR.money(price()) + '?';
+      q.textContent = free ? 'Take the ' + car.name + ' as your free sponsor car?' : 'Buy the ' + car.name + ' for ' + DR.money(price()) + '?';
       if (buyB) buyB.classList.toggle('disabled', !G.canAfford(price()));
     }
-    var close = UI.modal([q, h('div', { class: 'gsmall dim' }, 'Gearbox: pick how it comes from the factory'), rows,
+    var close = UI.modal([q, h('div', { class: 'gsmall dim' }, free ? 'Gearbox: pick how it comes from the factory (your sponsor pays for either)' : 'Gearbox: pick how it comes from the factory'), rows,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '10px' } },
         btn('Cancel', function () { close(); }),
-        buyB = btn('Buy', function () {
+        buyB = btn(free ? 'Take it' : 'Buy', function () {
           if (!G.canAfford(price())) return UI.toast('Not enough money');
-          close(); G.buyCar(id, pick); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage);
+          close(); done();
         }, 'primary'))]);
     draw();
   }
