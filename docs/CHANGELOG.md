@@ -2,7 +2,7 @@
 
 Short notes for testing, newest first.
 
-## 2026-11-11 (later): shift a manual in the burnout
+## Manual burnout shifting, pick your gearbox at the dealer
 
 - **Manual cars shift in the burnout.** While you hold GAS in the box, the
   yellow button reads **SHIFT**: tap it for 2nd, then 3rd. Let off the gas
@@ -10,9 +10,16 @@ Short notes for testing, newest first.
   shift the same way; regular automatics still shift themselves.
 - When the revs are up in 1st, the coach line says "Tap SHIFT for 2nd".
 
+- **Dealer: pick the gearbox.** About 20 cars that came from the factory
+  with a manual or an automatic now ask which one when you tap Buy, with the
+  real option price (e.g. '18 Mustang GT 10-speed auto +$1,595, Hellcat
+  6-speed manual -$1,995, Chevelle Turbo 400 auto +$250). The one you pick is
+  the car's factory gearbox. Cars you already own don't change.
+
 **Try:** a manual car on slicks: hold GAS, tap SHIFT once or twice, let off,
 tap STAGE. **Look out for:** a STAGE tap that shifts instead (it only shifts
-while your finger is on the gas), or the button label not switching back.
+while your finger is on the gas), or the button label not switching back. Buy a car with the other gearbox
+and check Upgrade > Transmission says it's the factory one.
 
 ## Burnouts, 10-speed, setups, truck & trailer
 - Tune: a "⇉ all" button next to each setting puts it into every saved

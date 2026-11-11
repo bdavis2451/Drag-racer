@@ -272,11 +272,14 @@
   // Garage slots: home.js replaces these with the bays of where you live
   G.carSlots = function () { var c = G.state.career || {}, n = 0; for (var k in c.sponsor || {}) if (c.sponsor[k].paid) n++; return 1 + n; };
   G.slotFree = function () { return G.state.cars.length < G.carSlots(); };
-  G.buyCar = function (carId) {
-    var p = DR.CARS[carId].price;
+  // trId: the other factory gearbox picked at the dealer (DR.TRANS_CHOICE)
+  G.transChoice = function (carId, trId) { return (DR.TRANS_CHOICE[carId] || []).filter(function (c) { return c[0] === trId; })[0] || null; };
+  G.buyCar = function (carId, trId) {
+    var ch = G.transChoice(carId, trId), p = DR.CARS[carId].price + (ch ? ch[1] : 0);
     if (!G.canAfford(p) || !G.slotFree()) return false;
     G.pay(p);
     var inst = G.newInst(carId);
+    if (ch) { inst.facTrans = ch[0]; inst.spent = p; }
     G.state.cars.push(inst); G.state.active = inst.uid; G.save();
     return inst;
   };

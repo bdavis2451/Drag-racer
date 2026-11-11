@@ -9,9 +9,11 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **Manual cars shifting in the burnout** and **picking auto or manual when
-  buying**: options in `docs/features/burnouts-10r80.md`.
-
+- **Ram 2500 Cummins with a manual (G56)**: waiting on a yes/no. The real
+  manual truck had the engine detuned to 660 lb-ft so the G56 could hold it;
+  needs a detuned engine or a G56 that holds the full torque.
+- **Free sponsor car and the gearbox choice**: the free car still comes with
+  the standard box. Offer the choice (sponsor pays the difference)? Waiting.
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
   when it's running inside Facebook's browser (no sound there). Owner said
   not now (2026-11-10).
@@ -63,6 +65,8 @@ the top of each section.
 
 - Nov 11 playtest: all-setups button, 10R80 (+built), AWD rolling burnout,
   burnout upshift / rev limit / tire length, truck & trailer prompts: shipped.
+- Manual burnout shifting (SHIFT on the gas, STAGE off it) and the dealer
+  gearbox choice (Buy pop-up, real option prices): shipped.
 
 - Contract line on the timeslip, This Week keeps contract races, shifter /
   valve body split, iPhone sound default Full: shipped 2026-11-10.

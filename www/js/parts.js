@@ -666,6 +666,7 @@
   // the nearest box of the other kind (rear-drive box -> transaxle and back)
   var TX_EQUIV = { m5_light: 'tx5', m5_t5_4: 'tx5', m5_t5_v6: 'tx5', m5_t5_v8: 'tx5', m5_hd: 'tx5_hd', m4_cl: 'tx5_hd', m6: 'tx6', m6_hd: 'tx6_hd',
     a4: 'tx4a', a6: 'tx4a', a4_hd: 'tx4a', a6_hd: 'tx4a', m6_tr: 'tx6_hd', a8: 'tx4a', a3_400: 'tx4a', pg2: 'tx4a', a2_pg: 'tx4a', dct6: 'txdct', dct7: 'txdct', seq6: 'txseq', lenco5: 'txseq', pg_pm: 'tx4a', a3_pm: 'tx4a', dog4: 'tx6_hd', seq6_hd: 'txseq', cl5: 'txseq',
+    a5_z: 'tx4a', a3_th: 'tx4a', a3_727: 'tx4a', m3_col: 'tx5', m5_nv: 'tx5', a10: 'tx4a', a10_b: 'tx4a',
     tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6', tx6_hd: 'm6_hd', tx4a: 'a4', txdct: 'dct7', txseq: 'seq6' };
   DR.transEquiv = function (id) { return TX_EQUIV[id] || id; };
   // a build (an opponent's, an old save's) with a gearbox that can't fit
@@ -676,10 +677,12 @@
     return inst;
   };
   // Stock option id for a category on this car instance.
+  // the gearbox the car came with: the one picked at the dealer, or the car's
+  DR.facTrans = function (inst) { var car = DR.CARS[inst.carId]; return inst.facTrans && DR.TRANS[inst.facTrans] ? inst.facTrans : car.trans; };
   DR.stockPart = function (cat, inst) {
     var car = DR.CARS[inst.carId];
     if (cat === 'engine') return car.engine;
-    if (cat === 'trans') return DR.converted(inst) && DR.TX_REAR[car.trans] ? DR.TX_REAR[car.trans] : car.trans;
+    if (cat === 'trans') { var ft = DR.facTrans(inst); return DR.converted(inst) && DR.TX_REAR[ft] ? DR.TX_REAR[ft] : ft; }
     if (cat === 'rtires') return car.tire;
     if (cat === 'diff') return car.diff;
     if (cat === 'fi') { var e = DR.ENGINES[inst.engine || car.engine]; return e.fi ? e.fi.part : 'none'; }
@@ -714,7 +717,7 @@
     }
     if (cat === 'trans') {
       var fac = DR.stockPart('trans', inst);
-      list.push({ id: fac, name: DR.TRANS[fac].name + (fac === car.trans ? ' (Factory)' : ' (with the conversion)'), price: 0, desc: transDesc(fac) });
+      list.push({ id: fac, name: DR.TRANS[fac].name + (fac === DR.facTrans(inst) ? ' (Factory)' : ' (with the conversion)'), price: 0, desc: transDesc(fac) });
       DR.TRANS_SHOP.forEach(function (t) { if (t !== fac && DR.transFits(inst, t)) list.push({ id: t, name: DR.TRANS[t].name, price: DR.TRANS[t].price, desc: transDesc(t) }); });
       return list;
     }

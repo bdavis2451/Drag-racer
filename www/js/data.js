@@ -110,6 +110,12 @@ DR.TRANS = {
   m6_tr:    { name: '6-Speed Manual (TR6060)',   type: 'manual', ratios: [2.26, 1.58, 1.19, 1.00, 0.77, 0.63], shift: 0.33, maxTq: 950,  eff: 0.86, price: 4500 },
   a4_hd:    { name: '4-Speed Automatic HD (4R100)', type: 'auto', ratios: [2.71, 1.54, 1.00, 0.71],    shift: 0.28, maxTq: 900,  eff: 0.83, price: 2800, lu: true },
   a6_hd:    { name: '6-Speed Automatic HD (68RFE)', type: 'auto', ratios: [3.23, 1.84, 1.41, 1.00, 0.82, 0.63], shift: 0.24, maxTq: 1600, eff: 0.83, price: 6000, lu: true },
+  // factory boxes offered only at the dealer (the other choice when buying)
+  a5_z:     { name: '5-Speed Automatic (RE5R05A)', type: 'auto', ratios: [3.83, 2.36, 1.53, 1.00, 0.83], shift: 0.30, maxTq: 650, eff: 0.83, price: 2500, lu: true },
+  a3_th:    { name: '3-Speed Automatic (Turbo 400)', type: 'auto', ratios: [2.48, 1.48, 1.00],         shift: 0.30, maxTq: 900, eff: 0.83, price: 1500 },
+  a3_727:   { name: '3-Speed Automatic (TorqueFlite 727)', type: 'auto', ratios: [2.45, 1.45, 1.00],   shift: 0.30, maxTq: 900, eff: 0.83, price: 1500 },
+  m3_col:   { name: '3-Speed Manual (Column Shift)', type: 'manual', ratios: [2.47, 1.53, 1.00],       shift: 0.55, maxTq: 500, eff: 0.88, price: 600 },
+  m5_nv:    { name: '5-Speed Manual (NV3500)',   type: 'manual', ratios: [4.02, 2.32, 1.40, 1.00, 0.73], shift: 0.45, maxTq: 450, eff: 0.86, price: 1800 },
   // Transaxles: gearbox and differential in one case, for an engine that
   // sits sideways (front-drive, and AWD cars built from them). Smaller
   // gears and a diff in the case: they hold less than a rear-drive box.
@@ -134,6 +140,17 @@ DR.TRANS = {
   seq6_hd:  { name: 'Heavy-Duty 6-Speed Sequential', type: 'seq', ratios: [2.66, 1.86, 1.43, 1.17, 1.00, 0.86], shift: 0.06, maxTq: 2400, eff: 0.90, price: 22000, adj: true },
   cl5:      { name: 'Clutchless 5-Speed (Pro Stock)', type: 'seq', ratios: [2.60, 1.90, 1.50, 1.22, 1.00], shift: 0.03, maxTq: 3200, eff: 0.92, price: 26000, adj: true },
   lenco5:   { name: 'Lenco 5-Speed Air-Shift',   type: 'seq',    ratios: [2.39, 1.69, 1.31, 1.12, 1.00], shift: 0.04, maxTq: 4500, eff: 0.91, price: 30000, adj: true }
+};
+// The other gearbox a car could be ordered with, and what the factory
+// charged for it over (or under) the one the game gives it
+DR.TRANS_CHOICE = {
+  stang15: [['a10', 1595]], fox: [['a4', 600]], fox23: [['a4', 600]],
+  camaro6: [['a4', 750]], camaro: [['a4', 750]], vette5: [['a4', 0]],
+  camss: [['m6_tr', -1185]], hellcat: [['m6_tr', -1995]], supra: [['a4', 0]],
+  ronin: [['tx4a', 800]], pip: [['tx4a', 800]], mira: [['a4', 900]], silvia: [['a4', 900]], rx7: [['a4', 900]],
+  volta: [['txdct', 1100]], z35: [['a5_z', 1000]],
+  chevelle: [['a3_th', 250]], cuda: [['a3_727', 250]], charger: [['m4_cl', 0]], nova: [['m4_cl', 0]], belair: [['m3_col', -190]],
+  hauler: [['m5_nv', -900]]
 };
 DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'dog4', 'a4', 'a6', 'a8', 'a10', 'a10_b', 'a3_400', 'pg2', 'pg_pm', 'a3_pm', 'dct7', 'seq6', 'seq6_hd', 'cl5', 'lenco5',
   'tx5', 'tx5_hd', 'tx6', 'tx6_hd', 'tx4a', 'txdct', 'txseq'];
@@ -276,7 +293,7 @@ Object.keys(DR.CAR_FIT).forEach(function (id) { var c = DR.CARS[id], f = DR.CAR_
 // A transverse car's factory gearbox is a transaxle; when one is converted
 // to rear or all-wheel drive it gets the matching rear-drive box.
 DR.TX_FOR = { m5_light: 'tx5', m5_hd: 'tx5_hd', m6: 'tx6' };
-DR.TX_REAR = { tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6' };
+DR.TX_REAR = { tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6', tx4a: 'a4', txdct: 'dct7' };
 Object.keys(DR.CARS).forEach(function (id) { var c = DR.CARS[id]; if (c.mount === 'T' && DR.TX_FOR[c.trans]) c.trans = DR.TX_FOR[c.trans]; });
 // Dealer tabs, in rail order.
 DR.CAR_CATS =['Compact', 'JDM', 'Euro', 'Muscle', 'Classic', 'Truck', 'Pro'];

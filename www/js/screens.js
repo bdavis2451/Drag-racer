@@ -928,10 +928,43 @@
               UI.toast('All ' + G.carSlots() + ' bays at ' + G.home().name + ' are taken. Move somewhere bigger (My Cars > Home) or sell a car.');
             }, 'disabled') : btn('Buy', function () {
               if (!G.canAfford(car.price)) return UI.toast('Not enough money');
-              UI.confirm('Buy the ' + car.name + ' for ' + DR.money(car.price) + '?', function () { G.buyCar(id); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage); }, 'Buy');
+              buyPopup(id);
             }, 'go' + (G.canAfford(car.price) ? '' : ' disabled')))),
         strip)));
   };
+
+  // the Buy pop-up: a car that was sold with a manual or an automatic asks
+  // which one, with what the factory charged for the other
+  function boxLine(t) {
+    var T = DR.TRANS[t], n = T.ratios.length + '-speed ';
+    return T.type === 'manual' ? [n + 'manual', 'You shift, with a clutch.'] : T.type === 'dct' ? [n + 'dual-clutch', 'Shifts itself, very quickly.'] : [n + 'automatic', 'Shifts itself. The torque converter makes launches easier.'];
+  }
+  function buyPopup(id) {
+    var car = DR.CARS[id], choice = DR.TRANS_CHOICE[id] || [], pick = null;
+    if (!choice.length) return UI.confirm('Buy the ' + car.name + ' for ' + DR.money(car.price) + '?', function () { G.buyCar(id); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage); }, 'Buy');
+    var opts = [[null, 0]].concat(choice), rows = h('div', { class: 'boxpick' }), q = h('p', { class: 'pix' }), buyB;
+    function price() { var c = G.transChoice(id, pick); return car.price + (c ? c[1] : 0); }
+    function draw() {
+      rows.innerHTML = '';
+      opts.forEach(function (o) {
+        var t = o[0] || car.trans, bl = boxLine(t), on = o[0] === pick;
+        rows.appendChild(h('div', { class: 'boxopt' + (on ? ' on' : ''), onclick: function () { pick = o[0]; draw(); } },
+          h('span', { class: 'boxdot' }, on ? '●' : '○'),
+          h('span', { class: 'boxtxt' }, h('b', {}, bl[0]), h('span', { class: 'gsmall dim' }, ' ' + bl[1])),
+          h('span', { class: 'boxp' + (o[1] < 0 ? ' good' : '') }, !o[0] ? 'Standard' : o[1] > 0 ? '+' + DR.money(o[1]) : o[1] < 0 ? '-' + DR.money(-o[1]) : 'No charge')));
+      });
+      q.textContent = 'Buy the ' + car.name + ' for ' + DR.money(price()) + '?';
+      if (buyB) buyB.classList.toggle('disabled', !G.canAfford(price()));
+    }
+    var close = UI.modal([q, h('div', { class: 'gsmall dim' }, 'Gearbox: pick how it comes from the factory'), rows,
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '10px' } },
+        btn('Cancel', function () { close(); }),
+        buyB = btn('Buy', function () {
+          if (!G.canAfford(price())) return UI.toast('Not enough money');
+          close(); G.buyCar(id, pick); A.cash(); UI.toast('You bought the ' + car.name + '!'); UI.show(UI.Garage);
+        }, 'primary'))]);
+    draw();
+  }
 
   // ---------------------------------------------------------------- MY CARS
   UI.Cars = function () {

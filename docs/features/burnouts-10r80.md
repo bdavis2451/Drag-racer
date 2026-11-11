@@ -1,6 +1,6 @@
 # Feature: burnouts, 10-speed auto, all-setups button, truck & trailer
 
-Status: **first part shipped 2026-11-11**; two open questions (below).
+Status: **shipped 2026-11-11** (both questions decided and built; Ram manual held back, see below).
 From the Nov 11 playtest notes (`playtest-nov.md`). Owner picks: 1C, 2 A+B+C,
 3A, 4 A+B+D, 7 A+B+C; 5 and 6 parked (`awd-fwd-traction.md`, `wheels-tires.md`).
 
@@ -56,32 +56,55 @@ The yellow button is STAGE in the box. Options:
 - **C. No choice when buying:** the other factory box shows in the
   Transmission shop as "(Factory option)" at a discount.
 
-**Cars that came with both (research, from memory: verify before building):**
-| Car | Manual (game) | Optional automatic |
-|---|---|---|
-| '18 Mustang GT | MT82 6-speed | 10R80 10-speed |
-| '89 Mustang GT / LX 2.3 | T5 5-speed | AOD / A4LD 4-speed |
-| '98 Camaro V6 / Z28 | T5 / T56 | 4L60E 4-speed |
-| '12 Camaro SS (game: auto) | TR6060 6-speed | 6L80 (factory now) |
-| Supra Mk4 Turbo | V160 6-speed | A340 4-speed |
-| Civic hatch, Metro, Miata, S14, RX-7 FD | 5-speed | 3- or 4-speed auto |
-| 350Z | 6-speed | 5-speed auto |
-| Golf GTI Mk5 | 6-speed | 6-speed DSG |
-| BMW M3 E46 | 6-speed | SMG (sequential) |
-| 911 Turbo 997 (game: DCT) | 6-speed manual | (Tiptronic/PDK) |
-| Corvette C5 | T56 6-speed | 4L60E |
-| Hellcat (game: auto) | TR6060 6-speed | 8-speed (factory now) |
-| Nova SS '68 (game: auto) | Muncie 4-speed | TH400 / Powerglide |
-| Chevelle SS '70, 'Cuda '70 (game: 4-speed) | 4-speed | TH400 / 727 |
-| Charger R/T '69 (game: auto) | 4-speed | 727 TorqueFlite |
-| Bel Air '57 (game: Powerglide) | 3-speed | Powerglide |
-| C1500 '88-98 (game: auto) | 5-speed | 4L60E |
-| Ram 2500 Cummins (game: auto) | G56 6-speed | 68RFE |
-Manual-only in real life: Neon R/T, Integra Type R, Cobalt SS, S2000, Evo IX,
-STI, R34, Z06, Viper, Cobra '03. Automatic-only: Monte SS, GNX, Lightning,
-GT-R (DCT), Aventador.
-Some need a new factory box in the game: a stock 3-speed TH400 / 727, a 5-speed
-auto (350Z), the A340 / AOD (can use the 4-speed auto).
+## Plan for 2A: auto or manual in the Buy pop-up: **owner picked all four groups, real prices; shipped**
+**How it looks:** the dealer's Buy pop-up gets two buttons under the price,
+e.g. **6-speed manual** / **10-speed automatic +$1,595**, with one plain line
+each ("you shift" / "shifts itself, easier launches"). The factory box is
+picked by default. Cars with only one real gearbox show no choice.
+**Prices:** the real factory option price (the extra-cost box adds it; a
+cheaper box takes it off). Checked: '18 GT 10-speed +$1,595 (Digital
+Trends, cars.com); Hellcat 8-speed +$1,995 over the manual (TrueDelta).
+Others from period price lists, rounded.
+**Saves and rivals:** owned cars keep their gearbox; rivals don't change.
+The box you didn't pick is still in the Transmission shop as now.
+
+| Group | Car (game box now) | Other choice | Price | New gearbox needed? |
+|---|---|---|---|---|
+| A. Modern V8s | '18 Mustang GT (6-spd manual) | 10R80 10-speed auto | +$1,595 | no |
+| | '89 Mustang GT / LX 2.3 (5-spd) | 4-speed auto (AOD) | +$600 | no (4-speed auto) |
+| | '98 Camaro V6 / Z28 (5-spd / 6-spd) | 4-speed auto (4L60E) | +$750 | no |
+| | Corvette C5 (6-spd) | 4-speed auto (4L60E) | +$0 (auto was standard) | no |
+| | '12 Camaro SS (6-spd auto) | 6-speed manual (TR6060) | -$1,185 | no |
+| | Hellcat (8-spd auto) | 6-speed manual (TR6060) | -$1,995 | no |
+| | Supra Turbo (6-spd) | 4-speed auto | +$0 | no |
+| B. Imports | Civic, Metro (5-spd FWD) | 4-speed auto transaxle | +$800 | no |
+| | Miata, S14, RX-7 FD (5-spd) | 4-speed auto | +$900 | no |
+| | Golf GTI (6-spd) | 6-speed DSG | +$1,100 | no |
+| | 350Z (6-spd) | 5-speed auto | +$1,000 | yes (5-speed auto) |
+| C. Muscle | Chevelle SS, 'Cuda (4-spd) | 3-speed auto (TH400 / 727) | +$250 | yes (stock 3-speed auto) |
+| | Charger R/T (built TH400) | 4-speed manual | +$0 | no |
+| | Nova SS (4-spd auto) | 4-speed manual | +$0 | no |
+| | Bel Air (Powerglide) | 3-speed manual | -$190 | yes (3-speed manual) |
+| D. Trucks | C1500 (4-spd auto) | 5-speed manual | -$900 | yes (HD 5-speed) |
+| | Ram 2500 Cummins (68RFE) | 6-speed manual (G56) | -$0 | **held back**: the real manual truck was detuned to 660 lb-ft; needs a call |
+Left out: the M3's SMG (an automated manual, would need its own rules), the
+911's Tiptronic (slower than the PDK we use), and manual-only/auto-only cars
+(Neon, Integra, Cobalt, S2000, Evo, STI, R34, Z06, Viper, Cobra, AE86,
+Beetle, Willys; Monte SS, GNX, Lightning, GT-R, Aventador, race cars).
+
+## Build notes (dealer gearbox)
+- data.js `DR.TRANS_CHOICE` (car -> [[box, price difference]]); new
+  dealer-only boxes a5_z, a3_th, a3_727, m3_col, m5_nv (not in the shop).
+  `DR.TX_REAR` gains tx4a/txdct for conversions.
+- parts.js `DR.facTrans(inst)` (inst.facTrans or the car's); stockPart and
+  the "(Factory)" label use it; TX_EQUIV for the new boxes.
+- game.js `G.transChoice`, `G.buyCar(carId, trId)` sets `inst.facTrans` and
+  adds the price difference to `spent`.
+- screens.js `buyPopup(id)` / `boxLine(t)`; style.css `.boxpick`/`.boxopt`.
+- Fair passes (DR.simulate, median of 3), standard vs other box: '18 GT 12.54
+  / 12.09, Hellcat 11.66 / 12.00, Chevelle 13.51 / 13.64, Bel Air 16.93 /
+  16.17, Civic 16.85 / 17.64, GTI 14.56 / 14.33. Tests: scr/boxpick.js,
+  boxbench.js, boxui.js; rivsnap 0 diffs.
 
 ## Build notes
 - screens.js `allSetupsBtn(inst, key, label)`; slider passes `S` to `def.fmt`.

@@ -1055,3 +1055,11 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .shakewarn.on { display: flex; animation: shakewarn 0.11s steps(2) infinite; }
 .shakewarn .pix { font-size: 14px; letter-spacing: 1px; }
 @keyframes shakewarn { 0% { transform: translate(-50%, -50%); background: #c8102e; } 50% { transform: translate(calc(-50% + 2px), calc(-50% - 2px)); background: #e8301e; } }
+/* dealer Buy pop-up: factory gearbox choice */
+.boxpick { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.boxopt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 2px solid rgba(255,255,255,0.15); border-radius: 6px; cursor: pointer; }
+.boxopt.on { border-color: var(--accent); background: rgba(255,204,0,0.08); }
+.boxopt .boxdot { color: var(--accent); }
+.boxopt .boxtxt { flex: 1; }
+.boxopt .boxp { white-space: nowrap; }
+.boxopt .boxp.good { color: #4cd964; }
