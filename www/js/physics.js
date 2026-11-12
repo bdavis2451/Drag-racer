@@ -57,8 +57,32 @@
     return (knockAddCache[engId] = add);
   }
   DR.chargeTemp = chargeTemp;
+  // ---- a diesel: the fuel makes the torque, the air decides how cleanly it
+  // burns. Fuel the calibration asks for (its torque curve) -> capped by
+  // the smoke limiter at the air there is -> air-fuel ratio. Richer than
+  // ~18:1 not all of it burns: black smoke, hot exhaust, less power per
+  // drop. Exhaust temperature (F, before the turbo) follows the ratio.
+  // Fuel: 210 g/kWh (a modern common-rail diesel at full load).
+  var DSL_BSFC = 5.83e-8;   // kg of fuel per J of work
+  function dieselState(S, rpm, boost, thr) {
+    var d = S.dsl, w = Math.max(rpm, 300) * RPM2W;
+    var Tf = d.Tf * shape(S, rpm);
+    if (S.mech && rpm > S.mech) Tf *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
+    if (d.tqCap) Tf = Math.min(Tf, d.tqCap);
+    var ma = airMass(S, rpm, TB.P1 + Math.max(0, boost) / 0.145, 1);
+    // no more air than the compressor can flow (its rated diesel power at
+    // about 18:1)
+    if (S.flowW) ma = Math.min(ma, S.flowW * DSL_BSFC * 18 * 1.05);
+    var mf = Math.min(Tf * w * DSL_BSFC, ma / d.afrLim) * (thr == null ? 1 : thr);
+    var afr = mf > 0 ? ma / mf : 99;
+    var eff = afr < 18 ? Math.max(0.7, 1 - 0.025 * (18 - afr)) : 1;
+    var egt = 400 + 19000 / Math.max(afr, 8) - (S.icE || 0) * 60;
+    return { T: mf * eff / DSL_BSFC / w, afr: afr, egt: egt };
+  }
+  DR.dieselState = function (S, rpm, boost) { return S.dsl ? dieselState(S, rpm, boost) : null; };
   // Full-throttle torque (Nm) at rpm with a given boost (psi). No nitrous.
   function boostedTorque(S, rpm, boost) {
+    if (S.dsl) return Math.min(dieselState(S, rpm, boost).T, S.fuelW / Math.max(rpm, 300) / RPM2W);
     var w = Math.max(rpm, 300) * RPM2W;
     var Tna = S.Tpk * shape(S, rpm);
     // past the mechanical limit the valves float: power falls away fast
@@ -126,6 +150,9 @@
     S.lowK = 0.45 + (mods.low || 0);
     var xp = Math.max(1.05, S.pkRpm / S.tqRpm);
     S.highK = 1 / ((xp - 1) * (xp - 1) + 2 * xp * (xp - 1));
+    // a diesel's torque stays flatter to its power peak (370 hp at 2,800 on
+    // 800 lb-ft at 1,600)
+    if (e.diesel) S.highK = 0.133 / ((xp - 1) * (xp - 1));
     S.Tpk = Tpk;
     var fiId = mods.fi || (e.fi ? e.fi.part : 'none');
     var fi = DR.FI[fiId];
@@ -144,7 +171,7 @@
     // past factory boost before it falls off its sweet spot)
     S.fiMax = fi.price ? fi.maxBoost || 0 : (fi.maxBoost || 0) * 1.25;
     S.etaC = fi.eta || { turbo: 0.7, roots: 0.55, screw: 0.66, cent: 0.7 }[fi.type] || 0.7;
-    S.icE = mods.ic != null && mods.ic > 0 ? mods.ic : fiId.indexOf('fi_oem') === 0 ? 0.65 : 0;
+    S.icE = mods.ic != null && mods.ic > 0 ? mods.ic : fiId.indexOf('fi_oem') === 0 || (e.diesel && fi.type === 'turbo') ? 0.65 : 0;
     S.icSink = mods.icSink;
     S.cool = mods.cool || 0;
     S.knockFuel = S.knock = e.diesel ? 99 : (mods.knock || 17) + (mods.noAdd ? 0 : engineKnockAdd(e.id));
@@ -191,26 +218,50 @@
       // choke flow it stalls, so a huge compressor can't hold boost on a
       // small engine at low rpm
       mc: Math.max(0.05, (S.flowW ? S.flowW / DR.HP : 400) / 10 * 0.00756) };
+    if (t.compound) {
+      // the big stage: its own flow, and a share of its weight to spin up
+      var I2 = 7.6e-5 * Math.pow(t.cex2 / 82, 5) + 1.6e-4 * Math.pow(t.turb2 / 68, 5);
+      S.tb.cmp = true; S.tb.phi2 = TB.K * Math.pow(t.turb2 / 68, 2) * Math.pow(t.ar2 / 0.82, TB.AR) * 1.15;
+      S.tb.I = I1 + 0.35 * I2; S.tb.etaT = 0.7; S.tb.r = cex / 2000;
+    }
     S.lag = 0.25 * Math.pow(S.tb.I / 2.4e-4, 0.35) * (t.bb ? 0.85 : 1);
   }
   // power the turbine makes and the compressor needs (W) at this rpm,
   // manifold pressure P2 (kPa) and throttle
-  function tbFlow(S, rpm, P2, thr) {
-    var tb = S.tb, pr = Math.max(1, P2 / TB.P1), cpr = Math.pow(pr, 0.2857) - 1;
-    var T2 = TB.T1 * (1 + cpr / S.etaC), Tm = T2 - (S.icE || 0) * (T2 - TB.T1);
+  // air the engine pumps (kg/s) at this rpm, manifold pressure (kPa) and throttle
+  function airMass(S, rpm, P2, thr) {
+    var pr = Math.max(1, P2 / TB.P1), cpr = Math.pow(pr, 0.2857) - 1;
+    var T2 = TB.T1 * (1 + cpr / (S.etaC || 0.7)), Tm = T2 - (S.icE || 0) * (T2 - TB.T1);
     // air per stroke follows the torque curve up to the power peak; past it
     // the engine still pumps air (power falls more for friction and burn
     // time than for breathing), so the exhaust flow eases off gently
     var vs = shape(S, Math.min(rpm, S.pkRpm));
+    // a diesel's breathing is flat: its torque curve is the fuel, not the air
+    if (S.diesel) vs = Math.max(vs, 0.95);
     if (rpm > S.pkRpm) { var d = (rpm - S.pkRpm) / S.pkRpm; vs *= Math.max(0.4, 1 - 0.6 * d * d); }
-    var ma = tb.ve * vs * (thr == null ? 1 : thr) * (P2 * 1000 / (287 * Tm)) * airDisp(S.eng) / 1000 * rpm / 120;
-    var mx = ma * (1 + 1 / tb.afr);
+    var ve = S.tb ? S.tb.ve : 0.9 * (1 + 0.25 * (S.breathing || 0));
+    return ve * vs * (thr == null ? 1 : thr) * (P2 * 1000 / (287 * Tm)) * airDisp(S.eng) / 1000 * rpm / 120;
+  }
+  function tbFlow(S, rpm, P2, thr) {
+    var tb = S.tb, pr = Math.max(1, P2 / TB.P1), cpr = Math.pow(pr, 0.2857) - 1;
+    var ma = airMass(S, rpm, P2, thr), mx = ma * (1 + 1 / tb.afr), t3k = 1;
+    // a diesel's exhaust is as heavy and as hot as the fuel it burns: more
+    // fuel lights a bigger turbo (what the smoke limiter lets through)
+    if (S.dsl) {
+      var d = S.dsl, mf = Math.min(d.Tf * shape(S, rpm) * Math.max(rpm, 300) * RPM2W * DSL_BSFC * (thr == null ? 1 : thr), ma / d.afrLim);
+      var afr = mf > 0 ? ma / mf : 60;
+      mx = ma + mf; t3k = clamp(((400 + 19000 / Math.max(afr, 8) - 32) / 1.8 + 273) / 957, 0.6, 1.5);
+    }
     // a sequential pair runs on the small turbo alone until the hand-over;
     // a variable-vane turbine closes down to a small one at low flow
     var phi = tb.seq ? (rpm < tb.seq ? tb.phi1 : tb.phi) : tb.phi;
     if (tb.vgt) phi *= clamp(0.55 + 0.45 * mx / (tb.mc * 1.07), 0.55, 1);
-    var P4 = TB.P1 + tb.c4 * mx * mx, xx = mx * Math.sqrt(tb.T3e) / (phi * P4), ER = Math.sqrt(1 + xx * xx);
-    return { ma: ma, Wt: mx * 1150 * tb.T3e * (1 - Math.pow(ER, -0.248)) * tb.etaT, Wc: ma * 1005 * TB.T1 * cpr / S.etaC };
+    // compounds: at low flow the small high-pressure turbo does the work;
+    // as the flow grows the big one takes over
+    if (tb.cmp) phi = tb.phi1 + (tb.phi2 - tb.phi1) * clamp(mx / (tb.mc * 1.07), 0, 1);
+    var T3 = tb.T3e * t3k;
+    var P4 = TB.P1 + tb.c4 * mx * mx, xx = mx * Math.sqrt(T3) / (phi * P4), ER = Math.sqrt(1 + xx * xx);
+    return { ma: ma, Wt: mx * 1150 * T3 * (1 - Math.pow(ER, -0.248)) * tb.etaT, Wc: ma * 1005 * TB.T1 * cpr / S.etaC };
   }
   // the most boost (psi) the turbo can hold at this rpm (steady, full throttle)
   function tbHold(S, rpm) {
@@ -283,7 +334,9 @@
     var k = engId + '|' + fiId;
     if (fitCache[k] != null) return fitCache[k];
     var e = DR.ENGINES[engId], u = DR.FI[fiId], ok = true;
-    if (u.twin && (e.rotary || e.cyl < 6)) ok = false;
+    if (!!u.diesel !== !!e.diesel || (u.twin && (e.rotary || e.cyl < 6))) ok = false;
+    // the diesel turbos are picked for the Cummins (its fuel lights them)
+    else if (u.diesel) ok = true;
     else {
       var S = engineCore(e, { fi: fiId }, 1);
       S.boostSet = Math.min(15, u.maxBoost); S.flowW = u.flow * DR.HP; S.red = Math.max(e.red, e.bp || 0); tbInit(S);
@@ -385,6 +438,8 @@
     // and has a little more (a Fox's 88 lph pump is good for ~250 hp NA)
     var stockInj = ai ? Math.max(e.hp * 1.35 + 60, 300) : e.hp * (e.fi ? 1.15 : 1.25);
     var stockPump = ai ? stockInj : Math.max(stockEng.hp * 1.3, 180);
+    // a stock Cummins: its injectors feed about 520 hp with a tune, the CP3 550
+    if (e.diesel && !ai) { stockInj = 520; stockPump = 550; }
     S.fuelInj = inj.fuel || stockInj; S.fuelPump = pump.fuel || stockPump;
     // ---- carburetor: its airflow caps the power (more with boost pushed
     // through it), the jets meter the fuel (a carb's own fuel is never the
@@ -403,6 +458,24 @@
     }
     S.stockFuel = !inj.fuel && !pump.fuel;
     S.fuelW = Math.min(S.fuelInj, S.fuelPump) * (e.diesel ? 1 : fuel.ff) * DR.HP;
+    // ---- a diesel makes its power from fuel (see dieselState): the
+    // calibration asks for so much fuel, the injectors and pump cap it, and
+    // the ECU's smoke limiter holds back what the air can't burn cleanly.
+    // The factory calibration is the real truck's: 370 hp / 800 lb-ft with
+    // the automatic, 350 / 660 when it came with the G56, and it limits
+    // torque in 1st and 2nd. A tune adds fuel and loosens the limiter; a
+    // race tune takes it off.
+    S.dsl = null;
+    if (e.diesel) {
+      var tlev = ai ? 2 : (ecu.dslTune || 0), capHp = Math.min(S.fuelInj, S.fuelPump);
+      var manCal = tlev === 0 && DR.facTrans && DR.facTrans(inst) === 'm6_g56' && inst.engine === stockEng.id;
+      var reqHp = tlev === 0 ? (manCal ? 350 : e.hp) : tlev === 1 ? Math.max(e.hp * 1.35, e.hp + 120) * (1 + 0.15 * B) : capHp;
+      reqHp = Math.min(reqHp, capHp);
+      S.dsl = { tune: tlev, hp: reqHp, cap: capHp, manCal: manCal, tqCap: manCal ? 660 / 0.7376 : 0,
+        afrLim: [20, 17, 13][tlev], gearLim: tlev === 0 ? [0.8, 0.93] : null };
+      S.dsl.Tf = reqHp * DR.HP / (S.pkRpm * RPM2W * shape(S, S.pkRpm));
+      S.fuelW = capHp * 1.05 * DR.HP;
+    }
     // ignition: the factory coils light factory boost plus a few psi (about
     // 10 psi on an engine that never had a turbo)
     S.sparkPsi = e.diesel ? 99 : (e.fi ? e.fi.boost + 6 : 10) + (ign.spark || 0);
@@ -429,18 +502,21 @@
       // the divided housing chokes a little sooner at big power
       if (tsOk && S.flowW) S.flowW *= 0.95;
       if (ai) {
-        if (fiU.price) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // rival builds: the old gate model
+        if (fiU.price && !e.diesel) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // rival builds: the old gate model
       } else {
         var fSpring = oem && e.fi ? Math.round(e.fi.boost * 0.7 * 2) / 2 : 0;
         var spring = Math.max(gate.spring || 7, fSpring), ctrl = gate.ctrl || 'none', top;
-        if (oem && DR.partId('wastegate', inst) === 'stock') { ctrl = 'ecu'; spring = fSpring; top = tuned ? e.fi.boost * 1.4 : e.fi.boost; }
+        if (oem && (DR.partId('wastegate', inst) === 'stock' || e.diesel)) { ctrl = 'ecu'; spring = fSpring; top = tuned ? e.fi.boost * 1.4 : e.fi.boost; }
+        // a diesel turbo runs what the fuel drives it to (gate-less or
+        // set high): the turbo's own limit
+        else if (e.diesel) { ctrl = 'ebc'; spring = 0; top = comp; }
         else top = ctrl === 'mbc' ? spring * 2 : ctrl === 'ebc' ? comp : spring;
         S.maxBoost = Math.round(Math.min(comp, top) * 2) / 2;
         S.boostMin = Math.min(spring, S.maxBoost);
         // an electronic controller (or a tuned factory ECU) can set boost per gear
         S.ebc = ctrl === 'ebc' || (ctrl === 'ecu' && tuned);
         // creep: internal gates on a bolt-on turbo, worse on a big engine
-        if (!oem) S.creep = Math.round((gate.creep || 0) * clamp((airDisp(e) * S.red / 1000 - 8) / 10, 0, 1) * 4 * 2) / 2;
+        if (!oem && !e.diesel) S.creep = Math.round((gate.creep || 0) * clamp((airDisp(e) * S.red / 1000 - 8) / 10, 0, 1) * 4 * 2) / 2;
         S.boostWhy.spring = S.boostMin; S.boostWhy.ctrl = ctrl; S.boostWhy.ctrlMax = Math.round(top * 2) / 2; S.boostWhy.creep = S.creep;
       }
     }
@@ -505,7 +581,7 @@
       S.lockup = !!conv.lockup && !!tr.lu;   // a lockup converter in a box that can work it
     } else {
       var stockTqNm = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.3;
-      S.clCap = clutch.cap || Math.max(420, stockTqNm * 1.4);
+      S.clCap = clutch.cap || (e.diesel ? 950 : Math.max(420, stockTqNm * 1.4));
       S.engage = clutch.engage;
       S.slider = clutch.slide || null;   // [clamp share at the hit, seconds to full lock]
     }
@@ -695,7 +771,7 @@
   DR.tuneDefaults = function (inst, S) {
     var tr = DR.TRANS[S.transId];
     var auto = tr.type === 'auto';
-    var fiDef = S.eng.fi && S.fiId === S.eng.fi.part ? S.eng.fi.boost : Math.min(8, S.maxBoost);
+    var fiDef = S.eng.fi && S.fiId === S.eng.fi.part ? S.eng.fi.boost : S.diesel ? S.maxBoost : Math.min(8, S.maxBoost);
     return {
       boost: fiDef,
       // manuals launch near peak torque, or for a turbo near its full-boost
@@ -875,6 +951,15 @@
     if (S.carbW && S.peakHp >= S.carbW / DR.HP * (1 + (S.boostSet || 0) / 14.7) * 0.97) out.carb = 'Out of air';
     if (r.axle > 0.005) out.rearend = 'Axles may snap';
     if (r.trans > 0.005) out.trans = 'Too much torque';
+    // a diesel's exhaust temperature: a drag pass lives with 1,600 F, past
+    // ~1,700 F pistons melt and turbine wheels crack
+    if (S.dsl) {
+      var egtPk = 0;
+      for (var er = 1500; er <= S.red; er += 250) egtPk = Math.max(egtPk, dieselState(S, er, steadyBoost(S, er)).egt);
+      S.egtPk = Math.round(egtPk);
+      if (egtPk > 1700) { r.engine += Math.min(0.6, (egtPk - 1700) / 400); r.notes.push('Exhaust temperature hits ' + Math.round(egtPk / 10) * 10 + ' F: more fuel than air. A bigger turbo (more air) or less fuel cools it'); }
+      else if (egtPk > 1450) r.notes.push('Exhaust runs ' + Math.round(egtPk / 10) * 10 + ' F at full power: fine for a pass, hot for towing');
+    }
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     if (S.clCap && tqNm > S.clCap) out.clutch = 'Slipping';
     // a converter that can't flash to where the turbo makes boost: the car
@@ -990,6 +1075,15 @@
     if (S.carbBig) r.notes.push('The carb is far too big for this engine: weak signal, it stumbles off the line');
     (S.untuned || []).forEach(function (u) { if (u[0] !== 'fueltype' && u[0] !== 'fi') r.notes.push(u[1] + ' - get an ECU flash'); });
     if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
+    // a diesel's exhaust temperature: a drag pass lives with 1,600 F, past
+    // ~1,700 F pistons melt and turbine wheels crack
+    if (S.dsl) {
+      var egtPk = 0;
+      for (var er = 1500; er <= S.red; er += 250) egtPk = Math.max(egtPk, dieselState(S, er, steadyBoost(S, er)).egt);
+      S.egtPk = Math.round(egtPk);
+      if (egtPk > 1700) { r.engine += Math.min(0.6, (egtPk - 1700) / 400); r.notes.push('Exhaust temperature hits ' + Math.round(egtPk / 10) * 10 + ' F: more fuel than air. A bigger turbo (more air) or less fuel cools it'); }
+      else if (egtPk > 1450) r.notes.push('Exhaust runs ' + Math.round(egtPk / 10) * 10 + ' F at full power: fine for a pass, hot for towing');
+    }
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     // gearbox ratings carry a little margin: trouble starts 5% past them
     if (tqNm > S.trMaxTq * 1.05) { r.trans = Math.min(0.75, (tqNm / S.trMaxTq - 1.05) * 1.1); r.notes.push('Torque exceeds what the transmission can hold'); }
@@ -1289,6 +1383,9 @@
         // retarded spark light the exhaust), more the closer to where the
         // turbo comes in
         var target = Math.min(tgt, holdAt(S, rpm)) * thrB * 0.1;
+        // a diesel on the brake against an automatic's converter is under
+        // load: it fuels and builds real boost at the stall
+        if (S.dsl && S.trType === 'auto') target = Math.max(target, Math.min(tgt, holdAt(S, rpm)) * thrB * 0.6);
         if (S.twostep && thrB > 0.5) {
           var build = clamp((S.tune.launchRpm - S.spoolLo * 0.5) / (S.spoolHi * 0.85 - S.spoolLo * 0.5), 0.15, 1);
           target = Math.max(target, bSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
@@ -1304,6 +1401,14 @@
       }
     } else if (S.fiType !== 'none') {
       this.boost = steadyBoost(S, rpm) * thrB;
+    }
+    // -------- a diesel: air-fuel ratio, smoke and exhaust temperature
+    if (S.dsl) {
+      var ds = dieselState(S, rpm, this.boost, Math.max(0.05, thrB));
+      this.afr = ds.afr;
+      this.egt = (this.egt || 500) + ((thrB > 0.05 ? ds.egt : 450) - (this.egt || 500)) * Math.min(1, dt / 1.2);
+      this.smoke = thrB > 0.2 ? clamp((21 - ds.afr) / 7, 0, 1) : 0;
+      this.egtMax = Math.max(this.egtMax || 0, this.egt);
     }
 
     // -------- nitrous
@@ -1324,7 +1429,7 @@
       // a carb's secondaries off the line: vacuum ones open softly, an
       // oversized carb stumbles for a moment before the signal comes up
       var hitK = S.carbHit && this.launched && this.t < 0.5 ? S.carbHit + (1 - S.carbHit) * this.t / 0.5 : 1;
-      Te = boostedTorque(S, rpm, this.boost) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
+      Te = boostedTorque(S, rpm, this.boost) * (S.dsl && S.dsl.gearLim ? S.dsl.gearLim[this.gear] || 1 : 1) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
       // a soft cut (TC past full retard) drops cylinders: heard as a crackle
       if (this.tcRed > 0.3) this.cutT += dt * (this.tcRed - 0.3) / 0.5;
       var p = Te * wE;

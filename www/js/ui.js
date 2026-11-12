@@ -335,26 +335,27 @@
   function turboSheet(inst, fiId, S0, S1) {
     var u = DR.FI[fiId], e = S1.eng, t = DR.turboSpec(fiId, e);
     if (!t || !S1.tb) return null;
-    var psi = S0.fiId === fiId || (DR.FI[S0.fiId].type === 'turbo' && S0.boostSet > 0) ? S0.boostSet : 15;
+    var psi = S1.dsl && S0.fiId !== fiId ? S1.boostSet : S0.fiId === fiId || (DR.FI[S0.fiId].type === 'turbo' && S0.boostSet > 0) ? S0.boostSet : 15;
     psi = Math.min(psi, u.maxBoost || psi);
     var pull = DR.turboPull(S1, 500, 1500, psi), steady = DR.spoolAt(S1, psi);
-    var type = t.seq ? 'Sequential twins (one small turbo, the second joins at ~' + Math.round(t.seq / 100) * 100 + ' rpm)' : t.twin ? 'Twin turbos (a pair)' : 'Single turbo';
+    var type = t.compound ? 'Compound turbos (a big low-pressure turbo feeding a small high-pressure one)' : t.seq ? 'Sequential twins (one small turbo, the second joins at ~' + Math.round(t.seq / 100) * 100 + ' rpm)' : t.twin ? 'Twin turbos (a pair)' : 'Single turbo';
     var r100 = function (x) { return Math.round(x / 100) * 100; };
     var rows = [
       ['Type', type + (t.vgt ? ', variable vanes' : '')],
-      ['Compressor', 'inducer ' + t.comp + ' mm, exducer ' + (t.cex || Math.round(t.comp * 1.33)) + ' mm' + (t.twin ? ' (each)' : '')],
-      ['Turbine', t.turb + ' mm wheel, ' + t.ar.toFixed(2) + ' A/R housing' + (t.ts || (S1.tbx && S1.tbx.ts) ? ' (twin-scroll)' : '')],
+      ['Compressor', (t.compound ? 'small: ' : '') + 'inducer ' + t.comp + ' mm, exducer ' + (t.cex || Math.round(t.comp * 1.33)) + ' mm' + (t.twin ? ' (each)' : '') + (t.compound ? '; big: inducer ' + t.comp2 + ' mm, exducer ' + t.cex2 + ' mm' : '')],
+      ['Turbine', (t.compound ? 'small: ' : '') + t.turb + ' mm wheel, ' + t.ar.toFixed(2) + ' A/R housing' + (t.ts || (S1.tbx && S1.tbx.ts) ? ' (twin-scroll)' : '') + (t.compound ? '; big: ' + t.turb2 + ' mm, ' + t.ar2.toFixed(2) + ' A/R' : '')],
       ['Bearing', (t.bb ? 'ball bearing' : 'journal bearing') + (t.ceramic ? ', ceramic turbine' : '')],
       ['Max boost', u.maxBoost + ' psi'],
-      ['Supports', '~' + Math.round((S1.flowW || u.flow * DR.HP) / DR.HP / 10) * 10 + ' hp'],
+      ['Supports', '~' + Math.round((S1.flowW || u.flow * DR.HP) / DR.HP / 10) * 10 + ' hp' + (S1.dsl ? ' (diesel, clean)' : '')],
       ['On your engine', 'at ' + psi + ' psi', 'acc'],
       ['Boost starts', pull && pull.start ? '~' + r100(pull.start) + ' rpm' : 'past the limiter'],
       ['Full boost', pull && pull.full ? '~' + r100(pull.full) + ' rpm on a pull (holds it from ~' + r100(steady) + ')' : 'not before your ' + S1.red + ' rpm limiter', pull && pull.full ? 'good' : 'bad']
     ];
     var warn = [];
     if (!pull || !pull.full) warn.push('Too big for this engine at ' + psi + ' psi: it won\'t reach full boost before the limiter. A smaller turbo, more revs or more engine.');
-    else if (pull.full > S1.red - 800) warn.push('Comes in late: full boost only ' + (S1.red - r100(pull.full)) + ' rpm before the limiter. Plan on a 2-step and a loose converter.');
-    if (S1.flowW && S1.peakHp >= S1.flowW / DR.HP * 0.98) warn.push('Runs out of air: the compressor chokes at about ' + Math.round(S1.flowW / DR.HP) + ' hp, so power flattens up top.');
+    else if (pull.full > S1.red - 800) warn.push('Comes in late: full boost only ' + (S1.red - r100(pull.full)) + ' rpm before the limiter. ' + (S1.dsl ? 'More fuel lights it sooner; a looser converter and a transbrake help it leave.' : 'Plan on a 2-step and a loose converter.'));
+    if (S1.dsl && S1.egtPk > 1450) warn.push('Short of air for your fuel: black smoke and ' + Math.round(S1.egtPk / 10) * 10 + ' F exhaust at full power. A bigger turbo (or compounds) burns it clean.');
+    else if (S1.flowW && S1.peakHp >= S1.flowW / DR.HP * 0.98) warn.push('Runs out of air: the compressor chokes at about ' + Math.round(S1.flowW / DR.HP) + ' hp, so power flattens up top.');
     // the chart: boost on a full-throttle pull (solid), the most it can
     // hold at each rpm (dashed), the target (line)
     var W = 300, Hh = 120, x0 = 1000, x1 = S1.red, top = Math.max(psi * 1.25, 10);

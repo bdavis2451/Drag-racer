@@ -73,7 +73,9 @@ DR.ENGINES = {
   bb_94:   { name: '9.4L Big Block V8 (572)',     cyl: 8,  disp: 9.4, hp: 720,  pk: 6000, tq: 4500, red: 6800, w: 300, price: 41700, lvl: 5, safe: 1400, bg: 1.25, bp: 7200, carb: { name: 'Holley 1050 Dominator', cfm: 1050, sec: 'dp', val: 600 } },
   v10_84:  { name: '8.4L V10',                    cyl: 10, disp: 8.4, hp: 645,  pk: 6200, tq: 5000, red: 6400, w: 290, price: 34200, lvl: 5, safe: 900, bg: 1.25, bp: 7200 },
   v12_65:  { name: '6.5L V12',                    cyl: 12, disp: 6.5, hp: 770,  pk: 8500, tq: 6750, red: 8700, w: 235, price: 60000, lvl: 5, safe: 1000, bg: 1.12, bp: 9000 },
-  d_67:    { name: '6.7L I6 Turbo Diesel (Cummins)', cyl: 6, disp: 6.7, hp: 400, pk: 2800, tq: 1600, red: 3200, w: 522, price: 26500, lvl: 5, safe: 1200, fi: { part: 'fi_oem_vgt', boost: 30, tb: { name: 'Holset HE300VG (variable vanes)', comp: 60, cex: 80, turb: 62, ar: 0.8, vgt: true } }, diesel: true, bg: 1.4, bp: 3600 },
+  // 2013-18 Ram 2500 with the 68RFE: 370 hp / 800 lb-ft (the G56 truck's
+  // calibration: 350 / 660); stock rods are good for ~850 hp
+  d_67:    { name: '6.7L I6 Turbo Diesel (Cummins)', cyl: 6, disp: 6.7, hp: 370, pk: 2800, tq: 1600, red: 3200, w: 522, price: 12500, lvl: 5, safe: 850, fi: { part: 'fi_oem_vgt', boost: 30, tb: { name: 'Holset HE300VG (variable vanes)', comp: 60, cex: 80, turb: 62, ar: 0.8, vgt: true } }, diesel: true, bg: 1.4, bp: 3600 },
   v8_86b:  { name: '8.6L Billet Pro Mod V8',      cyl: 8,  disp: 8.6, hp: 1250, pk: 7800, tq: 6500, red: 8800, w: 260, price: 120000, lvl: 5, safe: 4500, bg: 1.15, bp: 8600 }
 };
 Object.keys(DR.ENGINES).forEach(function (k) { DR.ENGINES[k].id = k; });
@@ -110,6 +112,12 @@ DR.TRANS = {
   m6_tr:    { name: '6-Speed Manual (TR6060)',   type: 'manual', ratios: [2.26, 1.58, 1.19, 1.00, 0.77, 0.63], shift: 0.33, maxTq: 950,  eff: 0.86, price: 4500 },
   a4_hd:    { name: '4-Speed Automatic HD (4R100)', type: 'auto', ratios: [2.71, 1.54, 1.00, 0.71],    shift: 0.28, maxTq: 900,  eff: 0.83, price: 2800, lu: true },
   a6_hd:    { name: '6-Speed Automatic HD (68RFE)', type: 'auto', ratios: [3.23, 1.84, 1.41, 1.00, 0.82, 0.63], shift: 0.24, maxTq: 1600, eff: 0.83, price: 6000, lu: true },
+  // behind a Cummins (dsl: offered only behind a diesel): a built 68RFE
+  // (~900 hp), the 4-speed 48RE the 1,000-1,400+ hp trucks run, and the
+  // G56 manual (the box holds; its clutch is the weak link)
+  a6_68b:   { name: '6-Speed Automatic (68RFE, Built)', type: 'auto', ratios: [3.23, 1.84, 1.41, 1.00, 0.82, 0.63], shift: 0.22, maxTq: 2600, eff: 0.84, price: 6500, lu: true, dsl: true },
+  a4_48re:  { name: '4-Speed Automatic (48RE, Built)', type: 'auto', ratios: [2.45, 1.45, 1.00, 0.69], shift: 0.20, maxTq: 4200, eff: 0.85, price: 9500, lu: true, dsl: true },
+  m6_g56:   { name: '6-Speed Manual (G56)',      type: 'manual', ratios: [5.94, 3.28, 1.98, 1.32, 1.00, 0.74], shift: 0.5, maxTq: 1700, eff: 0.87, price: 3500, dsl: true },
   // factory boxes offered only at the dealer (the other choice when buying)
   a5_z:     { name: '5-Speed Automatic (RE5R05A)', type: 'auto', ratios: [3.83, 2.36, 1.53, 1.00, 0.83], shift: 0.30, maxTq: 650, eff: 0.83, price: 2500, lu: true },
   a3_th:    { name: '3-Speed Automatic (Turbo 400)', type: 'auto', ratios: [2.48, 1.48, 1.00],         shift: 0.30, maxTq: 900, eff: 0.83, price: 1500 },
@@ -150,9 +158,12 @@ DR.TRANS_CHOICE = {
   ronin: [['tx4a', 800]], pip: [['tx4a', 800]], mira: [['a4', 900]], silvia: [['a4', 900]], rx7: [['a4', 900]],
   volta: [['txdct', 1100]], z35: [['a5_z', 1000]],
   chevelle: [['a3_th', 250]], cuda: [['a3_727', 250]], charger: [['m4_cl', 0]], nova: [['m4_cl', 0]], belair: [['m3_col', -190]],
-  hauler: [['m5_nv', -900]]
+  hauler: [['m5_nv', -900]],
+  // the G56 was the standard box; the 68RFE cost $2,695 more
+  diesel: [['m6_g56', -2695]]
 };
 DR.TRANS_SHOP = ['m5_t5_v8', 'm5_hd', 'm4_cl', 'm6', 'm6_hd', 'dog4', 'a4', 'a6', 'a8', 'a10', 'a10_b', 'a3_400', 'pg2', 'pg_pm', 'a3_pm', 'dct7', 'seq6', 'seq6_hd', 'cl5', 'lenco5',
+  'a6_68b', 'a4_48re', 'm6_g56',
   'tx5', 'tx5_hd', 'tx6', 'tx6_hd', 'tx4a', 'txdct', 'txseq'];
 
 // ---------------------------------------------------------------------------

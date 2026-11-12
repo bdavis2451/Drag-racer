@@ -1,6 +1,11 @@
 # Diesel truck & motor rework (research, Nov 11)
 
-Status: **plan drafted (Nov 12), waiting on the owner's answers. No code.**
+Status: **shipped (Nov 12).**
+
+Decisions (Nov 12): real stock numbers (370 hp / 800 lb-ft auto, 350 / 660
+G56); G56 = factory manual calibration (a tune unlocks it, then the clutch
+is the limit); Diesel Dan and the stage 2 boss change and get rebalanced;
+Cummins $12,500 + $3,500 swap kit; build the plan as written.
 
 ## Update after the turbo rework (Nov 12)
 - Turbo spool is now physics (see `turbo-system.md`): the factory HE300VG
@@ -291,3 +296,41 @@ no knock, no spark limit, headPsi 45, fuelW ignores fuel type), parts.js
 `NOT_FOR.diesel` (ignition, throttle, fuel type), `fi_oem_vgt` (maxBoost
 40, spool 2,900 scaled by displacement). Turbo spool uses the gas-engine
 `spool` rpm scaled by displacement (physics.js ~137).
+
+## Build notes (Nov 12)
+- physics.js: `dieselState` (fuel torque curve `S.dsl.Tf x shape`, smoke
+  limiter `afrLim` 20 stock / 17 tune / 13 race, rich penalty 2.5% per AFR
+  under 18, EGT F = 400 + 19000/AFR - 60 x intercooler, BSFC 210 g/kWh),
+  `boostedTorque` diesel branch, `S.dsl` in buildSpec (stock 370 hp,
+  G56 manual calibration 350 / 660 lb-ft when bought with the G56 and on the
+  stock ECU, tune = 1.35x stock x breathing, race = everything the fuel
+  system feeds; low-gear limit 0.80 / 0.93 on the stock ECU), `airMass`
+  (diesel VE flat, compressor flow cap for diesels), tbFlow uses the fuel
+  (exhaust mass and EGT) so fuel lights the turbo; compounds blend small to
+  big turbine flow. Diesel shape: highK so 370 hp sits on 800 lb-ft.
+  Risk: EGT over 1,700 F. Pre-launch on an automatic builds boost at the
+  stall. Factory intercooler stays with an aftermarket turbo on a diesel.
+- parts.js: diesel options (`dsl: true`) in injectors / fuelpump / ecu /
+  clutch / converter, hidden on gas engines and vice versa (DSL_CATS);
+  NOT_FOR.diesel adds bov, wastegate, launch; diesel turbos (d_vgt63,
+  d_s366, d_s480, d_cmp, d_tri) with a Compound section; gas turbos and
+  blowers hidden on diesels; gearboxes behind a Cummins = dsl boxes + TH400,
+  Powerglide, Lenco; Cummins swap kit line ($3,500); diesel power packages
+  (PACKAGES_DSL).
+- data.js: d_67 370 hp, $12,500, safe 850; TRANS a6_68b, a4_48re, m6_g56;
+  TRANS_CHOICE diesel G56 -$2,695.
+- Final fuel ratings: injectors stock 520, 25% 600, 50% 700, 100% 850, 200%
+  1,050, 300% 1,250, race 1,600 hp; pumps stock 550, lift 650, stroker 850,
+  dual 1,250, triple 1,900.
+- extras.js: Diesel Dan now really drives a Ram (race tune, 50% injectors,
+  lift pump: 612 hp, 13.46 street): before, no rival drove the truck and he
+  fell back to another car.
+- game.js `dieselV2`: an owned diesel's gas parts map to diesel ones.
+- race.js: EGT bar on the dash (diesels), black smoke from the exhaust by
+  AFR.
+- Tests (scratchpad scr/): dsl4.js builds table, dslshop.js, dslui.js,
+  dslrace.js, dslpkg.js, dan2.js. Results: stock 16.02 @ 84 (real
+  15.6-16.5), G56 16.97, tune 501 hp 14.18, G56 + tune slips (16.16) until a
+  dual disc (15.02), 100% + S366 ~758 hp 12.5, 200% + S480 955 hp 11.92,
+  compounds 1,171 hp 11.25, over-fuelled stock turbo 1,820 F + risk.
+  Rival snapshot: 0 diffs. Regressions clean.

@@ -939,6 +939,8 @@
   // which one, with what the factory charged for the other
   function boxLine(t) {
     var T = DR.TRANS[t], n = T.ratios.length + '-speed ';
+    // the Ram's manual: the factory ran its engine on a milder calibration
+    if (t === 'm6_g56') return [n + 'manual (G56)', 'You shift, with a clutch. The factory detunes the engine for it: 350 hp / 660 lb-ft (a diesel tune unlocks the rest; then the clutch is the limit).'];
     return T.type === 'manual' ? [n + 'manual', 'You shift, with a clutch.'] : T.type === 'dct' ? [n + 'dual-clutch', 'Shifts itself, very quickly.'] : [n + 'automatic', 'Shifts itself. The torque converter makes launches easier.'];
   }
   // free: the sponsor's free car (either gearbox, no charge)

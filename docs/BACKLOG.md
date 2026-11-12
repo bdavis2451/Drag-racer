@@ -11,9 +11,6 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **Ram 2500 Cummins with a manual (G56)**: waiting on a yes/no. The real
-  manual truck had the engine detuned to 660 lb-ft so the G56 could hold it;
-  needs a detuned engine or a G56 that holds the full torque.
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
   when it's running inside Facebook's browser (no sound there). Owner said
   not now (2026-11-10).
@@ -27,9 +24,8 @@ the top of each section.
 
 - **Turbo diagram view** (Drag Racing: Streets style: the turbo system laid
   out as a flow diagram). Later (owner, Nov 12).
-- **Diesel engines and upgrades rework.** Note (Nov 12): the stock Ram now
-  runs 15.25 (was 15.75, real 15.6-16.5): its turbo spools early like the
-  real one; the real truck's low-gear torque limiting belongs in this rework. Rework the diesel motors and
+- **More diesels** (Duramax, Power Stroke) with the next batch of cars
+  (owner, Nov 12). Propane and water-meth injection: later. Rework the diesel motors and
   their upgrade paths. Research and test results done (Nov 11), options
   waiting on the owner: `docs/features/diesel.md`.
 
@@ -67,6 +63,10 @@ the top of each section.
 
 ## Decided
 
+- Diesel rework (Nov 12): fuel makes the power, real 370 / 800 stock, diesel
+  parts list, smoke + EGT, converters capped at 3,000 for diesels, G56 with
+  the factory manual calibration, Cummins $12,500 + swap kit, Diesel Dan in a
+  real truck: shipped.
 - Turbo rework (Nov 12): spool from physics, 8 singles + 4 twins with real-style
   model numbers, Single/Twin sections (Compound with the diesel), spec sheet
   with everything (A/R info only), one bearing per size, real factory

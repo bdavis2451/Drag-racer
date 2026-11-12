@@ -32,6 +32,14 @@
     t_twin:      { name: 'Twin 6266 Turbos',          type: 'turbo', comp: 62, cex: 82,  turb: 66, ar: 0.82, bb: true, twin: true, maxBoost: 35, flow: 1600, w: 44, price: 10500, desc: 'A pair of 62mm turbos: big power that still comes in early on a V8.' },
     t_twin76:    { name: 'Twin 7685 Turbos',          type: 'turbo', comp: 76, cex: 101, turb: 85, ar: 1.00, bb: true, twin: true, maxBoost: 45, flow: 2500, w: 56, price: 19000, lvl: 5, desc: 'Big twins for big-tire and radial cars.' },
     t_promod:    { name: 'Twin 9498 Pro Mod Turbos',  type: 'turbo', comp: 94, cex: 125, turb: 98, ar: 1.32, twin: true, maxBoost: 60, flow: 4400, w: 76, price: 45000, desc: 'Pro Mod power. Needs an anti-lag to leave.' },
+    // diesel turbos (Cummins): S300 / S400-frame singles, a drop-in VGT,
+    // compounds (a small high-pressure turbo fed by a big one: early spool
+    // and big air) and race triples
+    d_vgt63:     { name: 'Drop-In VGT Upgrade (63mm)', type: 'turbo', diesel: true, comp: 63, cex: 84,  turb: 66, ar: 0.8, vgt: true, maxBoost: 50, flow: 650, w: 22, price: 2800, desc: 'A bigger variable-vane turbo in the factory spot: still spools early, more air up top.' },
+    d_s366:      { name: 'S366 Turbo',                type: 'turbo', diesel: true, comp: 66, cex: 91,  turb: 73, ar: 0.91, maxBoost: 50, flow: 650, w: 24, price: 2600, desc: 'The classic S300-frame single: quick to light, clean on 50-100% injectors.' },
+    d_s480:      { name: 'S480 Turbo',                type: 'turbo', diesel: true, comp: 80, cex: 110, turb: 87, ar: 1.10, maxBoost: 55, flow: 900, w: 30, price: 3400, lvl: 4, desc: 'An S400-frame single: big air for 200% injectors. Lazy below about 2,000 rpm.' },
+    d_cmp:       { name: 'S366 / S480 Compounds',     type: 'turbo', diesel: true, compound: true, comp: 66, cex: 91, turb: 73, ar: 0.91, comp2: 80, cex2: 110, turb2: 87, ar2: 1.10, maxBoost: 80, flow: 1150, w: 55, price: 6800, lvl: 5, desc: 'An S480 feeding an S366: the small one lights early, the big one brings the air. Up to 80 psi.' },
+    d_tri:       { name: 'Race Triples (2x S400 over S500)', type: 'turbo', diesel: true, compound: true, comp: 75, cex: 100, turb: 83, ar: 1.0, comp2: 106, cex2: 140, turb2: 106, ar2: 1.32, maxBoost: 90, flow: 2000, w: 95, price: 14000, lvl: 5, desc: 'Competition triple turbos: two S400s blown into by an S500. 100 psi of air for 1,600+ hp. Lazy without a big converter.' },
     // retired sizes (older saves and rivals): the nearest current one
     t_61:        { alias: 't_med' },
     t_80:        { alias: 't_large' },
@@ -46,12 +54,14 @@
   };
   // compressor efficiency at its sweet spot: cheap and small units and
   // roots blowers heat the air the most
-  var ETA = { fi_oem_s: 0.68, fi_oem_tt: 0.7, fi_oem_sc: 0.62, fi_oem_vgt: 0.72, t_budget: 0.62, t_gt28: 0.72, t_small: 0.74, t_twin_sm: 0.72,
+  var ETA = { d_vgt63: 0.74, d_s366: 0.76, d_s480: 0.77, d_cmp: 0.74, d_tri: 0.75, fi_oem_s: 0.68, fi_oem_tt: 0.7, fi_oem_sc: 0.62, fi_oem_vgt: 0.72, t_budget: 0.62, t_gt28: 0.72, t_small: 0.74, t_twin_sm: 0.72,
     t_med: 0.75, t_67: 0.76, t_large: 0.77, t_twin: 0.75, t_twin76: 0.77, t_huge: 0.77, t_9498: 0.78, t_promod: 0.78,
     sc_m90: 0.55, sc_street: 0.68, sc_roots: 0.52, sc_screw: 0.66, sc_cent: 0.72, sc_screw2: 0.68, sc_cent2: 0.74, sc_1471: 0.6 };
   Object.keys(ETA).forEach(function (id) { if (DR.FI[id]) DR.FI[id].eta = ETA[id]; });
   Object.keys(DR.FI).forEach(function (id) { var u = DR.FI[id]; if (u.alias) DR.FI[id] = DR.FI[u.alias]; });
   DR.FI_ALIAS = { t_61: 't_med', t_80: 't_large' };
+  // a diesel's factory unit
+  DR.FI.fi_oem_vgt.flow = 550;
   // a turbo's hardware on this engine: a factory unit takes the engine's own
   DR.turboSpec = function (fiId, e) {
     var u = DR.FI[fiId];
@@ -64,6 +74,7 @@
   // firing order doesn't pair up on one turbo) or rotaries
   DR.twinScrollFits = function (e) { return !e.rotary && !e.diesel && (e.cyl === 4 || (e.cyl === 6 && / I6/.test(e.name))); };
   DR.FI_SHOP = ['t_budget', 't_gt28', 't_small', 't_med', 't_67', 't_large', 't_huge', 't_9498', 't_twin_sm', 't_twin', 't_twin76', 't_promod',
+    'd_vgt63', 'd_s366', 'd_s480', 'd_cmp', 'd_tri',
     'sc_m90', 'sc_street', 'sc_roots', 'sc_screw', 'sc_cent', 'sc_screw2', 'sc_cent2', 'sc_1471'];
 
   function opt(id, name, price, fx, desc) { var o = { id: id, name: name, price: price, desc: desc || '' }; for (var k in fx) o[k] = fx[k]; return o; }
@@ -231,7 +242,15 @@
     opt('inj4', '2400cc Injectors', 3000, { tune: 'hard', lvl: 4, fuel: 2800 }, 'Feeds 2800 hp on gasoline.'),
     opt('inj5', 'Twin Injectors per Cylinder', 6000, { tune: 'hard', lvl: 5, fuel: 5000 }, 'Feeds 5000 hp on gasoline, about 2750 on methanol.'),
     // what ~3000 hp+ methanol engines run: 16 race injectors of 325-500 lb/hr
-    opt('inj6', 'Twin 500 lb/hr Race Injectors', 9500, { tune: 'hard', lvl: 5, fuel: 9000 }, 'Two huge race injectors per cylinder, the kind 3000+ hp methanol Pro Mods run. Feeds 9000 hp on gasoline, about 4950 on methanol.')
+    opt('inj6', 'Twin 500 lb/hr Race Injectors', 9500, { tune: 'hard', lvl: 5, fuel: 9000 }, 'Two huge race injectors per cylinder, the kind 3000+ hp methanol Pro Mods run. Feeds 9000 hp on gasoline, about 4950 on methanol.'),
+    // diesel common-rail injectors, sized by how much more they flow than
+    // stock (the stock ones feed about 520 hp with a tune)
+    opt('dinj25', '25% Over Injectors', 1200, { dsl: true, tune: 'soft', fuel: 600 }, 'A mild step over stock nozzles: feeds about 600 hp. Clean on the stock turbo.'),
+    opt('dinj50', '50% Over Injectors', 2400, { dsl: true, tune: 'hard', fuel: 700 }, 'Feeds about 700 hp. Wants a tune and more air than the factory turbo makes up top, or it smokes.'),
+    opt('dinj100', '100% Over Injectors', 3800, { dsl: true, tune: 'hard', lvl: 3, fuel: 850 }, 'Twice the stock nozzle flow: about 850 hp. Needs a bigger turbo and more pump.'),
+    opt('dinj200', '200% Over Injectors', 5500, { dsl: true, tune: 'hard', lvl: 4, fuel: 1050 }, 'About 1050 hp of fuel. Needs a stroker or dual CP3 and big air (an S480 or compounds).'),
+    opt('dinj300', '300% Over Injectors', 7000, { dsl: true, tune: 'hard', lvl: 5, fuel: 1250 }, 'About 1250 hp of fuel: compound-turbo territory, dual CP3s.'),
+    opt('dinjr', 'Race Injectors (400%+)', 9500, { dsl: true, tune: 'hard', lvl: 5, fuel: 1600 }, 'Competition injectors: about 1600 hp of fuel. Only with race air and a race tune.')
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
@@ -246,7 +265,13 @@
     opt('fp2', 'Dual 450 lph Pumps', 900, { fuel: 1100, efiPump: true }, 'Feeds 1100 hp on gasoline.'),
     opt('fp3', 'Brushless Pump + -10AN Lines', 2000, { fuel: 1800, efiPump: true }, 'Feeds 1800 hp on gasoline.'),
     opt('fp4', 'Belt-Driven Mechanical Pump', 4500, { lvl: 5, fuel: 5000 }, 'About 12 gallons a minute. Feeds 5000 hp on gasoline, about 2750 on methanol.'),
-    opt('fp5', 'Big Belt-Driven Pump (20 GPM)', 7500, { lvl: 5, fuel: 8500 }, 'About 20 gallons a minute, the size alcohol-burning Pro Mods run. Feeds 8500 hp on gasoline, about 4700 on methanol.')
+    opt('fp5', 'Big Belt-Driven Pump (20 GPM)', 7500, { lvl: 5, fuel: 8500 }, 'About 20 gallons a minute, the size alcohol-burning Pro Mods run. Feeds 8500 hp on gasoline, about 4700 on methanol.'),
+    // diesel: a lift pump feeds the high-pressure CP3, a bigger (stroker)
+    // CP3 or two or three of them make the rail pressure big injectors need
+    opt('dlift', 'Lift Pump (FASS / AirDog style)', 1000, { dsl: true, fuel: 650 }, 'Feeds the high-pressure pump a steady, clean supply: the stock CP3 holds rail pressure to about 650 hp.'),
+    opt('dcp3s', 'Stroker CP3 + Lift Pump', 2300, { dsl: true, lvl: 3, fuel: 850 }, 'A bigger-stroke CP3: rail pressure for about 850 hp.'),
+    opt('dcp3d', 'Dual CP3 Kit', 3800, { dsl: true, lvl: 4, fuel: 1250 }, 'A second CP3 on its own bracket: about 1250 hp of fuel.'),
+    opt('dcp3t', 'Triple CP3 Race Kit', 7500, { dsl: true, lvl: 5, fuel: 1900 }, 'Three CP3s: about 1900 hp of fuel, for competition trucks.')
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
     opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Knocks past 17 psi with a cool, intercooled charge, far sooner with a hot one.'),
@@ -275,6 +300,9 @@
     opt('ecu0', 'Performance Chip', 350, { bw: 0.015, ecu: 0 }, 'An off-the-shelf plug-in chip: a little more timing and fuel for a stock engine. It is not a tune: it can\'t scale new injectors, boost, alcohol fuel or cams. Keeps the factory limiter.'),
     opt('ecu1', 'Street Tune Flash', 600, { bw: 0.03, ecu: 1, tune: true }, 'A custom flash of the factory ECU for your parts: injectors, boost, E85, cams. Better fuel and timing, and the rev limiter goes as far as your engine parts safely allow (up to +800 rpm).'),
     opt('ecu2', 'Standalone ECU', 2000, { bw: 0.05, ecu: 2, tune: true }, 'Tuned for your parts. Fully adjustable rev limiter, launch throttle & throttle ramp tuning.'),
+    // diesel: a handheld tuner re-flashes the factory ECU
+    opt('dtune', 'Diesel Tune (Handheld)', 900, { dsl: true, bw: 0.03, ecu: 1, tune: true, dslTune: 1 }, 'More fuel and timing: about +100 hp on a stock truck, the low-gear torque limit off and the smoke limiter loosened (a little haze on the hit). Lets a manual truck run full power.'),
+    opt('drace', 'Race Diesel Tune', 1600, { dsl: true, lvl: 3, bw: 0.05, ecu: 2, tune: true, dslTune: 2 }, 'No smoke limiter: all the fuel your injectors and pumps can deliver. Big black smoke and hot exhaust if the turbo can\'t keep up. Adjustable rev limiter.'),
     opt('ecu3', 'Race ECU + Traction Mgmt', 4500, { lvl: 4, bw: 0.08, ecu: 3, tune: true }, 'Tuned for your parts. Adjustable rev limiter and modern drag traction management: it pulls ignition timing smoothly when the tires spin, throttle left wide open.')
   ]};
   C.ic = { name: 'Intercooler', needsFI: true, options: [
@@ -338,6 +366,10 @@
     opt('cl3', 'Twin-Disc Clutch', 2400, { cap: 1500, engage: 0.20 }, 'Holds 1500 Nm.'),
     opt('cls', 'Adjustable Slipper Clutch', 3600, { cap: 1700, engage: 0.22, slide: [0.6, 0.9] }, 'Holds 1700 Nm, and slips on purpose for the first second: a big turbo stays on boost instead of bogging.'),
     opt('cl4', 'Triple-Disc Clutch', 4200, { cap: 2400, engage: 0.17 }, 'Holds 2400 Nm.'),
+    // diesel: clutches for a G56 (or a manual box behind a Cummins)
+    opt('dcl1', 'South Bend Single-Disc Upgrade', 1550, { dsl: true, cap: 1356, engage: 0.28 }, 'Holds about 1,000 lb-ft (475 hp).'),
+    opt('dcl2', 'South Bend Street Dual Disc', 1700, { dsl: true, cap: 1760, engage: 0.25 }, 'Holds about 1,300 lb-ft (650 hp). Still drives on the street.'),
+    opt('dcl3', 'South Bend Competition Dual Disc', 2300, { dsl: true, lvl: 3, cap: 1900, engage: 0.21 }, 'Holds about 1,400 lb-ft (800-900 hp). Grabby: race use.'),
     opt('cl5', 'Pro Multi-Disc Slider Clutch', 9000, { lvl: 5, cap: 4500, engage: 0.22, slide: [0.55, 1.2] }, 'Holds anything; slips on purpose for smooth launches.')
   ]};
   C.converter = { name: 'Torque Converter', needsConverter: true, options: [
@@ -352,6 +384,11 @@
     // below the turbo's boost rpm and the car falls on its face)
     opt('tc55', 'Race Converter (5500)', 3000, { lvl: 4, stall: 5500, tr: 2.18 }, 'A loose race converter for a high-revving engine or a mid-size turbo.'),
     opt('tcp6', 'Pro Mod Converter (6000)', 3400, { lvl: 5, stall: 6000, tr: 2.2 }, 'Flashes to 6000 rpm: keeps big turbos spooled when the car leaves. On a small engine or a small turbo it just slips and wastes power.'),
+    // diesel converters (68RFE / 48RE): tight by gas standards, a Cummins
+    // makes its torque low; race stators go to about 3,000
+    opt('dc22', 'Triple-Disc Converter (2200)', 1900, { dsl: true, stall: 2200, tr: 1.92 }, 'Billet cover and a triple-disc lockup: holds a tuned truck (about 1,000 hp). A little more stall for a bigger turbo.'),
+    opt('dc26', 'Billet Converter (2600)', 2400, { dsl: true, lvl: 3, stall: 2600, tr: 1.97 }, 'For compounds and aggressive builds: flashes higher so a big turbo lights on the hit. Holds about 1,400 hp.'),
+    opt('dc30', 'Race Billet Converter (3000)', 3000, { dsl: true, lvl: 4, stall: 3000, tr: 2.02 }, 'A race stator: as loose as diesel converters go. Race only.'),
     opt('tcp7', 'Pro Mod Converter (7000)', 3800, { lvl: 5, stall: 7000, tr: 2.25 }, 'Flashes to 7000 rpm, for the biggest turbos (full boost near 7000 rpm). Needs an engine that revs and makes power up there.'),
     // a clutch inside the converter locks engine to gearbox once the car is
     // moving: no slip, so more mph; the gear it locks in is set in Tuning
@@ -661,6 +698,7 @@
     var carMount = DR.converted(inst) ? 'L' : car.mount;
     function add(what, $) { out.lines.push([what, $]); out.install += $; }
     add('Labour, mounts & wiring harness', 550 + 250 * e.size);
+    if (e.diesel && !DR.ENGINES[car.engine].diesel) add('Cummins swap kit: mounts, crossmember, big radiator, ECM wiring, transmission adapter', 3500);
     if (e.mount !== 'B' && e.mount !== carMount) {
       if (e.mount === 'T') add('Rear-drive adapter: bellhousing, custom mounts, driveshaft', 2500);
       else if (car.drive === 'FWD') out.block = 'A longitudinal engine needs a RWD or lengthways AWD conversion first (Drivetrain)';
@@ -691,7 +729,7 @@
   // the nearest box of the other kind (rear-drive box -> transaxle and back)
   var TX_EQUIV = { m5_light: 'tx5', m5_t5_4: 'tx5', m5_t5_v6: 'tx5', m5_t5_v8: 'tx5', m5_hd: 'tx5_hd', m4_cl: 'tx5_hd', m6: 'tx6', m6_hd: 'tx6_hd',
     a4: 'tx4a', a6: 'tx4a', a4_hd: 'tx4a', a6_hd: 'tx4a', m6_tr: 'tx6_hd', a8: 'tx4a', a3_400: 'tx4a', pg2: 'tx4a', a2_pg: 'tx4a', dct6: 'txdct', dct7: 'txdct', seq6: 'txseq', lenco5: 'txseq', pg_pm: 'tx4a', a3_pm: 'tx4a', dog4: 'tx6_hd', seq6_hd: 'txseq', cl5: 'txseq',
-    a5_z: 'tx4a', a3_th: 'tx4a', a3_727: 'tx4a', m3_col: 'tx5', m5_nv: 'tx5', a10: 'tx4a', a10_b: 'tx4a',
+    a5_z: 'tx4a', a3_th: 'tx4a', a3_727: 'tx4a', m3_col: 'tx5', m5_nv: 'tx5', a10: 'tx4a', a10_b: 'tx4a', a6_68b: 'tx4a', a4_48re: 'tx4a', m6_g56: 'tx6_hd',
     tx5: 'm5_light', tx5_hd: 'm5_hd', tx6: 'm6', tx6_hd: 'm6_hd', tx4a: 'a4', txdct: 'dct7', txseq: 'seq6' };
   DR.transEquiv = function (id) { return TX_EQUIV[id] || id; };
   // a build (an opponent's, an old save's) with a gearbox that can't fit
@@ -743,7 +781,11 @@
     if (cat === 'trans') {
       var fac = DR.stockPart('trans', inst);
       list.push({ id: fac, name: DR.TRANS[fac].name + (fac === DR.facTrans(inst) ? ' (Factory)' : ' (with the conversion)'), price: 0, desc: transDesc(fac) });
-      DR.TRANS_SHOP.forEach(function (t) { if (t !== fac && DR.transFits(inst, t)) list.push({ id: t, name: DR.TRANS[t].name, price: DR.TRANS[t].price, desc: transDesc(t) }); });
+      var dslE = !!DR.ENGINES[inst.engine || car.engine].diesel;
+      // behind a Cummins: the diesel boxes and the race boxes diesel drag
+      // cars run (TH400, Powerglide, Lenco); no car gearboxes
+      var DSL_RACE = { a3_400: 1, a3_pm: 1, pg_pm: 1, lenco5: 1 };
+      DR.TRANS_SHOP.forEach(function (t) { if (t !== fac && DR.transFits(inst, t) && (dslE ? DR.TRANS[t].dsl || DSL_RACE[t] : !DR.TRANS[t].dsl)) list.push({ id: t, name: DR.TRANS[t].name, price: DR.TRANS[t].price, desc: transDesc(t) }); });
       return list;
     }
     if (cat === 'rtires') {
@@ -757,10 +799,11 @@
       var fEng = inst.engine || car.engine, fCur = DR.partId('fi', inst);
       if (st !== 'none' && DR.FI[st].type === 'turbo') { var tbf = DR.turboSpec(st, DR.ENGINES[fEng]); if (tbf && tbf.name) list[0].name = tbf.name + ' (Factory)'; }
       DR.FI_SHOP.forEach(function (f) {
-        var u = DR.FI[f];
-        // only the turbos that suit this engine (the one fitted always shows)
-        if (u.type === 'turbo' && f !== fCur && DR.turboFits && !DR.turboFits(f, fEng)) return;
-        list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, tune: 'hard', group: u.type !== 'turbo' ? 'Superchargers' : u.twin ? 'Twin turbos' : 'Single turbos',
+        var u = DR.FI[f], dE = !!DR.ENGINES[fEng].diesel;
+        // only the turbos that suit this engine (the one fitted always shows);
+        // a diesel gets diesel turbos, no blowers
+        if (f !== fCur && (u.type !== 'turbo' ? dE : (!!u.diesel !== dE || (DR.turboFits && !DR.turboFits(f, fEng))))) return;
+        list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, tune: 'hard', group: u.type !== 'turbo' ? 'Superchargers' : u.compound ? 'Compound turbos' : u.twin ? 'Twin turbos' : 'Single turbos',
           desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp. Needs an ECU tune: the stock one can only run ~5 psi. Plan on injectors and a pump too.' });
       });
       return list;
@@ -813,6 +856,9 @@
     return c.options.map(function (o, i) {
       if (o.only && o.only.indexOf(engId) < 0) return null;   // made for one engine
       if (o.ts && o.id !== curId && !DR.twinScrollFits(eng)) return null;
+      // diesel parts only on a diesel, and a diesel shows its own (gas
+      // injectors, pumps, ECUs, clutches and converters don't fit it)
+      if (DSL_CATS[cat] && o.id !== 'stock' && o.id !== curId && !!o.dsl !== !!eng.diesel) return null;
       // carbureted engines: the multiport manifold; after it, no factory
       // injectors / throttle body / ECU to keep (the cheapest is the base);
       // carb pumps for a carb, EFI pumps for injection
@@ -842,7 +888,8 @@
   // housings take the place of the bottom end. A diesel has no spark, no
   // throttle body and does not run gasoline or alcohol.
   DR.engineKind = function (inst) { var e = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine]; return e.rotary ? 'rotary' : e.diesel ? 'diesel' : 'piston'; };
-  var NOT_FOR = { rotary: { rods: 1, cams: 1, valvetrain: 1 }, diesel: { ignition: 1, throttle: 1, fueltype: 1 } };
+  var NOT_FOR = { rotary: { rods: 1, cams: 1, valvetrain: 1 }, diesel: { ignition: 1, throttle: 1, fueltype: 1, bov: 1, wastegate: 1, launch: 1 } };
+  var DSL_CATS = { injectors: 1, fuelpump: 1, ecu: 1, clutch: 1, converter: 1 };
   // rotary versions of the bottom-end and head categories: same jobs (hold,
   // be, bw), rotary parts. Porting carries the breathing heads and cams give
   // a piston engine (0.30 + 0.33).
@@ -971,6 +1018,12 @@
   // / Extreme kits): a matched set of parts per shop group, bought and fitted
   // in one go at a discount. An entry is [cat, id] or [cat, fn(inst) -> id]
   // so a package can suit the car (automatic vs manual, boosted vs NA).
+  // a diesel's power packages: tune, injectors, pump and turbo
+  DR.PACKAGES_DSL = { power: [
+    [['ecu', 'dtune'], ['injectors', 'dinj25']],
+    [['ecu', 'dtune'], ['injectors', 'dinj50'], ['fuelpump', 'dlift'], ['fi', 'd_vgt63']],
+    [['ecu', 'drace'], ['injectors', 'dinj100'], ['fuelpump', 'dcp3s'], ['fi', 'd_s366']],
+    [['ecu', 'drace'], ['injectors', 'dinj200'], ['fuelpump', 'dcp3d'], ['fi', 'd_s480']]] };
   DR.PKG_TIERS = [{ id: 'budget', name: 'Budget', lvl: 1 }, { id: 'street', name: 'Street', lvl: 2 }, { id: 'pro', name: 'Pro', lvl: 3 }, { id: 'extreme', name: 'Extreme', lvl: 4 }];
   DR.PKG_DISCOUNT = 0.1;
   function auto(inst) { return DR.TRANS[DR.partId('trans', inst)].type === 'auto'; }
@@ -1249,7 +1302,8 @@
     var boostPkg = groups.indexOf('power') >= 0;
     groups.forEach(function (gid) {
       if (gid !== 'power' && boostPkg && steps.length) setBoost();
-      (DR.PACKAGES[gid] || [])[tier].forEach(function (e) {
+      var dslPk = gid === 'power' && DR.ENGINES[copy.engine || DR.CARS[copy.carId].engine].diesel;
+      ((dslPk ? DR.PACKAGES_DSL : DR.PACKAGES)[gid] || [])[tier].forEach(function (e) {
         var cat = e[0], id = typeof e[1] === 'function' ? e[1](copy) : e[1];
         if (!id || !DR.partApplies(cat, copy)) return;
         var cur = DR.partId(cat, copy);

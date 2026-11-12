@@ -2,6 +2,41 @@
 
 Short notes for testing, newest first.
 
+## Diesel rework: fuel makes the power, smoke, EGT, G56, Cummins swaps
+
+- **The Cummins works like a real diesel now.** Fuel makes the power: the
+  injectors, the pump and the tune set how much goes in; the turbo's air
+  decides how cleanly it burns. Short of air it **rolls black smoke**, the
+  exhaust runs hot and the extra fuel gives less and less. More fuel also
+  lights a bigger turbo sooner, like the real thing.
+- **Real stock numbers:** 370 hp / 800 lb-ft (16.0 in the quarter, like a
+  real crew-cab 4x4). The factory computer limits torque in 1st and 2nd.
+- **Diesel parts** (only on a diesel; gas injectors, pumps, gas turbos,
+  blow-off valves, wastegates and 2-steps are gone from it): injectors 25%
+  to 400% over, lift pump / stroker / dual / triple CP3, a Diesel Tune
+  (+~130 hp) and a Race Tune (no smoke limiter), Drop-in VGT, S366, S480,
+  **S366/S480 compounds** and race triples, diesel converters (2,200 /
+  2,600 / 3,000 stall, nothing looser), built 68RFE, built 48RE, South Bend
+  clutches. Packages pick diesel parts too.
+- **EGT gauge** on the race dash for diesels: green, amber past 1,300 F, red
+  past 1,600 F. Past ~1,700 F the engine-risk box warns (pistons, turbo).
+- **G56 manual** at the dealer ($2,695 less): like the real truck its engine
+  is detuned (350 hp / 660 lb-ft). A diesel tune unlocks it, then the stock
+  clutch slips until you fit a dual disc.
+- **Cummins swaps:** the 6.7 is $12,500 in the engine list, plus a $3,500
+  swap kit (and fabrication on smaller cars). Behind it: the G56, 68RFE,
+  48RE or a race box (TH400, Powerglide, Lenco). Diesel parts follow the
+  engine.
+- **Diesel Dan** (docks, Mondays) now really races a Cummins: coal-rolling,
+  about 13.5 on the street.
+- Your truck's old gas parts became the nearest diesel ones.
+
+**Try:** the stock Ram, then a Diesel Tune, then 100% injectors on the stock
+turbo (watch the smoke and the EGT), then add an S366 or compounds. A G56
+truck with a tune, then a dual-disc clutch. **Look out for:** smoke that
+never stops or never shows, an EGT gauge that seems off, a part that's
+missing on the truck or showing on a gas car.
+
 ## Turbo rework: real spool, new turbo lineup, spec sheets
 
 - **Turbos now come on boost the way real ones do.** The game works out

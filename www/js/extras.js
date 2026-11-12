@@ -71,7 +71,8 @@
     { id: 'nancy', name: 'Nitro Nancy', car: 'cobra03', spot: 'highway', stage: 2, win: { wd: [5], from: 25, to: 27 }, bet: 5000,
       ok: function (S) { return S.nosHp ? '' : '"Where\'s your bottle? I only race spray."'; },
       hint: 'After the Friday street night, a Cobra on the 99 on-ramp races anyone on nitrous. 1 to 3 AM.' },
-    { id: 'dan', name: 'Diesel Dan', car: 'diesel', spot: 'docks', stage: 2, win: { wd: [1], from: 22, to: 26 }, bet: 5000,
+    // Dan's truck: tuned (no smoke limiter: he rolls coal), 50% injectors and a lift pump
+    { id: 'dan', name: 'Diesel Dan', car: 'diesel', build: { injectors: 'dinj50', fuelpump: 'dlift', ecu: 'drace' }, spot: 'docks', stage: 2, win: { wd: [1], from: 22, to: 26 }, bet: 5000,
       ok: function (S) { return S.car.cat === 'Truck' ? '' : '"Trucks only, pal. Cars go to the car meet."'; },
       hint: 'Mondays at the docks there\'s a diesel truck that only races other trucks. Coal-rolling, big money.' },
     { id: 'max', name: 'Mileage Max', car: 'hellcat', spot: 'docks', stage: 3, win: { wd: [3], from: 22, to: 26 }, bet: 10000,
@@ -95,6 +96,7 @@
   X.wandererAt = function (spot) { var c = G.careerState(), now = G.now(); return DR.WANDERERS.filter(function (w) { return w.spot === spot && c.stage >= w.stage && wWindow(w, now); })[0] || null; };
   function wOpp(w) {
     var o = rivals().filter(function (x) { return x.carId === w.car; }).sort(function (a, b) { return Math.abs(DR.STAGES.findIndex(function (st) { return st.all.some(function (ev) { return ev.opps.indexOf(a) >= 0; }); }) - w.stage - 1) - Math.abs(DR.STAGES.findIndex(function (st) { return st.all.some(function (ev) { return ev.opps.indexOf(b) >= 0; }); }) - w.stage - 1); })[0];
+    if (w.build) o = { carId: w.car, parts: w.build };
     o = Object.assign({}, o || DR.STAGES[Math.min(w.stage + 1, DR.STAGES.length - 1)].events[0].opps[0]);
     o.name = w.name; o.skill = Math.max(o.skill || 0.7, 0.85); o.color = '#151515';
     return o;

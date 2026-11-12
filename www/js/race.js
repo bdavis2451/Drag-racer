@@ -240,6 +240,9 @@
     var sm = G.simMode(), tcol = sm ? '#c8c8d0' : T < tt.topt - 10 ? '#4da3ff' : T > tt.topt + 30 ? '#ff4d4d' : '#46e07a';
     hbar(4, 'TIRE ' + Math.round(T * 1.8 + 32), T / tmax, tcol, sm ? null : [(tt.topt - 10) / tmax, (tt.topt + 30) / tmax]);
     if (Sx.fiType !== 'none') hbar(18, 'BOOST ' + sim.boost.toFixed(0), sim.boost / Math.max(Sx.maxBoost, 5), '#ffcc33');
+    // a diesel's exhaust temperature (pyrometer): green to 1,300 F, amber to
+    // 1,600, red past it
+    if (Sx.dsl) { var eg = sim.egt || 400; hbar(32, 'EGT ' + Math.round(eg / 10) * 10, (eg - 300) / 1600, eg > 1600 ? '#ff4d4d' : eg > 1300 ? '#ffa13d' : '#46e07a'); }
     // ---- right: speed
     var mph = sim.v * 2.23694, km = G.state.settings.units === 'kmh', sp = String(Math.round(km ? mph * 1.609 : mph));
     while (sp.length < 3) sp = ' ' + sp;
@@ -884,6 +887,13 @@
         var n = Math.floor(r.smokeAcc); r.smokeAcc -= n;
         // (from the front tires on a front-driver)
       if (n) parts.smoke(r.S.drive === 'FWD' ? rearX + (spr.wheelF.x - spr.wheelR.x) / DR.PPM : rearX, 0.12, sim.v, Math.min(6, n), { lane: r.lane, slip: slipV, dense: 0.55 + 0.35 * heavy });
+      }
+      // a diesel short of air rolls black smoke out of the exhaust (a light
+      // haze when it's just rich; the thicker the richer)
+      if (r.S.dsl && sim.smoke > 0.02 && !sim.finished && !sim.dead) {
+        r.dslAcc = (r.dslAcc || 0) + dt * 45 * sim.smoke;
+        var dn = Math.floor(r.dslAcc); r.dslAcc -= dn;
+        if (dn) parts.smoke(rearX - (spr.wheelR.x - spr.padL) / DR.PPM, 0.45, sim.v, Math.min(5, dn), { lane: r.lane, engine: true, dense: 0.3 + 0.55 * sim.smoke });
       }
       if (sim.nosOn || (sim.cut && !sim.launched && r.S.twostep && Math.random() < 0.15)) {
         var ex = rearX - (spr.wheelR.x - spr.padL) / DR.PPM;
