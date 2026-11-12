@@ -1,7 +1,6 @@
 # Diesel truck & motor rework (research, Nov 11)
 
-Status: **research done, talking it through. No code.** Picked up again
-Nov 12, after the turbo rework shipped.
+Status: **plan drafted (Nov 12), waiting on the owner's answers. No code.**
 
 ## Update after the turbo rework (Nov 12)
 - Turbo spool is now physics (see `turbo-system.md`): the factory HE300VG
@@ -142,6 +141,102 @@ What didn't: the fuel side (tune +2-5 hp, injectors +0), power still made
 by boost not fuel, gas parts on a diesel, low stock torque (672 vs 800),
 and the stock truck is now too quick (15.25 vs real 15.6-16.5).
 Test script: scratchpad `scr/dsl3.js`.
+
+## Owner's picks (Nov 12)
+1. **A: fuel makes the power.** 2. **All diesel parts.** 3. **Smoke + EGT.**
+4. (asked again: what it means). 5. **No high-stall gas converters on
+diesels; base the converter list on real diesel converters.** 6. **G56 +
+detuned engine** (owner's idea: an ECU option that limits it); **Cummins
+swaps into other cars, done properly**; other diesels wait for the next car
+batch. Base everything on realism + early-2000s racer fun.
+
+## Research added (Nov 12)
+- **Smoke / air-fuel:** diesels run lean. Factory calibrations sit around
+  20-22:1 (clean, cool EGT); haze starts richer than ~18:1; lambda 1.1-1.2
+  (~16-17:1) is a tuner's full-power limit; richer is black smoke and heat.
+  Factory ECUs have a smoke limiter (fuel capped by the air measured).
+  (HP Academy diesel fundamentals; oilburners forum; Banks on EGT.)
+- **G56 manual truck (2013-18):** 350 hp / 660 lb-ft vs the 68RFE's
+  370 / 800, from a **de-rated engine calibration** (same hardware)
+  (DieselHub, TFLtruck). Clutches: stock is the weak link; South Bend
+  single upgrade ~475 hp / 1,000 lb-ft (~$1,550), street dual disc ~650 hp /
+  1,300-1,350 lb-ft (~$1,400-1,770), competition dual disc ~800-900 hp /
+  1,300-1,400 lb-ft (~$2,300).
+- **Diesel converters (68RFE / 48RE):** factory ~2,000 stall; aftermarket
+  triple/quad-disc billet units at 1,400-1,900 (towing), 2,200 (tuned), 2,600
+  (compounds / aggressive), race stators to ~3,000 (SunCoast 1,800-3,000;
+  DPC; ATS; BD "race/drag/sled only"). No 4,000+ diesel converters found.
+- **Injector prices (2013-18 6.7):** ~$550-1,000/set for mild remans,
+  S&S 50-200% $3,756-7,008 (2019+), Exergy 150% $4,974.
+- **Cummins swaps:** used 6.7 $3,000-6,000 (salvage) + swap kit
+  $1,500-3,000 + trans adapter $800-1,400; shop jobs $7,000-9,000; small
+  cars need firewall notching, cooling, frame strengthening. Real swaps:
+  C10s, Mustangs, Dusters, Jeeps.
+  (dieselworldmag cost of a Cummins swap; crossmembers.com; stangnet;
+  forabodiesonly Duster build.)
+
+## The plan (draft, Nov 12)
+**1. Power from fuel (diesels only).** The injectors, pump and tune set the
+fuel per stroke = the torque. The air (boost) sets the air-fuel ratio:
+22:1+ clean; 18-22 a light haze; under ~17 black smoke, hotter EGT and
+less power per drop of fuel (it doesn't all burn). The stock ECU has a
+smoke limiter (fuel capped near 20:1) and limits torque in 1st and 2nd
+like the real truck; a tune raises the fuel and loosens the limiter.
+**2. Stock truck:** the real 2013-18 numbers: 370 hp / 800 lb-ft with the
+68RFE (fixes the 15.25: back to ~15.7-15.9).
+**3. Diesel parts** (shown only on a diesel; gas injectors, pumps, gas
+turbos, blow-off valve, wastegate parts and 2-step hidden):
+| Section | Option | Feeds / does | Price |
+|---|---|---|---|
+| Injectors | Stock | ~400 hp | - |
+| | 25% over | ~500 hp | $1,200 |
+| | 50% over | ~600 hp | $2,400 |
+| | 100% over | ~750 hp | $3,800 |
+| | 200% over | ~950 hp | $5,500 |
+| | 300% over | ~1,150 hp | $7,000 |
+| | Race (400%+) | ~1,500 hp | $9,500 |
+| Fuel Pump | Stock CP3 | ~500 hp | - |
+| | Lift pump (FASS / AirDog style) | ~600 hp | $1,000 |
+| | Stroker CP3 + lift pump | ~800 hp | $2,300 |
+| | Dual CP3 kit | ~1,200 hp | $3,800 |
+| | Triple CP3 race kit | ~1,800 hp | $7,500 |
+| ECU | Diesel tune (handheld) | more fuel and timing, ~+100 hp stock, low-gear limit off, smoke limiter loosened | $900 |
+| | Race tune | no smoke limiter, full timing, for big injectors | $1,600 |
+| Turbo | Factory HE300VG (VGT) | ~500 hp | - |
+| | Drop-in VGT upgrade (63mm) | ~650 hp, still spools early | $2,800 |
+| | S366 single (66mm) | ~650 hp | $2,600 |
+| | S480 single (80mm) | ~900 hp | $3,400 |
+| Turbo, Compound | S366 over S480 | ~1,100 hp, early spool + big top end | $6,800 |
+| | Race triples (S400 x2 over S500) | ~2,000 hp | $14,000 |
+| Converter | Factory (2,000) | | - |
+| | Triple-disc 2,200 stall (tuned) | holds 1,000 hp | $1,900 |
+| | Billet 2,600 stall (compounds) | holds 1,400 hp | $2,400 |
+| | Race billet 3,000 stall | race only | $3,000 |
+| Transmission | Built 68RFE | ~900 hp | $6,500 |
+| | Built 48RE (4-speed) | 1,400+ hp | $9,500 |
+| Clutch (G56) | South Bend single upgrade | 1,000 lb-ft | $1,550 |
+| | Street dual disc | 1,300 lb-ft | $1,700 |
+| | Competition dual disc | 1,400 lb-ft | $2,300 |
+Bottom end / valvetrain / head studs: the existing parts with diesel
+limits (stock rods ~800 hp, studs past 45 psi, springs for revs).
+**4. Smoke and EGT:** an EGT gauge on the dash for diesels (red past
+1,300 F); black smoke from the stacks on launch and whenever it's short of
+air (thicker = richer), a light haze when tuned clean; the cloud drifts
+across the lane. Past ~1,500 F the run carries piston/turbo risk (the
+existing risk box).
+**5. G56 manual:** a dealer choice on the Ram (-$2,695 vs the 68RFE, the
+real option price). The manual truck's factory ECU runs the real
+"manual calibration": 350 hp / 660 lb-ft. A diesel tune lifts it to the
+full fuel; then the stock clutch is the limit (the clutch upgrades above).
+**6. Cummins swaps done properly:** the 6.7 in the engine swap list at a
+realistic price (pulled engine with ECM and harness ~$12,500, was $26,500),
+a "Cummins swap kit" line (mounts, crossmember, cooling, wiring, adapter
+$3,500) on top of the existing fit/fabrication costs; needs a gearbox that
+holds the torque (G56, 48RE, built 68RFE, or a race box); the diesel parts
+follow the engine; ~1,150 lb on the nose.
+**Saves:** an owned diesel's gas injectors / pumps / turbo / ECU become the
+nearest diesel parts. **Rivals:** question below.
+**Left out:** other diesels (next car batch), propane, water-meth (later).
 
 ## Options (for the owner to pick from)
 
