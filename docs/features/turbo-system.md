@@ -1,6 +1,6 @@
 # Turbo system rework (spool, sizing, setups)
 
-Status: **research, talking it through. No code.** Started Nov 12.
+Status: **research done, first decisions made; written plan next. No code.** Started Nov 12.
 Order agreed in principle: turbo system first, then the diesel rework
 (`diesel.md`) on top of it, then career/rival balance.
 
@@ -134,18 +134,22 @@ calibration pass is the main work.
    their real job (boost control), not "spool sooner".
 7. **Later, optional:** a DRS-style diagram view of the turbo system.
 
+## Decisions (owner, Nov 12)
+- **Spool from physics** (engine airflow, exhaust heat, turbo size), not
+  fixed per-turbo numbers. Calibrate to real ranges.
+- **Sections: Single, Twin, Compound (diesel only).** Sequential and VGT stay
+  factory parts.
+- **Naming: real-style model numbers** (e.g. 6266, 7675, 8885, S366, S480),
+  with the size/type in the description.
+- **Spec sheet shows everything:** on-your-engine numbers, the boost curve,
+  and compressor/turbine details (wheel sizes, trims, A/R, bearing). A/R
+  is information only, never adjustable.
+
 ## Open questions for the owner
-1. Physics model + curated list + spec sheet (recommended), or keep fixed
-   per-turbo spool numbers and just recalibrate them?
-2. Setup sections: Single / Twin / Compound? (Compound diesel-only at first?)
-3. Turbo naming: by size ("Turbo 67mm") as now, or size + style ("67mm
-   ball-bearing, street housing"), or real-style model numbers (6766, S480)?
-4. Bearing: one per turbo (we pick), or offer the journal/ball pair on the
+1. Bearing: one per turbo (we pick), or offer the journal/ball pair on the
    popular sizes as a price/response choice?
-5. Spec sheet detail: just "boost starts / full boost / supports hp", or
-   also the boost curve and wheel sizes?
-6. The diagram view (DRS style) now, later, or no?
-7. Rivals: let them change and rebalance after (my pick), or freeze?
+2. The diagram view (DRS style) now, later, or no?
+3. Rivals: let them change and rebalance after (my pick), or freeze?
 
 ## What it changes
 - **Every turbo car**, player and rival, gets new spool. Career/rival
