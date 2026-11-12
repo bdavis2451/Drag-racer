@@ -793,7 +793,9 @@
       DR.pixText(ctx, 'RPM X1000', Math.round((L + R) / 2) - 18, B + 13, '#666');
     }
     var info = h('div', { class: 'tstats' },
-      h('div', { class: 'row', style: { marginBottom: '6px' } }, btn('▶ Pull ' + DR.money(fee), run, 'go')),
+      h('div', { class: 'row', style: { marginBottom: '6px' } }, btn('▶ Pull ' + DR.money(fee), run, 'go'),
+        // the turbo on the car: its spec sheet and boost curve
+        (function () { var Sx = G.spec(G.car()); return Sx.tb && UI.turboSheet ? btn('Turbo specs', function () { var cl = UI.modal(h('div', { class: 'col pmodal' }, h('div', { class: 'pix acc' }, Sx.tbs && Sx.tbs.name || DR.FI[Sx.fiId].name), UI.turboSheet(G.car(), Sx.fiId, Sx, Sx), btn('Close', function () { cl(); }, 'small'))); }, 'small') : null; })()),
       dy ? gst('PEAK WHP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm + delta(dy.peakHp, prev && prev.peakHp), 'acc') : h('div', { class: 'dim gsmall' }, 'No pulls on this car yet.'),
       dy ? gst('PEAK WTQ', Math.round(dy.peakTq) + ' lb-ft' + delta(dy.peakTq, prev && prev.peakTq)) : null,
       dy ? gst('SAE CF', dy.cf.toFixed(3) + ' • ' + dy.temp + '°F ' + dy.baro.toFixed(2) + ' inHg', '') : null,

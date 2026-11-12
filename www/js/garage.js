@@ -511,9 +511,16 @@
   // fit). Factory parts aren't sold.
   function catalogGrid(inst, cat) {
     var curId = DR.partId(cat, inst), tunedNow = G.spec(inst).tuned, bestG = cat === 'gears' && DR.bestGears ? DR.bestGears(inst, function (o) { return G.partUnlocked('gears', lvlOf(o), o.id); }) : null;
-    var grid = h('div', { class: 'pgrid' });
+    var grid = h('div', { class: 'pgrid' }), wrap = null, lastGroup = null;
     DR.partOptions(cat, inst).forEach(function (o) {
       if (!o.price) return;
+      // turbos come in sections: single, twin, then the superchargers
+      if (o.group && o.group !== lastGroup) {
+        if (!wrap) wrap = h('div', {});
+        if (grid.children.length) wrap.appendChild(grid);
+        wrap.appendChild(h('h3', { class: 'pgroup' }, o.group));
+        grid = h('div', { class: 'pgrid' }); lastGroup = o.group;
+      }
       var lvl = lvlOf(o), installed = o.id === curId, owned = G.ownedCount(cat, o.id), tubeOn = cat === 'weight' && DR.getOption('chassis', inst).tube, locked = tubeOn || !G.partUnlocked(cat, lvl, o.id);
       grid.appendChild(h('div', { class: 'pcard l' + lvl + (locked ? ' locked' : '') + (installed ? ' inst' : ''), onclick: function () { partModal(inst, cat, o.id); } },
         h('div', { class: 'pic' }, iconEl(DR.iconCat(cat, inst), lvl, o.id, 48)),
@@ -524,6 +531,7 @@
         h('div', { class: 'pfoot' }, tubeOn ? h('span', { class: 'tag' }, 'TUBE CHASSIS FITTED') : locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl, o.id)) : h('span', { class: 'price' + (G.canAfford(G.partPrice(cat, o) + (o.install || 0)) ? '' : ' bad') }, DR.money(G.partPrice(cat, o) + (o.install || 0)) + (o.install ? ' fitted' : '') + (G.partDiscount(cat) ? ' (sponsor)' : '')),
           cat === 'gears' && !locked && o.id === bestG ? h('span', { class: 'tag g' }, 'BEST FOR YOUR CAR') : installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(cat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
+    if (wrap) { wrap.appendChild(grid); return wrap; }
     if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
     if (cat === 'gears' && bestG === 'stock') return h('div', {}, h('div', { class: 'good gsmall', style: { margin: '0 0 6px' } }, 'BEST FOR YOUR CAR: the factory gears run its quickest quarter right now.'), grid);
     return grid;
@@ -660,6 +668,7 @@
         owned ? ['In your inventory', '×' + owned, 'acc'] : null
       ]) : h('div', { class: 'warnbox' }, G.partFitIssue({ cat: cat, id: id }, inst)),
       fits ? UI.riskBox(S1) : null,
+      cat === 'fi' && DR.FI[id] && DR.FI[id].type === 'turbo' ? UI.turboSheet(inst, id, S0, S1) : null,
       cat === 'engine' && opt.fit && opt.fit.block ? h('div', { class: 'warnbox' }, opt.fit.block + '.') : null,
       cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory. The install is paid when the engine goes in.') : null,
       G.isEngineBound(cat) && cat !== 'engine' ? h('div', { class: 'dim' }, 'Built for your ' + DR.ENGINES[inst.engine].name + '.') : G.isCarBound(cat) ? h('div', { class: 'dim' }, 'Built for your ' + DR.CARS[inst.carId].name + '.') : null,

@@ -84,7 +84,7 @@
   // Boost (psi) a fully spooled system makes at this rpm with full throttle.
   function steadyBoost(S, rpm) {
     if (S.fiType === 'none') return 0;
-    if (S.fiType === 'turbo') return S.boostSet * clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1) + creepAt(S, rpm);
+    if (S.fiType === 'turbo') return (S.tbHoldT ? Math.min(S.boostSet, holdAt(S, rpm)) : 0) + creepAt(S, rpm);
     if (S.fiType === 'cent') return S.boostSet * Math.pow(Math.min(rpm, S.ref) / S.ref, 2);
     return S.boostSet * clamp(rpm / 1800, 0, 1);
   }
@@ -133,14 +133,8 @@
     S.fiType = fi.type;
     S.boostSet = mods.boost != null ? mods.boost : (e.fi ? e.fi.boost : 0);
     S.maxBoost = fi.maxBoost || 0;
-    if (fi.type === 'turbo') {
-      // exhaust flow sets the spool: a rotary fires every rotor face once
-      // per shaft turn, so a 1.3L 13B flows like a 2.6L piston engine
-      var ds = clamp(Math.sqrt(3.0 / airDisp(e)), 0.55, 1.6);
-      S.spool15 = fi.spool * ds;
-      S.lag = fi.lag;
-      setSpool(S);
-    }
+    S.eng = e;
+    if (fi.type === 'turbo') S.tbs = DR.turboSpec(fiId, e);
     S.paras = fi.paras || 0;
     S.flowW = fi.flow ? fi.flow * DR.HP : 0;
     // compressor efficiency, intercooler effectiveness (factory boosted
@@ -155,28 +149,149 @@
     S.cool = mods.cool || 0;
     S.knockFuel = S.knock = e.diesel ? 99 : (mods.knock || 17) + (mods.noAdd ? 0 : engineKnockAdd(e.id));
     S.fuelW = 1e12;
+    if (S.tbs) tbInit(S);
     return S;
   }
 
   function airDisp(e) { return e.rotary ? e.disp * 2 : e.disp; }
   DR.airDisp = airDisp;
-  // full-boost rpm for the boost asked for: more boost needs more exhaust
-  // energy, so the turbo gets there later (about 14% later per 10 psi over
-  // 15, in line with dyno boost curves). A turbo too big for the engine may
-  // not reach it before the limiter.
-  function spoolAt(S, boost) { return S.spool15 * clamp(1 + 0.14 * (boost - 15) / 10, 0.8, 1.8); }
-  function setSpool(S, sized) {
-    if (!S.spool15) return;
-    S.spoolHi = spoolAt(S, S.boostSet);
-    // a bolt-on turbo far too big for the engine: if the power the engine
-    // asks for is under ~40% of what the turbo is built to flow, it sits
-    // way left on its compressor map and needs a lot more revs to light
-    if (sized && S.flowW && DR.FI[S.fiId].price) {
-      var want = shapePeak(S) * S.Tpk * (1 + S.boostSet / 14.7) * (DR.AMBIENT_C + 273.15) / (chargeTemp(S, S.boostSet) + 273.15), frac = want / S.flowW;
-      if (frac < 0.4) S.spoolHi *= Math.min(1.6, Math.sqrt(0.4 / Math.max(0.05, frac)));
-    }
-    S.spoolLo = S.spoolHi * 0.55;
+  // ---------------------------------------------------------------- turbo
+  // How a turbo comes on boost, from the physics (Garrett Turbo Tech 103):
+  // the engine pumps air (displacement x rpm x how well it breathes x the
+  // density of the boosted charge); the exhaust (that air plus its fuel, hot)
+  // squeezes through the turbine housing and drives the turbine; the
+  // compressor spends that power making boost. Boost holds where the turbine
+  // can pay for it, so it arrives at the rpm where the exhaust is strong
+  // enough: a bigger engine, hotter exhaust or a smaller turbine gets there
+  // sooner, more boost later. The rotor also has to be spun up (its
+  // inertia): that's the lag on top. Calibrated to dyno pulls (Evo + 35R
+  // ~4,400, 5.3 LS + 76mm ~3,800, 6.0 + 88mm ~4,700, Cummins + S480 ~3,000).
+  var TB = { T1: 298, P1: 101.3, K: 0.042, AR: 0.35, SIG: 0.72 };
+  function tbU2psi(U) { return (Math.pow(1 + TB.SIG * U * U / (1005 * TB.T1), 3.5) - 1) * 14.7; }
+  function tbPsi2U(psi) { return Math.sqrt(Math.max(0, Math.pow(1 + Math.max(0, psi) / 14.7, 1 / 3.5) - 1) * 1005 * TB.T1 / TB.SIG); }
+  // the turbo's fixed numbers for this engine: rotor inertia, turbine flow
+  // capacity, exhaust heat. x: the parts around it (manifold, downpipe, heat
+  // shielding, twin-scroll), set by buildSpec.
+  function tbSetup(S, e, x) {
+    var t = S.tbs; x = x || {};
+    var n = t.twin ? 2 : 1, cex = t.cex || t.comp * 1.33;
+    var I1 = 7.6e-5 * Math.pow(cex / 82, 5) + 1.6e-4 * Math.pow(t.turb / 68, 5) * (t.ceramic ? 0.6 : 1);
+    var phi1 = TB.K * Math.pow(t.turb / 68, 2) * Math.pow(t.ar / 0.82, TB.AR);
+    // a single turbo on a V or flat engine is fed through long crossover
+    // pipes: the exhaust cools and its pulses smear out (about a third of the
+    // energy at the turbine); twins sit right at each bank
+    var vee = e.vee != null ? e.vee : / V\d|Flat-6|V8|V10|V12/.test(e.name) && !/Flat-4|Boxer-4/.test(e.name);
+    var pulse = (vee && !t.twin ? 0.66 : vee ? 0.95 : 1) * (x.man || 1) * (x.ts || (t.ts && x.stockMan !== false) ? 1.1 : 1);
+    var T3 = (e.diesel ? 1180 : e.rotary ? 1150 : 1200) * (x.heat || 1);
+    S.tb = { n: n, r: cex / 2000, I: I1 * n, phi: phi1 * n, phi1: phi1, I1: I1, T3e: T3 * pulse, c4: (x.c4 != null ? x.c4 : (e.diesel ? 15 : 40)) * (t.factory && x.stockDp !== false ? 2 : 1),
+      ve: 0.9 * (1 + 0.25 * (S.breathing || 0)), afr: e.diesel ? 16 : 11.8, fric: t.bb ? 0.5 : 1,
+      // small turbines are less efficient (more of the gas slips past the blades)
+      etaT: 0.58 + 0.14 * clamp((t.turb - 45) / 23, 0, 1), vgt: !!t.vgt, seq: t.seq || 0,
+      // the compressor's surge line: past about PR 2 at a quarter of its
+      // choke flow it stalls, so a huge compressor can't hold boost on a
+      // small engine at low rpm
+      mc: Math.max(0.05, (S.flowW ? S.flowW / DR.HP : 400) / 10 * 0.00756) };
+    S.lag = 0.25 * Math.pow(S.tb.I / 2.4e-4, 0.35) * (t.bb ? 0.85 : 1);
   }
+  // power the turbine makes and the compressor needs (W) at this rpm,
+  // manifold pressure P2 (kPa) and throttle
+  function tbFlow(S, rpm, P2, thr) {
+    var tb = S.tb, pr = Math.max(1, P2 / TB.P1), cpr = Math.pow(pr, 0.2857) - 1;
+    var T2 = TB.T1 * (1 + cpr / S.etaC), Tm = T2 - (S.icE || 0) * (T2 - TB.T1);
+    // air per stroke follows the torque curve up to the power peak; past it
+    // the engine still pumps air (power falls more for friction and burn
+    // time than for breathing), so the exhaust flow eases off gently
+    var vs = shape(S, Math.min(rpm, S.pkRpm));
+    if (rpm > S.pkRpm) { var d = (rpm - S.pkRpm) / S.pkRpm; vs *= Math.max(0.4, 1 - 0.6 * d * d); }
+    var ma = tb.ve * vs * (thr == null ? 1 : thr) * (P2 * 1000 / (287 * Tm)) * airDisp(S.eng) / 1000 * rpm / 120;
+    var mx = ma * (1 + 1 / tb.afr);
+    // a sequential pair runs on the small turbo alone until the hand-over;
+    // a variable-vane turbine closes down to a small one at low flow
+    var phi = tb.seq ? (rpm < tb.seq ? tb.phi1 : tb.phi) : tb.phi;
+    if (tb.vgt) phi *= clamp(0.55 + 0.45 * mx / (tb.mc * 1.07), 0.55, 1);
+    var P4 = TB.P1 + tb.c4 * mx * mx, xx = mx * Math.sqrt(tb.T3e) / (phi * P4), ER = Math.sqrt(1 + xx * xx);
+    return { ma: ma, Wt: mx * 1150 * tb.T3e * (1 - Math.pow(ER, -0.248)) * tb.etaT, Wc: ma * 1005 * TB.T1 * cpr / S.etaC };
+  }
+  // the most boost (psi) the turbo can hold at this rpm (steady, full throttle)
+  function tbHold(S, rpm) {
+    var lo = TB.P1, hi = TB.P1 * (1 + Math.max(S.maxBoost || 0, 30) / 14.7 * 1.4);
+    var ok = function (P2) { var f = tbFlow(S, rpm, P2); return f.Wt >= f.Wc && P2 / TB.P1 <= 1 + 8 * f.ma / S.tb.mc; };
+    if (!ok(TB.P1 + 1)) return 0;
+    for (var i = 0; i < 16; i++) { var m = (lo + hi) / 2; if (ok(m)) lo = m; else hi = m; }
+    return (lo - TB.P1) * 0.145;
+  }
+  function tbInit(S) {
+    if (!S.tbs) return;
+    tbSetup(S, S.eng, S.tbx);
+    var top = Math.max(S.red, S.pkRpm) + 1500, tab = [];
+    for (var r = 0; r <= top; r += 100) tab.push(r < 600 ? 0 : tbHold(S, r));
+    S.tbHoldT = tab;
+    S.spoolHi = spoolAt(S, S.boostSet || 8);
+    S.spoolLo = spoolAt(S, Math.max(1, (S.boostSet || 8) * 0.15));
+  }
+  function holdAt(S, rpm) {
+    var t = S.tbHoldT, i = rpm / 100, k = Math.floor(i);
+    if (k >= t.length - 1) return t[t.length - 1];
+    return k < 0 ? 0 : t[k] + (t[k + 1] - t[k]) * (i - k);
+  }
+  // the lowest rpm where the turbo holds this boost (steady state; a pull
+  // gets there a few hundred rpm later, see DR.turboPull)
+  function spoolAt(S, boost) {
+    var t = S.tbHoldT; if (!t) return 0;
+    for (var k = 6; k < t.length; k++) if (t[k] >= boost) {
+      var f = t[k - 1] < boost ? (boost - t[k - 1]) / Math.max(0.01, t[k] - t[k - 1]) : 0;
+      return (k - 1 + f) * 100;
+    }
+    return (t.length + 5) * 100;
+  }
+  // the rotor: its energy (1/2 I w^2) sets the compressor's tip speed and so
+  // the boost it can make; the turbine's surplus over the compressor's need
+  // spins it up, bearing drag slows it
+  function tbStep(S, st, rpm, thr, tgt, dt, closed) {
+    var tb = S.tb, U = st.U || 0, w = U / tb.r, E = 0.5 * tb.I * w * w;
+    var made = tbU2psi(U), boost = Math.min(made, tgt);
+    var f = tbFlow(S, rpm, TB.P1 + boost * thr / 0.145, Math.max(thr, 0.04));
+    var surplus = f.Wt - f.Wc - tb.fric * 0.02 * E;
+    // throttle shut (a shift): with a blow-off valve the compressor vents
+    // and the rotor coasts; without one it surges and stalls the wheel
+    if (closed) surplus -= E / Math.max(0.1, S.bovT || 0.15) * 0.5;
+    if (made >= tgt && surplus > 0) surplus = 0;   // the wastegate opens
+    E = Math.max(1e-4, E + surplus * dt);
+    st.U = Math.sqrt(2 * E / tb.I) * tb.r;
+    return Math.min(tbU2psi(st.U), tgt);
+  }
+  // a dyno pull at full throttle (rpm/s): where boost starts and where it's full
+  DR.turboPull = function (S, rate, from, psi) {
+    if (!S.tb) return null;
+    var st = { U: 0 }, rpm = from || 1500, dt = 0.004, tgt = psi || S.boostSet, out = { start: null, full: null, curve: [] }, nx = rpm;
+    while (rpm <= S.red) {
+      var b = tbStep(S, st, rpm, 1, tgt + creepAt(S, rpm), dt, false);
+      if (out.start == null && b >= Math.max(1, tgt * 0.1)) out.start = rpm;
+      if (out.full == null && b >= tgt * 0.95) out.full = rpm;
+      if (rpm >= nx) { out.curve.push([Math.round(rpm), Math.round(b * 10) / 10, Math.round(holdAt(S, rpm) * 10) / 10]); nx += 100; }
+      rpm += (rate || 500) * dt;
+    }
+    return out;
+  };
+  DR.turboHold = function (S, rpm) { return S.tbHoldT ? holdAt(S, rpm) : 0; };
+  DR._tbFlow = tbFlow;
+  // does this turbo suit this engine? (stock breathing, 15 psi): it has to
+  // come on boost before the limiter and feed more than the engine makes
+  // without it. Cached per engine.
+  var fitCache = {};
+  DR.turboFits = function (fiId, engId) {
+    var k = engId + '|' + fiId;
+    if (fitCache[k] != null) return fitCache[k];
+    var e = DR.ENGINES[engId], u = DR.FI[fiId], ok = true;
+    if (u.twin && (e.rotary || e.cyl < 6)) ok = false;
+    else {
+      var S = engineCore(e, { fi: fiId }, 1);
+      S.boostSet = Math.min(15, u.maxBoost); S.flowW = u.flow * DR.HP; S.red = Math.max(e.red, e.bp || 0); tbInit(S);
+      var pull = DR.turboPull(S, 500, 1500, S.boostSet);
+      ok = !!pull && pull.full != null && pull.full <= Math.max(e.red, e.bp || 0) - 300 && u.flow >= e.hp * 1.15;
+    }
+    return (fitCache[k] = ok);
+  };
 
   // ---------------------------------------------------------------- spec builder
   DR.buildSpec = function (inst, tuneOverride) {
@@ -305,11 +420,14 @@
     S.boostMin = 0; S.creep = 0; S.ebc = false;
     S.boostWhy = { type: fiU.type, comp: comp, oem: oem };
     if (fiU.type === 'turbo') {
-      S.lag *= gate.spoolK;
-      // the rest of the turbo system: a freer manifold and downpipe and
-      // shielding that keeps the heat for the turbine light it sooner
-      var sk = (tman.spoolK || 1) * (dpipe.spoolK || 1) * (theat.spoolK || 1);
-      S.lag *= sk; if (S.spool15) S.spool15 *= Math.sqrt(sk);
+      // the rest of the turbo system: the manifold (a short cast log keeps
+      // the most exhaust energy for the turbine; long tubular runners flow
+      // more up top but cool the gas; a divided twin-scroll keeps the
+      // pulses apart), the downpipe's back pressure and the heat kept in
+      var tsOk = !!tman.ts && DR.twinScrollFits(e);
+      S.tbx = { man: tman.man || 1, ts: tsOk, stockMan: DR.partId('tmanifold', inst) === 'stock', stockDp: DR.partId('downpipe', inst) === 'stock', c4: dpipe.c4 != null ? dpipe.c4 : (e.diesel ? 15 : 40), heat: theat.heat || 1 };
+      // the divided housing chokes a little sooner at big power
+      if (tsOk && S.flowW) S.flowW *= 0.95;
       if (ai) {
         if (fiU.price) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // rival builds: the old gate model
       } else {
@@ -486,7 +604,7 @@
     // boost by gear: a cap on the target in each gear (less in the low gears
     // to stop wheelspin, the full target where the car can use it)
     S.gearBoost = S.ebc && S.fiType === 'turbo' && Array.isArray(T.gearBoost) && T.gearBoost.some(function (b) { return b < S.boostSet; }) ? T.gearBoost : null;
-    setSpool(S, true);
+    tbInit(S);
     // the charge at full boost, and the knock limit that leaves the fuel
     S.iat = chargeTemp(S, S.boostSet);
     if (S.fiType !== 'none') S.knock = Math.floor(knockAt(S, S.iat) * 2) / 2;
@@ -583,7 +701,7 @@
       // manuals launch near peak torque, or for a turbo near its full-boost
       // rpm (a 2-step builds boost there before the clutch drops)
       launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) :
-        S.spool15 ? Math.min(S.red - 700, Math.max(S.tqRpm * 0.85, spoolAt(S, (inst.tune && inst.tune.boost) || fiDef) * 0.95)) : S.tqRpm * 0.85) / 100) * 100,
+        S.tbHoldT ? Math.min(S.red - 700, Math.max(S.tqRpm * 0.85, spoolAt(S, (inst.tune && inst.tune.boost) || fiDef) * 0.95)) : S.tqRpm * 0.85) / 100) * 100,
       psi: S.tire.optP,
       jets: 0,
       fd: S.fdSet || S.car.fd,
@@ -965,7 +1083,7 @@
     this.we = S.idle * RPM2W; this.ww = 0;
     this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = S.engage || 0.3; this.locked = false;
     this.launched = false; this.t = 0; this.time = 0;
-    this.boost = 0; this.thr = 0; this.cut = false; this.cutT = 0; this.stepT = 0;
+    this.boost = 0; this.tbSt = { U: 0 }; this.thr = 0; this.cut = false; this.cutT = 0; this.stepT = 0;
     this.phi = 0; this.dphi = 0; this.z = 0; this.dz = 0;   // body pitch (nose up +) and heave (up +) on the springs
     this.wheelie = false; this.th = 0; this.dth = 0; this.unload = 0; this.onBar = false;
     this.tireT = opts.tireT != null ? opts.tireT : 28;
@@ -1162,20 +1280,28 @@
     // -------- boost
     var thrB = this.thr;
     if (S.fiType === 'turbo') {
-      var sf = clamp((rpm - S.spoolLo) / (S.spoolHi - S.spoolLo), 0, 1);
       var bSet = S.gearBoost ? Math.min(S.boostSet, S.gearBoost[Math.min(this.gear, S.gearBoost.length - 1)]) : S.boostSet;
-      var target = (bSet * sf + creepAt(S, rpm)) * thrB;
-      // revving with no load on it (clutch in, in neutral) a turbo makes next
-      // to no boost: only a 2-step builds it on the line
-      if (pre) target *= 0.1;
-      if (pre && S.twostep && thrB > 0.5) {
-        var build = clamp((S.tune.launchRpm - S.spoolLo * 0.5) / (S.spoolHi * 0.85 - S.spoolLo * 0.5), 0.15, 1);
-        target = Math.max(target, bSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
+      var tgt = bSet + creepAt(S, rpm);
+      this.tbSt = this.tbSt || { U: 0 };
+      if (pre) {
+        // revving with no load on it (clutch in, in neutral) a turbo makes
+        // next to no boost: only a 2-step builds it on the line (its cut and
+        // retarded spark light the exhaust), more the closer to where the
+        // turbo comes in
+        var target = Math.min(tgt, holdAt(S, rpm)) * thrB * 0.1;
+        if (S.twostep && thrB > 0.5) {
+          var build = clamp((S.tune.launchRpm - S.spoolLo * 0.5) / (S.spoolHi * 0.85 - S.spoolLo * 0.5), 0.15, 1);
+          target = Math.max(target, bSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
+        }
+        var tau = target > this.boost ? S.lag * Math.sqrt(S.spoolHi / Math.max(rpm, 1500)) : 0.15;
+        this.boost += (target - this.boost) * Math.min(1, dt / tau);
+        this.tbSt.U = tbPsi2U(this.boost);
+      } else {
+        var closed = thrB < 0.3;
+        // anti-lag keeps the turbine lit through a shift
+        if (this.shifting && S.twostep === 2) closed = false;
+        this.boost = tbStep(S, this.tbSt, rpm, thrB, tgt, dt, closed) * thrB;
       }
-      if (this.shifting && S.twostep === 2) target = Math.max(target, this.boost);
-      // throttle shut for a shift: a blow-off valve keeps the turbo spinning
-      var tau = target > this.boost ? S.lag * Math.sqrt(S.spoolHi / Math.max(rpm, 1500)) : (this.shifting || this.sinceShift < 0.2 ? (S.bovT || 0.15) : 0.15);
-      this.boost += (target - this.boost) * Math.min(1, dt / tau);
     } else if (S.fiType !== 'none') {
       this.boost = steadyBoost(S, rpm) * thrB;
     }

@@ -2,6 +2,43 @@
 
 Short notes for testing, newest first.
 
+## Turbo rework: real spool, new turbo lineup, spec sheets
+
+- **Turbos now come on boost the way real ones do.** The game works out
+  spool from your engine and the turbo together: displacement, how high it
+  revs, how well it breathes (heads and cams count), exhaust heat, and the
+  turbo's own wheels and housing. A big turbo on a small engine is lazy, the
+  same turbo on a big V8 lights early; a single turbo on a V8 (long crossover
+  pipes) spools later than twins. Boost also has to spin the turbo up, so
+  big wheels lag more and ball bearings recover faster after a shift.
+- **New lineup, named like the real ones** (compressor/turbine wheel sizes):
+  singles 5057, 4847, 5558, 6266, 7275, 7685, 8891, 9498; twins 4847, 6266,
+  7685 and the 9498 Pro Mod pair. **Single** and **Twin** sections in the
+  shop, and only the sizes that suit your engine show up. Twins need 6+
+  cylinders. Your old turbo becomes the nearest new one (61mm -> 6266, 80mm
+  -> 7685, the others keep their slot).
+- **Spec sheet:** tap a turbo in the shop (or **Turbo specs** on the dyno):
+  wheel sizes, housing, bearing, max boost, the power it supports, and on
+  your engine where boost starts and where it's full, with a boost chart and
+  warnings (too big / runs out of air).
+- **Factory turbos are the real ones** (TD05 twin-scroll on the Evo, VF48
+  on the STI, CT20B sequential twins on the Supra, HT-12 sequentials on the
+  RX-7, VTG on the 911, HE300VG on the Ram...). Most stock cars now run
+  closer to their real timeslips.
+- **Manifolds tell the truth:** the cast log answers quickest; tubular and
+  equal-length make more top end but spool a touch later. **New: Twin-Scroll
+  Divided Manifold** ($2,600, fours and inline sixes): a few hundred rpm
+  sooner, chokes a little sooner at big power. Wastegates are boost control
+  only now (no "spools sooner").
+- **Rivals changed too:** about half the turbo rivals' times moved (most by
+  a few hundredths; some bosses are up to ~0.4 s quicker). A career balance
+  pass comes next.
+
+**Try:** Upgrade > Turbo / Supercharger: open a few turbos and read the spec
+sheet on your car; fit one and do a dyno pull. **Look out for:** a turbo
+that should suit your engine but doesn't show up, spool numbers that feel
+off for a combo you know, or a rival that's suddenly out of reach.
+
 ## Manual burnout shifting, pick your gearbox at the dealer
 
 - **Manual cars shift in the burnout.** While you hold GAS in the box, the

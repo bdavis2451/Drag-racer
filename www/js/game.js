@@ -33,6 +33,7 @@
     try { carbV2(s); } catch (e) { /* keep what loaded */ }
     try { tubeV2(s); } catch (e) { /* keep what loaded */ }
     try { vbV2(s); } catch (e) { /* keep what loaded */ }
+    try { turboV2(s); } catch (e) { /* keep what loaded */ }
     // traction control used to come switched off: cars that have the ECU and
     // never turned it on get it on, once
     if (!s.tcV2) { (s.cars || []).forEach(function (c) { if ((c.parts || {}).ecu === 'ecu3' && !(c.tune && c.tune.tcSlip > 0)) { c.tune = c.tune || {}; c.tune.tcSlip = DR.TC_DEFAULT || 12; } }); s.tcV2 = true; }
@@ -142,6 +143,14 @@
   // the automatic's shift kit / manual valve body moved from the shifter to
   // its own Valve Body section: an automatic's shifter part becomes the
   // matching valve body
+  // the turbo rework (Nov 2026): the 61mm became the 6266, the 80mm the 7685
+  function turboV2(s) {
+    if (s.turboV2) return;
+    var A = DR.FI_ALIAS || {};
+    (s.cars || []).forEach(function (c) { var p = c.parts || {}; if (A[p.fi]) p.fi = A[p.fi]; });
+    (s.inv || []).forEach(function (it) { if (it.cat === 'fi' && A[it.id]) it.id = A[it.id]; });
+    s.turboV2 = true;
+  }
   function vbV2(s) {
     if (s.vbV2) return;
     (s.cars || []).forEach(function (c) {

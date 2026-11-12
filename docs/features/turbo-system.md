@@ -1,6 +1,6 @@
 # Turbo system rework (spool, sizing, setups)
 
-Status: **plan drafted, waiting on item-by-item approval. No code.** Started Nov 12.
+Status: **shipped (Nov 12).** Next: career/rival rebalance, then the diesel rework. Started Nov 12.
 Order agreed in principle: turbo system first, then the diesel rework
 (`diesel.md`) on top of it, then career/rival balance.
 
@@ -131,7 +131,43 @@ Good enough to plan on. Still to do in the build: compressor limits (choke =
 the power it supports, surge on oversized compressors), the rotary's
 numbers, factory turbos per engine, and a full engine x turbo spool table.
 
-## The plan (draft for approval, Nov 12)
+## Approved (owner, Nov 12)
+- All 8 singles, all 4 twins, real factory turbos per engine (stock ETs
+  kept), honest manifolds, twin-scroll manifold (after research on its
+  downsides, below), wastegates = boost control only.
+
+## Twin-scroll research (Nov 12)
+- **What it does:** a divided manifold and divided turbine housing keep
+  cylinders whose exhaust pulses would collide apart (1-4 / 2-3 on a
+  1-3-4-2 four; 1-2-3 / 4-5-6 on an inline six), so each pulse hits the
+  turbine whole: quicker spool, better response.
+- **Gain:** from nothing to ~600 rpm sooner depending on the setup; the
+  disputed D-Sport test and forum results cluster at a few hundred rpm.
+- **Which engines:** best on 4-cylinders, good on inline sixes, poor on
+  cross-plane V8s (the LS firing order doesn't pair well; uneven pulse
+  spacing per bank). BMW and Subaru FA20 use it from the factory.
+- **Downsides:**
+  - **Needs the matching divided turbine housing**; on an open housing (or
+    an undivided manifold) the benefit is gone.
+  - **Top end:** at sustained high rpm the advantage narrows; several
+    racers report an open housing making ~5-10% more peak power on the same
+    turbo (disputed), and higher back pressure with big cams. Big-power
+    drag cars mostly run open housings.
+  - **Wastegating:** each scroll needs to be gated (two gates or a divided
+    gate), otherwise one side over-boosts/creeps.
+  - **Cost and fitment:** more expensive, harder to build, bulkier; a
+    poorly divided cheap cast "twin-scroll" gives little benefit.
+  - (No good source found on cracking specifically; tubular manifolds in
+    general crack more than cast logs.)
+- Sources: https://dsportmag.com/the-tech/twin-scroll-vs-single-scroll-turbo-test-the-great-divide/ ,
+  https://store.kinugawaturbosystems.com/blogs/k-log/single-scroll-vs-twin-scroll-turbos ,
+  https://ls1tech.com/forums/forced-induction/1461494-lsx-twinscroll-turbo-design-analysis.html ,
+  https://saemobilus.sae.org/articles/blowdown-interference-a-v8-twin-turbocharged-engine-2011-01-0337 ,
+  https://honda-tech.com/forums/drag-racing-36/1000-guys-ts-open-3302612/ ,
+  https://www.miataturbo.net/diy-turbo-discussion-14/twinscroll-worth-85074/page3/ ,
+  https://x-engineer.org/twin-scroll-turbo/ , https://www.autozine.org/technical_school/engine/Forced_Induction_4.html
+
+## The plan (approved Nov 12)
 
 **1. Spool from physics.** Each turbo has real specs (compressor and turbine
 wheel sizes, housing A/R, bearing). The game works out boost vs rpm for
@@ -268,7 +304,32 @@ pass comes after (agreed).
 - (garrettmotion.com and onallcylinders.com pages can't be fetched from the
   session; read through search summaries.)
 
-## Build notes (for Claude)
+## Build notes (for Claude), Nov 12
+- physics.js "turbo" section: `tbSetup` (inertia ~ wheel^5, turbine flow
+  ~ turb^2 x A/R^0.35, V single pulse 0.66, twin-scroll 1.1, manifold man,
+  heat, downpipe c4 back pressure, etaT by turbine size, surge line
+  PR <= 1 + 8 m/m_choke), `tbFlow` (closed-form turbine expansion ratio),
+  `tbHold` -> `S.tbHoldT` (most boost held per 100 rpm), `spoolAt`,
+  `tbStep` (rotor energy; BOV via S.bovT on closed throttle; gate at
+  target), `DR.turboPull` (500 rpm/s pull: start/full/curve),
+  `DR.turboFits` (15 psi full before max(red, bp) - 300, flow >= 1.15 x
+  stock hp; twins need 6+ cyl). Sim boost: pre-launch keeps the old
+  first-order 2-step build, then the rotor model.
+- parts.js: new FI hardware fields, `DR.turboSpec` (factory = engine
+  fi.tb), `DR.twinScrollFits`, aliases t_61 -> t_med, t_80 -> t_large
+  (game.js `turboV2` migrates saves). Shop groups via option `group`
+  (garage.js catalogGrid). Spec sheet: ui.js `UI.turboSheet`; dyno button
+  in screens.js.
+- data.js: factory `fi.tb` per turbo engine.
+- Tests (scratchpad scr/): tspool.js, ttable.js (engine x turbo spool
+  table), turboui.js / turboui2.js / dynosheet.js (screens), bench.js
+  (stock vs real: supra 13.71->13.31, evo 13.90->13.78, sti 13.53->13.39,
+  r34 13.38->13.30, gnx 13.89->13.83, silvia 14.66->14.19, rx7 13.43->13.37,
+  diesel 15.75->15.25), rivsnap2.js (70 of 126 rival times moved, mean
+  -0.04 s, +0.23 to -0.46). Regressions clean: qolsmoke, pkgsmoke, mvb2,
+  c2, burnui, boxui, nov11ui. buildSpec 0.8 -> 1.7 ms.
+
+## Build notes from research (for Claude)
 - Prototype: scratchpad `turbo/model.js` + `run2.js` (quasi-steady match).
   Next: add rotor inertia (transient), turbine capacity ~ A/R^0.5, diesel
   exhaust temp by fuel, calibrate to ranges; then a "spool table" for every

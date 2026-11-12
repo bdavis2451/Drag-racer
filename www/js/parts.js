@@ -6,29 +6,35 @@
   var DR = globalThis.DR;
 
   // Forced-induction units. type: turbo | roots | screw | cent
-  //  maxBoost psi, flow = max crank hp the unit can feed, spool = rpm where a
-  //  3.0L piston engine reaches 15 psi with it (bigger engines and rotaries
-  //  spool it sooner, more boost takes more revs), lag = seconds,
-  //  paras = supercharger drive loss. Spool grows with the turbine: a unit
-  //  sized for twice the power needs about 1.4x the exhaust flow.
+  //  maxBoost psi, flow = max crank hp the unit can feed (where the
+  //  compressor chokes), paras = supercharger drive loss.
+  //  Turbos carry their real hardware: comp (compressor inducer mm), cex
+  //  (compressor exducer mm), turb (turbine wheel mm), ar (turbine housing
+  //  A/R), bb (ball bearing), twin (a pair). The physics works out where
+  //  they come on boost for each engine (physics.js, turbo). Named like the
+  //  real ones: compressor and turbine wheel sizes (6266 = 62mm / 66mm).
+  //  A factory turbo's own hardware is on the engine (ENGINES fi.tb).
   DR.FI = {
     none:        { name: 'Naturally Aspirated', type: 'none' },
-    fi_oem_s:    { name: 'Factory Turbo',             type: 'turbo', maxBoost: 20, flow: 380,  spool: 3200, lag: 0.30, w: 15 },
-    fi_oem_tt:   { name: 'Factory Twin Turbos',       type: 'turbo', maxBoost: 22, flow: 620,  spool: 3700, lag: 0.30, w: 25 },
+    fi_oem_s:    { name: 'Factory Turbo',             type: 'turbo', maxBoost: 20, flow: 380,  w: 15 },
+    fi_oem_tt:   { name: 'Factory Twin Turbos',       type: 'turbo', maxBoost: 22, flow: 620,  w: 25 },
     fi_oem_sc:   { name: 'Factory Supercharger',      type: 'screw', maxBoost: 16, flow: 850,  paras: 0.10, w: 30 },
-    fi_oem_vgt:  { name: 'Factory VGT Turbo',         type: 'turbo', maxBoost: 40, flow: 800,  spool: 2900, lag: 0.45, w: 20 },
-    t_budget:    { name: 'Budget T3/T4 Turbo Kit',    type: 'turbo', maxBoost: 18, flow: 340,  spool: 3500, lag: 0.45, w: 20, price: 1200,  desc: 'A cheap journal-bearing turbo on a log manifold. Lazy, but it is boost.' },
-    t_gt28:      { name: 'Ball-Bearing Turbo 50mm',   type: 'turbo', maxBoost: 22, flow: 380,  spool: 2900, lag: 0.24, w: 16, price: 2400,  desc: 'Small ball-bearing turbo: spools early, made for little engines.' },
-    t_small:     { name: 'Small Turbo 54mm',          type: 'turbo', maxBoost: 24, flow: 480,  spool: 3300, lag: 0.30, w: 18, price: 3500,  desc: 'Quick spool, runs out of air up top.' },
-    t_61:        { name: 'Turbo 61mm',                type: 'turbo', maxBoost: 28, flow: 640,  spool: 3600, lag: 0.36, w: 20, price: 4500, lvl: 4,  desc: 'A step up from the 54mm without much more lag.' },
-    t_twin_sm:   { name: 'Twin 50mm Turbos',          type: 'turbo', maxBoost: 26, flow: 700,  spool: 3300, lag: 0.27, w: 32, price: 5500,  desc: 'Two small turbos, one per bank: quick spool on a V6 or V8.' },
-    t_med:       { name: 'Medium Turbo 64mm',         type: 'turbo', maxBoost: 32, flow: 780,  spool: 3900, lag: 0.42, w: 22, price: 6000,  desc: 'The street/strip sweet spot.' },
-    t_67:        { name: 'Turbo 67mm',                type: 'turbo', maxBoost: 35, flow: 950,  spool: 4300, lag: 0.48, w: 24, price: 7500, lvl: 5,  desc: 'Radial-tire power with street manners.' },
-    t_large:     { name: 'Large Turbo 76mm',          type: 'turbo', maxBoost: 40, flow: 1150, spool: 4900, lag: 0.55, w: 26, price: 9500, lvl: 5,  desc: 'Big power, big lag. Pairs well with a 2-step.' },
-    t_80:        { name: 'Turbo 80mm',                type: 'turbo', maxBoost: 45, flow: 1400, spool: 5000, lag: 0.6,  w: 28, price: 13000, desc: 'Big single for big power. Needs a 2-step to launch.' },
-    t_twin:      { name: 'Twin 67mm Turbos',          type: 'turbo', maxBoost: 42, flow: 1500, spool: 4300, lag: 0.45, w: 40, price: 16000, desc: 'Two medium turbos: spools faster than one big one.' },
-    t_huge:      { name: 'Huge Turbo 88mm',           type: 'turbo', maxBoost: 50, flow: 2000, spool: 5300, lag: 0.70, w: 32, price: 19000, desc: 'Radial-tire monster. Needs revs and an anti-lag.' },
-    t_promod:    { name: 'Twin 98mm Pro Mod Turbos',  type: 'turbo', maxBoost: 60, flow: 3600, spool: 7600, lag: 0.80, w: 55, price: 45000, desc: 'Big-tire Pro Mod power.' },
+    fi_oem_vgt:  { name: 'Factory VGT Turbo',         type: 'turbo', maxBoost: 40, flow: 800,  w: 20 },
+    t_budget:    { name: '5057 T3/T4 Turbo',          type: 'turbo', comp: 50, cex: 66,  turb: 57, ar: 0.63, maxBoost: 20, flow: 400,  w: 20, price: 1200,  desc: 'A cheap journal-bearing T3/T4 hybrid. Lazy and runs hot, but it is boost.' },
+    t_gt28:      { name: '4847 Turbo',                type: 'turbo', comp: 48, cex: 60,  turb: 47, ar: 0.64, bb: true, maxBoost: 24, flow: 350,  w: 14, price: 2400,  desc: 'A small ball-bearing turbo for small engines: comes in early and answers quickly.' },
+    t_small:     { name: '5558 Turbo',                type: 'turbo', comp: 55, cex: 72,  turb: 58, ar: 0.63, bb: true, maxBoost: 28, flow: 550,  w: 17, price: 3400,  desc: 'Quick spool on a four or six, runs out of air on a big engine.' },
+    t_med:       { name: '6266 Turbo',                type: 'turbo', comp: 62, cex: 82,  turb: 66, ar: 0.82, bb: true, maxBoost: 35, flow: 800,  w: 21, price: 4800, lvl: 4, desc: 'The street/strip favourite.' },
+    t_67:        { name: '7275 Turbo',                type: 'turbo', comp: 72, cex: 96,  turb: 75, ar: 0.96, bb: true, maxBoost: 40, flow: 1000, w: 24, price: 7000, lvl: 5, desc: 'Radial-tire power with street manners on a V8.' },
+    t_large:     { name: '7685 Turbo',                type: 'turbo', comp: 76, cex: 101, turb: 85, ar: 1.00, bb: true, maxBoost: 45, flow: 1250, w: 27, price: 9500, lvl: 5, desc: 'Big power, big lag. Pairs well with a 2-step.' },
+    t_huge:      { name: '8891 Turbo',                type: 'turbo', comp: 88, cex: 117, turb: 91, ar: 1.15, maxBoost: 50, flow: 1750, w: 32, price: 16000, lvl: 5, desc: 'Radial-tire monster. Needs revs, a big engine and a 2-step.' },
+    t_9498:      { name: '9498 Turbo',                type: 'turbo', comp: 94, cex: 125, turb: 98, ar: 1.32, maxBoost: 55, flow: 2200, w: 38, price: 24000, lvl: 5, desc: 'A big-tire single for a big-inch engine.' },
+    t_twin_sm:   { name: 'Twin 4847 Turbos',          type: 'turbo', comp: 48, cex: 60,  turb: 47, ar: 0.64, bb: true, twin: true, maxBoost: 24, flow: 700,  w: 30, price: 5200,  desc: 'Two small turbos, one per bank: quick response on a six or V8.' },
+    t_twin:      { name: 'Twin 6266 Turbos',          type: 'turbo', comp: 62, cex: 82,  turb: 66, ar: 0.82, bb: true, twin: true, maxBoost: 35, flow: 1600, w: 44, price: 10500, desc: 'A pair of 62mm turbos: big power that still comes in early on a V8.' },
+    t_twin76:    { name: 'Twin 7685 Turbos',          type: 'turbo', comp: 76, cex: 101, turb: 85, ar: 1.00, bb: true, twin: true, maxBoost: 45, flow: 2500, w: 56, price: 19000, lvl: 5, desc: 'Big twins for big-tire and radial cars.' },
+    t_promod:    { name: 'Twin 9498 Pro Mod Turbos',  type: 'turbo', comp: 94, cex: 125, turb: 98, ar: 1.32, twin: true, maxBoost: 60, flow: 4400, w: 76, price: 45000, desc: 'Pro Mod power. Needs an anti-lag to leave.' },
+    // retired sizes (older saves and rivals): the nearest current one
+    t_61:        { alias: 't_med' },
+    t_80:        { alias: 't_large' },
     sc_m90:      { name: 'Small Roots Blower (M90)',  type: 'roots', maxBoost: 10, flow: 430,  paras: 0.12, w: 22, price: 2600,  desc: 'Factory-style blower: torque off idle, modest top end.' },
     sc_street:   { name: 'Centrifugal Street Kit',    type: 'cent',  maxBoost: 14, flow: 620,  paras: 0.06, w: 18, price: 3800,  desc: 'A bolt-on street blower. Boost builds with rpm.' },
     sc_roots:    { name: 'Roots Blower 6-71',         type: 'roots', maxBoost: 16, flow: 900,  paras: 0.14, w: 40, price: 7000,  desc: 'Instant boost from idle. Sticks out of the hood.' },
@@ -40,11 +46,24 @@
   };
   // compressor efficiency at its sweet spot: cheap and small units and
   // roots blowers heat the air the most
-  var ETA = { fi_oem_s: 0.68, fi_oem_tt: 0.7, fi_oem_sc: 0.62, fi_oem_vgt: 0.72, t_budget: 0.6, t_gt28: 0.72, t_small: 0.68, t_61: 0.73, t_twin_sm: 0.71,
-    t_med: 0.74, t_67: 0.75, t_large: 0.76, t_80: 0.77, t_twin: 0.76, t_huge: 0.77, t_promod: 0.78,
+  var ETA = { fi_oem_s: 0.68, fi_oem_tt: 0.7, fi_oem_sc: 0.62, fi_oem_vgt: 0.72, t_budget: 0.62, t_gt28: 0.72, t_small: 0.74, t_twin_sm: 0.72,
+    t_med: 0.75, t_67: 0.76, t_large: 0.77, t_twin: 0.75, t_twin76: 0.77, t_huge: 0.77, t_9498: 0.78, t_promod: 0.78,
     sc_m90: 0.55, sc_street: 0.68, sc_roots: 0.52, sc_screw: 0.66, sc_cent: 0.72, sc_screw2: 0.68, sc_cent2: 0.74, sc_1471: 0.6 };
   Object.keys(ETA).forEach(function (id) { if (DR.FI[id]) DR.FI[id].eta = ETA[id]; });
-  DR.FI_SHOP = ['t_budget', 't_gt28', 't_small', 't_61', 't_twin_sm', 't_med', 't_67', 't_large', 't_80', 't_twin', 't_huge', 't_promod',
+  Object.keys(DR.FI).forEach(function (id) { var u = DR.FI[id]; if (u.alias) DR.FI[id] = DR.FI[u.alias]; });
+  DR.FI_ALIAS = { t_61: 't_med', t_80: 't_large' };
+  // a turbo's hardware on this engine: a factory unit takes the engine's own
+  DR.turboSpec = function (fiId, e) {
+    var u = DR.FI[fiId];
+    if (!u || u.type !== 'turbo') return null;
+    if (!u.price && e && e.fi && e.fi.tb) return Object.assign({ factory: true }, e.fi.tb);
+    return u.comp ? u : { comp: 46, cex: 60, turb: 52, ar: 0.63 };
+  };
+  // a twin-scroll (divided) manifold pairs cylinders whose pulses would
+  // collide: it works on fours and inline sixes, not on V engines (their
+  // firing order doesn't pair up on one turbo) or rotaries
+  DR.twinScrollFits = function (e) { return !e.rotary && !e.diesel && (e.cyl === 4 || (e.cyl === 6 && / I6/.test(e.name))); };
+  DR.FI_SHOP = ['t_budget', 't_gt28', 't_small', 't_med', 't_67', 't_large', 't_huge', 't_9498', 't_twin_sm', 't_twin', 't_twin76', 't_promod',
     'sc_m90', 'sc_street', 'sc_roots', 'sc_screw', 'sc_cent', 'sc_screw2', 'sc_cent2', 'sc_1471'];
 
   function opt(id, name, price, fx, desc) { var o = { id: id, name: name, price: price, desc: desc || '' }; for (var k in fx) o[k] = fx[k]; return o; }
@@ -273,12 +292,12 @@
   // how much of the engine's boost creep the gate lets through (internal
   // gates). gate: the old share-of-max model, kept for rival builds.
   C.wastegate = { name: 'Wastegate & Boost Control', needsTurbo: true, options: [
-    opt('stock', 'Internal Wastegate, 7 psi Spring', 0, { gate: 0.7, spoolK: 1, spring: 7, ctrl: 'none', creep: 1 }, 'What a bolt-on kit comes with: the gate opens at 7 psi, so it runs 7 psi and no more. On a big engine the small internal gate lets boost creep up near redline. Factory turbos use their own gate and the ECU.'),
-    opt('ws1', 'Stiffer Actuator Spring (10 psi)', 150, { gate: 0.76, spoolK: 1, spring: 10, ctrl: 'none', creep: 1 }, 'A 10 psi spring: it runs 10 psi, no more, no less.'),
-    opt('ws2', 'Manual Boost Controller', 300, { lvl: 2, gate: 0.82, spoolK: 0.99, spring: 7, ctrl: 'mbc', creep: 1 }, 'A bleed valve on the actuator line holds the gate shut longer: 7 psi spring, up to 14 psi.'),
-    opt('ws3', 'Ported Gate + 10 psi Spring + Controller', 650, { lvl: 2, gate: 0.86, spoolK: 0.98, spring: 10, ctrl: 'mbc', creep: 0.5 }, 'A ported flapper flows more (half the boost creep), a 10 psi spring and a manual controller: 10 to 20 psi.'),
-    opt('wg1', 'External Wastegate + Manual Controller', 900, { gate: 0.9, spoolK: 0.95, spring: 10, ctrl: 'mbc', creep: 0 }, 'A big external gate: no boost creep and a little quicker spool. 10 psi spring with a manual controller: 10 to 20 psi.'),
-    opt('wg2', 'Dual Gates + Electronic Boost Controller', 2200, { gate: 1, spoolK: 0.88, spring: 10, ctrl: 'ebc', creep: 0 }, 'Two external gates and an electronic controller: any target from 10 psi up to the turbo\'s limit, no creep, quicker spool.')
+    opt('stock', 'Internal Wastegate, 7 psi Spring', 0, { gate: 0.7, spring: 7, ctrl: 'none', creep: 1 }, 'What a bolt-on kit comes with: the gate opens at 7 psi, so it runs 7 psi and no more. On a big engine the small internal gate lets boost creep up near redline. Factory turbos use their own gate and the ECU.'),
+    opt('ws1', 'Stiffer Actuator Spring (10 psi)', 150, { gate: 0.76, spring: 10, ctrl: 'none', creep: 1 }, 'A 10 psi spring: it runs 10 psi, no more, no less.'),
+    opt('ws2', 'Manual Boost Controller', 300, { lvl: 2, gate: 0.82, spring: 7, ctrl: 'mbc', creep: 1 }, 'A bleed valve on the actuator line holds the gate shut longer: 7 psi spring, up to 14 psi.'),
+    opt('ws3', 'Ported Gate + 10 psi Spring + Controller', 650, { lvl: 2, gate: 0.86, spring: 10, ctrl: 'mbc', creep: 0.5 }, 'A ported flapper flows more (half the boost creep), a 10 psi spring and a manual controller: 10 to 20 psi.'),
+    opt('wg1', 'External Wastegate + Manual Controller', 900, { gate: 0.9, spring: 10, ctrl: 'mbc', creep: 0 }, 'A big external gate: no boost creep. 10 psi spring with a manual controller: 10 to 20 psi.'),
+    opt('wg2', 'Dual Gates + Electronic Boost Controller', 2200, { gate: 1, spring: 10, ctrl: 'ebc', creep: 0 }, 'Two external gates and an electronic controller: any target from 10 psi up to the turbo\'s limit, no creep, and boost by gear.')
   ]};
   // bov: how long boost hangs on while the throttle is shut for a shift (s)
   C.bov = { name: 'Blow-Off Valve', needsTurbo: true, options: [
@@ -541,23 +560,29 @@
     opt('mm2', 'Solid Engine & Trans Mounts', 500, { lvl: 2, mk: 1.03 }, 'Solid mounts: the engine can\'t roll at all, every bit of the hit goes to the tires. Shakes the whole car at idle.')
   ]};
   // ---- the turbo system, part by part (a turbo kit is the turbo plus all
-  // of these; the kit's own are the 'stock' ones). spoolK: how much sooner
-  // the turbo lights (< 1 = sooner), bw: exhaust flow, cool: heat kept out
-  // of the intake charge (C).
+  // of these; the kit's own are the 'stock' ones). man: share of the
+  // exhaust energy the manifold delivers to the turbine (a short cast log
+  // keeps the most; long tubular runners cool it but flow more up top,
+  // Holdener's LS log-vs-header test); ts: a divided twin-scroll manifold
+  // (with its divided turbine housing and a gate on each scroll); c4: the
+  // downpipe's back pressure (kPa per (kg/s)^2 of exhaust); heat: exhaust
+  // heat kept for the turbine; bw: exhaust flow, cool: heat kept out of the
+  // intake charge (C).
   C.tmanifold = { name: 'Turbo Manifold', needsTurbo: true, engineScaled: true, options: [
-    opt('stock', 'Kit Cast Log Manifold', 0, { bw: 0, spoolK: 1 }),
-    opt('tm1', 'Tubular Turbo Manifold', 900, { lvl: 2, bw: 0.05, spoolK: 0.95 }, 'Welded steel tubes instead of a cast log: better flow to the turbine, so it spools a bit sooner and makes more up top.'),
-    opt('tm2', 'Equal-Length Race Manifold', 2200, { lvl: 3, bw: 0.09, spoolK: 0.9 }, 'Equal-length runners and a big merge: every cylinder\'s pulse hits the turbine evenly. Quickest spool and the most flow.')
+    opt('stock', 'Kit Cast Log Manifold', 0, { bw: 0, man: 1 }, 'Short and compact: it keeps the exhaust hot and fast, so the turbo answers quickly. Runs out of flow on a big build.'),
+    opt('tm1', 'Tubular Turbo Manifold', 900, { lvl: 2, bw: 0.05, man: 0.95 }, 'Welded steel tubes instead of a cast log: more flow and power up top, a touch slower to spool (the longer runners cool the gas).'),
+    opt('tm2', 'Equal-Length Race Manifold', 2200, { lvl: 3, bw: 0.09, man: 0.92 }, 'Equal-length runners and a big merge: the most flow and top-end power. A little slower to spool than a log.'),
+    opt('tmts', 'Twin-Scroll Divided Manifold', 2600, { lvl: 3, bw: 0.06, man: 1, ts: true }, 'Splits the cylinders whose exhaust pulses would collide into two scrolls (with a divided turbine housing and a gate on each): boost comes in a few hundred rpm sooner and answers faster. The divided housing chokes a little sooner at big power. Fours and inline sixes only.')
   ]};
   C.downpipe = { name: 'Downpipe', needsTurbo: true, options: [
-    opt('stock', 'Kit Downpipe (2.5 in)', 0, { bw: 0, spoolK: 1 }),
-    opt('dp1', '3 in Downpipe', 400, { bw: 0.03, spoolK: 0.97 }, 'Less back pressure after the turbine: it spools a little sooner and breathes better. The cheapest turbo upgrade there is.'),
-    opt('dp2', '4 in Race Downpipe', 900, { lvl: 2, bw: 0.05, spoolK: 0.95 }, 'A big straight downpipe (or a dump tube at the strip): as little back pressure as possible.')
+    opt('stock', 'Kit Downpipe (2.5 in)', 0, { bw: 0, c4: 40 }),
+    opt('dp1', '3 in Downpipe', 400, { bw: 0.03, c4: 20 }, 'Less back pressure after the turbine: it spools a little sooner and breathes better, more so the more power it makes. The cheapest turbo upgrade there is.'),
+    opt('dp2', '4 in Race Downpipe', 900, { lvl: 2, bw: 0.05, c4: 9 }, 'A big straight downpipe (or a dump tube at the strip): as little back pressure as possible.')
   ]};
   C.theat = { name: 'Turbo Heat Management', needsTurbo: true, options: [
-    opt('stock', 'No Heat Shielding', 0, { spoolK: 1, cool: 0 }),
-    opt('th1', 'Turbo Blanket + Header Wrap', 300, { spoolK: 0.97, cool: 3 }, 'Keeps the heat in the exhaust (where it drives the turbine) and out of the engine bay: a little quicker spool and a cooler intake.'),
-    opt('th2', 'Ceramic-Coated Manifold + Blanket', 700, { lvl: 2, spoolK: 0.95, cool: 5 }, 'Ceramic coating inside and out plus a blanket: the most exhaust energy for the turbine, the least heat in the bay.')
+    opt('stock', 'No Heat Shielding', 0, { heat: 1, cool: 0 }),
+    opt('th1', 'Turbo Blanket + Header Wrap', 300, { heat: 1.02, cool: 3 }, 'Keeps the heat in the exhaust (where it drives the turbine) and out of the engine bay: a little quicker spool and a cooler intake.'),
+    opt('th2', 'Ceramic-Coated Manifold + Blanket', 700, { lvl: 2, heat: 1.04, cool: 5 }, 'Ceramic coating inside and out plus a blanket: the most exhaust energy for the turbine, the least heat in the bay.')
   ]};
   // Ring & pinion: the final drive is a gear set in the axle (or transaxle).
   // fdk: ratio vs the car's factory gears. A quick-change rear end swaps
@@ -729,7 +754,15 @@
     if (cat === 'fi') {
       var st = DR.stockPart('fi', inst);
       list.push({ id: st, name: st === 'none' ? 'None (Naturally Aspirated)' : DR.FI[st].name + ' (Factory)', price: 0, desc: st === 'none' ? '' : 'Max ' + DR.FI[st].maxBoost + ' psi, feeds ~' + DR.FI[st].flow + ' hp.' });
-      DR.FI_SHOP.forEach(function (f) { var u = DR.FI[f]; list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, tune: 'hard', desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp. Needs an ECU tune: the stock one can only run ~5 psi. Plan on injectors and a pump too.' }); });
+      var fEng = inst.engine || car.engine, fCur = DR.partId('fi', inst);
+      if (st !== 'none' && DR.FI[st].type === 'turbo') { var tbf = DR.turboSpec(st, DR.ENGINES[fEng]); if (tbf && tbf.name) list[0].name = tbf.name + ' (Factory)'; }
+      DR.FI_SHOP.forEach(function (f) {
+        var u = DR.FI[f];
+        // only the turbos that suit this engine (the one fitted always shows)
+        if (u.type === 'turbo' && f !== fCur && DR.turboFits && !DR.turboFits(f, fEng)) return;
+        list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, tune: 'hard', group: u.type !== 'turbo' ? 'Superchargers' : u.twin ? 'Twin turbos' : 'Single turbos',
+          desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp. Needs an ECU tune: the stock one can only run ~5 psi. Plan on injectors and a pump too.' });
+      });
       return list;
     }
     if (cat === 'diff') {
@@ -779,6 +812,7 @@
     var cbE = !inst.ai && eng.carb, mpiOn = DR.hasMpi(inst), curId = DR.partId(cat, inst), fedCarb = cbE && DR.carbFed(inst);
     return c.options.map(function (o, i) {
       if (o.only && o.only.indexOf(engId) < 0) return null;   // made for one engine
+      if (o.ts && o.id !== curId && !DR.twinScrollFits(eng)) return null;
       // carbureted engines: the multiport manifold; after it, no factory
       // injectors / throttle body / ECU to keep (the cheapest is the base);
       // carb pumps for a carb, EFI pumps for injection
@@ -950,7 +984,8 @@
   function turboFor(k, replace) { return function (inst) {
     if (!aftermarketFI(inst) && !replace) return null;
     var want = DR.ENGINES[inst.engine].hp * k, cur = DR.FI[DR.partId('fi', inst)];
-    var t = DR.FI_SHOP.filter(function (f) { return DR.FI[f].type === 'turbo'; }).sort(function (a, b) { return DR.FI[a].flow - DR.FI[b].flow; });
+    var t = DR.FI_SHOP.filter(function (f) { return DR.FI[f].type === 'turbo' && !DR.FI[f].twin && (!DR.turboFits || DR.turboFits(f, inst.engine)); }).sort(function (a, b) { return DR.FI[a].flow - DR.FI[b].flow; });
+    if (!t.length) return null;
     var pick = t[t.length - 1];
     for (var i = 0; i < t.length; i++) if (DR.FI[t[i]].flow >= want) { pick = t[i]; break; }
     if (DR.FI[pick].flow <= (cur.flow || 0)) return null;

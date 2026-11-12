@@ -315,7 +315,7 @@
       ['Engine', S.eng.name],
       ['Power', fmtHp(S.peakHp) + (S.nosHp ? ' +' + S.nosHp + ' N2O' : ''), 'acc'],
       ['Torque', Math.round(S.peakTq) + ' lb-ft'],
-      S.fiType !== 'none' ? ['Boost', S.boostSet.toFixed(1) + ' psi ' + DR.FI[S.fiId].name.replace('Factory ', '')] : null,
+      S.fiType !== 'none' ? ['Boost', S.boostSet.toFixed(1) + ' psi ' + (S.tbs && S.tbs.name ? S.tbs.name : DR.FI[S.fiId].name.replace('Factory ', ''))] : null,
       S.fiType !== 'none' ? ['Intake air', Math.round(S.iat) + ' C / ' + Math.round(S.iat * 1.8 + 32) + ' F at full boost • knocks past ' + S.knock + ' psi', S.iat > 75 || S.boostSet > S.knock + 0.5 ? 'bad' : ''] : null,
       ['Weight', kgLb(S.m) + ' (' + Math.round(S.f * 100) + '% front)'],
       ['Drive', S.drive + ', ' + S.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
@@ -327,6 +327,55 @@
       inst.best && inst.best.e ? ['Best 1/8', inst.best.e.toFixed(3) + 's', 'acc'] : null
     ]);
   }
+
+  // The turbo spec sheet: the hardware, and what it does on this engine at
+  // the boost you'd run (the car's boost, or 15 psi for a new turbo): where
+  // boost starts and where it's full on a full-throttle pull, the most it
+  // can hold at each rpm, and a boost chart.
+  function turboSheet(inst, fiId, S0, S1) {
+    var u = DR.FI[fiId], e = S1.eng, t = DR.turboSpec(fiId, e);
+    if (!t || !S1.tb) return null;
+    var psi = S0.fiId === fiId || (DR.FI[S0.fiId].type === 'turbo' && S0.boostSet > 0) ? S0.boostSet : 15;
+    psi = Math.min(psi, u.maxBoost || psi);
+    var pull = DR.turboPull(S1, 500, 1500, psi), steady = DR.spoolAt(S1, psi);
+    var type = t.seq ? 'Sequential twins (one small turbo, the second joins at ~' + Math.round(t.seq / 100) * 100 + ' rpm)' : t.twin ? 'Twin turbos (a pair)' : 'Single turbo';
+    var r100 = function (x) { return Math.round(x / 100) * 100; };
+    var rows = [
+      ['Type', type + (t.vgt ? ', variable vanes' : '')],
+      ['Compressor', 'inducer ' + t.comp + ' mm, exducer ' + (t.cex || Math.round(t.comp * 1.33)) + ' mm' + (t.twin ? ' (each)' : '')],
+      ['Turbine', t.turb + ' mm wheel, ' + t.ar.toFixed(2) + ' A/R housing' + (t.ts || (S1.tbx && S1.tbx.ts) ? ' (twin-scroll)' : '')],
+      ['Bearing', (t.bb ? 'ball bearing' : 'journal bearing') + (t.ceramic ? ', ceramic turbine' : '')],
+      ['Max boost', u.maxBoost + ' psi'],
+      ['Supports', '~' + Math.round((S1.flowW || u.flow * DR.HP) / DR.HP / 10) * 10 + ' hp'],
+      ['On your engine', 'at ' + psi + ' psi', 'acc'],
+      ['Boost starts', pull && pull.start ? '~' + r100(pull.start) + ' rpm' : 'past the limiter'],
+      ['Full boost', pull && pull.full ? '~' + r100(pull.full) + ' rpm on a pull (holds it from ~' + r100(steady) + ')' : 'not before your ' + S1.red + ' rpm limiter', pull && pull.full ? 'good' : 'bad']
+    ];
+    var warn = [];
+    if (!pull || !pull.full) warn.push('Too big for this engine at ' + psi + ' psi: it won\'t reach full boost before the limiter. A smaller turbo, more revs or more engine.');
+    else if (pull.full > S1.red - 800) warn.push('Comes in late: full boost only ' + (S1.red - r100(pull.full)) + ' rpm before the limiter. Plan on a 2-step and a loose converter.');
+    if (S1.flowW && S1.peakHp >= S1.flowW / DR.HP * 0.98) warn.push('Runs out of air: the compressor chokes at about ' + Math.round(S1.flowW / DR.HP) + ' hp, so power flattens up top.');
+    // the chart: boost on a full-throttle pull (solid), the most it can
+    // hold at each rpm (dashed), the target (line)
+    var W = 300, Hh = 120, x0 = 1000, x1 = S1.red, top = Math.max(psi * 1.25, 10);
+    var X = function (r) { return 28 + (r - x0) / (x1 - x0) * (W - 34); }, Y = function (b) { return Hh - 16 - Math.min(b, top) / top * (Hh - 26); };
+    var hold = [], made = [];
+    for (var r = x0; r <= x1; r += 100) hold.push(X(r).toFixed(1) + ',' + Y(Math.min(DR.turboHold(S1, r), u.maxBoost || 99)).toFixed(1));
+    (pull ? pull.curve : []).forEach(function (c) { made.push(X(c[0]).toFixed(1) + ',' + Y(c[1]).toFixed(1)); });
+    var ticks = '';
+    for (var k = Math.ceil(x0 / 1000) * 1000; k <= x1; k += 1000) ticks += '<text x="' + X(k) + '" y="' + (Hh - 3) + '" font-size="9" text-anchor="middle" fill="currentColor" opacity=".6">' + k / 1000 + 'k</text>';
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" width="100%" style="max-width:420px;display:block">' +
+      '<line x1="28" y1="' + Y(0) + '" x2="' + (W - 6) + '" y2="' + Y(0) + '" stroke="currentColor" opacity=".3"/>' +
+      '<line x1="28" y1="' + Y(psi) + '" x2="' + (W - 6) + '" y2="' + Y(psi) + '" stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>' +
+      '<text x="2" y="' + (Y(psi) + 3) + '" font-size="9" fill="currentColor" opacity=".7">' + psi + '</text>' +
+      '<polyline fill="none" stroke="currentColor" opacity=".45" stroke-dasharray="5 4" stroke-width="1.5" points="' + hold.join(' ') + '"/>' +
+      '<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" points="' + made.join(' ') + '"/>' + ticks + '</svg>';
+    var chart = h('div', { class: 'tbchart' }); chart.innerHTML = svg;
+    return h('div', { class: 'tbsheet' }, h('h3', { class: 'pgroup' }, 'Spec sheet'), statsGrid(rows), chart,
+      h('div', { class: 'dim', style: { fontSize: '14px' } }, 'Solid: boost on a full-throttle pull from 1,500 rpm. Dashed: the most it can hold at each rpm.'),
+      warn.map(function (w) { return h('div', { class: 'warnbox' }, w); }));
+  }
+  UI.turboSheet = turboSheet;
 
   UI.statsGrid = statsGrid; UI.carStats = carStats; UI.fmtHp = fmtHp; UI.kgLb = kgLb;
   UI.careerLine = function () { return careerLine(); };

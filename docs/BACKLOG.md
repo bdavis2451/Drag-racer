@@ -5,9 +5,9 @@ the top of each section.
 
 ## In progress
 
-- **Turbo system rework** (spool from physics, curated turbos, spec sheet,
-  Single/Twin/Compound sections). Research done Nov 12, talking it through:
-  `docs/features/turbo-system.md`. The diesel rework waits on it.
+- **Career/rival balance after the turbo rework.** About half the turbo
+  rivals moved (stage 3 boss ~0.45 s quicker, a few others 0.3-0.4 s).
+  Agreed: rebalance after the turbo rework (owner, Nov 12).
 
 ## Waiting on a yes or no
 
@@ -25,7 +25,11 @@ the top of each section.
 - **Wheels & tires rework** (front/rear sections by drive layout, more
   options; owner sending screenshots). `docs/features/wheels-tires.md`.
 
-- **Diesel engines and upgrades rework.** Rework the diesel motors and
+- **Turbo diagram view** (Drag Racing: Streets style: the turbo system laid
+  out as a flow diagram). Later (owner, Nov 12).
+- **Diesel engines and upgrades rework.** Note (Nov 12): the stock Ram now
+  runs 15.25 (was 15.75, real 15.6-16.5): its turbo spools early like the
+  real one; the real truck's low-gear torque limiting belongs in this rework. Rework the diesel motors and
   their upgrade paths. Research and test results done (Nov 11), options
   waiting on the owner: `docs/features/diesel.md`.
 
@@ -63,6 +67,11 @@ the top of each section.
 
 ## Decided
 
+- Turbo rework (Nov 12): spool from physics, 8 singles + 4 twins with real-style
+  model numbers, Single/Twin sections (Compound with the diesel), spec sheet
+  with everything (A/R info only), one bearing per size, real factory
+  turbos, honest manifolds + twin-scroll (full trade, gates built in),
+  wastegates control only, rivals change and get rebalanced: shipped.
 - Nov 11 playtest: all-setups button, 10R80 (+built), AWD rolling burnout,
   burnout upshift / rev limit / tire length, truck & trailer prompts: shipped.
 - Manual burnout shifting (SHIFT on the gas, STAGE off it) and the dealer
