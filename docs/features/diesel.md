@@ -114,6 +114,35 @@ upgrade, look at the injector selection, research.
 | Twin-screw 4.5L blower | 193 | 327 | | 19.74 |
 | Stock + 5,000 stall converter | | | | doesn't finish |
 
+## Re-run after the turbo rework (Nov 12, same method: median of 3 AI passes, prepped strip)
+| Build | hp | lb-ft | Full boost (pull) | ET |
+|---|---|---|---|---|
+| Stock | 400 | 672 | 1,700 | 15.25 @ 87 (was 15.75) |
+| Chip / Flash | 402 / 405 | 672 | 1,700 | 15.23 / 15.13 |
+| Flash + big injectors + pump | 405 | 672 | 1,700 | 15.13 (still +0 hp) |
+| Flash, factory turbo at 40 psi | 460 (fuel-capped) | 793 | 1,730 | 14.43 (was 15.31) |
+| Standalone, race injectors, pump, studs, intercooler, exhaust | 449 | 695 | 1,690 | 14.64 |
+| + 6266 at 35 psi | 488 | 755 | 1,920 | 14.45 |
+| + 7275 at 40 psi | 531 | 821 | 2,340 | 14.74 |
+| + 7685 at 45 psi | 573 | 881 | 3,130 | 15.19 |
+| + 8891 at 50 psi | 612 | 786 | never | 15.91 |
+| Built (race heads/cams/billet, 4,800 rpm) + 7685 | 784 | 960 | 2,650 | 14.44 @ 109 |
+| Built + 8891 | 843 | 1,031 | 3,070 | 14.63 @ 112 |
+| Built + Twin 9498 | 274 | 309 | never | 18.60 |
+| Stock + 150 shot | | | | 14.21 |
+| Flash + 250 shot | | | | 13.60 |
+| Twin-screw 4.5L | 193 | 327 | | 19.74 |
+
+What changed: the turbo side is mostly fixed: bolt-on turbos now spool on
+the Cummins (a 7685, S480-size, is full at ~3,100, real S480 ~2,600-3,000)
+instead of making 160-210 hp; bigger turbos no longer make it slower until
+they're truly too big (8891 on a stock-rpm Cummins, Pro Mod twins). Most
+power reachable ~840 hp (was ~650; real: 1,000 hp street builds common).
+What didn't: the fuel side (tune +2-5 hp, injectors +0), power still made
+by boost not fuel, gas parts on a diesel, low stock torque (672 vs 800),
+and the stock truck is now too quick (15.25 vs real 15.6-16.5).
+Test script: scratchpad `scr/dsl3.js`.
+
 ## Options (for the owner to pick from)
 
 **1. How diesel power works**
