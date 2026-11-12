@@ -1262,8 +1262,9 @@
 
   // Standing burnout in the box: the line lock holds the non-driven wheels
   // and the drive tires are free to spin on the wet pad. AWD cars can't.
+  // (an AWD car has no line lock: all four spin and it rolls through the
+  // water; the race screen moves it, the physics spins and heats the tires)
   Sim.prototype.burnout = function (on) {
-    if (on && this.S.drive === 'AWD') return false;
     if (!!on === !!this.burnMode) return !!on;
     this.burnMode = !!on;
     this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = 0.15; this.locked = false;

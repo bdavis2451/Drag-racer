@@ -2,6 +2,20 @@
 
 Short notes for testing, newest first.
 
+## AWD burnouts: all four spinning, pulling through the water
+
+- AWD cars now do a real rolling burnout: no line lock, so with all four
+  tires spinning the car **pulls forward through the water box** (harder the
+  more power it has) while the engine revs freely through the gears, like
+  AWD drag cars do. Before, it sat on its brakes (a 2-step held it at the
+  launch rpm) and crawled.
+- Smoke comes off the front tires too. Let off and it eases to a stop before
+  the line; STAGE pulls it up.
+
+**Try:** an Evo, STI, GT-R or 911 in the burnout box: hold GAS, tap SHIFT on
+a manual. **Look out for:** the car running into the beams, or tires that
+heat too fast or too slow.
+
 ## Tuner session clipboard
 
 - When your driver runs the rest of a tuning session, each pass now lands

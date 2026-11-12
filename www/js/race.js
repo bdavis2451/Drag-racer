@@ -510,7 +510,7 @@
     function startBurnout() {
       if (phase !== 'pre') return;
       phase = 'burnout'; phaseT = 0;
-      you.lineLock = you.sim.burnout(true); you.bsNoUp = false;
+      you.lineLock = you.sim.burnout(true) && S.drive !== 'AWD'; you.bsNoUp = false;
     }
     // Pull out of the box and creep into the beams. Each car does this on its
     // own; the tree comes down once both are staged.
@@ -538,6 +538,16 @@
       // not enough power to spin them in the higher gear: it kicks back down
       // and stays there
       if (sim.gear > 0 && sim.rpm() < Math.max(S.idle + 1200, lim * 0.55)) { r.bdT = (r.bdT || 0) + dt; if (r.bdT > 0.6) { sim.gear--; r.bsNoUp = true; r.bdT = 0; } } else r.bdT = 0;
+    }
+    // AWD rolling burnout: no line lock, so with all four spinning in the
+    // water the car pulls forward and keeps going as long as you're on it
+    // (the more power, the harder it pulls), easing up before the line
+    function awdRoll(r, thr, dt) {
+      var lim = -3, top = DR.clamp(2.5 + r.S.peakHp / 220, 3, 7) * Math.min(1, thr * 1.2);
+      var v = r.creepV || 0, room = Math.max(0, lim - r.off);
+      v = thr > 0.05 ? Math.min(top, v + dt * 4) : Math.max(0, v - dt * 5);
+      v = Math.min(v, Math.sqrt(2 * 5 * room));
+      r.creepV = v; r.off = Math.min(lim, r.off + v * dt);
     }
     function awdCreep(r, thr, dt) {
       var lim = BOX_X + 7;
@@ -661,7 +671,7 @@
         if (act && phase !== 'stage') startStaging();
         var tt = S.tire.topt, thr = playerThrottle();
         if (phase === 'burnout') {
-          if (you.sim.burnMode) you.burn = burnAmt(you);
+          if (you.sim.burnMode) { you.burn = burnAmt(you); if (S.drive === 'AWD') awdRoll(you, thr, dt); }
           else { you.sim.tireT += DR.clamp(S.peakHp / 250, 0.7, 2.6) * 8 * thr * 0.6 * DR.Sim.burnHeat(S.tire) * dt; you.sim.tireE += S.peakHp * 745.7 * 0.25 * thr * dt; you.burn = thr * 0.5; awdCreep(you, thr, dt); }
           // coach the burnout off the tire temperature (sim mode: you judge
           // it by the smoke and the time on the gas)
@@ -672,7 +682,7 @@
           else if (thr > 0.05 && canShift && you.sim.gear === 0 && you.sim.rpm() > Math.min(S.limit, S.tune.burnRpm || S.limit) - 500) { msg = 'Tap SHIFT for 2nd to spin them faster.'; you.spun = true; }
           else if (thr > 0.05) { msg = S.tire.kind === 'Drag Radial' ? 'Spinning... radials heat fast: keep it short and light.' : S.tire.kind === 'Slick' ? 'Spinning... slicks want a good long burnout.' : 'Spinning... keep it pinned.'; you.spun = true; }
           else if (!you.spun) msg = introSub;
-          else msg = you.lineLock ? 'Hold GAS to spin the tires. Hit STAGE when they\'re hot.' : 'AWD: no line lock. Hold GAS to roll through the water spinning all four. Hit STAGE when ready.';
+          else msg = you.lineLock ? 'Hold GAS to spin the tires. Hit STAGE when they\'re hot.' : 'AWD: no line lock. Hold GAS: it pulls through the water spinning all four. Let off and hit STAGE when they\'re hot.';
           if (msg !== you.burnMsg) { you.burnMsg = msg; setMsg(vsLine, msg); }
         }
         stepSim(you, dt, thr, true);
@@ -700,7 +710,7 @@
       } else if (opp.box === 'burn') {
         opp.burnT += dt;
         if (opp.sim.tireT < opp.burnTarget && opp.burnT < 6) {
-          if (opp.sim.burnout(true)) { stepSim(opp, dt, opp.burnT < 0.4 ? opp.burnT / 0.4 : 0.85, true); burnShift(opp, dt); opp.burn = burnAmt(opp); }
+          if (opp.sim.burnout(true)) { stepSim(opp, dt, opp.burnT < 0.4 ? opp.burnT / 0.4 : 0.85, true); burnShift(opp, dt); opp.burn = burnAmt(opp); if (opp.S.drive === 'AWD') awdRoll(opp, 0.85, dt); }
           else { opp.sim.tireT += DR.clamp(opp.S.peakHp / 250, 0.7, 2.6) * 8 * 0.6 * dt; opp.burn = 0.6; awdCreep(opp, 0.85, dt); stepSim(opp, dt, 0.85, true); }
         } else {
           opp.sim.burnout(false); opp.burn = 0; stepSim(opp, dt, 0, true);
@@ -887,6 +897,8 @@
         var n = Math.floor(r.smokeAcc); r.smokeAcc -= n;
         // (from the front tires on a front-driver)
       if (n) parts.smoke(r.S.drive === 'FWD' ? rearX + (spr.wheelF.x - spr.wheelR.x) / DR.PPM : rearX, 0.12, sim.v, Math.min(6, n), { lane: r.lane, slip: slipV, dense: 0.55 + 0.35 * heavy });
+      // an AWD car smokes the fronts too
+      if (n && r.S.drive === 'AWD') parts.smoke(rearX + (spr.wheelF.x - spr.wheelR.x) / DR.PPM, 0.12, sim.v, Math.min(4, Math.ceil(n * 0.7)), { lane: r.lane, slip: slipV, dense: 0.5 + 0.3 * heavy });
       }
       // a diesel short of air rolls black smoke out of the exhaust (a light
       // haze when it's just rich; the thicker the richer)
