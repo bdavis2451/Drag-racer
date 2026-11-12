@@ -1,6 +1,19 @@
 # Diesel truck & motor rework (research, Nov 11)
 
-Status: **research done, talking it through. No code.** Owner asked: play
+Status: **research done, talking it through. No code.** Picked up again
+Nov 12, after the turbo rework shipped.
+
+## Update after the turbo rework (Nov 12)
+- Turbo spool is now physics (see `turbo-system.md`): the factory HE300VG
+  variable-vane turbo comes in around 1,500-1,700 rpm like the real one, and
+  big gas turbos no longer behave like gas-engine sizes on the Cummins.
+- Side effect: the stock Ram runs **15.25** (was 15.75; real 15.6-16.5).
+  The real truck is held back by the ECU limiting torque in the low gears
+  (and fuel-limited power); that belongs in this rework.
+- The turbo shop already has the **Compound** section planned for diesels
+  (S366 over S480 style) and the spec sheet works for diesel turbos.
+- Still true: injectors/pumps are gas parts, the tune adds almost nothing,
+  torque is 619 lb-ft (real 800), converters past the redline stall the truck. Owner asked: play
 with the Ram 2500 Cummins, try a high-hp build, check spool and every
 upgrade, look at the injector selection, research.
 
