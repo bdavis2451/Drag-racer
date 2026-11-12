@@ -499,7 +499,9 @@
         note = quicker ? et.toFixed(3) + ': quicker, but that was the pass, not the setting. Back to ' + fmt(pass.k, was) + '.' : (et < 90 ? et.toFixed(3) : 'No time') + ': no better. Back to ' + fmt(pass.k, was) + '.';
       }
     }
-    ss.log[ss.log.length - 1].note = note;
+    var lastL = ss.log[ss.log.length - 1];
+    lastL.note = note;
+    lastL.kind = pass.confirm ? 'confirm' : pass.k === null ? 'base' : /^Threw/.test(note) ? 'out' : /Keeping/.test(note) ? 'kept' : 'back';
     G.save();
     return note;
   };
@@ -670,7 +672,7 @@
     ss.cur = pass;
     var drivers = DR.Team ? DR.Team.dragDrivers() : [], close;
     // the session's driver keeps going on their own
-    if (ss.auto && drivers.some(function (d) { return d.id === ss.auto; })) { ss.cur = pass; return setTimeout(function () { simPass(ss, ss.auto); }, 30); }
+    if (ss.auto && drivers.some(function (d) { return d.id === ss.auto; })) { ss.cur = pass; return clipboard(ss, pass); }
     if (ss.drv) drivers = [ss.drv].concat(drivers.filter(function (d) { return d.id !== ss.drv.id; }));
     var rows = [];
     drivers.forEach(function (d, i) {
@@ -714,7 +716,7 @@
     payDriver(ss, drvId);
     var res = TU.simPass(ss.inst, drvId, ss.surf), noteTxt = TU.record(ss, ss.cur, res);
     if (res.broke) ss.broke = true;
-    UI.toast(ss.cur.label + ': ' + (res.et < 90 ? res.et.toFixed(3) : 'DNF') + '. ' + noteTxt);
+    if (!ss.auto) UI.toast(ss.cur.label + ': ' + (res.et < 90 ? res.et.toFixed(3) : 'DNF') + '. ' + noteTxt);
     if (res.broke) return notes(ss);
     setTimeout(function () { passPrompt(ss); }, 50);
   }
@@ -751,6 +753,64 @@
     if (d > -0.003) return { keep: false, refund: paid, why: 'Couldn\'t beat what you came in with (' + ss.baseEt.toFixed(3) + '): your old tune is back on.' };
     return { keep: true, gain: -d };
   };
+  // the session's notes, one row per pull, check and pass
+  function logRows(ss) {
+    var n = 0;
+    return ss.log.map(function (x) {
+      if (x.pit) return h('div', { class: 'row' }, h('span', { class: 'acc grow' }, '— ' + x.pit));
+      if (x.check) return h('div', { class: 'row' }, h('span', { class: 'dim' }, 'CHECK'), h('span', { class: 'grow' }, x.check + ': ' + x.note));
+      if (x.pull) return h('div', { class: 'row' }, h('span', { class: 'dim' }, 'DYNO'), h('span', { class: 'grow' }, x.pull + ': ' + x.note), h('span', {}, Math.round(x.whp) + ' whp'));
+      n++;
+      var tag = { kept: ['KEPT', 'good'], back: ['BACK', 'dim'], out: ['OUT', 'bad'], base: ['BASE', 'acc'], confirm: ['FINAL', 'acc'] }[x.kind] || ['', ''];
+      return h('div', { class: 'row' }, h('span', { class: 'dim' }, '#' + n), h('span', { class: 'grow' }, x.pass + (x.note ? ' — ' + x.note : '')),
+        tag[0] ? h('span', { class: tag[1] }, tag[0]) : null,
+        h('span', { class: x.aborted ? 'bad' : '' }, x.sixty < 9 ? x.sixty.toFixed(3) + ' / ' + (x.et < 90 ? x.et.toFixed(3) : 'DNF') : 'DNF'));
+    });
+  }
+  // ET by pass: kept changes green, put back grey, thrown out red, the
+  // baseline and the final pass in the accent colour; the best so far as a line
+  function etChart(ss) {
+    var pts = ss.log.filter(function (x) { return x.pass && x.et < 90; });
+    if (!pts.length) return null;
+    var W = 300, H = 90, lo = Math.min.apply(null, pts.map(function (x) { return x.et; })), hi = Math.max.apply(null, pts.map(function (x) { return x.et; }));
+    if (hi - lo < 0.02) { hi += 0.01; lo -= 0.01; }
+    var X = function (i) { return 30 + (pts.length < 2 ? (W - 40) / 2 : i / (pts.length - 1) * (W - 40)); }, Y = function (et) { return 8 + (et - lo) / (hi - lo) * (H - 24); };
+    var col = { kept: '#46e07a', back: '#8a8f9c', out: '#ff4d4d', base: 'var(--accent)', confirm: 'var(--accent)' };
+    var best = Infinity, line = [], dots = '';
+    pts.forEach(function (x, i) {
+      if (x.kind !== 'out' && x.kind !== 'back') best = Math.min(best, x.et);
+      if (best < Infinity) line.push(X(i).toFixed(1) + ',' + Y(best).toFixed(1));
+      dots += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.et).toFixed(1) + '" r="3.5" fill="' + (col[x.kind] || '#c8c8d0') + '"/>';
+    });
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="max-width:420px;display:block">' +
+      '<text x="2" y="12" font-size="9" fill="currentColor" opacity=".7">' + lo.toFixed(2) + '</text>' +
+      '<text x="2" y="' + (H - 14) + '" font-size="9" fill="currentColor" opacity=".7">' + hi.toFixed(2) + '</text>' +
+      '<polyline fill="none" stroke="#46e07a" stroke-opacity=".5" stroke-dasharray="3 3" points="' + line.join(' ') + '"/>' + dots +
+      '<text x="' + (W / 2) + '" y="' + (H - 2) + '" font-size="9" text-anchor="middle" fill="currentColor" opacity=".6">pass by pass (quicker is higher)</text></svg>';
+    var d = h('div', { class: 'tbchart' }); d.innerHTML = svg; return d;
+  }
+  function sessionCost(ss) { return ss.cost.labor + ss.cost.driver + ss.cost.dyno + ss.cost.fuel + ss.cost.track + ss.cost.parts; }
+  // the clipboard: while a driver runs the session, every pass lands here
+  // and the next one waits for a tap
+  function clipboard(ss, pass) {
+    var left = (ss.track || []).filter(function (it) { return !it.tried; }).length + (ss.confirmed ? 0 : 1), close;
+    var drv = DR.Team ? DR.Team.staff(ss.auto) : null, logEl = h('div', { class: 'tunerlog' }, logRows(ss));
+    close = UI.modal([h('div', { class: 'plvl' }, 'TUNING SESSION • ' + ss.who.name.toUpperCase() + (drv ? ' • ' + drv.name.toUpperCase() + ' DRIVING' : '')),
+      UI.statsGrid([
+        ['Baseline', ss.baseEt != null && ss.baseEt < 90 ? ss.baseEt.toFixed(3) : '-'],
+        ['Best kept', ss.refEt != null && ss.refEt < 90 ? ss.refEt.toFixed(3) : '-', 'good'],
+        ['Passes', ss.passes + ' run, about ' + left + ' to go'],
+        ['Spent', DR.money(sessionCost(ss))]
+      ]),
+      etChart(ss), logEl,
+      h('div', { class: 'pix acc', style: { marginTop: '6px' } }, 'Next: ' + pass.label),
+      h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', marginTop: '8px' } },
+        btn('Next pass', function () { close(); simPass(ss, ss.auto); }, 'primary'),
+        btn('Watch it', function () { close(); runPass(ss, ss.auto); }),
+        btn('Drive it yourself', function () { close(); runPass(ss, null); }, 'small')),
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('End the session', function () { close(); notes(ss); }, 'small'))]);
+    setTimeout(function () { logEl.scrollTop = logEl.scrollHeight; }, 0);
+  }
   function notes(ss) {
     var vd = TU.verdict(ss);
     if (!vd.keep) { ss.inst.tune = JSON.parse(JSON.stringify(ss.t0)); G.save(); }
@@ -760,14 +820,15 @@
     var saved = ss.broke || ss.inst.damage ? null : saveSetup(ss);
     var then = ss.then && !ss.broke && !ss.inst.damage ? ss.then : null;
     var total = ss.cost.labor + ss.cost.driver + ss.cost.dyno + ss.cost.fuel + ss.cost.track + ss.cost.parts;
+    var fin = ss.confirmEt != null ? ss.confirmEt : ss.refEt != null ? ss.refEt : ss.best, gain = ss.baseEt != null && fin != null && ss.baseEt < 90 && fin < 90 ? fin - ss.baseEt : null;
     close = UI.modal([h('div', { class: 'pix acc' }, 'TUNER\'S NOTES • ' + ss.who.name.toUpperCase()),
-      h('div', { class: 'tunerlog' }, ss.log.map(function (x) {
-        if (x.pit) return h('div', { class: 'row' }, h('span', { class: 'acc grow' }, '— ' + x.pit));
-        if (x.check) return h('div', { class: 'row' }, h('span', { class: 'dim' }, 'CHECK'), h('span', { class: 'grow' }, x.check + ': ' + x.note));
-        if (x.pull) return h('div', { class: 'row' }, h('span', { class: 'dim' }, 'DYNO'), h('span', { class: 'grow' }, x.pull + ': ' + x.note), h('span', {}, Math.round(x.whp) + ' whp'));
-        n++;
-        return h('div', { class: 'row' }, h('span', { class: 'dim' }, '#' + n), h('span', { class: 'grow' }, x.pass + (x.note ? ' — ' + x.note : '')), h('span', { class: x.aborted ? 'bad' : '' }, x.sixty < 9 ? x.sixty.toFixed(3) + ' / ' + (x.et < 90 ? x.et.toFixed(3) : 'DNF') : 'DNF'));
-      })),
+      // the session at a glance, like a timeslip
+      ss.passes ? h('div', { class: 'tbslip' },
+        h('div', {}, h('div', { class: 'dim gsmall' }, 'CAME IN'), h('div', { class: 'pix' }, ss.baseEt != null && ss.baseEt < 90 ? ss.baseEt.toFixed(3) : '-')),
+        h('div', {}, h('div', { class: 'dim gsmall' }, vd.keep ? 'LEAVES ON' : 'BEST TRIED'), h('div', { class: 'pix' }, fin != null && fin < 90 ? fin.toFixed(3) : '-')),
+        h('div', {}, h('div', { class: 'dim gsmall' }, 'CHANGE'), h('div', { class: 'pix ' + (gain != null && gain < 0 && vd.keep ? 'good' : 'dim') }, gain != null && vd.keep ? (gain <= 0 ? '' : '+') + gain.toFixed(3) : 'kept the old tune'))) : null,
+      etChart(ss),
+      h('div', { class: 'tunerlog' }, logRows(ss)),
       h('p', {}, Object.keys(ch).length ? 'Set: ' + Object.keys(ch).map(function (k) { return label(k) + ' ' + fmt(k, ch[k]); }).join(' • ') : 'Nothing changed.'),
       ss.broke || ss.inst.damage ? h('p', { class: 'bad' }, 'The car is broken. It needs a repair.') : null,
       vd.why ? h('p', { class: 'warn' }, vd.why) : null,

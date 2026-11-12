@@ -2,6 +2,20 @@
 
 Short notes for testing, newest first.
 
+## Tuner session clipboard
+
+- When your driver runs the rest of a tuning session, each pass now lands
+  on a **clipboard** instead of a quick bar at the bottom: the baseline, the
+  best kept time, passes run and about how many to go, money spent, an
+  **ET chart** (kept changes green, put back grey, thrown-out passes red) and
+  the full log. Tap **Next pass** for each one, or **Watch it** / **Drive it
+  yourself**, or end the session.
+- The tuner's notes at the end open with the session at a glance: came in,
+  leaves on, the change, and the chart.
+
+**Try:** Tune > Tuner, pick your driver's "runs the rest". **Look out for:**
+a pass that doesn't show up in the list, or a chart that looks wrong.
+
 ## Diesel rework: fuel makes the power, smoke, EGT, G56, Cummins swaps
 
 - **The Cummins works like a real diesel now.** Fuel makes the power: the

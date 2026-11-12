@@ -63,6 +63,8 @@ the top of each section.
 
 ## Decided
 
+- Tuner session clipboard (live log, ET chart, summary sheet; one pass at a
+  time) when a driver runs the session (owner, Nov 12): shipped.
 - Diesel rework (Nov 12): fuel makes the power, real 370 / 800 stock, diesel
   parts list, smoke + EGT, converters capped at 3,000 for diesels, G56 with
   the factory manual calibration, Cummins $12,500 + swap kit, Diesel Dan in a
