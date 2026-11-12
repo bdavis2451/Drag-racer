@@ -5,7 +5,9 @@ the top of each section.
 
 ## In progress
 
-- Nothing right now.
+- **Turbo system rework** (spool from physics, curated turbos, spec sheet,
+  Single/Twin/Compound sections). Research done Nov 12, talking it through:
+  `docs/features/turbo-system.md`. The diesel rework waits on it.
 
 ## Waiting on a yes or no
 

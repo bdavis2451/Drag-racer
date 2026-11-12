@@ -36,4 +36,8 @@ drive layout:
 - Saves: what an existing car's tires and wheels become.
 
 ## Ideas list (add as they come)
-- (owner's screenshots go here)
+- Owner's screenshot (Nov 12), Drag Racing: Streets wheels screen: the car
+  in the middle, each axle's parts beside it: wheel (size shown, R14), tire,
+  spring, shock, brake disc, brake pads; a center tile for the differential.
+  Front parts on one side, rear on the other: the front/rear split above.
+  Their turbo screen is in `turbo-system.md`.
