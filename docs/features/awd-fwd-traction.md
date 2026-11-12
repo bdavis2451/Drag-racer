@@ -4,6 +4,17 @@ Status: **parked: test results only, no changes yet.** Owner (Nov 11): make
 this its own update, run 1,500 / 2,000 hp AWD and FWD and a 3,000 hp AWD
 truck, and keep the results here.
 
+## Update (Nov 12)
+- **AWD burnouts shipped** (not traction): AWD cars now do one quick hit
+  in the water box (rev on the 2-step, launch with all four spinning for
+  about a second, brake, pull up or back up to the line). Code: race.js
+  `awdHit` / `endHit`.
+- **The turbo rework changed the 4-cylinder numbers below:** spool comes from
+  physics now and the lineup is new (6266 ... 9498). The FWD/AWD tests need a
+  re-run before this update starts; the "4-cylinders top out" finding may
+  have moved.
+- FWD traction itself is still untouched (the main open problem here).
+
 ## The short version
 - **AWD is close to real at every power level**, up to 2,000 hp. The 3,000 hp
   AWD truck is believable too.
