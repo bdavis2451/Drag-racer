@@ -1,6 +1,6 @@
 # Turbo system rework (spool, sizing, setups)
 
-Status: **research done, first decisions made; written plan next. No code.** Started Nov 12.
+Status: **plan drafted, waiting on item-by-item approval. No code.** Started Nov 12.
 Order agreed in principle: turbo system first, then the diesel rework
 (`diesel.md`) on top of it, then career/rival balance.
 
@@ -110,7 +110,92 @@ calibration pass is the main work.
   number. What I'd leave: set bonuses (gamey: a real matched system gains
   from the physics, not a bonus).
 
-## My recommendation (for discussion)
+## Calibration (Nov 12, scratchpad `turbo/dyn.js` + `cal.js`)
+Physics: engine airflow -> exhaust energy -> turbine power vs compressor
+power, plus the rotor's inertia (it has to be spun up), simulated as a
+500 rpm/s dyno pull. One turbine constant for all turbos; turbine flow ~
+wheel size squared x A/R^0.35; a V8 single loses ~30% of the exhaust energy
+in its long crossover pipes (cooler, pulses smeared), twins per bank don't.
+
+| Combo (boost) | Real full boost | Model |
+|---|---|---|
+| 2.0 Evo + 35R .82 (30) | 4,000-4,500 | 4,480 |
+| same, .63 housing | 250-400 sooner | 275 sooner |
+| 3.0 2JZ + 42R 1.01 (30) | ~4,500 | 4,270 |
+| 5.3 LS + 76mm (20) | 3,800-4,200 | 3,740 |
+| 6.0 LS + 88mm (25) | 4,500-5,000 | 4,680 |
+| 6.7 Cummins + S480 (40) | 2,600-3,000 | 3,060 |
+| 13B + GT35R (20) | 4,800-5,200 (soft) | 4,170 |
+
+Good enough to plan on. Still to do in the build: compressor limits (choke =
+the power it supports, surge on oversized compressors), the rotary's
+numbers, factory turbos per engine, and a full engine x turbo spool table.
+
+## The plan (draft for approval, Nov 12)
+
+**1. Spool from physics.** Each turbo has real specs (compressor and turbine
+wheel sizes, housing A/R, bearing). The game works out boost vs rpm for
+your engine: displacement, rev range, how well it breathes (heads, cams),
+exhaust heat (gas / diesel / rotary), V8 single vs twins. Lag comes from the
+rotor's weight (big wheels lag more; ball bearings recover faster after a
+shift). 2-step, anti-lag, blow-off valve and boost-by-gear keep working.
+
+**2. Turbo slot: Single and Twin sections** (Compound arrives with the
+diesel rework). Only sizes that fit the engine are listed. One bearing type
+per size. Price = the turbo with its basic kit (log manifold, downpipe,
+internal gate, piping), as now.
+
+Singles:
+| Turbo | Size | Bearing | Supports | Price | Replaces |
+|---|---|---|---|---|---|
+| 5057 (T3/T4) | 50mm, budget | journal | ~400 hp | $1,200 | Budget T3/T4 |
+| 4847 | 48mm | ball | ~350 hp | $2,400 | Ball-Bearing 50mm |
+| 5558 | 55mm | ball | ~550 hp | $3,400 | Small 54mm |
+| 6266 | 62mm | ball | ~800 hp | $4,800 | 61mm, Medium 64mm |
+| 7275 | 72mm | ball | ~1,000 hp | $7,000 | 67mm |
+| 7685 | 76mm | ball | ~1,250 hp | $9,500 | Large 76mm, 80mm |
+| 8891 | 88mm | journal | ~1,750 hp | $16,000 | Huge 88mm |
+| 9498 | 94mm | journal | ~2,200 hp | $24,000 | (new: big-tire single) |
+
+Twins (6 cylinders and up):
+| Turbo | Supports (pair) | Price | Replaces |
+|---|---|---|---|
+| Twin 4847 | ~700 hp | $5,200 | Twin 50mm |
+| Twin 6266 | ~1,600 hp | $10,500 | Twin 67mm |
+| Twin 7685 | ~2,500 hp | $19,000 | (new) |
+| Twin 9498 Pro Mod | ~4,400 hp | $45,000 | Twin 98mm Pro Mod |
+
+**3. Factory turbos get their real specs per engine** (CT26 on the 3S-GTE,
+TD05 on the 4G63, VF on the EJ257, T3 on the Buick/GNX and SVO, sequential
+twins on the 2JZ and 13B, twin T25-class on the RB26, IHI twins on the VR38,
+etc.), calibrated so **stock cars keep their current stock ETs** (they're
+matched to real timeslips).
+
+**4. Spec sheet** (tap any turbo in the shop, also from the dyno): model,
+type, compressor inducer/exducer, turbine wheel, housing A/R, bearing, max
+boost, supports ~hp; "on your engine": boost starts, full boost at your
+boost setting, a boost-vs-rpm chart, and warnings (won't reach full boost
+before redline / runs out of air above X rpm / too small for your power).
+
+**5. Turbo parts that tell the truth:**
+- Manifold: Kit Cast Log (quickest response) -> Tubular (more top end, a
+  touch slower) -> Equal-Length Race (most top end) ; new **Twin-Scroll
+  Divided** manifold for 4- and 6-cylinders (quicker spool, keeps top end).
+- Downpipe and heat wrap: small real gains (less back pressure / hotter
+  turbine), as now.
+- Wastegate parts: boost control and creep only (no "spools sooner").
+
+**Left out:** adjustable A/R, bearing choice, compounds and diesel turbos
+(the diesel rework), the diagram view (later), sequential conversions.
+
+**Saves:** old turbos become the one in the "Replaces" column, same boost
+setting (capped to the new max). Manifold/downpipe/heat/gate parts keep
+their ids.
+
+**Rivals and career:** every turbo rival changes; the career/rival balance
+pass comes after (agreed).
+
+## My recommendation (for discussion, Nov 12)
 1. **Physics under the hood, a curated shop on top.** Every turbo is a real
    spec (compressor size, turbine size, housing A/R fixed by us, bearing,
    max boost, power it supports). The game works out spool for *your*
@@ -144,12 +229,12 @@ calibration pass is the main work.
 - **Spec sheet shows everything:** on-your-engine numbers, the boost curve,
   and compressor/turbine details (wheel sizes, trims, A/R, bearing). A/R
   is information only, never adjustable.
+- **One bearing type per turbo size** (we pick it).
+- **Diagram view (DRS style): later** (backlog).
+- **Rivals change** with the new spool; rebalance the career after.
 
 ## Open questions for the owner
-1. Bearing: one per turbo (we pick), or offer the journal/ball pair on the
-   popular sizes as a price/response choice?
-2. The diagram view (DRS style) now, later, or no?
-3. Rivals: let them change and rebalance after (my pick), or freeze?
+- (all answered, see Decisions)
 
 ## What it changes
 - **Every turbo car**, player and rival, gets new spool. Career/rival
