@@ -5,6 +5,9 @@ the top of each section.
 
 ## In progress
 
+- **Engine power ceilings** (factory-turbo engines capped low, boost and rev
+  limits): research and plan done Nov 13, `docs/features/engine-ceilings.md`.
+  Then (owner, Nov 13): **wheels & tires rework**, then **FWD traction**.
 - **Career/rival balance after the turbo rework.** About half the turbo
   rivals moved (stage 3 boss ~0.45 s quicker, a few others 0.3-0.4 s).
   Agreed: rebalance after the turbo rework (owner, Nov 12).
