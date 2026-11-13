@@ -2,6 +2,29 @@
 
 Short notes for testing, newest first.
 
+## Engine power ceilings: full race builds reach real record power
+
+- **Race fuels hold more boost:** methanol 80 psi (was 50), E85 40 (30),
+  race gas 40 (34). Pump gas stays 17 psi (that's right for 93 octane with
+  an intercooler).
+- **Race turbos turn up further:** 8891 to 70 psi, 9498 to 80, twin 7685s
+  to 60, Pro Mod twins to 80.
+- **Engines famous for big power now make it** on a full race build: SR20
+  and 4G63 about 2,000 hp, RB26 ~2,140, 2JZ-GTE ~2,350, Buick turbo / GNX
+  ~1,500, 3S ~1,500, VR38 ~2,450. They also rev higher with race valvetrain
+  and billet parts (4G63 10,500, SR20 10,000, RB26 10,200).
+- **A few engines that ran too strong at high boost are trimmed** to real
+  numbers: 4A-G, the 3.2 I6, VQ35, 3800, V10, V12.
+- **The Cummins goes further:** race injectors and the triple CP3 kit feed
+  about 2,600 hp, race triples to 100 psi: about 2,300 hp.
+- Nothing changes up to 15 psi: stock cars and mild builds are as before.
+  Builds past 15 psi change power (up or down by engine). Some rivals'
+  times move; the career rebalance will sort them out.
+
+**Try:** a full race build on an SR20, 4G63, RB26 or 2JZ on methanol with
+the 9498 or twin 7685s, boost turned up. **Look out for:** power that feels
+wrong for an engine you know, or a build of yours that lost a lot.
+
 ## Fix: big single turbos on V6/V8 engines hold their boost up top
 
 - A big single turbo on a V engine (a GT-R or LS with an 8891, say) lost

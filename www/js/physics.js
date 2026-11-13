@@ -91,6 +91,12 @@
     var be = Math.min(boost, kn) + Math.max(0, boost - kn) * 0.35;
     // past what the ignition can light, cylinders misfire
     if (S.sparkPsi != null && boost > S.sparkPsi) be -= (boost - S.sparkPsi) * 0.7;
+    // (S.bk: how well this engine family turns big boost into power: a
+    // factory turbo engine, low compression and built for boost, more; a
+    // high-compression NA engine less. Set so full race builds land on
+    // what the record engines make)
+    // (applies past 15 psi: mild boost works the same on any engine)
+    if (S.bk && S.bk !== 1 && be > 15) be = 15 + (be - 15) * S.bk;
     var T = Tna * (1 + be / 14.7) * (DR.AMBIENT_C + 273.15) / (iat + 273.15);
     if (S.fiType === 'roots' || S.fiType === 'screw' || S.fiType === 'cent')
       T -= S.paras * S.Tpk * (boost / 14.7) * Math.min(1, rpm / S.ref) * 1.2;
@@ -147,6 +153,7 @@
     S.ref = Math.max(e.red, S.pkRpm + 300);  // where the engine "breathes" to (sets blower curves)
     S.red = e.red;                         // rev limiter; buildSpec sets the real one
     S.idle = e.diesel ? 700 : 900;
+    S.bk = e.bk || 1;
     S.lowK = 0.45 + (mods.low || 0);
     var xp = Math.max(1.05, S.pkRpm / S.tqRpm);
     S.highK = 1 / ((xp - 1) * (xp - 1) + 2 * xp * (xp - 1));
@@ -223,6 +230,8 @@
     if (t.compound) {
       // the big stage: its own flow, and a share of its weight to spin up
       var I2 = 7.6e-5 * Math.pow(t.cex2 / 82, 5) + 1.6e-4 * Math.pow(t.turb2 / 68, 5);
+      // (the small high-pressure stage sets the surge line)
+      S.tb.mcS = S.tb.mc * 0.4;
       S.tb.cmp = true; S.tb.phi2 = TB.K * Math.pow(t.turb2 / 68, 2) * Math.pow(t.ar2 / 0.82, TB.AR) * 1.15;
       S.tb.I = I1 + 0.35 * I2; S.tb.etaT = 0.7; S.tb.r = cex / 2000;
     }
@@ -271,7 +280,7 @@
   // the most boost (psi) the turbo can hold at this rpm (steady, full throttle)
   function tbHold(S, rpm) {
     var lo = TB.P1, hi = TB.P1 * (1 + Math.max(S.maxBoost || 0, 30) / 14.7 * 1.4);
-    var ok = function (P2) { var f = tbFlow(S, rpm, P2); return f.Wt >= f.Wc && P2 / TB.P1 <= 1 + 8 * f.ma / S.tb.mc; };
+    var ok = function (P2) { var f = tbFlow(S, rpm, P2); return f.Wt >= f.Wc && P2 / TB.P1 <= 1 + 8 * f.ma / (S.tb.mcS || S.tb.mc); };
     if (!ok(TB.P1 + 1)) return 0;
     for (var i = 0; i < 16; i++) { var m = (lo + hi) / 2; if (ok(m)) lo = m; else hi = m; }
     return (lo - TB.P1) * 0.145;
@@ -417,9 +426,13 @@
     // spin (valvetrain & bottom end), the ECU sets where the limiter is
     S.factoryRed = e.red;
     // a rotary has no valves to float: its ports never run out of time
-    S.vtLimit = rotary ? e.red + 3000 : e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0);
+    // (e.rx: how much further a full race build of this engine really revs
+    // than the generic parts give it, e.g. a race 4G63 to ~10,500; it comes
+    // in with the race valvetrain and bottom end)
+    var rxV = (e.rx || 0) * clamp((vtrain.vt || 0) / 2300, 0, 1);
+    S.vtLimit = rotary ? e.red + 3000 : e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0) + rxV;
     var beBy = [['pistons', pist.be], ['rods', rods.be], ['crank', crank.be], ['oiling', oil.be]].filter(function (p) { return !rotary || p[0] !== 'rods'; }).sort(function (a, b) { return a[1] - b[1]; });
-    S.beLimit = e.red + beBy[0][1];
+    S.beLimit = e.red + beBy[0][1] + (e.rx || 0) * clamp((beBy[0][1] - 800) / 1800, 0, 1);
     S.beWeak = beBy[0][0];
     S.rotary = rotary;
     S.partRpm = { pistons: e.red + pist.be, rods: e.red + rods.be, crank: e.red + crank.be, oiling: e.red + oil.be };

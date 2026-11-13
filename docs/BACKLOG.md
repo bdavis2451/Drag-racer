@@ -5,14 +5,21 @@ the top of each section.
 
 ## In progress
 
-- **Engine power ceilings** (factory-turbo engines capped low, boost and rev
-  limits): research and plan done Nov 13, `docs/features/engine-ceilings.md`.
-  Then (owner, Nov 13): **wheels & tires rework**, then **FWD traction**.
+- **Wheels & tires rework** (next, owner Nov 13), then **FWD traction**.
+  `docs/features/wheels-tires.md`, `docs/features/awd-fwd-traction.md`.
+- **Career/rival balance after the engine ceilings too:** 19 rivals moved
+  (3.2 I6 rivals at 20 psi up to 0.32 s slower, 2JZ-GTE rivals ~0.1 s
+  quicker). Folded into the same rebalance.
 - **Career/rival balance after the turbo rework.** About half the turbo
   rivals moved (stage 3 boss ~0.45 s quicker, a few others 0.3-0.4 s).
   Agreed: rebalance after the turbo rework (owner, Nov 12).
 
 ## Waiting on a yes or no
+
+- **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
+  ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
+  spool). Records are ~3,000 / ~3,500. Option: a ~100 mm single or twin
+  8891s. Asked Nov 13.
 
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
   when it's running inside Facebook's browser (no sound there). Owner said
@@ -20,10 +27,6 @@ the top of each section.
 
 ## Parked ideas
 
-- **AWD & FWD traction** (FWD falls apart at high power; 4-cylinder power
-  ceiling). Test results: `docs/features/awd-fwd-traction.md`.
-- **Wheels & tires rework** (front/rear sections by drive layout, more
-  options; owner sending screenshots). `docs/features/wheels-tires.md`.
 
 - **Turbo diagram view** (Drag Racing: Streets style: the turbo system laid
   out as a flow diagram). Later (owner, Nov 12).

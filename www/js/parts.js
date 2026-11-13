@@ -26,12 +26,12 @@
     t_med:       { name: '6266 Turbo',                type: 'turbo', comp: 62, cex: 82,  turb: 66, ar: 0.82, bb: true, maxBoost: 35, flow: 800,  w: 21, price: 4800, lvl: 4, desc: 'The street/strip favourite.' },
     t_67:        { name: '7275 Turbo',                type: 'turbo', comp: 72, cex: 96,  turb: 75, ar: 0.96, bb: true, maxBoost: 40, flow: 1000, w: 24, price: 7000, lvl: 5, desc: 'Radial-tire power with street manners on a V8.' },
     t_large:     { name: '7685 Turbo',                type: 'turbo', comp: 76, cex: 101, turb: 85, ar: 1.00, bb: true, maxBoost: 45, flow: 1250, w: 27, price: 9500, lvl: 5, desc: 'Big power, big lag. Pairs well with a 2-step.' },
-    t_huge:      { name: '8891 Turbo',                type: 'turbo', comp: 88, cex: 117, turb: 91, ar: 1.15, maxBoost: 50, flow: 1750, w: 32, price: 16000, lvl: 5, desc: 'Radial-tire monster. Needs revs, a big engine and a 2-step.' },
-    t_9498:      { name: '9498 Turbo',                type: 'turbo', comp: 94, cex: 125, turb: 98, ar: 1.32, maxBoost: 55, flow: 2200, w: 38, price: 24000, lvl: 5, desc: 'A big-tire single for a big-inch engine.' },
+    t_huge:      { name: '8891 Turbo',                type: 'turbo', comp: 88, cex: 117, turb: 91, ar: 1.15, maxBoost: 70, flow: 1750, w: 32, price: 16000, lvl: 5, desc: 'Radial-tire monster. Needs revs, a big engine and a 2-step.' },
+    t_9498:      { name: '9498 Turbo',                type: 'turbo', comp: 94, cex: 125, turb: 98, ar: 1.32, maxBoost: 80, flow: 2200, w: 38, price: 24000, lvl: 5, desc: 'A big-tire single for a big-inch engine.' },
     t_twin_sm:   { name: 'Twin 4847 Turbos',          type: 'turbo', comp: 48, cex: 60,  turb: 47, ar: 0.64, bb: true, twin: true, maxBoost: 24, flow: 700,  w: 30, price: 5200,  desc: 'Two small turbos, one per bank: quick response on a six or V8.' },
     t_twin:      { name: 'Twin 6266 Turbos',          type: 'turbo', comp: 62, cex: 82,  turb: 66, ar: 0.82, bb: true, twin: true, maxBoost: 35, flow: 1600, w: 44, price: 10500, desc: 'A pair of 62mm turbos: big power that still comes in early on a V8.' },
-    t_twin76:    { name: 'Twin 7685 Turbos',          type: 'turbo', comp: 76, cex: 101, turb: 85, ar: 1.00, bb: true, twin: true, maxBoost: 45, flow: 2500, w: 56, price: 19000, lvl: 5, desc: 'Big twins for big-tire and radial cars.' },
-    t_promod:    { name: 'Twin 9498 Pro Mod Turbos',  type: 'turbo', comp: 94, cex: 125, turb: 98, ar: 1.32, twin: true, maxBoost: 60, flow: 4400, w: 76, price: 45000, desc: 'Pro Mod power. Needs an anti-lag to leave.' },
+    t_twin76:    { name: 'Twin 7685 Turbos',          type: 'turbo', comp: 76, cex: 101, turb: 85, ar: 1.00, bb: true, twin: true, maxBoost: 60, flow: 2500, w: 56, price: 19000, lvl: 5, desc: 'Big twins for big-tire and radial cars.' },
+    t_promod:    { name: 'Twin 9498 Pro Mod Turbos',  type: 'turbo', comp: 94, cex: 125, turb: 98, ar: 1.32, twin: true, maxBoost: 80, flow: 4400, w: 76, price: 45000, desc: 'Pro Mod power. Needs an anti-lag to leave.' },
     // diesel turbos (Cummins): S300 / S400-frame singles, a drop-in VGT,
     // compounds (a small high-pressure turbo fed by a big one: early spool
     // and big air) and race triples
@@ -39,7 +39,7 @@
     d_s366:      { name: 'S366 Turbo',                type: 'turbo', diesel: true, comp: 66, cex: 91,  turb: 73, ar: 0.91, maxBoost: 50, flow: 650, w: 24, price: 2600, desc: 'The classic S300-frame single: quick to light, clean on 50-100% injectors.' },
     d_s480:      { name: 'S480 Turbo',                type: 'turbo', diesel: true, comp: 80, cex: 110, turb: 87, ar: 1.10, maxBoost: 55, flow: 900, w: 30, price: 3400, lvl: 4, desc: 'An S400-frame single: big air for 200% injectors. Lazy below about 2,000 rpm.' },
     d_cmp:       { name: 'S366 / S480 Compounds',     type: 'turbo', diesel: true, compound: true, comp: 66, cex: 91, turb: 73, ar: 0.91, comp2: 80, cex2: 110, turb2: 87, ar2: 1.10, maxBoost: 80, flow: 1150, w: 55, price: 6800, lvl: 5, desc: 'An S480 feeding an S366: the small one lights early, the big one brings the air. Up to 80 psi.' },
-    d_tri:       { name: 'Race Triples (2x S400 over S500)', type: 'turbo', diesel: true, compound: true, comp: 75, cex: 100, turb: 83, ar: 1.0, comp2: 106, cex2: 140, turb2: 106, ar2: 1.32, maxBoost: 90, flow: 2000, w: 95, price: 14000, lvl: 5, desc: 'Competition triple turbos: two S400s blown into by an S500. 100 psi of air for 1,600+ hp. Lazy without a big converter.' },
+    d_tri:       { name: 'Race Triples (2x S400 over S500)', type: 'turbo', diesel: true, compound: true, comp: 75, cex: 100, turb: 83, ar: 1.0, comp2: 106, cex2: 140, turb2: 106, ar2: 1.32, maxBoost: 100, flow: 3300, w: 95, price: 14000, lvl: 5, desc: 'Competition triple turbos: two S400s blown into by an S500. 100 psi of air for 1,600+ hp. Lazy without a big converter.' },
     // retired sizes (older saves and rivals): the nearest current one
     t_61:        { alias: 't_med' },
     t_80:        { alias: 't_large' },
@@ -250,7 +250,7 @@
     opt('dinj100', '100% Over Injectors', 3800, { dsl: true, tune: 'hard', lvl: 3, fuel: 850 }, 'Twice the stock nozzle flow: about 850 hp. Needs a bigger turbo and more pump.'),
     opt('dinj200', '200% Over Injectors', 5500, { dsl: true, tune: 'hard', lvl: 4, fuel: 1050 }, 'About 1050 hp of fuel. Needs a stroker or dual CP3 and big air (an S480 or compounds).'),
     opt('dinj300', '300% Over Injectors', 7000, { dsl: true, tune: 'hard', lvl: 5, fuel: 1250 }, 'About 1250 hp of fuel: compound-turbo territory, dual CP3s.'),
-    opt('dinjr', 'Race Injectors (400%+)', 9500, { dsl: true, tune: 'hard', lvl: 5, fuel: 1600 }, 'Competition injectors: about 1600 hp of fuel. Only with race air and a race tune.')
+    opt('dinjr', 'Race Injectors (400%+)', 9500, { dsl: true, tune: 'hard', lvl: 5, fuel: 2600 }, 'Competition injectors: about 2600 hp of fuel. Only with race air and a race tune.')
   ]};
   C.fuelpump = { name: 'Fuel Pump & Lines', options: [
     opt('stock', 'Stock Fuel Pump', 0, { fuel: 0 }),
@@ -271,13 +271,13 @@
     opt('dlift', 'Lift Pump (FASS / AirDog style)', 1000, { dsl: true, fuel: 650 }, 'Feeds the high-pressure pump a steady, clean supply: the stock CP3 holds rail pressure to about 650 hp.'),
     opt('dcp3s', 'Stroker CP3 + Lift Pump', 2300, { dsl: true, lvl: 3, fuel: 850 }, 'A bigger-stroke CP3: rail pressure for about 850 hp.'),
     opt('dcp3d', 'Dual CP3 Kit', 3800, { dsl: true, lvl: 4, fuel: 1250 }, 'A second CP3 on its own bracket: about 1250 hp of fuel.'),
-    opt('dcp3t', 'Triple CP3 Race Kit', 7500, { dsl: true, lvl: 5, fuel: 1900 }, 'Three CP3s: about 1900 hp of fuel, for competition trucks.')
+    opt('dcp3t', 'Triple CP3 Race Kit', 7500, { dsl: true, lvl: 5, fuel: 2600 }, 'Three CP3s: about 2600 hp of fuel, for competition trucks.')
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
     opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Knocks past 17 psi with a cool, intercooled charge, far sooner with a hot one.'),
-    opt('e85', 'E85 Ethanol', 800, { tune: 'hard', knock: 30, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, 30 psi safe with a cool charge, and it cools a hot one 15 C. Needs 33% more fuel flow.'),
-    opt('race', 'Race Gas 116', 1200, { knock: 34, fmul: 1.03, ff: 1 }, '+3% power, 34 psi safe with a cool charge.'),
-    opt('meth', 'Methanol', 2500, { tune: 'hard', knock: 50, fmul: 1.06, ff: 0.55, cool: 35 }, '+6% power, 50 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs about 80% more fuel flow than gasoline: injectors and pumps feed only ~55% of their gasoline rating.')
+    opt('e85', 'E85 Ethanol', 800, { tune: 'hard', knock: 40, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, 40 psi safe with a cool charge, and it cools a hot one 15 C. Needs 33% more fuel flow.'),
+    opt('race', 'Race Gas 116', 1200, { knock: 40, fmul: 1.03, ff: 1 }, '+3% power, 40 psi safe with a cool charge.'),
+    opt('meth', 'Methanol', 2500, { tune: 'hard', knock: 80, fmul: 1.06, ff: 0.55, cool: 35 }, '+6% power, 80 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs about 80% more fuel flow than gasoline: injectors and pumps feed only ~55% of their gasoline rating.')
   ]};
   // spark: extra psi of boost (and nitrous) the ignition can light before it
   // starts to misfire (stock ignition gives out a few psi past factory boost)

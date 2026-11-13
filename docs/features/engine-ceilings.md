@@ -1,6 +1,8 @@
 # Engine power ceilings (how much each engine can make)
 
-Status: **research done, plan drafted (Nov 13). No code.** Owner (Nov 13):
+Status: **built and shipped (Nov 13).** Owner's answers (Nov 13): match the
+records; raise all three race fuels and check the 93-octane number; trim the
+engines that run high; raise the Cummins now. Owner (Nov 13, earlier):
 do heavy research, chase realism, expand to any engine that needs it, make it
 its own section. Already ticked as wanted: race turbos to 65/70 psi,
 methanol knock limit up, more revs for 4G63 / EJ / SR. Comes before the
@@ -140,7 +142,79 @@ one-off 100+ psi engines):
   up).
 - **Prices / unlocks:** unchanged.
 
-## Open questions
+## Decisions (owner, Nov 13)
+1. **Match the records** (not 80-90%): targets below are the record builds.
+2. **Fuels:** methanol 80 psi, E85 40, race gas 40. **Pump gas stays 17**:
+   research says 93 octane with a good intercooler is safe around 15-18 psi
+   on typical 9-10:1 engines (more with low compression and a cold charge,
+   less without an intercooler), so 17 is right.
+3. **Trim the high ones** (4A-G, S54-style 3.2, VQ35, 3800, V10 / V12).
+4. **Cummins raised now** (race injectors / triple CP3 to ~2,600 hp of fuel,
+   race triples to 100 psi and ~3,300 hp of flow).
+
+## Build (Nov 13)
+- **Fuels** (parts.js): knock limits above.
+- **Race compressors** (parts.js `maxBoost`): twin 7685 60, 8891 70, 9498 80,
+  Pro Mod twins 80.
+- **Revs** (data.js `rx`, physics.js): a race valvetrain (by how much it
+  adds) and billet bottom end let an engine rev `rx` higher than before;
+  race power peaks (`bp`) moved up for 4G63 9,800, SR20 9,200, 3S 8,800,
+  EJ 8,200, 2JZ-GTE/GE 8,800/8,500, RB26 9,200, VR38 8,000, Cummins 4,400.
+- **Boost effect past 15 psi** (data.js `bk`, physics.js `boostedTorque`):
+  each engine has a factor for how well it turns boost past 15 psi into
+  power (head, block, how the factory sized it). Up to 15 psi nothing
+  changes, so stock cars and mild builds are as before. Fitted per engine
+  (scratchpad `scr/calibk.js`) so a full race build lands on its target.
+  Range 0.21 (3800 NA) to 1.96 (RB26). The 8.6 billet Pro Mod stays 1.
+- **Compound surge** (physics.js): the triples' small stage now has its
+  own surge line (`mcS`), so the race triples can make full boost.
+
+### Final full-build numbers (best adder, methanol, max revs)
+| Engine | Target | Game | With |
+|---|---|---|---|
+| 1.0 I3 | 450 | 451 | 6266 |
+| 1.6 4A-G / Blacktop | 900 / 1,000 | 900 / 1,005 | 8891 70 psi |
+| 1.5 D15 | 800 | 799 | 7685 |
+| 1.8 B18C | 1,500 | 1,502 | 8891 70 psi |
+| 2.0 K20 / F20C | 1,800 | 1,796 / 1,796 | 9498 80 psi |
+| 2.0 SR20 | 2,000 | 1,997 | 9498 80 psi, 10,000 |
+| 2.0 4G63 | 2,000 | 2,049 | 9498 80 psi, 10,500 |
+| 2.0 3S-GTE | 1,500 | 1,496 | 9498 80 psi |
+| 2.5 EJ257 | 1,300 | 1,297 | 9498 80 psi |
+| 1.3 13B | 1,700 | 1,696 | 9498 80 psi |
+| 3.0 2JZ-GE / 2JZ-GTE | 1,800 / 2,350 | 1,804 / 2,345 | 9498 / twin 7685 60 psi |
+| 2.6 RB26 | 2,140 | 2,138 | twin 7685 60 psi |
+| 3.2 I6 (S54) | 1,500 | 1,500 | 9498 |
+| 3.5 VQ35 | 1,400 | 1,389 | 8891 |
+| 3.8 3800 NA / SC | 1,000 / 1,000 | 1,005 / 1,000 | 8891 |
+| 3.8 Buick turbo / GNX | 1,500 | 1,500 / 1,501 | 8891 70 psi |
+| 3.8 VR38 | 2,450 | 2,459 | twin 7685 60 psi |
+| 3.8 911 | 2,000 | 1,988 | 9498 |
+| 4.6 Terminator | 2,200 | 2,205 | twin 7685 |
+| 5.0 305 / 302 HO / Coyote | 1,800 / 2,500 / 3,000 | 1,805 / 2,502 / 3,008 | 9498 / Pro Mod |
+| 283 / 350 / 5.7 TBI / LS1 | 1,800 / 2,800 / 2,400 / 3,000 | 1,801 / 2,806 / 2,398 / 2,993 | 9498 / Pro Mod / twin 7685 |
+| LS3 / LS7 / LSA | 3,500 / 3,800 / 3,500 | on target | Pro Mod |
+| Hemi / 454 / 572 | 3,500 / 3,500 / 4,300 | on target | Pro Mod |
+| V10 / V12 | 3,000 | 2,989 / 3,017 | Pro Mod |
+| 6.7 Cummins | ~2,000+ | ~2,317 | race triples, race injectors |
+
+**Short of the record:** 2JZ-GTE (record ~3,000) and VR38 (~3,500 crank)
+stop at ~2,350 / ~2,450: the twin 7685s run out of flow (2,500 hp) and the
+Pro Mod twins are too big to spool on 3.0-3.8 L. Getting there needs a
+bigger turbo option (a ~100 mm single or a twin 8891 set): question for the
+owner.
+
+### Tests (Nov 13)
+- `scr/calibk.js targets check`: all 44 engines on target, no errors.
+- Stock benchmark (`scr/bench.js`) vs the last commit: identical (Evo
+  13.78 -> 13.79).
+- Rival snapshot (`scr/rivsnap2.js ceil vfix`): 19 of 126 moved. Biggest:
+  the 3.2 I6 "Godzilla" rivals at 20 psi +0.32 / +0.21 s (that engine was
+  over-rated past 15 psi); 2JZ-GTE rivals 0.10-0.14 s quicker; K20 rival
+  +0.07. Accepted, goes into the career rebalance.
+- qolsmoke, pkgsmoke, burnui: clean.
+
+## Open questions (answered Nov 13, see Decisions)
 1. Targets at ~80-90% of the records (recommended), or right at the records?
 2. Fuel knock limits: methanol 80 / E85 40 / race gas 40 as above?
 3. Trim the high engines (4A-G, S54, VQ35, 3800, V10 / V12) too, or only
