@@ -208,9 +208,11 @@
     // pipes: the exhaust cools and its pulses smear out (about a third of the
     // energy at the turbine); twins sit right at each bank
     var vee = e.vee != null ? e.vee : / V\d|Flat-6|V8|V10|V12/.test(e.name) && !/Flat-4|Boxer-4/.test(e.name);
-    var pulse = (vee && !t.twin ? 0.66 : vee ? 0.95 : 1) * (x.man || 1) * (x.ts || (t.ts && x.stockMan !== false) ? 1.1 : 1);
+    // (the crossover loss is kept apart: it shrinks as the flow grows, see tbFlow)
+    var xloss = vee && !t.twin ? 0.34 : 0;
+    var pulse = (vee && t.twin ? 0.95 : 1) * (x.man || 1) * (x.ts || (t.ts && x.stockMan !== false) ? 1.1 : 1);
     var T3 = (e.diesel ? 1180 : e.rotary ? 1150 : 1200) * (x.heat || 1);
-    S.tb = { n: n, r: cex / 2000, I: I1 * n, phi: phi1 * n, phi1: phi1, I1: I1, T3e: T3 * pulse, c4: (x.c4 != null ? x.c4 : (e.diesel ? 15 : 40)) * (t.factory && x.stockDp !== false ? 2 : 1),
+    S.tb = { n: n, r: cex / 2000, I: I1 * n, phi: phi1 * n, phi1: phi1, I1: I1, T3e: T3 * pulse, xloss: xloss, c4: (x.c4 != null ? x.c4 : (e.diesel ? 15 : 40)) * (t.factory && x.stockDp !== false ? 2 : 1),
       ve: 0.9 * (1 + 0.25 * (S.breathing || 0)), afr: e.diesel ? 16 : 11.8, fric: t.bb ? 0.5 : 1,
       // small turbines are less efficient (more of the gas slips past the blades)
       etaT: 0.58 + 0.14 * clamp((t.turb - 45) / 23, 0, 1), vgt: !!t.vgt, seq: t.seq || 0,
@@ -259,7 +261,10 @@
     // compounds: at low flow the small high-pressure turbo does the work;
     // as the flow grows the big one takes over
     if (tb.cmp) phi = tb.phi1 + (tb.phi2 - tb.phi1) * clamp(mx / (tb.mc * 1.07), 0, 1);
-    var T3 = tb.T3e * t3k;
+    // a single turbo on a V engine loses the most through its crossover
+    // pipes at low flow (cooled, smeared pulses: slow spool); flat out the
+    // exhaust is hot and dense all the way and most of it gets there
+    var fq = clamp(mx / (tb.mc * 1.07), 0, 1), T3 = tb.T3e * t3k * (1 - (tb.xloss || 0) * (1 - 0.6 * fq * fq));
     var P4 = TB.P1 + tb.c4 * mx * mx, xx = mx * Math.sqrt(T3) / (phi * P4), ER = Math.sqrt(1 + xx * xx);
     return { ma: ma, Wt: mx * 1150 * T3 * (1 - Math.pow(ER, -0.248)) * tb.etaT, Wc: ma * 1005 * TB.T1 * cpr / S.etaC };
   }

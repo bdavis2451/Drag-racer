@@ -2,6 +2,19 @@
 
 Short notes for testing, newest first.
 
+## Fix: big single turbos on V6/V8 engines hold their boost up top
+
+- A big single turbo on a V engine (a GT-R or LS with an 8891, say) lost
+  too much exhaust energy in its crossover pipes at full power, so it
+  couldn't hold boost near redline (a GT-R with the 8891 held 30-35 psi,
+  about 1,340 hp). Now the loss is big at low flow (where it slows spool,
+  as before) and small flat out: that GT-R holds 50 psi from ~6,000 rpm and
+  makes its turbo's ~1,750 hp. Spool on V8s moves only 100-200 rpm.
+- Rivals barely move (at most 0.015 s).
+
+**Try:** a V6/V8 with a big single turbo on the dyno: boost should hold to
+the limiter. **Look out for:** spool that now feels too early.
+
 ## AWD burnouts: one quick hit
 
 - AWD cars prep their tires like real AWD drag cars: **one quick hit**. Hold

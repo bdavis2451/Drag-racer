@@ -51,7 +51,7 @@ parts, methanol, sequential box, 36x17 slicks). With the new turbos.
 | Lightning AWD swap (3,051 hp) | 3,051 | 4,640 | 1.03 | 4.44 | 6.93 @ 199 | 6.92 | unchanged ✓ |
 | Lightning RWD (same) | 3,051 | 4,441 | 1.04 | 4.38 | 6.81 @ 204 | 6.82 | unchanged ✓ |
 
-*With a fix found in this re-run (not shipped yet, waiting on the owner):
+*With a fix found in this re-run (shipped Nov 13):
 the turbo rework charges a single turbo on a V engine ~34% of its exhaust
 energy for the long crossover pipes at all flows, so a big single on a V6/V8
 couldn't hold boost up top (GT-R + 8891 held 30-35 psi at 8,000 rpm, 1,340
