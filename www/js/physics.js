@@ -49,7 +49,8 @@
   function knockAt(S, iat, rpm) {
     var k = Math.min(S.knockFuel + 2, S.knockFuel - 0.12 * (iat - 50));
     if (rpm != null && S.red > S.tqRpm) k += S.knockFuel * 0.1 * (2 * clamp((rpm - S.tqRpm) / (S.red - S.tqRpm), 0, 1) - 1);
-    return k;
+    // (a charge that hot knocks on any boost at all, never below none)
+    return Math.max(0, k);
   }
   // Past the knock point the tune pulls timing to stop it: each extra psi
   // adds less until power stops climbing (the plateau, about 30% past the
@@ -59,7 +60,9 @@
   function boostUsed(boost, kn) {
     var x = boost - kn, P = knockSpan(kn);
     if (x <= 0) return boost;
-    return kn + (x <= P ? x - x * x / (2 * P) : P / 2 - (x - P) * 0.3);
+    // (detonating hard it still makes at least what it would unboosted:
+    // what it really does is break, which the risk carries)
+    return Math.max(0, kn + (x <= P ? x - x * x / (2 * P) : P / 2 - (x - P) * 0.3));
   }
   DR.knockSpan = knockSpan;
   // the boost an engine takes before knock, nitrous spraying included
@@ -144,7 +147,9 @@
     // a carb (or throttle body) out of air: the top end flattens and falls
     if (S.carbW) { var cw = S.carbW * (1 + Math.max(0, boost) / 14.7); if (T * w > cw) T = cw * (1 - 0.1 * Math.min(1, (T * w - cw) / cw)) / w; }
     T = Math.min(T, S.fuelW / w);
-    return T;
+    // (a blower overdriven far past what the engine can use can cost more to
+    // spin than the engine makes: it never pushes the engine backwards)
+    return Math.max(0, T);
   }
 
   // Boost creep (psi) at this rpm: builds from the power peak to redline.
@@ -1219,9 +1224,8 @@
   // the knock point and where power stops on the day (psi)
   DR.knockOnDay = function (S, cond, engHeat) {
     if (S.fiType === 'none' || S.diesel || S.knock == null) return null;
-    var d = DR.knockDT(cond, engHeat), kf = S.knockFuel, k0 = Math.min(kf + 2, kf - 0.12 * (S.iat - 50)), k1 = Math.min(kf + 2, kf - 0.12 * (S.iat + d - 50));
-    var sh = Math.round((k0 - k1) * 2) / 2;
-    return { shift: sh, knock: S.knock - sh, top: S.knockTop - sh };
+    var d = DR.knockDT(cond, engHeat), sh = Math.round((knockAt(S, S.iat) - knockAt(S, S.iat + d)) * 2) / 2;
+    return { shift: sh, knock: Math.max(0, S.knock - sh), top: Math.max(0, S.knockTop - sh) };
   };
   DR.airPower = function (cond, S) {
     return Math.pow((DR.AMBIENT_C + 273.15) / (cond.air + 273.15), S.fiType === 'turbo' ? 0.25 : 0.5);

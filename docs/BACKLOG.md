@@ -22,6 +22,12 @@ the top of each section.
 
 ## Waiting on a yes or no
 
+- **Audit questions (Nov 14), `docs/features/audit-nov14.md`:** big turbos
+  aren't sold for the engines whose record builds need them (A list what
+  the built engine can use, B what it can use as built now, C keep and lower
+  the ceilings); filter superchargers by engine like turbos; nitrous helps
+  a turbo spool.
+
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
   spool). Records are ~3,000 / ~3,500. Option: a ~100 mm single or twin

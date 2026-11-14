@@ -73,6 +73,33 @@
   // game no longer has are dropped (one bad entry must not stop the garage
   // from opening), missing fields get defaults, and spare engine parts from
   // old saves that never said which engine they fit get the current one.
+  // Every part the game has, by category: what any car (on its own engine)
+  // or any engine (in a rear-drive, a front-drive, an AWD car and the
+  // truck) can list. Built once, when a save loads. { cat: { id: {price} } }
+  var catalogAll = null;
+  function inCatalog(cat, id) {
+    if (cat === 'engine') return DR.ENGINES[id] ? { price: DR.ENGINES[id].price } : null;
+    if (!catalogAll) {
+      catalogAll = {};
+      var cats = Object.keys(DR.PART_CATS || {}).concat(['fi', 'trans', 'rtires', 'diff', 'gears']);
+      var ctxs = Object.keys(DR.CARS).map(function (cid) { return { carId: cid, engine: DR.CARS[cid].engine, parts: {}, tune: {} }; });
+      ['camaro', 'volta', 'evo', 'diesel'].forEach(function (cid) { if (DR.CARS[cid]) Object.keys(DR.ENGINES).forEach(function (eid) { ctxs.push({ carId: cid, engine: eid, parts: {}, tune: {} }); }); });
+      ctxs.forEach(function (ctx) {
+        cats.forEach(function (cat2) {
+          var opts; try { opts = DR.partOptions(cat2, ctx) || []; } catch (e) { return; }
+          var m = catalogAll[cat2] || (catalogAll[cat2] = {});
+          opts.forEach(function (o) { if (o.id != null && !m[o.id]) m[o.id] = { price: o.price || 0 }; });
+        });
+      });
+      // turbos and blowers the shop only lists for engines they suit, and
+      // every gearbox and tire there is
+      Object.keys(DR.FI || {}).forEach(function (f) { if (!DR.FI[f].alias) (catalogAll.fi = catalogAll.fi || {})[f] = catalogAll.fi[f] || { price: DR.FI[f].price || 0 }; });
+      Object.keys(DR.TRANS || {}).forEach(function (t) { (catalogAll.trans = catalogAll.trans || {})[t] = catalogAll.trans[t] || { price: DR.TRANS[t].price || 0 }; });
+      Object.keys(DR.TIRES || {}).forEach(function (t) { (catalogAll.rtires = catalogAll.rtires || {})[t] = catalogAll.rtires[t] || { price: DR.TIRES[t].price || 0 }; });
+    }
+    return (catalogAll[cat] || {})[id] || null;
+  }
+  G._inCatalog = inCatalog;
   function sanitize(s) {
     function carOf(id) { return DR.CARS[id] || (DR.CARS_RESERVE && DR.CARS_RESERVE[id]); }
     function fits(cat, inst, id) {
@@ -86,7 +113,20 @@
       if (!DR.ENGINES[c.engine]) c.engine = carOf(c.carId).engine;
       c.parts = c.parts || {}; c.tune = c.tune || {}; c.vis = c.vis || {};
       if (typeof c.spent !== 'number' || !isFinite(c.spent)) c.spent = 0;
-      Object.keys(c.parts).forEach(function (cat) { if (!fits(cat, c, c.parts[cat])) delete c.parts[cat]; });
+      // a fitted part the car can't take any more (the rules for what fits
+      // changed) goes on the shelf; only a part the game no longer has at
+      // all is dropped
+      Object.keys(c.parts).forEach(function (cat) {
+        var id = c.parts[cat];
+        if (fits(cat, c, id)) return;
+        delete c.parts[cat];
+        var known = inCatalog(cat, id);
+        if (!known || id === 'stock' || id === 'none') return;
+        var it = { uid: (s.uid = (s.uid || 1000) + 1), cat: cat, id: id, price: known.price || 0, from: c.uid };
+        if (G.isEngineBound(cat)) it.eng = c.engine;
+        if (G.isCarBound(cat)) it.car = c.carId;
+        (s.inv = s.inv || []).push(it);
+      });
     });
     if (!s.cars.some(function (c) { return c.uid === s.active; })) s.active = s.cars.length ? s.cars[0].uid : null;
     if (!s.cars.length) s.started = false;
@@ -95,8 +135,10 @@
       if (!it || !it.cat) return false;
       if (G.isEngineBound(it.cat) && !DR.ENGINES[it.eng]) { var src = s.cars.filter(function (c) { return c.uid === it.from; })[0] || cur; if (!src) return false; it.eng = src.engine; }
       if (G.isCarBound(it.cat) && !it.car && it.from != null) { var fc = s.cars.filter(function (c) { return c.uid === it.from; })[0]; if (fc) it.car = fc.carId; }
-      var ctx = { carId: cur ? cur.carId : 'fox', engine: it.eng || (cur ? cur.engine : 'v8_50'), parts: {}, tune: {} };
-      return fits(it.cat, ctx, it.id);
+      // a spare part is kept if the game still has it, whatever car is in
+      // the garage right now (a transaxle off a front-driver, diesel or carb
+      // parts, a conversion kit for another car all stay on the shelf)
+      return !!inCatalog(it.cat, it.id);
     });
     if (typeof s.money !== 'number' || !isFinite(s.money)) s.money = 0;
   }

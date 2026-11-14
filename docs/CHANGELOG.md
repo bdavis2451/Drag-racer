@@ -2,6 +2,25 @@
 
 Short notes for testing, newest first.
 
+## Audit fixes: parts vanishing from the shelf, overdriven blowers
+
+- **Fixed: spare parts could disappear from your shelf when the game
+  loaded.** It checked each spare part against whatever car was active, so
+  a transaxle off a front-driver, diesel parts, carb fuel pumps or a
+  conversion kit for another car could be deleted. Now they stay. (Parts
+  already lost before this can't be brought back.)
+- **Fixed: a supercharger turned far past what the engine takes on its
+  fuel** made almost no power (the dyno could even show negative power).
+  It now makes about what the engine does without boost while it detonates,
+  with the same high chance of breaking.
+- **Known, waiting on a decision:** the biggest turbos (9498, twin 7685,
+  Pro Mod twins) aren't sold for most engines yet, so the record power from
+  the engine-ceilings update can't be reached in the shop yet.
+
+**Try:** park a car with spare parts on the shelf, switch to a different
+kind of car, close and reopen the game. **Look out for:** anything missing
+from the shelf.
+
 ## Nitrous on a boosted engine knocks sooner
 
 - Spraying on boost, the tune pulls timing for the shot (about 2 degrees
