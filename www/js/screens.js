@@ -636,7 +636,7 @@
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; DR.syncSetup(inst); G.save(); UI.refresh(); } : null);
       var ab = allSetupsBtn(inst, def.key, def.label), labSpan = row.querySelector('.lab span');
       if (ab && labSpan) labSpan.appendChild(ab);
-      row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F); knock limit ' + S.knock + ' psi.' : '')));
+      row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' && S.knock < 90 ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F). This engine (' + S.cr + ':1) knocks past about ' + S.knock + ' psi on this fuel (' + S.knockLo + ' at peak torque, ' + S.knockHi + ' up top). Past it the tune pulls timing: each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and further it detonates.' : '')));
       // jets: how the plugs read (any data logger brings a wideband: the
       // exact air/fuel ratio)
       if (def.key === 'jets') {
@@ -726,7 +726,7 @@
     var lam = S.fiType !== 'none' ? 0.78 : 0.86, cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1, st = STOICH[S.fuelId] || 14.7;
     var pts = dy.pts.map(function (p) {
       var ld = p.hp / dy.peakHp;
-      return { rpm: p.rpm, hp: +(p.hp * eff).toFixed(1), tq: +(p.tq * eff).toFixed(1), boost: +p.boost.toFixed(1), afr: +(lam * (1 + (lean - 1) * ld * ld) * st).toFixed(2) };
+      return { rpm: p.rpm, hp: +(p.hp * eff).toFixed(1), tq: +(p.tq * eff).toFixed(1), boost: +p.boost.toFixed(1), afr: +(lam * (1 + (lean - 1) * ld * ld) * st).toFixed(2), pull: p.pull ? 1 : 0 };
     });
     var pk = pts.reduce(function (a, p) { return p.hp > a.hp ? p : a; }, pts[0]), pt = pts.reduce(function (a, p) { return p.tq > a.tq ? p : a; }, pts[0]);
     return { key: JSON.stringify([inst.engine, inst.parts, inst.tune]), at: Date.now(), pts: pts, peakHp: pk.hp, peakHpRpm: pk.rpm, peakTq: pt.tq, nosHp: Math.round(S.nosHp * eff), red: S.red,
@@ -781,13 +781,15 @@
       }
       if (dy.nosHp) line('hp', '#7a3ad6', function (p) { return p.rpm > 2200 ? dy.nosHp : 0; });
       line('tq', '#4da3ff'); line('hp', '#ffcc00');
-      if (dy.fi !== 'none') { ctx.fillStyle = '#46e07a'; dy.pts.forEach(function (p) { if (p.rpm <= limit) ctx.fillRect(Math.round(X(p.rpm)), Math.round(B - p.boost / Math.max(dy.maxBoost, 1) * (B - T) * 0.5), 1, 1); }); }
+      // boost; orange where the tune is pulling timing to stop knock
+      if (dy.fi !== 'none') { dy.pts.forEach(function (p) { if (p.rpm <= limit) { ctx.fillStyle = p.pull ? '#ff8a00' : '#46e07a'; ctx.fillRect(Math.round(X(p.rpm)), Math.round(B - p.boost / Math.max(dy.maxBoost, 1) * (B - T) * 0.5), p.pull ? 2 : 1, p.pull ? 2 : 1); } }); }
       // air/fuel on its own scale (10-16:1 for gasoline), along the top
       var st0 = dy.pts[0] ? dy.pts[0].afr / (dy.fi !== 'none' ? 0.78 : 0.86) : 14.7;
       ctx.fillStyle = '#ff3d9a'; dy.pts.forEach(function (p) { if (p.rpm <= limit && p.rpm > 1500) ctx.fillRect(Math.round(X(p.rpm)), Math.round(T + (1 - (p.afr / st0 - 0.68) / 0.42) * (B - T) * 0.45), 1, 1); });
       if (sweep.p < 1) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(Math.round(X(limit)), T, 1, B - T); }
       DR.pixText(ctx, 'WHP', R + 2, T + 2, '#ffcc00'); DR.pixText(ctx, 'WTQ', R + 2, T + 10, '#4da3ff');
       if (dy.fi !== 'none') DR.pixText(ctx, 'PSI', R + 2, T + 18, '#46e07a');
+      if (dy.pts.some(function (p) { return p.pull; })) DR.pixText(ctx, 'KNK', R + 2, T + 42, '#ff8a00');
       DR.pixText(ctx, 'AFR', R + 2, T + 26, '#ff3d9a');
       if (dy.nosHp) DR.pixText(ctx, 'N2O', R + 2, T + 34, '#9b4dff');
       DR.pixText(ctx, 'RPM X1000', Math.round((L + R) / 2) - 18, B + 13, '#666');
@@ -798,6 +800,8 @@
         (function () { var Sx = G.spec(G.car()); return Sx.tb && UI.turboSheet ? btn('Turbo specs', function () { var cl = UI.modal(h('div', { class: 'col pmodal' }, h('div', { class: 'pix acc' }, Sx.tbs && Sx.tbs.name || DR.FI[Sx.fiId].name), UI.turboSheet(G.car(), Sx.fiId, Sx, Sx), btn('Close', function () { cl(); }, 'small'))); }, 'small') : null; })()),
       dy ? gst('PEAK WHP', Math.round(dy.peakHp) + ' @ ' + dy.peakHpRpm + delta(dy.peakHp, prev && prev.peakHp), 'acc') : h('div', { class: 'dim gsmall' }, 'No pulls on this car yet.'),
       dy ? gst('PEAK WTQ', Math.round(dy.peakTq) + ' lb-ft' + delta(dy.peakTq, prev && prev.peakTq)) : null,
+      // where the tune pulled timing to hold off knock (orange on the boost line)
+      (function () { var pp = dy ? dy.pts.filter(function (p) { return p.pull && p.rpm <= dy.red; }) : []; return pp.length ? gst('TIMING PULLED', pp[0].rpm + '-' + pp[pp.length - 1].rpm + ' rpm (knock)') : null; })(),
       dy ? gst('SAE CF', dy.cf.toFixed(3) + ' • ' + dy.temp + '°F ' + dy.baro.toFixed(2) + ' inHg', '') : null,
       dy ? gst('OBSERVED', Math.round(dy.peakHp / dy.cf) + ' whp uncorrected', '') : null,
       dy ? gst('AFR @ PEAK', dy.afrPk.toFixed(1) + ':1', '') : null,

@@ -156,13 +156,13 @@
   // boost before knock; -1 low: the other way round).
   C.pistons = { name: 'Pistons', engineScaled: true, options: [
     opt('stock', 'Stock Cast Pistons', 0, { hold: 1, be: 800, cr: 0 }, 'The first thing to break.'),
-    opt('p1', 'Forged Pistons (Boost, Low Comp)', 1600, { hold: 2.0, be: 1200, cr: -1 }, 'Holds 2x stock power. Lower compression: -2% power, +3 psi before knock.'),
-    opt('p2', 'Forged Pistons (NA, High Comp)', 1600, { hold: 1.7, be: 1200, cr: 1 }, 'Holds 1.7x stock power. Higher compression: +4% power, 3 psi less before knock.'),
+    opt('p1', 'Forged Pistons (Boost, Low Comp)', 1600, { hold: 2.0, be: 1200, cr: -1 }, 'Holds 2x stock power. Lower compression (about 1.5 points): -2% power, takes 4-5 psi more boost on pump gas.'),
+    opt('p2', 'Forged Pistons (NA, High Comp)', 1600, { hold: 1.7, be: 1200, cr: 1 }, 'Holds 1.7x stock power. Higher compression (about 1 point): +4% power, takes about 3 psi less boost on pump gas.'),
     opt('p3', 'Billet Race Pistons', 4000, { lvl: 4, hold: 3.4, be: 1800, cr: 0 }, 'Holds 3.4x stock power.'),
     opt('p4', 'Pro Mod Pistons', 9000, { lvl: 5, hold: 6, be: 2600, cr: 0 }, 'Coated skirts and gas ports. Holds 6x stock power.'),
     // the Lima's own upgrade: the forged, low-compression pistons Ford put in
     // the 2.3 Turbo (SVO, Thunderbird Turbo Coupe) drop straight into the NA block
-    opt('p_lima', 'Factory 2.3 Turbo Pistons (Forged)', 900, { lvl: 2, hold: 2.0, be: 1000, cr: -1, only: ['i4_23'] }, 'Ford\'s forged, low-compression pistons from the 2.3 Turbo, a drop-in for the NA Lima. Holds 2x stock power. -2% power, +3 psi before knock.')
+    opt('p_lima', 'Factory 2.3 Turbo Pistons (Forged)', 900, { lvl: 2, hold: 2.0, be: 1000, cr: -1, only: ['i4_23'] }, 'Ford\'s forged, low-compression pistons from the 2.3 Turbo, a drop-in for the NA Lima. Holds 2x stock power. -2% power, takes about 4 psi more boost on pump gas.')
   ]};
   C.rods = { name: 'Connecting Rods', engineScaled: true, options: [
     opt('stock', 'Stock Rods', 0, { hold: 1.3, be: 800 }, 'Good for 1.3x stock power.'),
@@ -274,10 +274,10 @@
     opt('dcp3t', 'Triple CP3 Race Kit', 7500, { dsl: true, lvl: 5, fuel: 2600 }, 'Three CP3s: about 2600 hp of fuel, for competition trucks.')
   ]};
   C.fueltype = { name: 'Fuel Type', options: [
-    opt('stock', 'Pump Gas 93', 0, { knock: 17, fmul: 1, ff: 1 }, 'Knocks past 17 psi with a cool, intercooled charge, far sooner with a hot one.'),
-    opt('e85', 'E85 Ethanol', 800, { tune: 'hard', knock: 40, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, 40 psi safe with a cool charge, and it cools a hot one 15 C. Needs 33% more fuel flow.'),
-    opt('race', 'Race Gas 116', 1200, { knock: 40, fmul: 1.03, ff: 1 }, '+3% power, 40 psi safe with a cool charge.'),
-    opt('meth', 'Methanol', 2500, { tune: 'hard', knock: 80, fmul: 1.06, ff: 0.55, cool: 35 }, '+6% power, 80 psi safe, and it cools the charge 35 C: blown cars run it without an intercooler. Needs about 80% more fuel flow than gasoline: injectors and pumps feed only ~55% of their gasoline rating.')
+    opt('stock', 'Pump Gas 93', 0, { knock: 20, fmul: 1, ff: 1 }, 'How much boost it takes depends on the engine: about 20 psi on a low-compression (8.5:1) turbo engine with a cool charge, about 3 psi less per point of compression, less with a hot charge.'),
+    opt('e85', 'E85 Ethanol', 800, { tune: 'hard', knock: 40, fmul: 1.04, ff: 0.75, cool: 15 }, '+4% power, about twice the boost of pump gas (40 psi on an 8.5:1 engine with a cool charge), and it cools a hot one 15 C. Needs 33% more fuel flow.'),
+    opt('race', 'Race Gas 116', 1200, { knock: 40, fmul: 1.03, ff: 1 }, '+3% power, about twice the boost of pump gas (40 psi on an 8.5:1 engine with a cool charge).'),
+    opt('meth', 'Methanol', 2500, { tune: 'hard', knock: 80, fmul: 1.06, ff: 0.55, cool: 35 }, '+6% power, about four times the boost of pump gas (80 psi on an 8.5:1 engine), and it cools the charge 35 C: blown cars run it without an intercooler. Needs about 80% more fuel flow than gasoline: injectors and pumps feed only ~55% of their gasoline rating.')
   ]};
   // spark: extra psi of boost (and nitrous) the ignition can light before it
   // starts to misfire (stock ignition gives out a few psi past factory boost)

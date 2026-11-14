@@ -25,6 +25,14 @@ live Pages build on an iPhone: every push reaches him (he is our tester).
 7. **Ask before doing anything the owner hasn't agreed to.** Small bug fixes
    they asked for are fine; anything else, ask.
 
+## Research
+
+- **Never settle for thin research.** If a source can't be reached (a blocked
+  site, a tool that fails, a paywall), don't make do with summaries: stop and
+  ask the owner what to do (download it another way, they paste it, or skip).
+- Pages the web-fetch tool can't reach: download them plainly with `curl`
+  (no disguised browser identity; a site that blocks bots stays blocked).
+
 ## A file per feature
 
 Every update gets a working file, `docs/features/<name>.md`, started at the

@@ -143,7 +143,9 @@
   function limits(ss, S) {
     var a = ss.agg, e = ss.who.eng / 100, margin = a.psi + (1 - e) * 1.5;
     return {
-      knock: S.fiType !== 'none' && !S.diesel && S.boostSet > S.knock - margin,
+      // a good tuner runs into the knock point a little (timing pulled) but
+      // stops well short of where power stops climbing
+      knock: S.fiType !== 'none' && !S.diesel && S.boostSet > S.knock + S.knockSpan * 0.6 - margin,
       // fuel: how close to the injectors'/pump's rating they'll run (how
       // hard you said to push, less for a greener tuner)
       // and never into running lean with the nitrous shot on top (a dry kit
@@ -159,7 +161,7 @@
     var what = both ? 'injectors and pump are' : S.fuelInj < S.fuelPump ? 'injectors are' : 'fuel pump is';
     return 'the ' + what + ' maxed out: they feed about ' + Math.round(Math.min(S.fuelInj, S.fuelPump) * S.fuelFF) + ' hp' + (S.fuelFF < 1 ? ' on ' + (S.fuelId === 'meth' ? 'methanol' : 'E85') : '') + '. Bigger ' + (both ? 'injectors and pump' : S.fuelInj < S.fuelPump ? 'injectors' : 'pump') + ' to go further';
   }
-  function why(l, S) { return l.knock ? 'knock margin' : l.lean ? (S ? fuelWhy(S) : 'the fuel system is maxed out') : l.spark ? 'the ignition started to misfire' : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : ''; }
+  function why(l, S) { return l.knock ? 'knock: it was pulling timing and the extra boost wasn\'t buying power any more' : l.lean ? (S ? fuelWhy(S) : 'the fuel system is maxed out') : l.spark ? 'the ignition started to misfire' : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : ''; }
   // a pull's sheet: wheel power and torque, boost and air/fuel against rpm
   function sheet(S) {
     var dy = DR.dyno(S), lam = S.fiType !== 'none' ? 0.78 : 0.86, cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1, st = STOICH[S.fuelId] || 14.7;
@@ -230,7 +232,7 @@
     ss.pulls.push(p); ss.log.push({ pull: lbl, note: note, whp: p.sheet.peakHp, afr: p.sheet.afr });
     // a pull past the knock line can hurt it (a careful tuner backs off quick)
     var l = limits(ss, S);
-    if (l.knock && S.boostSet > S.knock + 0.5 && Math.random() < 0.12 * (1 - ss.who.eng / 100)) { ss.inst.damage = { engine: true }; ss.broke = 'engine'; ss.log.push({ pit: 'It detonated on the rollers: the engine is hurt.' }); }
+    if (l.knock && S.boostSet > S.knockTop + 0.5 && Math.random() < 0.12 * (1 - ss.who.eng / 100)) { ss.inst.damage = { engine: true }; ss.broke = 'engine'; ss.log.push({ pit: 'It detonated on the rollers: the engine is hurt.' }); }
     G.save();
     return p;
   }

@@ -31,8 +31,8 @@
   // hotter). The intercooler takes back its share of the heat down to
   // ambient (an ice tank cools below it), and E85 or methanol cool the
   // charge as they evaporate. Hot air is thin (less power per psi) and
-  // knocks sooner: the fuel's knock limit is for a 50 C charge and drops
-  // 0.12 psi per degree over it.
+  // knocks sooner: the knock point is for a 50 C charge and drops 0.12 psi
+  // per degree over it.
   DR.AMBIENT_C = 25;
   function chargeTemp(S, boost) {
     if (S.fiType === 'none' || !(boost > 0)) return DR.AMBIENT_C;
@@ -42,17 +42,44 @@
     var sink = (S.icSink != null ? S.icSink : DR.AMBIENT_C) + 273.15;
     return t2 - S.icE * (t2 - sink) - 273.15 - S.cool * Math.min(1, boost / 10);
   }
-  function knockAt(S, iat) { return Math.min(S.knockFuel + 2, S.knockFuel - 0.12 * (iat - 50)); }
+  // The knock point (psi) at a charge temperature and rpm. Knock is worst at
+  // peak torque (the end gas has the most time to light) and eases as the
+  // revs rise: about 10% under the mid-range figure at peak torque, 10% over
+  // at redline.
+  function knockAt(S, iat, rpm) {
+    var k = Math.min(S.knockFuel + 2, S.knockFuel - 0.12 * (iat - 50));
+    if (rpm != null && S.red > S.tqRpm) k += S.knockFuel * 0.1 * (2 * clamp((rpm - S.tqRpm) / (S.red - S.tqRpm), 0, 1) - 1);
+    return k;
+  }
+  // Past the knock point the tune pulls timing to stop it: each extra psi
+  // adds less until power stops climbing (the plateau, about 30% past the
+  // knock point: 6 psi on pump gas). Past that there's no timing left to
+  // pull: it detonates and loses power. Returns the boost the engine "uses".
+  function knockSpan(kn) { return Math.max(4, 0.3 * kn); }
+  function boostUsed(boost, kn) {
+    var x = boost - kn, P = knockSpan(kn);
+    if (x <= 0) return boost;
+    return kn + (x <= P ? x - x * x / (2 * P) : P / 2 - (x - P) * 0.3);
+  }
+  DR.knockSpan = knockSpan;
+  // An engine's knock point on a fuel (psi, 50 C charge): the fuel's rating
+  // is for an 8.5:1 engine; each point of compression over that costs about
+  // 15% of it (3 psi on pump gas), and the combustion design (head, bore,
+  // direct injection: e.kd, psi on pump gas) adds or takes a little.
+  function engKnock(e, ref, crD) {
+    var cr = (e.cr || 9.5) + (crD || 0);
+    return ref * Math.max(0.35, 1 - 0.15 * (cr - 8.5)) + (e.kd || 0) * ref / 20;
+  }
   // A factory boosted engine is built for its boost (lower compression,
   // timing to match): it gets the knock margin it needs to run factory boost
-  // on pump gas with its own intercooler, plus 2 psi.
+  // on pump gas with its own intercooler, plus 2 psi, even at peak torque.
   var knockAddCache = {};
   function engineKnockAdd(engId) {
     if (knockAddCache[engId] != null) return knockAddCache[engId];
     var e = DR.ENGINES[engId], add = 0;
     if (e.fi && !e.diesel) {
-      var S = engineCore(e, { knock: 17, noAdd: true }, 1);
-      add = Math.max(0, e.fi.boost + 2 - knockAt(S, chargeTemp(S, e.fi.boost)));
+      var S = engineCore(e, { knock: 20, noAdd: true }, 1);
+      add = Math.max(0, e.fi.boost + 2 - knockAt(S, chargeTemp(S, e.fi.boost), S.tqRpm));
     }
     return (knockAddCache[engId] = add);
   }
@@ -87,8 +114,8 @@
     var Tna = S.Tpk * shape(S, rpm);
     // past the mechanical limit the valves float: power falls away fast
     if (S.mech && rpm > S.mech) Tna *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
-    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat) : 99;
-    var be = Math.min(boost, kn) + Math.max(0, boost - kn) * 0.35;
+    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat, rpm) : 99;
+    var be = boostUsed(boost, kn);
     // past what the ignition can light, cylinders misfire
     if (S.sparkPsi != null && boost > S.sparkPsi) be -= (boost - S.sparkPsi) * 0.7;
     // (S.bk: how well this engine family turns big boost into power: a
@@ -110,7 +137,7 @@
   }
 
   // Boost creep (psi) at this rpm: builds from the power peak to redline.
-  function creepAt(S, rpm) { return S.creep ? S.creep * clamp((rpm - S.pkRpm) / Math.max(300, S.red - S.pkRpm), 0, 1) : 0; }
+  function creepAt(S, rpm) { var c = (S.creep || 0) + (S.creepEgt || 0); return c ? c * clamp((rpm - S.pkRpm) / Math.max(300, S.red - S.pkRpm), 0, 1) : 0; }
   // Boost (psi) a fully spooled system makes at this rpm with full throttle.
   function steadyBoost(S, rpm) {
     if (S.fiType === 'none') return 0;
@@ -181,7 +208,8 @@
     S.icE = mods.ic != null && mods.ic > 0 ? mods.ic : fiId.indexOf('fi_oem') === 0 || (e.diesel && fi.type === 'turbo') ? 0.65 : 0;
     S.icSink = mods.icSink;
     S.cool = mods.cool || 0;
-    S.knockFuel = S.knock = e.diesel ? 99 : (mods.knock || 17) + (mods.noAdd ? 0 : engineKnockAdd(e.id));
+    S.cr = Math.round(((e.cr || 9.5) + (mods.crD || 0)) * 10) / 10;
+    S.knockFuel = S.knock = e.diesel ? 99 : engKnock(e, mods.knock || 20, mods.crD) + (mods.knockAdd || 0) + (mods.noAdd ? 0 : engineKnockAdd(e.id));
     S.fuelW = 1e12;
     if (S.tbs) tbInit(S);
     return S;
@@ -405,12 +433,13 @@
     var bg = e.bg || 1.3, bp = e.bp || e.pk + 1000;
     var pkB = e.pk + (bp - e.pk) * B;
     var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
-    // compression: high-comp pistons make more power but knock sooner
-    var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crKnock = -3 * (pist.cr || 0);
+    // compression: high-comp pistons (+1 point) make more power but knock
+    // sooner; low-comp ones (-1.5 points) the other way round
+    var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crD = pist.cr > 0 ? 1 : pist.cr < 0 ? -1.5 : 0;
     // water-meth: worth most on pump or race gas; alcohol fuels already run cool
     var wmK = fuel.ff < 0.6 ? 0.15 : fuel.ff < 0.9 ? 0.4 : 1;
     var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0) + (cOpt && cOpt.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: (fuel.cool || 0) + (wmi.cool || 0) * wmK + (theat.cool || 0),
-      knock: fuel.knock + (e.diesel ? 0 : crKnock) + Math.round((wmi.knock || 0) * wmK * 2) / 2 };
+      knock: fuel.knock, crD: e.diesel ? 0 : crD, knockAdd: Math.round((wmi.knock || 0) * wmK * 2) / 2 };
     var S = engineCore(e, mods, 1);
     S.ai = ai;
     var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
@@ -430,9 +459,9 @@
     // than the generic parts give it, e.g. a race 4G63 to ~10,500; it comes
     // in with the race valvetrain and bottom end)
     var rxV = (e.rx || 0) * clamp((vtrain.vt || 0) / 2300, 0, 1);
-    S.vtLimit = rotary ? e.red + 3000 : e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0) + rxV;
+    S.vtLimit = rotary ? e.red + 3000 : Math.round((e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0) + rxV) / 50) * 50;
     var beBy = [['pistons', pist.be], ['rods', rods.be], ['crank', crank.be], ['oiling', oil.be]].filter(function (p) { return !rotary || p[0] !== 'rods'; }).sort(function (a, b) { return a[1] - b[1]; });
-    S.beLimit = e.red + beBy[0][1] + (e.rx || 0) * clamp((beBy[0][1] - 800) / 1800, 0, 1);
+    S.beLimit = Math.round((e.red + beBy[0][1] + (e.rx || 0) * clamp((beBy[0][1] - 800) / 1800, 0, 1)) / 50) * 50;
     S.beWeak = beBy[0][0];
     S.rotary = rotary;
     S.partRpm = { pistons: e.red + pist.be, rods: e.red + rods.be, crank: e.red + crank.be, oiling: e.red + oil.be };
@@ -701,7 +730,18 @@
     tbInit(S);
     // the charge at full boost, and the knock limit that leaves the fuel
     S.iat = chargeTemp(S, S.boostSet);
-    if (S.fiType !== 'none') S.knock = Math.floor(knockAt(S, S.iat) * 2) / 2;
+    if (S.fiType !== 'none') {
+      S.knock = Math.floor(knockAt(S, S.iat) * 2) / 2;
+      S.knockSpan = Math.round(knockSpan(S.knock) * 2) / 2;
+      // where power stops climbing, and the range across the revs
+      S.knockTop = Math.round((S.knock + S.knockSpan) * 2) / 2;
+      S.knockLo = Math.floor(knockAt(S, S.iat, S.tqRpm) * 2) / 2;
+      S.knockHi = Math.floor(knockAt(S, S.iat, S.red) * 2) / 2;
+      // pulled timing burns late: a hotter exhaust spins a turbo harder
+      // (up to about a psi of creep at the plateau)
+      S.creepEgt = S.fiType === 'turbo' && !S.diesel && S.boostSet > S.knock ? Math.round(Math.min(1, (S.boostSet - S.knock) / S.knockSpan) * 2) / 2 : 0;
+      S.boostTop += S.creepEgt;
+    }
     S.ratios = tr.adj ? T.gears.slice() : DR.boxRatios(trId, car);
     S.fd = T.fd;
 
@@ -831,7 +871,7 @@
       help: 'Past your valvetrain or bottom-end limit the valves float and the engine may let go.' },
     { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost; },
       show: function (S) { return S.fiType !== 'none'; }, req: 'Requires a turbo or supercharger', group: 'Engine',
-      help: 'More boost = more power, but watch the knock limit of your fuel and your internals.' },
+      help: 'More boost = more power, but watch how much your engine takes on its fuel (knock) and your internals.' },
     { key: 'gearBoost', label: 'Boost by Gear', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost || 0; },
       show: function (S) { return S.fiType === 'turbo' && S.ebc; }, req: 'Requires a turbo with an electronic boost controller (or a tuned factory turbo ECU)', group: 'Engine',
       help: 'A cap on boost in each gear, as electronic controllers do: run less in 1st and 2nd where the tires can\'t take it, the full target from where they can. Set to the target (or above) for no cap.' },
@@ -960,7 +1000,8 @@
     if (fs.ratio > 1.02) out[fs.by] = out[fs.by] || (fs.nos ? 'Can\'t feed the nitrous' : 'Running lean');
     if (S.untuned && S.untuned.length) out.ecu = 'Needs a tune';
     if ((S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
-    if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.knock + 0.5) out.fueltype = 'Knocking at ' + (S.boostTop || S.boostSet) + ' psi';
+    if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.knockTop + 0.5) out.fueltype = 'Detonating at ' + (S.boostTop || S.boostSet) + ' psi';
+    else if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.knock + 0.5) out.fueltype = 'Timing pulled past ' + S.knock + ' psi';
     if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.headPsi + 0.5) out.headstud = 'Head lifts past ' + S.headPsi + ' psi';
     if (S.peakHp + S.nosHp > S.coolHp * 1.05) out.cooling = 'Runs hot in long races';
     if (S.creep) out.wastegate = 'Boost creeps +' + S.creep + ' psi';
@@ -1014,7 +1055,9 @@
       var T = boostedTorque(S, rpm, b);
       var hp = T * rpm * RPM2W / DR.HP;
       var lbft = T * 0.7376;
-      pts.push({ rpm: rpm, hp: hp, tq: lbft, boost: b });
+      // past the knock point here the tune is pulling timing
+      var pull = b > 0.5 && !S.diesel && S.fiType !== 'none' && b > knockAt(S, chargeTemp(S, b), rpm) + 0.25;
+      pts.push({ rpm: rpm, hp: hp, tq: lbft, boost: b, pull: pull });
       if (rpm <= S.red) {
         if (hp > peakHp) { peakHp = hp; peakHpRpm = rpm; }
         if (lbft > peakTq) peakTq = lbft;
@@ -1068,9 +1111,12 @@
       r.notes.push('Rev limiter is ' + (S.red - S.mech) + ' rpm past the ' + (S.vtLimit <= S.beLimit ? 'valvetrain (valve float)' : WEAK[S.beWeak] || 'bottom end'));
     }
     var bTop = S.boostTop || S.boostSet;
+    if (S.creepEgt) r.notes.push('Boost creeps ' + S.creepEgt + ' psi up top: pulled timing burns late, and the hot exhaust spins the turbo harder');
     if (S.creep && S.fiType !== 'none') r.notes.push('Boost creeps ' + S.creep + ' psi past the target up top: the internal wastegate can\'t dump enough exhaust (a ported or external gate fixes it)');
     if (bTop > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + bTop + ' psi - misfiring past ' + S.sparkPsi + ' psi');
-    if (bTop > S.knock + 0.5) { r.engine += Math.min(0.6, (bTop - S.knock) * 0.05); r.notes.push('Boost is past the knock limit (' + S.knock + ' psi' + (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + ')'); }
+    var kWhy = S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel';
+    if (bTop > S.knockTop + 0.5) { r.engine += Math.min(0.7, (bTop - S.knockTop) * 0.08); r.notes.push('Detonating: past about ' + S.knockTop + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression'); }
+    else if (bTop > S.knock + 0.5) { r.engine += Math.min(0.1, (bTop - S.knock) * 0.015); r.notes.push('Timing pulled: past ' + S.knock + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and the exhaust runs hot'); }
     if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)'); }
     if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');

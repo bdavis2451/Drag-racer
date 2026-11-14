@@ -16,6 +16,13 @@ the top of each section.
 
 ## Waiting on a yes or no
 
+- **Boost by rpm** (a taper setting): the knock model makes the midrange
+  give up a little at high boost; real tunes taper boost from the midrange.
+  Only boost by gear exists. Proposed Nov 14.
+- **Turbo wear** (a turbo that wears like tires/clutch, faster with hot
+  exhaust): doesn't exist; the knock model shows hot exhaust as creep and
+  engine risk instead. Proposed Nov 14.
+
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
   spool). Records are ~3,000 / ~3,500. Option: a ~100 mm single or twin
@@ -68,6 +75,10 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Knock model (Nov 14):** engine-aware knock point (compression, design,
+  fuel, charge temperature, rpm), timing pulled past it to a plateau, then
+  detonation. Shipped. `docs/features/knock-model.md`.
 
 - Tuner session clipboard (live log, ET chart, summary sheet; one pass at a
   time) when a driver runs the session (owner, Nov 12): shipped.

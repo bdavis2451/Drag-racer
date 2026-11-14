@@ -2,6 +2,31 @@
 
 Short notes for testing, newest first.
 
+## Knock: how much boost depends on the engine, not just the fuel
+
+- **No more one number per fuel.** Each engine has its real compression
+  ratio (shown on its spec) and head design. On 93 a low-compression turbo
+  engine takes about 20 psi (2JZ-GTE, RB26, SR20, Evo ~22), a 10:1 engine
+  about 15, an LS ~13, a Coyote ~12, an S2000 ~8. A hot charge takes some
+  off; E85, race gas and methanol take about 2x / 2x / 4x as much.
+- **No hard cut-off.** Past that point the tune pulls timing: each psi adds
+  less, and about 30% further on power stops climbing (the exhaust gets hot
+  and the boost creeps up a little). Past that it detonates: power drops
+  and the engine is at risk.
+- Knock is worst at peak torque and eases as the revs rise.
+- **Pistons set compression:** low-comp forged about -1.5 points (4-5 psi
+  more on pump gas), high-comp +1 point (3 psi less, +4% power).
+- **Dyno:** the boost line turns orange where timing is being pulled, with
+  the rpm range listed. The Setup screen says where your engine knocks and
+  where power stops. Tuners now push into the pulled zone like real ones.
+- Stock cars run the same. Boosted builds change power (low-compression
+  engines gain, high-compression ones lose some). A few rivals are a touch
+  quicker. Also fixed the dyno showing "7888.888888 rpm".
+
+**Try:** your turbo car on the dyno, then turn the boost up 2 psi at a time
+and watch where the orange starts and where power stops. **Look out for:**
+an engine that takes far more or less boost than you'd expect for it.
+
 ## Engine power ceilings: full race builds reach real record power
 
 - **Race fuels hold more boost:** methanol 80 psi (was 50), E85 40 (30),
