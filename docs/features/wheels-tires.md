@@ -1,7 +1,7 @@
 # Wheels & tires rework
 
 Status: **started Nov 14 (owner: "let's start the wheels & tires rework").
-Plan approved Nov 14 (below). Building: per-car research first.** FWD traction after
+Plan approved Nov 14 (below). Per-car research done; building.** FWD traction after
 this.
 
 ## Owner's notes
@@ -222,7 +222,7 @@ colour/finish in Style (the wheel style itself is the part).
 | Factory | the car's own | car's own | (fitted) | as now |
 | Street 5-spoke (cast) | 15-20 in, 7-10 in wide | ~22 lb | $600 | looks, fits street/track tires |
 | Forged lightweight | 17-20 in, 8-11 in wide | ~18 lb | $1,800 | -4 lb a corner, circuit |
-| Drag (one-piece) | rear 15x8-15x12, 17x10; front 15x3.5, 17x4.5 | 14-16 lb rear, 10-15 front | $900 | light; runners and drag tires |
+| Drag (one-piece) | rear 15x8-15x12, 17x10; front 15x3.5, 17x4.5, 18x5 | 14-16 lb rear, 10-15 front | $900 | light; runners and drag tires |
 | Beadlock drag | 15x10-15x16, 17x10, 16x16 | 19-26 lb | $2,200 | low tire pressure without the tire spinning on the rim; wide sizes for big slicks |
 
 **Tires (20, priced per pair; listed only in sizes that fit the wheel):**
@@ -286,6 +286,78 @@ sheets keep their hand-drawn wheels until you change the wheels.
 diameter (the game has no rollout), wheel offset/backspacing (implied by
 the size choice), tire growth on radials, different compounds per tire,
 wheel spacers.
+
+## Per-car limits (researched Nov 14)
+**Rules used** (sources below the table):
+- **Smallest wheel over the brakes** follows the front/rear rotor size:
+  ~11 in rotors clear 15 in drag wheels; 12-12.5 in need 16-17; 13 in
+  (most 13 in big brake kits) need 17+; 14 in need 18+; 15-15.7 in
+  (Hellcat, R35, Aventador carbon) need 18-20 (Maximum Motorsports "Big
+  Brake Caliper and Wheel Clearance"; Wilwood Evo kits "17 in minimum").
+  Drag-specific wheels (thin spokes, more barrel room) clear more than
+  street wheels: the number is for the drag wheel. Drag brakes allow 15
+  in on every car except where noted.
+- **Widest rear tire without tubs** = the tire's section width (M/T's
+  measured width, inches) the stock wheel well takes, on the right
+  backspacing, rolled fender lips allowed. Mini-tubs to ~16.5 in (31x13,
+  31x13.5R); full tubs: anything.
+
+| Car | Factory wheel / tire (F; R if different) | Widest without tubs | Smallest wheel F / R (drag brakes) | Confidence |
+|---|---|---|---|---|
+| Fox Mustang GT '89 | 15x7, 225/60R15 | 12.5 in (28x10.5 or 275/60R15 on 15x10) | 15 / 15 | sourced (factory: Goodyear, forum; fit: Stangnet summaries) |
+| Fox LX 2.3 | 14x5.5, 195/75R14 | 12.5 in (same body) | 14 / 14 | factory from spec memory; body as GT |
+| Camaro V6 '98 (4th gen) | 16x7.5, 215/60R16 | 12.5 in (275/60R15; 28 in slick max) | 15 / 15 (rear: light caliper grinding) | sourced (CamaroZ28 / LS1Tech summaries) |
+| Camaro Z28 '98 | 16x8, 245/50R16 | 12.5 in | 15 / 15 | as V6 |
+| Camaro SS '12 (5th gen) | 20x8 245/45R20; 20x9 275/40R20 | 12.0 in (305/45R17; 315 rubs) | 18 / 17 | factory sourced (tiresize.com); wheels: Camaro5 summaries |
+| AE86 Trueno | 14x5.5, 185/60R14 | 9.0 in (~225) | 13 / 13 | spec memory; to verify |
+| Supra Turbo Mk4 | 17x8 235/45R17; 17x9.5 255/40R17 | 12.5 in (315/35R17, rolled fenders) | 17 / 17 (15 rear needs non-turbo or drag brakes) | sourced (Real Street, MKIVSupra summaries) |
+| Civic hatch (EG) | 14x5.5, 185/60R14 | front (driven) 9.0 in (~225) | 13 / 13 | spec memory |
+| Neon R/T | 16x6, 205/55R16 | front 9.0 in | 15 / 15 | spec memory; to verify |
+| Geo Metro | 13x4.5, 155/80R13 | front 8.0 in | 12 / 12 | spec memory |
+| Integra Type R | 15x6, 195/55R15 | front 9.0 in | 15 / 15 | spec memory |
+| Golf GTI Mk5 | 17x7, 225/45R17 | front 9.6 in (245) | 16 / 15 | spec memory (312 mm front rotors) |
+| Cobalt SS | 18x7.5, 225/40R18 | front 9.6 in | 17 / 15 (Brembo front) | spec memory |
+| VW Beetle | 15x4.5, 165R15 | 8.2 in (~205) | 15 / 15 | spec memory |
+| MX-5 Miata NA | 14x5.5, 185/60R14 | 9.0 in | 13 / 13 | spec memory |
+| Silvia S14 | 16x6.5, 205/55R16 | 10.2 in (255) | 15 / 15 | spec memory |
+| S2000 AP1 | 16x6.5 205/55R16; 16x7.5 225/50R16 | 10.2 in | 16 / 16 | spec memory |
+| RX-7 FD | 16x8, 225/50R16 | 10.2 in | 16 / 16 | spec memory |
+| Evo IX | 17x8, 235/45R17 | 10.9 in (275/40R17 on 17x9) | 17 / 17 | sourced (DSMtuners, dragracingwheels guide, Wilwood) |
+| WRX STI (GD) | 17x7.5, 225/45R17 | 10.2 in | 17 / 17 (Brembo) | spec memory; as Evo |
+| Skyline GT-R R34 | 18x9, 245/40R18 | 10.9 in | 17 / 17 | spec memory |
+| 350Z | 17x7.5 225/50R17; 17x8 235/45R17 | 10.9 in | 17 / 17 | spec memory (my350z: some 17s don't clear Brembos) |
+| GT-R R35 | 20x9.5 255/40R20; 20x10.5 285/35R20 | 12.4 in | 18 / 18 (drag brake kits: 17 F, 15 R) | sourced (T1 Race Development, Vivid Racing, AMS) |
+| M3 E46 | 18x8 225/45R18; 18x9 255/40R18 | 10.9 in | 17 / 17 | spec memory |
+| 911 Turbo (997) | 19x8.5 235/35R19; 19x11 305/30R19 | 12.4 in | 18 / 18 (drag 17 / 15) | spec memory (350 mm rotors) |
+| Aventador SVJ | 20x9 255/30R20; 21x13 355/25R21 | 14.0 in | 20 / 20 (drag 19 / 19) | spec memory |
+| Nova SS '68 | 14x7, F70-14 | 11.5 in (275) | 14 / 14 | classic-muscle rule (Drag Zine/forums) |
+| Chevelle SS '70 | 14x7, F70-14 | 12.0 in | 15 / 14 | classic-muscle rule |
+| Charger R/T '69 | 14x5.5, F70-14 | 12.0 in | 15 / 14 | classic-muscle rule |
+| Hemi 'Cuda '70 | 15x7, F60-15 | 11.5 in | 15 / 14 | classic-muscle rule |
+| Bel Air '57 | 14x5, 7.50-14 | 11.5 in | 14 / 14 | classic-muscle rule |
+| Willys gasser '41 | as the game's car | 16.5 in (radiused wells: counts as mini-tubs) | 15 / 15 | gasser build |
+| Monte Carlo SS '87 (G-body) | 15x7, 215/65R15 | 12.5 in (28x10.5) | 15 / 15 | G-body as Fox (TurboBuick summaries) |
+| Buick GNX | 16x8, 245/50R16 | 12.5 in | 15 / 15 | as Monte Carlo |
+| Mustang Cobra '03 (SN95) | 17x9, 275/40R17 | 11.5 in (275/295) | 17 / 16 (13 in Brembo front) | spec memory + MM rule |
+| Mustang GT '18 (S550) | 18x8, 235/50R18 | 12.6 in (305/45R17 doesn't rub; 315) | 18 / 17 (18x5 runner clears Brembo; 15 rear needs drag brakes) | sourced (Three Piece, Beefcake Racing) |
+| Corvette C5 | 17x8.5 245/45R17; 18x9.5 275/40R18 | 12.6 in (315/35R17) | 17 / 16 | sourced (CorvetteForum summaries) |
+| Corvette Z06 (C6) | 18x9.5 275/35R18; 19x12 325/30R19 | 13.1 in | 18 / 18 | spec memory (14 in rotors) |
+| Challenger Hellcat | 20x9.5, 275/40R20 | 11.8 in (305/45R17 easy; 315/50R17 needs trimming) | 18 / 17 (18x5 drag runner; 17x10-17x11 beadlock rears) | sourced (dragracingwheels.com, Hellcat forum summaries) |
+| Viper ACR | 18x11 295/25R18; 19x13 355/30R19 | 14.0 in | 18 / 19 | spec memory |
+| C1500 | 15x7, 235/75R15 | 13.0 in | 15 / 15 | spec memory; to verify |
+| F-150 Lightning | 18x9.5, 295/45R18 | 13.0 in | 17 / 17 | spec memory (13.1 in rotors) |
+| Ram 2500 Cummins | 17x8, 265/70R17 | 13.0 in | 17 / 17 | spec memory |
+| Pro Mod Camaro | 15 in drag wheels, slicks | full tubs | 15 / 15 | race car |
+| Top Dragster | 17x2.5 front, 16x16 rear | full | 15 / 15 | race car |
+
+"Spec memory" = factory specs I know well but didn't find a page for this
+pass; the stock car keeps today's physics either way (factory tires keep
+their current values), so these only set what the shop lists. Any the
+owner or tester knows better, we change.
+
+**Catalog addition from this research:** the drag wheel gets an **18x5
+front runner** size: modern Brembo cars (S550 GT, Camaro SS, Hellcat, GT-R)
+can't run a 15 or 17 in front over factory brakes.
 
 ## Known issues this rework fixes on the way
 - AWD cars get the skinny front-runner benefit (less weight and rolling
