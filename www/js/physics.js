@@ -62,6 +62,8 @@
     return kn + (x <= P ? x - x * x / (2 * P) : P / 2 - (x - P) * 0.3);
   }
   DR.knockSpan = knockSpan;
+  // the boost an engine takes before knock, nitrous spraying included
+  DR.knockSafe = function (S) { return S.knock - (S.nosKnock || 0); };
   // An engine's knock point on a fuel (psi, 50 C charge): the fuel's rating
   // is for an 8.5:1 engine; each point of compression over that costs about
   // 15% of it (3 psi on pump gas), and the combustion design (head, bore,
@@ -115,13 +117,14 @@
   var kLast = { x: 0, P: 1 };
   function knockDeg(x, P) { return x <= 0 ? 0 : x <= P ? 10 * x / P : 10 + 2 * (x - P); }
   DR.knockDeg = knockDeg;
-  function boostedTorque(S, rpm, boost, kdT) {
+  // (kdP: psi off the knock point while the nitrous sprays)
+  function boostedTorque(S, rpm, boost, kdT, kdP) {
     if (S.dsl) return Math.min(dieselState(S, rpm, boost).T, S.fuelW / Math.max(rpm, 300) / RPM2W);
     var w = Math.max(rpm, 300) * RPM2W;
     var Tna = S.Tpk * shape(S, rpm);
     // past the mechanical limit the valves float: power falls away fast
     if (S.mech && rpm > S.mech) Tna *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
-    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat + (kdT || 0), rpm) : 99;
+    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat + (kdT || 0), rpm) - (kdP || 0) : 99;
     var be = boostUsed(boost, kn);
     kLast.x = boost - kn; kLast.P = knockSpan(kn);
     // past what the ignition can light, cylinders misfire
@@ -750,6 +753,14 @@
       S.creepEgt = S.fiType === 'turbo' && !S.diesel && S.boostSet > S.knock ? Math.round(Math.min(1, (S.boostSet - S.knock) / S.knockSpan) * 2) / 2 : 0;
       S.boostTop += S.creepEgt;
     }
+    // nitrous on a boosted engine: the shot burns fast and adds cylinder
+    // pressure, so the tune pulls timing for it (about 2 degrees per 50 hp
+    // on a 5.7 V8, more on a small engine where the same shot is a bigger
+    // share of the charge). On boost that means it knocks sooner while it
+    // sprays: about 0.43 psi of knock point per degree on pump gas, more on
+    // the stronger fuels.
+    S.nosDeg = S.nosHp && !S.diesel ? 2 * S.nosHp / 50 * Math.sqrt(5.7 / Math.max(1, airDisp(e))) : 0;
+    S.nosKnock = S.nosDeg && S.fiType !== 'none' ? Math.round(S.nosDeg * 0.43 * S.knockFuel / 20 * 2) / 2 : 0;
     S.ratios = tr.adj ? T.gears.slice() : DR.boxRatios(trId, car);
     S.fd = T.fd;
 
@@ -1008,8 +1019,9 @@
     if (fs.ratio > 1.02) out[fs.by] = out[fs.by] || (fs.nos ? 'Can\'t feed the nitrous' : 'Running lean');
     if (S.untuned && S.untuned.length) out.ecu = 'Needs a tune';
     if ((S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
-    if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knockTop + 0.5) out.fueltype = 'Detonating at ' + (S.boostTop || S.boostSet) + ' psi';
-    else if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knock + 0.5) out.fueltype = 'Timing pulled past ' + S.knock + ' psi';
+    var nk = S.nosKnock || 0, onSpray = nk ? ' on the spray' : '';
+    if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knockTop - nk + 0.5) out.fueltype = 'Detonating' + onSpray + ' at ' + (S.boostTop || S.boostSet) + ' psi';
+    else if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knock - nk + 0.5) out.fueltype = 'Timing pulled' + onSpray + ' past ' + (S.knock - nk) + ' psi';
     if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.headPsi + 0.5) out.headstud = 'Head lifts past ' + S.headPsi + ' psi';
     if (S.peakHp + S.nosHp > S.coolHp * 1.05) out.cooling = 'Runs hot in long races';
     if (S.creep) out.wastegate = 'Boost creeps +' + S.creep + ' psi';
@@ -1122,10 +1134,12 @@
     if (S.creepEgt) r.notes.push('Boost creeps ' + S.creepEgt + ' psi up top: pulled timing burns late, and the hot exhaust spins the turbo harder');
     if (S.creep && S.fiType !== 'none') r.notes.push('Boost creeps ' + S.creep + ' psi past the target up top: the internal wastegate can\'t dump enough exhaust (a ported or external gate fixes it)');
     if (bTop > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + bTop + ' psi - misfiring past ' + S.sparkPsi + ' psi');
-    var kWhy = S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel';
+    // (with nitrous: the worst case, while it sprays)
+    var nkR = S.nosKnock || 0, kR = S.knock - nkR, kTopR = S.knockTop - nkR;
+    var kWhy = (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + (nkR ? ' and the nitrous spraying (' + nkR + ' psi sooner)' : '');
     if (S.diesel || S.fiType === 'none') { /* no spark knock */ }
-    else if (bTop > S.knockTop + 0.5) { r.engine += Math.min(0.7, (bTop - S.knockTop) * 0.08); r.notes.push('Detonating: past about ' + S.knockTop + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression'); }
-    else if (bTop > S.knock + 0.5) { r.engine += Math.min(0.1, (bTop - S.knock) * 0.015); r.notes.push('Timing pulled: past ' + S.knock + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and the exhaust runs hot'); }
+    else if (bTop > kTopR + 0.5) { r.engine += Math.min(0.7, (bTop - kTopR) * 0.08); r.notes.push('Detonating: past about ' + kTopR + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression' + (nkR ? ', or a smaller shot' : '')); }
+    else if (bTop > kR + 0.5) { r.engine += Math.min(0.1, (bTop - kR) * 0.015); r.notes.push('Timing pulled: past ' + kR + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + kTopR + ' psi, and the exhaust runs hot'); }
     if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)'); }
     if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
@@ -1517,7 +1531,7 @@
       // a carb's secondaries off the line: vacuum ones open softly, an
       // oversized carb stumbles for a moment before the signal comes up
       var hitK = S.carbHit && this.launched && this.t < 0.5 ? S.carbHit + (1 - S.carbHit) * this.t / 0.5 : 1;
-      Te = boostedTorque(S, rpm, this.boost, this.kdT) * (S.dsl && S.dsl.gearLim ? S.dsl.gearLim[this.gear] || 1 : 1) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
+      Te = boostedTorque(S, rpm, this.boost, this.kdT, this.nosLvl * (S.nosKnock || 0)) * (S.dsl && S.dsl.gearLim ? S.dsl.gearLim[this.gear] || 1 : 1) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
       // timing the tune pulled for knock (degrees, for the data logger)
       this.knockDeg = S.diesel || !(this.boost > 0) ? 0 : knockDeg(kLast.x, kLast.P);
       // a soft cut (TC past full retard) drops cylinders: heard as a crackle

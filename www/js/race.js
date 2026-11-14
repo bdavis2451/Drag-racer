@@ -355,7 +355,8 @@
     // a hot day (or a heat-soaked engine) knocks sooner: past where power
     // stops on the day it detonates (on top of the risk already counted)
     var eng = r.engine, kd = DR.knockOnDay(S, cond, heat && heat.eng), bTop = S.boostTop || S.boostSet;
-    if (kd && kd.shift > 0) eng = Math.min(0.85, eng + 0.08 * (Math.max(0, bTop - kd.top - 0.5) - Math.max(0, bTop - S.knockTop - 0.5)));
+    var nk = S.nosKnock || 0;
+    if (kd && kd.shift > 0) eng = Math.min(0.85, eng + 0.08 * (Math.max(0, bTop - (kd.top - nk) - 0.5) - Math.max(0, bTop - (S.knockTop - nk) - 0.5)));
     if (Math.random() < eng) return { failAt: 0.6 + Math.random() * span, failType: 'engine' };
     if (Math.random() < r.trans) return { failAt: 0.4 + Math.random() * span, failType: 'trans' };
     if (Math.random() < (r.axle || 0)) return { failAt: 0.05 + Math.random() * 0.5, failType: 'axle' };
@@ -506,7 +507,8 @@
     setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (DR.multiRound(cfg.ev) ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Hold GAS to do your burnout.' : 'Hold GAS to do your burnout.');
     // hot air knocks sooner: say so when it costs this build (cool air, the other way)
     var kDay = cfg.cond ? DR.knockOnDay(S, cfg.cond, heat.eng) : null, kNote = '';
-    if (kDay && Math.abs(kDay.shift) >= 1 && (S.boostTop || S.boostSet) > kDay.knock - 1) kNote = kDay.shift > 0 ? ' • hot charge: knocks past ~' + kDay.knock + ' psi today' : ' • cool air: takes ~' + kDay.knock + ' psi today';
+    var kNos = S.nosKnock || 0, kToday = kDay ? kDay.knock - kNos : 0;
+    if (kDay && (Math.abs(kDay.shift) >= 1 || kNos) && (S.boostTop || S.boostSet) > kToday - 1) kNote = (kDay.shift >= 1 ? ' • hot charge' : kDay.shift <= -1 ? ' • cool air' : '') + (kDay.shift >= 1 || kNos ? (kDay.shift >= 1 ? ':' : ' •') + ' knocks past ~' + kToday + ' psi' + (kNos ? ' on the spray' : '') + ' today' : ': takes ~' + kToday + ' psi today');
     if (cfg.cond) subEl.textContent = DR.condLabel(cfg.cond) + (heat.eng > 1 ? ' • water ' + Math.round(195 + heat.eng * 1.8) + '°F' : '') + kNote + ' • ' + subEl.textContent;
     if (estLine) subEl.textContent = estLine + subEl.textContent;
     var introSub = subEl.textContent;

@@ -636,7 +636,7 @@
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; DR.syncSetup(inst); G.save(); UI.refresh(); } : null);
       var ab = allSetupsBtn(inst, def.key, def.label), labSpan = row.querySelector('.lab span');
       if (ab && labSpan) labSpan.appendChild(ab);
-      row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' && S.knock < 90 ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F). This engine (' + S.cr + ':1) knocks past about ' + S.knock + ' psi on this fuel (' + S.knockLo + ' at peak torque, ' + S.knockHi + ' up top). Past it the tune pulls timing: each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and further it detonates.' : '')));
+      row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' && S.knock < 90 ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F). This engine (' + S.cr + ':1) knocks past about ' + S.knock + ' psi on this fuel (' + S.knockLo + ' at peak torque, ' + S.knockHi + ' up top). Past it the tune pulls timing: each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and further it detonates.' + (S.nosKnock ? ' With the nitrous spraying it knocks about ' + S.nosKnock + ' psi sooner (' + DR.knockSafe(S) + ' psi).' : '') : '')));
       // jets: how the plugs read (any data logger brings a wideband: the
       // exact air/fuel ratio)
       if (def.key === 'jets') {

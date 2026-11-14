@@ -145,7 +145,8 @@
     return {
       // a good tuner runs into the knock point a little (timing pulled) but
       // stops well short of where power stops climbing
-      knock: S.fiType !== 'none' && !S.diesel && S.boostSet > S.knock + S.knockSpan * 0.6 - margin,
+      // (with nitrous, the knock point while it sprays)
+      knock: S.fiType !== 'none' && !S.diesel && S.boostSet > S.knock - (S.nosKnock || 0) + S.knockSpan * 0.6 - margin,
       // fuel: how close to the injectors'/pump's rating they'll run (how
       // hard you said to push, less for a greener tuner)
       // and never into running lean with the nitrous shot on top (a dry kit
@@ -232,7 +233,7 @@
     ss.pulls.push(p); ss.log.push({ pull: lbl, note: note, whp: p.sheet.peakHp, afr: p.sheet.afr });
     // a pull past the knock line can hurt it (a careful tuner backs off quick)
     var l = limits(ss, S);
-    if (l.knock && S.boostSet > S.knockTop + 0.5 && Math.random() < 0.12 * (1 - ss.who.eng / 100)) { ss.inst.damage = { engine: true }; ss.broke = 'engine'; ss.log.push({ pit: 'It detonated on the rollers: the engine is hurt.' }); }
+    if (l.knock && S.boostSet > S.knockTop - (S.nosKnock || 0) + 0.5 && Math.random() < 0.12 * (1 - ss.who.eng / 100)) { ss.inst.damage = { engine: true }; ss.broke = 'engine'; ss.log.push({ pit: 'It detonated on the rollers: the engine is hurt.' }); }
     G.save();
     return p;
   }

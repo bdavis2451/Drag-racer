@@ -5,8 +5,14 @@ the top of each section.
 
 ## In progress
 
-- **Wheels & tires rework** (next, owner Nov 13), then **FWD traction**.
-  `docs/features/wheels-tires.md`, `docs/features/awd-fwd-traction.md`.
+- **Audit of the turbo, diesel and engine power/knock updates** under the
+  new quality rule (owner, Nov 14), with the nitrous-on-boost knock follow-up.
+- **Wheels & tires rework** (next after the audit), then **FWD traction**.
+  Owner notes Nov 14: wheel width and diameter, a good wheel selection, tire
+  selection, chosen separately per axle (front labelled Front; the drive
+  axle isn't labelled, the game knows it), new wheel/tire assets and a path
+  for adding more. `docs/features/wheels-tires.md`,
+  `docs/features/awd-fwd-traction.md`.
 - **Career/rival balance after the engine ceilings too:** 19 rivals moved
   (3.2 I6 rivals at 20 psi up to 0.32 s slower, 2JZ-GTE rivals ~0.1 s
   quicker). Folded into the same rebalance.
@@ -15,16 +21,6 @@ the top of each section.
   Agreed: rebalance after the turbo rework (owner, Nov 12).
 
 ## Waiting on a yes or no
-
-- **Boost by rpm** (a taper setting): the knock model makes the midrange
-  give up a little at high boost; real tunes taper boost from the midrange.
-  Only boost by gear exists. Proposed Nov 14.
-- **Nitrous on boost lowers the knock point** (tuners pull timing for a
-  shot on a boosted engine). Not modelled; planned follow-up to the knock
-  model. Asked Nov 14.
-- **Turbo wear** (a turbo that wears like tires/clutch, faster with hot
-  exhaust): doesn't exist; the knock model shows hot exhaust as creep and
-  engine risk instead. Proposed Nov 14.
 
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
@@ -37,7 +33,12 @@ the top of each section.
 
 ## Parked ideas
 
-
+- **Boost by rpm** (a taper setting): the knock model makes the midrange
+  give up a little at high boost; real tunes taper boost from the midrange.
+  Only boost by gear exists. Pinned for later (owner, Nov 14).
+- **Engine part wear** (turbo, internals): later, after a general rework of
+  how wear works in the game (owner, Nov 14). Until then hot exhaust from
+  pulled timing stays an engine risk.
 - **Turbo diagram view** (Drag Racing: Streets style: the turbo system laid
   out as a flow diagram). Later (owner, Nov 12).
 - **More diesels** (Duramax, Power Stroke) with the next batch of cars
@@ -78,6 +79,10 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Nitrous on boost lowers the knock point** (Nov 14): shipped.
+
+- **Turbo wear: no** (owner, Nov 14). Hot exhaust stays an engine risk.
 
 - **Knock model (Nov 14):** engine-aware knock point (compression, design,
   fuel, charge temperature, rpm), timing pulled past it to a plateau, then

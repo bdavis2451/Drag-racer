@@ -237,9 +237,34 @@ Rechecked every caller and text after shipping; found and fixed:
   blower, rotary, nitrous on boost, E85 low-comp, high-comp, old save),
   race intro text, logger line, calibk (44 within 3%), bench, rivals,
   qolsmoke, pkgsmoke, burnui, tubest, tuner.
-- **Planned follow-up:** nitrous on a boosted engine should lower the
-  knock point (tuners pull timing for a shot on boost). Not modelled before
-  or now: in the backlog, asked.
+- **Nitrous on boost (approved and built Nov 14):** see below.
+
+## Nitrous on boost (Nov 14)
+Research: the standard rule is about 2 degrees of timing out per 50 hp shot
+(HP Academy, Andre Simon: "always worked on the 2 deg per 50 hp rule";
+on pump gas the engine reaches the knock limit before best timing on the
+bottle, on E85 it often doesn't; more retard if it's sprayed at low rpm).
+Kit makers: Edelbrock "approximately 2 degrees for every 50 HP"; Speedway
+Motors' table 100 hp 3-5 deg, 150 5-7, 200 6-8, 250 9-11 (pdf 32570060).
+Nitrous also cools the charge (Nitrous Outlet, LSX Mag; HP Academy
+webinar 094), which the rule already nets out. Sources downloaded to
+scratchpad web/nos.
+Build:
+- `S.nosDeg` = 2 deg per 50 hp x sqrt(5.7 L / displacement) (a shot is a
+  bigger share of a small engine's charge; our scaling, not from a source).
+- `S.nosKnock` = nosDeg x 0.43 psi per degree (SAE 960497: ~1 octane per
+  degree vs ~2.3 per psi) x fuel rating / 20; only on boosted gasoline
+  engines. Supra 2JZ: 75 shot -1.5 psi, 150 shot -3; LS1: 150 shot -1.5.
+- Race sim: knock point drops by nosLvl x nosKnock while it sprays
+  (`boostedTorque(..., kdP)`). Risk, status ("Timing pulled on the
+  spray"), race failure roll, race intro ("knocks past ~13 psi on the spray
+  today"), tuner limit, packages (`DR.knockSafe(S)`), tune help, ratings
+  row, intake-air row, help text; the logger's Timing pulled trace adds the
+  nitrous retard.
+- Tests: knnos.js (Supra/LS1/S13 dry vs 75/150 shots, NA and diesel
+  unaffected, E85), tuner with a 150 shot backs off 1.5-2.5 psi, race intro,
+  rivals 5 of 126 moved <= 0.008 s, bench unchanged, qolsmoke, burnui,
+  tubest, pkgsmoke.
 
 ## Sources
 - HP Academy forum: "knock limited engine high boost low timing or vice

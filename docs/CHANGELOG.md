@@ -2,6 +2,18 @@
 
 Short notes for testing, newest first.
 
+## Nitrous on a boosted engine knocks sooner
+
+- Spraying on boost, the tune pulls timing for the shot (about 2 degrees
+  per 50 hp, more on a small engine), so the engine knocks sooner while it
+  sprays: a 150 shot on a 2JZ takes about 3 psi off its knock point on
+  pump gas. The Setup screen, warnings and race intro say how much; tuners
+  run a little less boost with a big shot on.
+- Nitrous on its own (no boost) and diesels are unchanged.
+
+**Try:** a turbo car with a 150 shot on pump gas, boost near its knock
+point. **Look out for:** warnings that don't match the shot or the fuel.
+
 ## Knock follow-up: weather counts, logger shows it, a clutch bug fixed
 
 - **Hot days knock sooner in races.** The day's air temperature (and an

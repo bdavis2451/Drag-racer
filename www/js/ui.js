@@ -285,7 +285,7 @@
   function ratingsBox(S) {
     var r = S.risk, hp = S.peakHp + S.nosHp, lbft = S.peakTq + (S.nosW ? S.nosW / (4000 * 2 * Math.PI / 60) * 0.7376 : 0), L = 0.7376;
     var rows = [['Engine internals', S.safeHp, hp, ' hp'], ['Fuel system', S.fuelW / DR.HP, S.fuelDemand, ' hp'],
-      S.fiType !== 'none' && !S.diesel ? ['Knock point (power stops at ' + S.knockTop + ')', S.knock, S.boostSet, ' psi'] : null,
+      S.fiType !== 'none' && !S.diesel ? ['Knock point' + (S.nosKnock ? ' on the spray' : '') + ' (power stops at ' + (S.knockTop - (S.nosKnock || 0)) + ')', DR.knockSafe(S), S.boostSet, ' psi'] : null,
       ['Rev limit (valvetrain/bottom end)', S.mech, S.red, ' rpm'],
       ['Transmission', S.trMaxTq * L, lbft, ' lb-ft'],
       S.clCap ? ['Clutch', S.clCap * L, lbft, ' lb-ft'] : null,
@@ -316,7 +316,7 @@
       ['Power', fmtHp(S.peakHp) + (S.nosHp ? ' +' + S.nosHp + ' N2O' : ''), 'acc'],
       ['Torque', Math.round(S.peakTq) + ' lb-ft'],
       S.fiType !== 'none' ? ['Boost', S.boostSet.toFixed(1) + ' psi ' + (S.tbs && S.tbs.name ? S.tbs.name : DR.FI[S.fiId].name.replace('Factory ', ''))] : null,
-      S.fiType !== 'none' ? ['Intake air', Math.round(S.iat) + ' C / ' + Math.round(S.iat * 1.8 + 32) + ' F at full boost' + (S.diesel ? '' : ' • knocks past ' + S.knock + ' psi, power stops at ' + S.knockTop), S.iat > 75 || S.boostSet > S.knockTop + 0.5 ? 'bad' : ''] : null,
+      S.fiType !== 'none' ? ['Intake air', Math.round(S.iat) + ' C / ' + Math.round(S.iat * 1.8 + 32) + ' F at full boost' + (S.diesel ? '' : ' • knocks past ' + S.knock + ' psi, power stops at ' + S.knockTop + (S.nosKnock ? ' (' + S.nosKnock + ' psi sooner on the spray)' : '')), S.iat > 75 || S.boostSet > S.knockTop - (S.nosKnock || 0) + 0.5 ? 'bad' : ''] : null,
       ['Weight', kgLb(S.m) + ' (' + Math.round(S.f * 100) + '% front)'],
       ['Drive', S.drive + ', ' + S.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
       tr.type === 'auto' ? ['Converter', S.stall + ' stall' + (S.tbrake ? ' + transbrake' : ', foot brake')] : null,
@@ -572,6 +572,7 @@
         p('Boost by gear: with an electronic boost controller (or a tuned factory turbo ECU) you can cap the boost in each gear in Tuning, the way racers do: less in 1st and 2nd where the tires can\'t take it, the full target from where they can. On a car that spins, a lower 1st-gear boost is often quicker than full boost and traction control.'),
         p('The small stuff real builds have: underdrive pulleys and an electric water pump free up 1-3% of the power the accessories take. Head studs: factory head bolts stretch past about 22 psi and the head lifts off the gasket (a factory turbo engine holds a little more than its own boost); studs and an MLS gasket hold about 40 psi, an O-ringed block about 75. Water-methanol injection cools the charge and acts like more octane, worth a few psi more boost on pump gas. Solid engine and trans mounts put more of the hit into the tires.'),
         p('Cooling: the radiator is sized for the car\'s factory engine. Make far more power and the car runs hot over a long circuit race and loses pace as the ECU pulls timing; a bigger radiator and oil cooler fix it. Drag passes are too short to notice. Safety: tech wants a parachute on any car that traps over 150 mph (Weight & Safety).'),
+        p('Nitrous on a boosted engine: the shot burns fast and adds cylinder pressure, so the tune pulls timing for it (about 2 degrees per 50 hp on a V8, more on a small engine). On boost that means it knocks sooner while it sprays: the Setup screen says by how much. A big shot on a lot of boost needs less boost, better fuel or lower compression.'),
         p('Nitrous needs fuel too. A dry kit adds its fuel through your injectors, so the injectors and pump must feed the engine plus the shot; a wet kit sprays its own fuel but draws it from your pump; the big foggers bring their own. Short on fuel, the spray runs lean and can burn a piston: the dyno shows SPRAY FUEL.'),
         h('h2', {}, 'Tuning'),
         p('Grip comes from tire compound, tire pressure (each tire has an ideal psi), tire temperature and weight transfer. Ladder bars / 4-links, springs and shocks change how hard the car hits the tires. Gearing, launch RPM, boost, and throttle management decide whether you hook or go up in smoke.'),

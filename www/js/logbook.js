@@ -94,7 +94,7 @@
         if (lvl >= 2) { ch.wmph.push(+(sim.ww * S.r * 2.23694).toFixed(1)); ch.boost.push(+(sim.boost || 0).toFixed(1)); ch.thr.push(Math.round((sim.thr || 0) * 100)); }
         if (lvl >= 3) {
           var l = sim.thr > 0.5 ? lam * (1 + (lean - 1) * load * load) : 1;
-          ch.afr.push(+(l * st).toFixed(1)); ch.tc.push(+((sim.tcRed || 0) * 20 + (sim.knockDeg || 0)).toFixed(1));
+          ch.afr.push(+(l * st).toFixed(1)); ch.tc.push(+((sim.tcRed || 0) * 20 + (sim.knockDeg || 0) + (sim.nosLvl || 0) * (S.nosDeg || 0)).toFixed(1));
           ch.g.push(+((sim.a || 0) / 9.81).toFixed(2)); ch.shock.push(Math.round((sim.cr || 0) * 1000));
         }
       }

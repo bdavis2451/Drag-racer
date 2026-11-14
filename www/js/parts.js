@@ -1051,7 +1051,7 @@
       t.forEach(function (id) {
         if (DR.FI[id].flow <= cur.flow) return;
         var c = withParts(inst, { fi: id }); c.tune = Object.assign({}, c.tune); delete c.tune.boost;
-        var S0 = DR.buildSpec(c); c.tune.boost = Math.max(S0.boostSet, Math.min(DR.PKG_BOOST[DR.PKG_BOOST.length - 1], S0.knock - 1, S0.sparkPsi, S0.maxBoost));
+        var S0 = DR.buildSpec(c); c.tune.boost = Math.max(S0.boostSet, Math.min(DR.PKG_BOOST[DR.PKG_BOOST.length - 1], DR.knockSafe(S0) - 1, S0.sparkPsi, S0.maxBoost));
         var pw = bandPower(c);
         if (pw > bestP) { bestP = pw; best = id; }
       });
@@ -1289,12 +1289,12 @@
     function setBoost() {
       var S = DR.buildSpec(copy);
       if (S.fiType === 'none') return;
-      var want = Math.min(DR.PKG_BOOST[tier], S.knock - 1, S.sparkPsi, S.maxBoost);
+      var want = Math.min(DR.PKG_BOOST[tier], DR.knockSafe(S) - 1, S.sparkPsi, S.maxBoost);
       var was = S.boostSet;
       copy.tune.boost = Math.max(was, Math.round(want * 2) / 2);
       // more boost heats the charge and lowers the knock limit: back off
       // until it is a psi under it again
-      while (copy.tune.boost > was && DR.buildSpec(copy).knock - 1 < copy.tune.boost) copy.tune.boost -= 0.5;
+      while (copy.tune.boost > was && DR.knockSafe(DR.buildSpec(copy)) - 1 < copy.tune.boost) copy.tune.boost -= 0.5;
       // and no more than the engine's internals take (that's the bottom-end
       // package's job)
       while (copy.tune.boost > was && DR.buildSpec(copy).risk.engine > 0) copy.tune.boost -= 0.5;
@@ -1334,9 +1334,9 @@
       // can actually be used
       if (boostPkg) {
         var Sb = DR.buildSpec(copy);
-        if (Sb.fiType !== 'none' && Sb.sparkPsi < Math.min(DR.PKG_BOOST[tier], Sb.knock - 1, Sb.maxBoost)) {
+        if (Sb.fiType !== 'none' && Sb.sparkPsi < Math.min(DR.PKG_BOOST[tier], DR.knockSafe(Sb) - 1, Sb.maxBoost)) {
           var ig = DR.partOptions('ignition', copy).filter(function (o) { return o.id !== 'stock' && unl('ignition', o) && rank('ignition', copy, o.id) > rank('ignition', copy, DR.partId('ignition', copy)); })
-            .filter(function (o) { return Sb.sparkPsi - (DR.getOption('ignition', copy).spark || 0) + (o.spark || 0) >= Math.min(DR.PKG_BOOST[tier], Sb.knock - 1, Sb.maxBoost); })[0];
+            .filter(function (o) { return Sb.sparkPsi - (DR.getOption('ignition', copy).spark || 0) + (o.spark || 0) >= Math.min(DR.PKG_BOOST[tier], DR.knockSafe(Sb) - 1, Sb.maxBoost); })[0];
           if (ig) { copy.parts.ignition = ig.id; steps.push({ cat: 'ignition', id: ig.id, opt: ig }); setBoost(); }
         }
       }
