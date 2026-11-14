@@ -27,7 +27,7 @@
   L.analyzer = function (inst, S) {
     var lvl = L.level(inst);
     if (!lvl) return null;
-    var a = { lim: null, limT: 0, early: null, bogMin: 1e9, spin: null, spinEnd: null, boostAt: null, tc: null, tcEnd: null, lastGear: 0 };
+    var a = { lim: null, limT: 0, early: null, bogMin: 1e9, spin: null, spinEnd: null, boostAt: null, tc: null, tcEnd: null, kn: null, knMax: 0, lastGear: 0 };
     var cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1;
     return {
       sample: function (sim) {
@@ -46,6 +46,9 @@
         if (lvl >= 3) {
           if ((sim.tcRed || 0) > 0.03 && a.tc === null) a.tc = t;
           if ((sim.tcRed || 0) <= 0.03 && a.tc !== null && a.tcEnd === null) a.tcEnd = t;
+          // timing pulled for knock: where it started and the most it pulled
+          if ((sim.knockDeg || 0) > 2 && a.kn === null) a.kn = { rpm: rpm, psi: sim.boost };
+          a.knMax = Math.max(a.knMax, sim.knockDeg || 0);
         }
       },
       // the line (or '' if the pass was clean)
@@ -59,6 +62,7 @@
         if (a.bogMin < 1e8 && a.bogMin < Math.min(lr * 0.6, S.peakTqRpm ? S.peakTqRpm * 0.6 : 1e9)) return 'Bogged off the line: the revs fell to ' + Math.round(a.bogMin / 100) * 100 + '.';
         if (a.lim !== null) return 'Hit the rev limiter in ' + GEARN[a.lim] + ': shift sooner, or a taller gear.';
         if (lvl >= 3 && lean > 1.03) return 'Lean at the top of the gears (' + (Math.round(12.6 * lean * 10) / 10) + ':1): the fuel system is out of breath.';
+        if (lvl >= 3 && a.kn !== null && a.knMax > 6) return 'The tune pulled up to ' + Math.round(a.knMax) + '° of timing for knock (from ' + Math.round(a.kn.rpm / 100) * 100 + ' rpm, ' + Math.round(a.kn.psi) + ' psi)' + (a.knMax > 10 ? ': it detonated. Less boost, better fuel or lower compression.' : ': more boost there buys little.');
         if (a.early !== null) return 'Shifted early in ' + GEARN[a.early] + ': it pulls harder higher up.';
         if (lvl >= 3 && a.tc !== null) return 'The traction control pulled timing from ' + f1(a.tc) + ' to ' + f1(a.tcEnd !== null ? a.tcEnd : sim.t) + ' s.';
         if (lvl >= 2 && a.boostAt !== null) return 'Full boost at ' + f1(a.boostAt) + ' s.';
@@ -90,7 +94,7 @@
         if (lvl >= 2) { ch.wmph.push(+(sim.ww * S.r * 2.23694).toFixed(1)); ch.boost.push(+(sim.boost || 0).toFixed(1)); ch.thr.push(Math.round((sim.thr || 0) * 100)); }
         if (lvl >= 3) {
           var l = sim.thr > 0.5 ? lam * (1 + (lean - 1) * load * load) : 1;
-          ch.afr.push(+(l * st).toFixed(1)); ch.tc.push(+((sim.tcRed || 0) * 20).toFixed(1));
+          ch.afr.push(+(l * st).toFixed(1)); ch.tc.push(+((sim.tcRed || 0) * 20 + (sim.knockDeg || 0)).toFixed(1));
           ch.g.push(+((sim.a || 0) / 9.81).toFixed(2)); ch.shock.push(Math.round((sim.cr || 0) * 1000));
         }
       }

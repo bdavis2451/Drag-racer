@@ -349,10 +349,14 @@
     DR.pixText(c, 'N2O', 14, 9, armed ? '#ffffff' : '#e3d6ff');
   }
 
-  function rollFailure(S) {
+  function rollFailure(S, cond, heat) {
     var r = S.risk, est = DR.simulate(S, {}).et;
     var span = Math.max(1.5, Math.min(est, 12) * 0.8);
-    if (Math.random() < r.engine) return { failAt: 0.6 + Math.random() * span, failType: 'engine' };
+    // a hot day (or a heat-soaked engine) knocks sooner: past where power
+    // stops on the day it detonates (on top of the risk already counted)
+    var eng = r.engine, kd = DR.knockOnDay(S, cond, heat && heat.eng), bTop = S.boostTop || S.boostSet;
+    if (kd && kd.shift > 0) eng = Math.min(0.85, eng + 0.08 * (Math.max(0, bTop - kd.top - 0.5) - Math.max(0, bTop - S.knockTop - 0.5)));
+    if (Math.random() < eng) return { failAt: 0.6 + Math.random() * span, failType: 'engine' };
     if (Math.random() < r.trans) return { failAt: 0.4 + Math.random() * span, failType: 'trans' };
     if (Math.random() < (r.axle || 0)) return { failAt: 0.05 + Math.random() * 0.5, failType: 'axle' };
     if (Math.random() < (r.chassis || 0)) return { failAt: 0.05 + Math.random() * 0.4, failType: 'chassis' };
@@ -363,10 +367,10 @@
   function RaceScreen(cfg) {
     var settings = G.state.settings, testDrive = !!cfg.inst;
     var inst = cfg.inst || G.car(), S = G.spec(inst);
-    var fail = rollFailure(S);
+    var heat = testDrive ? { eng: 0, nosP: 1 } : G.roundHeat(inst, cfg);
+    var fail = rollFailure(S, cfg.cond || DR.Race.cond(cfg), heat);
     // a hired drag driver in your seat: they drive, you watch
     var drv = cfg.driver && DR.Team ? DR.Team.staff(cfg.driver) : null, drvAI = drv ? DR.AIDriver.fromDrag(drv) : null, drvStageAt = null;
-    var heat = testDrive ? { eng: 0, nosP: 1 } : G.roundHeat(inst, cfg);
     // the data logger, if the car has one
     var rec = testDrive ? null : DR.Logbook.recorder(inst, S);
     var dsA = testDrive ? null : DR.Logbook.analyzer(inst, S);   // "the data says"
@@ -500,7 +504,10 @@
     var vsLine = opp ? 'VS ' + opp.label : 'TEST & TUNE';
     infoEl.innerHTML = '';
     setMsg(vsLine, opp ? (cfg.mode === 'street' ? 'Bet: ' + DR.money(cfg.bet) + ' • ' : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name + (DR.multiRound(cfg.ev) ? ' round ' + (cfg.round + 1) + '/' + cfg.ev.opps.length : '') + ' • Prize: ' + DR.money(cfg.reward) + ' • ' : '') + 'Hold GAS to do your burnout.' : 'Hold GAS to do your burnout.');
-    if (cfg.cond) subEl.textContent = DR.condLabel(cfg.cond) + (heat.eng > 1 ? ' • water ' + Math.round(195 + heat.eng * 1.8) + '°F' : '') + ' • ' + subEl.textContent;
+    // hot air knocks sooner: say so when it costs this build (cool air, the other way)
+    var kDay = cfg.cond ? DR.knockOnDay(S, cfg.cond, heat.eng) : null, kNote = '';
+    if (kDay && Math.abs(kDay.shift) >= 1 && (S.boostTop || S.boostSet) > kDay.knock - 1) kNote = kDay.shift > 0 ? ' • hot charge: knocks past ~' + kDay.knock + ' psi today' : ' • cool air: takes ~' + kDay.knock + ' psi today';
+    if (cfg.cond) subEl.textContent = DR.condLabel(cfg.cond) + (heat.eng > 1 ? ' • water ' + Math.round(195 + heat.eng * 1.8) + '°F' : '') + kNote + ' • ' + subEl.textContent;
     if (estLine) subEl.textContent = estLine + subEl.textContent;
     var introSub = subEl.textContent;
 

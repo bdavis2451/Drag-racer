@@ -212,6 +212,35 @@ knock-sensor part, a separate knock gauge.
 - Tuner (scr/kntuner.js), qolsmoke, pkgsmoke, burnui, tubest: clean;
   tune/dyno screens checked (scr/knui.js, kn_dyno.png).
 
+## Integration pass (Nov 14, owner's quality rule)
+Rechecked every caller and text after shipping; found and fixed:
+- **Races ignored the weather and heat soak for knock** (only air density).
+  Now `Sim.kdT` = air - 25 C + half the heat soak past 8 C moves the knock
+  point (`boostedTorque(S, rpm, boost, kdT)`); `DR.knockDT`,
+  `DR.knockOnDay(S, cond, engHeat)`.
+- **Failure roll** (race.js `rollFailure`) adds the detonation risk a hot
+  day causes past where power stops.
+- **Race intro** says "hot charge: knocks past ~N psi today" (or "cool
+  air: takes ~N") when it matters to the build.
+- **Data logger:** the Timing pulled trace includes knock retard
+  (`sim.knockDeg`: 10 deg at the plateau, more past it); the Pro logger's
+  "data says" line reports it ("pulled up to N deg for knock from X rpm").
+- **Diesels:** no knock notes, status or intake-air text (race triples at
+  100 psi were reading "timing pulled").
+- **Clutch bug (older, found by this check):** a clutch that couldn't hold
+  the engine's torque flipped between locked and slipping every step and
+  passed no torque on the slipping steps, halving drive (a 14 psi LS1 on a
+  stock clutch trapped 118 mph, 126 with 10% less power). Now it passes up
+  to its capacity. 5 rivals 0.002-0.05 s quicker; stock cars unchanged.
+- Tested: weather sweep (power falls monotonically with heat and with
+  less power, at grip 1 and 4), edge cases (diesel 100 psi, NA, carb
+  blower, rotary, nitrous on boost, E85 low-comp, high-comp, old save),
+  race intro text, logger line, calibk (44 within 3%), bench, rivals,
+  qolsmoke, pkgsmoke, burnui, tubest, tuner.
+- **Planned follow-up:** nitrous on a boosted engine should lower the
+  knock point (tuners pull timing for a shot on boost). Not modelled before
+  or now: in the backlog, asked.
+
 ## Sources
 - HP Academy forum: "knock limited engine high boost low timing or vice
   versa" (Andre Simon, H24); "timing retard to combat knock" (Chris Wall,

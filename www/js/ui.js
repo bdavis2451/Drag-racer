@@ -316,7 +316,7 @@
       ['Power', fmtHp(S.peakHp) + (S.nosHp ? ' +' + S.nosHp + ' N2O' : ''), 'acc'],
       ['Torque', Math.round(S.peakTq) + ' lb-ft'],
       S.fiType !== 'none' ? ['Boost', S.boostSet.toFixed(1) + ' psi ' + (S.tbs && S.tbs.name ? S.tbs.name : DR.FI[S.fiId].name.replace('Factory ', ''))] : null,
-      S.fiType !== 'none' ? ['Intake air', Math.round(S.iat) + ' C / ' + Math.round(S.iat * 1.8 + 32) + ' F at full boost • knocks past ' + S.knock + ' psi, power stops at ' + S.knockTop, S.iat > 75 || S.boostSet > S.knockTop + 0.5 ? 'bad' : ''] : null,
+      S.fiType !== 'none' ? ['Intake air', Math.round(S.iat) + ' C / ' + Math.round(S.iat * 1.8 + 32) + ' F at full boost' + (S.diesel ? '' : ' • knocks past ' + S.knock + ' psi, power stops at ' + S.knockTop), S.iat > 75 || S.boostSet > S.knockTop + 0.5 ? 'bad' : ''] : null,
       ['Weight', kgLb(S.m) + ' (' + Math.round(S.f * 100) + '% front)'],
       ['Drive', S.drive + ', ' + S.ratios.length + '-spd ' + { manual: 'manual', auto: 'auto', seq: 'sequential', dct: 'DCT' }[tr.type]],
       tr.type === 'auto' ? ['Converter', S.stall + ' stall' + (S.tbrake ? ' + transbrake' : ', foot brake')] : null,

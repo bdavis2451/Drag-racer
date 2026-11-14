@@ -33,6 +33,19 @@ live Pages build on an iPhone: every push reaches him (he is our tester).
 - Pages the web-fetch tool can't reach: download them plainly with `curl`
   (no disguised browser identity; a site that blocks bots stays blocked).
 
+## Quality (owner, Nov 14)
+
+- **Every update fully integrated.** A new system reaches everything it
+  touches: physics, rivals/AI, packages, the tuner, the data logger, every
+  screen and help text that mentions it, saves. Anything not wired in yet
+  is written down as a planned follow-up and done soon after, never left
+  half-connected.
+- **Recheck the work, in detail.** Before shipping: grep every caller and
+  every text that mentions what changed, test the edge cases (diesel, NA,
+  carbs, rotary, nitrous, old saves, rivals), look at the screens, and
+  re-read the diff. The game is complex now: avoiding bugs and future
+  issues is worth any amount of time and tokens.
+
 ## A file per feature
 
 Every update gets a working file, `docs/features/<name>.md`, started at the

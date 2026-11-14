@@ -2,6 +2,23 @@
 
 Short notes for testing, newest first.
 
+## Knock follow-up: weather counts, logger shows it, a clutch bug fixed
+
+- **Hot days knock sooner in races.** The day's air temperature (and an
+  engine heat-soaked between rounds) moves the knock point: about 2 psi
+  less on a 100°F day than a 77°F one, more on a cool night. The race intro
+  tells you when it matters ("hot charge: knocks past ~14 psi today").
+- **Data logger:** the Timing pulled trace now includes timing pulled for
+  knock, and the Pro logger tells you how much and from where.
+- **Fixed: a clutch that couldn't hold the engine's torque lost half the
+  drive** (the car could even get quicker with less power). Now it slips
+  but still passes everything it can hold. Cars on a clutch too small for
+  their power are quicker; a few rivals are up to 0.05 s quicker.
+- Diesels no longer show knock warnings at big boost.
+
+**Try:** a boosted car on a hot day vs a cool night; a big-power car on its
+stock clutch. **Look out for:** anything that gets quicker with less power.
+
 ## Knock: how much boost depends on the engine, not just the fuel
 
 - **No more one number per fuel.** Each engine has its real compression

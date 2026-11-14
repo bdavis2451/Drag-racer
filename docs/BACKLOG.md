@@ -19,6 +19,9 @@ the top of each section.
 - **Boost by rpm** (a taper setting): the knock model makes the midrange
   give up a little at high boost; real tunes taper boost from the midrange.
   Only boost by gear exists. Proposed Nov 14.
+- **Nitrous on boost lowers the knock point** (tuners pull timing for a
+  shot on a boosted engine). Not modelled; planned follow-up to the knock
+  model. Asked Nov 14.
 - **Turbo wear** (a turbo that wears like tires/clutch, faster with hot
   exhaust): doesn't exist; the knock model shows hot exhaust as creep and
   engine risk instead. Proposed Nov 14.

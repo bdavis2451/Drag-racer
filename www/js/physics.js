@@ -108,14 +108,22 @@
   }
   DR.dieselState = function (S, rpm, boost) { return S.dsl ? dieselState(S, rpm, boost) : null; };
   // Full-throttle torque (Nm) at rpm with a given boost (psi). No nitrous.
-  function boostedTorque(S, rpm, boost) {
+  // (kdT: how much hotter the charge is than on a 25 C day, from the
+  // weather and heat soak: it moves the knock point only; the thinner air is
+  // the race's own correction. After a call, kLast holds how far past the
+  // knock point it ran (psi) and that point's pulled zone.)
+  var kLast = { x: 0, P: 1 };
+  function knockDeg(x, P) { return x <= 0 ? 0 : x <= P ? 10 * x / P : 10 + 2 * (x - P); }
+  DR.knockDeg = knockDeg;
+  function boostedTorque(S, rpm, boost, kdT) {
     if (S.dsl) return Math.min(dieselState(S, rpm, boost).T, S.fuelW / Math.max(rpm, 300) / RPM2W);
     var w = Math.max(rpm, 300) * RPM2W;
     var Tna = S.Tpk * shape(S, rpm);
     // past the mechanical limit the valves float: power falls away fast
     if (S.mech && rpm > S.mech) Tna *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
-    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat, rpm) : 99;
+    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat + (kdT || 0), rpm) : 99;
     var be = boostUsed(boost, kn);
+    kLast.x = boost - kn; kLast.P = knockSpan(kn);
     // past what the ignition can light, cylinders misfire
     if (S.sparkPsi != null && boost > S.sparkPsi) be -= (boost - S.sparkPsi) * 0.7;
     // (S.bk: how well this engine family turns big boost into power: a
@@ -1000,8 +1008,8 @@
     if (fs.ratio > 1.02) out[fs.by] = out[fs.by] || (fs.nos ? 'Can\'t feed the nitrous' : 'Running lean');
     if (S.untuned && S.untuned.length) out.ecu = 'Needs a tune';
     if ((S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
-    if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.knockTop + 0.5) out.fueltype = 'Detonating at ' + (S.boostTop || S.boostSet) + ' psi';
-    else if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.knock + 0.5) out.fueltype = 'Timing pulled past ' + S.knock + ' psi';
+    if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knockTop + 0.5) out.fueltype = 'Detonating at ' + (S.boostTop || S.boostSet) + ' psi';
+    else if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knock + 0.5) out.fueltype = 'Timing pulled past ' + S.knock + ' psi';
     if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.headPsi + 0.5) out.headstud = 'Head lifts past ' + S.headPsi + ' psi';
     if (S.peakHp + S.nosHp > S.coolHp * 1.05) out.cooling = 'Runs hot in long races';
     if (S.creep) out.wastegate = 'Boost creeps +' + S.creep + ' psi';
@@ -1115,7 +1123,8 @@
     if (S.creep && S.fiType !== 'none') r.notes.push('Boost creeps ' + S.creep + ' psi past the target up top: the internal wastegate can\'t dump enough exhaust (a ported or external gate fixes it)');
     if (bTop > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + bTop + ' psi - misfiring past ' + S.sparkPsi + ' psi');
     var kWhy = S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel';
-    if (bTop > S.knockTop + 0.5) { r.engine += Math.min(0.7, (bTop - S.knockTop) * 0.08); r.notes.push('Detonating: past about ' + S.knockTop + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression'); }
+    if (S.diesel || S.fiType === 'none') { /* no spark knock */ }
+    else if (bTop > S.knockTop + 0.5) { r.engine += Math.min(0.7, (bTop - S.knockTop) * 0.08); r.notes.push('Detonating: past about ' + S.knockTop + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression'); }
     else if (bTop > S.knock + 0.5) { r.engine += Math.min(0.1, (bTop - S.knock) * 0.015); r.notes.push('Timing pulled: past ' + S.knock + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and the exhaust runs hot'); }
     if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)'); }
     if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
@@ -1190,6 +1199,16 @@
     return (k == null ? 1 : k) * tk;
   };
   // engine output against the 25 C the dyno figures are for
+  // how much hotter the charge is than on the 25 C day the dyno figures are
+  // for (C): the air outside, plus a heat-soaked intake between rounds
+  DR.knockDT = function (cond, engHeat) { return (cond ? cond.air - DR.AMBIENT_C : 0) + 0.5 * clamp((engHeat || 0) - 8, 0, 20); };
+  // the knock point and where power stops on the day (psi)
+  DR.knockOnDay = function (S, cond, engHeat) {
+    if (S.fiType === 'none' || S.diesel || S.knock == null) return null;
+    var d = DR.knockDT(cond, engHeat), kf = S.knockFuel, k0 = Math.min(kf + 2, kf - 0.12 * (S.iat - 50)), k1 = Math.min(kf + 2, kf - 0.12 * (S.iat + d - 50));
+    var sh = Math.round((k0 - k1) * 2) / 2;
+    return { shift: sh, knock: S.knock - sh, top: S.knockTop - sh };
+  };
   DR.airPower = function (cond, S) {
     return Math.pow((DR.AMBIENT_C + 273.15) / (cond.air + 273.15), S.fiType === 'turbo' ? 0.25 : 0.5);
   };
@@ -1224,6 +1243,10 @@
     // its normal running temperature; the ECU pulls timing past ~8 C) and a
     // nitrous bottle that has lost pressure as it emptied and cooled
     if (opts.engHeat) this.airK *= 1 - 0.003 * clamp(opts.engHeat - 8, 0, 20);
+    // the charge runs as much hotter as the air is (and a heat-soaked
+    // engine's intake warms it more): the knock point drops with it
+    this.kdT = DR.knockDT(this.cond, opts.engHeat);
+    this.knockDeg = 0;
     this.nosP = opts.nosP || 1;
     // tire shake: how prone this run is (soft, low-pressure sidewalls on a
     // sticky track shake; stiffer rear rebound settles it; and no two
@@ -1494,7 +1517,9 @@
       // a carb's secondaries off the line: vacuum ones open softly, an
       // oversized carb stumbles for a moment before the signal comes up
       var hitK = S.carbHit && this.launched && this.t < 0.5 ? S.carbHit + (1 - S.carbHit) * this.t / 0.5 : 1;
-      Te = boostedTorque(S, rpm, this.boost) * (S.dsl && S.dsl.gearLim ? S.dsl.gearLim[this.gear] || 1 : 1) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
+      Te = boostedTorque(S, rpm, this.boost, this.kdT) * (S.dsl && S.dsl.gearLim ? S.dsl.gearLim[this.gear] || 1 : 1) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
+      // timing the tune pulled for knock (degrees, for the data logger)
+      this.knockDeg = S.diesel || !(this.boost > 0) ? 0 : knockDeg(kLast.x, kLast.P);
       // a soft cut (TC past full retard) drops cylinders: heard as a crackle
       if (this.tcRed > 0.3) this.cutT += dt * (this.tcRed - 0.3) / 0.5;
       var p = Te * wE;
@@ -1738,7 +1763,10 @@
       }
       if (!done) {
         var dw = this.we - this.ww * Gr;
-        var Tc = Math.abs(dw) < 1e-6 ? 0 : (dw > 0 ? cap : -cap);
+        // (at the same speed on both sides, e.g. the step after it broke
+        // loose from locked: it passes the engine's torque up to what it
+        // holds, not nothing)
+        var Tc = Math.abs(dw) < 1e-6 ? clamp(Te, -cap, cap) : (dw > 0 ? cap : -cap);
         this.clutchE += Math.abs(Tc * dw) * dt;
         var weN = this.we + dt * (Te - Tc) / S.Ie;
         tf = this.tireForce(this.ww, N, mu);
