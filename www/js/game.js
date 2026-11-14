@@ -752,7 +752,7 @@
   // MJ per kg of tire. Drag tires last 1.75x what they used to (real drag
   // slicks stay useful for ~50 passes; see docs/features/tuner-v2.md)
   var DRAG_LIFE_K = 1.75;
-  var TIRE_LIFE = { Street: 0.8 * DRAG_LIFE_K, 'Drag Radial': 0.67 * DRAG_LIFE_K, Slick: 1.25 * DRAG_LIFE_K, Track: 0.9, 'Race Slick': 0.8 };
+  var TIRE_LIFE = { Street: 0.8 * DRAG_LIFE_K, 'Drag Radial': 0.67 * DRAG_LIFE_K, Slick: 1.25 * DRAG_LIFE_K, Track: 0.9, 'Race Slick': 0.8, 'Radial Slick': 1.6 * DRAG_LIFE_K, 'Front Runner': 1 };   // (radial slicks: longer life, M/T)
   G.addWear = function (inst, S, sim, passes) {
     if (inst.ai) return;
     passes = passes || 1;
@@ -788,7 +788,7 @@
 
   // circuit distance: a tire lasts so many km of hard laps (race slicks a
   // race weekend or two, track tires a few, street tires a season)
-  var TIRE_KM = { Street: 900, Track: 500, 'Race Slick': 300, 'Drag Radial': 250, Slick: 120 };
+  var TIRE_KM = { Street: 900, Track: 500, 'Race Slick': 300, 'Drag Radial': 250, Slick: 120, 'Radial Slick': 150, 'Front Runner': 400 };
   G.addTireKm = function (inst, S, km) {
     if (inst.ai) return;
     inst.wear = inst.wear || {};

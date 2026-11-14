@@ -232,7 +232,7 @@
   // ---------------------------------------------------------------- sponsors
   // What each sponsor sells, so what it discounts while you're signed with
   // it, and what it wants on the car when you win its races.
-  function drag(S) { return S.tire.kind === 'Drag Radial' || S.tire.kind === 'Slick'; }
+  function drag(S) { return S.tire.kind === 'Drag Radial' || S.tire.kind === 'Slick' || S.tire.kind === 'Radial Slick'; }
   DR.SPONSOR_PERKS = {
     parts: { grp: 'engine', pct: 0.1 }, slick: { grp: 'engine', pct: 0.1 }, pixel: { grp: 'engine', pct: 0.1 },
     vortex: { grp: 'engine', pct: 0.12, prod: ['an aftermarket intake', function (S, inst) { return DR.partId('intake', inst) !== 'stock'; }] },

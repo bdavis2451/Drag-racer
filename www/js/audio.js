@@ -293,7 +293,7 @@
     // burnout). Fade in/out smoothly so a quick chirp doesn't click.
     var want = Math.min(1, Math.max(0, slip || 0));
     v.tire += (want - v.tire) * (want > v.tire ? 0.35 : 0.12);
-    var kind = st.tire || 'Street', tone = kind === 'Slick' ? 0.25 : kind === 'Drag Radial' ? 0.55 : 1;
+    var kind = st.tire || 'Street', tone = kind === 'Slick' ? 0.25 : kind === 'Radial Slick' ? 0.35 : kind === 'Drag Radial' ? 0.55 : 1;
     var tAmt = Math.pow(v.tire, 1.4);
     v.tf.frequency.setTargetAtTime((kind === 'Street' ? 1050 : 850) + (Math.random() - 0.5) * 160 + tAmt * 150, t, 0.03);
     v.tg.gain.setTargetAtTime(tAmt * tone * 0.6, t, 0.05);

@@ -129,7 +129,7 @@
       color: inst.color || car.col, stripe: inst.stripe || '', rim: inst.rim || '#c8c8c8',
       kit: inst.kit || null, vis: inst.vis && Object.keys(inst.vis).length ? inst.vis : null,
       tireR: tire.r, frontR: car.body === 'dragster' ? 0.24 : DR.partId('ftires', inst) !== 'stock' ? 0.30 : DR.TIRES[car.tire].r,
-      slick: tire.kind === 'Slick', radial: tire.kind === 'Drag Radial',
+      slick: tire.kind === 'Slick' || tire.kind === 'Radial Slick', radial: tire.kind === 'Drag Radial',
       blower: !!(fiu.price && (fiu.type === 'roots' || fiu.type === 'screw')),
       scoop: !!(fiu.price && fiu.type === 'turbo' && fiu.flow > 1000),
       wing: aero === 'a2' ? 2 : aero === 'a1' ? 1 : 0,

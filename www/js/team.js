@@ -270,8 +270,8 @@
 
   // lap time lost to cold tires on lap 1, and per lap of wear (x lap no.),
   // for a car of about 220 hp per tonne
-  var TIRE_COLD = { Street: 0.006, Track: 0.012, 'Race Slick': 0.02, 'Drag Radial': 0.01, Slick: 0.02 };
-  var TIRE_DEG = { Street: 0.0005, Track: 0.0008, 'Race Slick': 0.0011, 'Drag Radial': 0.0014, Slick: 0.0022 };
+  var TIRE_COLD = { Street: 0.006, Track: 0.012, 'Race Slick': 0.02, 'Drag Radial': 0.01, Slick: 0.02, 'Radial Slick': 0.02, 'Front Runner': 0.006 };
+  var TIRE_DEG = { Street: 0.0005, Track: 0.0008, 'Race Slick': 0.0011, 'Drag Radial': 0.0014, Slick: 0.0022, 'Radial Slick': 0.0018, 'Front Runner': 0.0006 };
 
   // ---------------------------------------------------------------- the field
   var TEAMS = ['Apex Motorsport', 'Redline Racing', 'Kerbside', 'Slipstream', 'Late Apex', 'Grid Kings', 'Pit Lane Co.', 'Tarmac Union', 'Blue Flag', 'Chequered',

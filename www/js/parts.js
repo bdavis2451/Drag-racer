@@ -539,6 +539,15 @@
     opt('ft1', 'Skinny Front Runners', 700, { fm: -14, roll: 0.75, lat: 0.6 }, 'Less weight & rolling resistance. Almost no cornering or braking grip.'),
     opt('ft2', 'Matching Tires All Round', 600, { fm: 0, roll: 1, match: true }, 'The wheels that aren\'t driven get the same road tire as the drive wheels (street, track or race slick). No use with drag tires.')
   ]};
+  // the wheels on the axle that isn't driven (the drive axle's are
+  // 'wheels'); options are listed per car (sizes over its brakes)
+  C.fwheels = { name: 'Wheels', options: [opt('stock', 'Factory Wheels', 0, {})] };
+  // rear wheel tubs: room for wider rear tires
+  C.tubs = { name: 'Rear Wheel Tubs', options: [
+    opt('stock', 'Factory Wheel Wells', 0, { tubW: 0 }),
+    opt('tub1', 'Mini-Tubs', 2500, { tubW: 16.5, lvl: 3 }, 'The inner wheel wells cut out and widened about 2-3 inches each side: room for a 315 radial or a 31x13 slick.'),
+    opt('tub2', 'Full Tubs (Back-Half)', 6000, { tubW: 99, lvl: 4, kg: -10 }, 'The rear floor and wells rebuilt around a narrowed rear end: any slick fits. -10 kg.')
+  ]};
   C.weight = { name: 'Weight Reduction', options: [
     opt('stock', 'Stock', 0, { wr: 0 }),
     opt('w0', 'Spare, Jack & A/C Delete', 250, { wr: 0.02 }, '-2% chassis weight.'),
@@ -784,6 +793,124 @@
     return list;
   };
   // Full option list for a category on this car instance.
+  // ---------------------------------------------------------------- wheels & tires
+  // Four slots: each axle's wheel and tire. The drive axle's are 'wheels'
+  // and 'rtires' (the drive tires, whichever end they're on), the other
+  // axle's 'fwheels' and 'ftires'; the shop names them Front / Rear.
+  var LEGACY_W = { wh1: 1, wh2: 1, wh3: 1 }, LEGACY_FT = { ft1: 1, ft2: 1 };
+  DR.driveOf = function (inst) { var l = DR.getOption('layout', inst); return (l && l.layout) || DR.CARS[inst.carId].drive; };
+  // 'front' or 'rear' for a wheel/tire slot on this car as it's built
+  DR.axleOf = function (inst, cat, drive) {
+    var fwd = (drive || DR.driveOf(inst)) === 'FWD', isDrive = cat === 'wheels' || cat === 'rtires';
+    return isDrive === fwd ? 'front' : 'rear';
+  };
+  function parseWS(s) { var m = /^(\d+)x([\d.]+)$/.exec(s); return m ? [+m[1], +m[2]] : [15, 7]; }
+  function facOf(inst, axle) {
+    var w = DR.CAR_WT[inst.carId], i = axle === 'front' ? 0 : 1, ws = parseWS(w[i]);
+    return { d: ws[0], w: ws[1], size: w[2 + i], sec: DR.sizeSec(w[2 + i]) };
+  }
+  DR.factoryWT = facOf;
+  // a wheel id -> { style, d, w, bead, lb, factory }
+  DR.wheelSpec = function (inst, cat, id) {
+    id = id || (inst.parts && inst.parts[cat]) || 'stock';
+    var axle = DR.axleOf(inst, cat), f = facOf(inst, axle);
+    if (id === 'stock' || LEGACY_W[id]) return { id: id, style: 'factory', d: f.d, w: f.w, bead: id === 'wh3', lb: DR.wheelLb('street', f.d, f.w), factory: true, legacy: !!LEGACY_W[id] };
+    var m = /^(street|forged|drag|bead)(\d+)x([\d.]+)$/.exec(id);
+    if (!m) return { id: 'stock', style: 'factory', d: f.d, w: f.w, lb: DR.wheelLb('street', f.d, f.w), factory: true };
+    var st = DR.WHEEL_STYLES[m[1]];
+    return { id: id, style: m[1], d: +m[2], w: +m[3], bead: !!st.bead, lb: DR.wheelLb(m[1], +m[2], +m[3]) };
+  };
+  // the smallest wheel diameter over the brakes on an axle
+  DR.minWheel = function (inst, axle) {
+    var w = DR.CAR_WT[inst.carId], i = axle === 'front' ? 0 : 1, b = DR.partId('brakes', inst);
+    if (b === 'br1') return w[6][i];
+    var m = w[5][i];
+    return b === 'br3' ? Math.max(m, 18) : b === 'br2' ? Math.max(m, 19) : m;
+  };
+  // the widest tire (section, in) an axle's wells take
+  DR.wellLimit = function (inst, axle) {
+    var w = DR.CAR_WT[inst.carId], fwd = DR.CARS[inst.carId].drive === 'FWD';
+    if (axle === 'front') return fwd ? w[4] : facOf(inst, 'front').sec + 1.5;
+    var lim = fwd ? facOf(inst, 'rear').sec + 1.5 : w[4];
+    return Math.max(lim, DR.getOption('tubs', inst).tubW || 0);
+  };
+  // the tire on a slot -> its data (a factory tire: the car's own, at its
+  // real size)
+  DR.tireSpec = function (inst, cat, id) {
+    var car = DR.CARS[inst.carId], isDrive = cat === 'rtires';
+    id = id || (inst.parts && inst.parts[cat]) || (isDrive ? car.tire : 'stock');
+    var fac = isDrive ? id === car.tire && !(inst.parts && inst.parts.rtires && inst.parts.rtires !== car.tire) : id === 'stock';
+    if (fac || LEGACY_FT[id]) {
+      var f = facOf(inst, DR.axleOf(inst, cat));
+      return Object.assign({}, DR.TIRES[car.tire], { id: id, factory: true, rim: f.d, sec: f.sec, size: f.size, wmin: f.w - 1.5, wmax: f.w + 1.5, legacy: !!LEGACY_FT[id] });
+    }
+    return Object.assign({ id: id }, DR.TIRES[id]);
+  };
+  // does a tire go on a wheel?
+  DR.tireFits = function (t, wh) {
+    if (t.factory) return wh.factory || (wh.d === t.rim && wh.w >= t.wmin && wh.w <= t.wmax);
+    return wh.d === t.rim && wh.w >= t.wmin - 0.01 && wh.w <= t.wmax + 0.01;
+  };
+  var KG = 0.4536;
+  DR.wheelsTires = function (inst, drive) {
+    var car = DR.CARS[inst.carId];
+    if (!DR.CAR_WT[inst.carId]) return null;
+    var p = inst.parts || {};
+    var legacy = !!(LEGACY_W[p.wheels] || LEGACY_FT[p.ftires]);
+    var axD = DR.axleOf(inst, 'wheels', drive), axO = axD === 'front' ? 'rear' : 'front';
+    var wD = DR.wheelSpec(inst, 'wheels'), wO = DR.wheelSpec(inst, 'fwheels');
+    var tD = DR.tireSpec(inst, 'rtires'), tO = DR.tireSpec(inst, 'ftires');
+    var facD = facOf(inst, axD), facO = facOf(inst, axO), base = DR.TIRES[car.tire];
+    var lbD = DR.wheelLb('street', facD.d, facD.w), lbO = DR.wheelLb('street', facO.d, facO.w);
+    var wmD = 2 * (wD.lb - lbD) * KG, wmO = 2 * (wO.lb - lbO) * KG;
+    // the drive tire's sidewall (in) and how far its wheel stretches it
+    var od = tD.r / 0.0127, side = (od - tD.rim) / 2;
+    var stretch = tD.factory ? 0.5 : Math.max(0, Math.min(1, (wD.w - tD.wmin) / Math.max(0.5, tD.wmax - tD.wmin)));
+    var issues = [];
+    [[axD, 'wheels', 'rtires', wD, tD], [axO, 'fwheels', 'ftires', wO, tO]].forEach(function (a) {
+      var ax = a[0], wh = a[3], t = a[4], AX = ax === 'front' ? 'Front' : 'Rear';
+      if (wh.d < DR.minWheel(inst, ax)) issues.push({ cat: a[1], text: AX + ' wheels (' + wh.d + ' in) don\'t clear the brakes: ' + DR.minWheel(inst, ax) + ' in or bigger' + (DR.partId('brakes', inst) !== 'br1' && DR.CAR_WT[inst.carId][6][ax === 'front' ? 0 : 1] < wh.d + 1 ? ', or drag brakes' : '') });
+      if (!DR.tireFits(t, wh)) issues.push({ cat: a[2], text: AX + ' tires don\'t fit the ' + AX.toLowerCase() + ' wheels (' + (t.factory ? t.size : t.name) + ' on ' + wh.d + 'x' + wh.w + ')' });
+      if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' ? 'tubs' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' ? ': tubs fix it (Chassis)' : '') });
+      if (a[1] === 'wheels' && t.kind === 'Front Runner') issues.push({ cat: 'rtires', text: 'Front runners can\'t drive the car' });
+    });
+    return {
+      legacy: legacy, axD: axD, axO: axO, wD: wD, wO: wO, tD: tD, tO: tO,
+      wmD: wmD, massD: (tD.m - base.m) + wmD, massO: (tO.m - base.m) + wmO,
+      roll: tO.roll || 1, side: side, sideRel: Math.max(-0.6, Math.min(0.8, (side - 5.5) / 2.5)), stretch: stretch, issues: issues
+    };
+  };
+  function tireOptions(cat, inst) {
+    var car = DR.CARS[inst.carId], drive = cat === 'rtires', list = [], cur = DR.partId(cat, inst);
+    var f = DR.CAR_WT[inst.carId] ? facOf(inst, DR.axleOf(inst, cat)) : null;
+    list.push(drive ? { id: car.tire, name: 'Factory Tires' + (f ? ' ' + f.size : ''), price: 0, desc: tireDesc(car.tire), factory: true }
+      : { id: 'stock', name: 'Factory Tires' + (f ? ' ' + f.size : ''), price: 0, fm: 0, roll: 1, factory: true, desc: 'The car\'s own tires on its factory wheels.' });
+    if (!drive && LEGACY_FT[cur]) C.ftires.options.forEach(function (o) { if (o.id === cur) list.push(o); });
+    DR.TIRE_SHOP.forEach(function (t) {
+      var x = DR.TIRES[t];
+      if (drive && (t === car.tire || x.kind === 'Front Runner')) return;
+      list.push({ id: t, name: x.name, price: x.price, lvl: x.lvl, group: x.kind, rim: x.rim, desc: tireDesc(t), fm: 0, roll: x.roll || 1 });
+    });
+    return list;
+  }
+  function wheelOptions(cat, inst) {
+    var list = [], cur = DR.partId(cat, inst), drive = cat === 'wheels';
+    if (!DR.CAR_WT[inst.carId]) return C.wheels.options.slice();
+    var ax = DR.axleOf(inst, cat), f = facOf(inst, ax), min = DR.minWheel(inst, ax);
+    list.push({ id: 'stock', name: 'Factory Wheels ' + f.d + 'x' + f.w, price: 0, wm: 0, bead: false, factory: true, desc: 'The wheels the car came with.' });
+    if (LEGACY_W[cur]) C.wheels.options.forEach(function (o) { if (o.id === cur) list.push(o); });
+    Object.keys(DR.WHEEL_STYLES).forEach(function (k) {
+      var st = DR.WHEEL_STYLES[k];
+      st.sizes.forEach(function (sz) {
+        var id = k + sz[0] + 'x' + sz[1];
+        if (id !== cur && (sz[0] < min || (drive && sz[1] < 6))) return;
+        list.push({ id: id, name: st.name + ' ' + sz[0] + 'x' + sz[1], price: st.price, lvl: st.lvl, group: st.name, style: k, d: sz[0], w: sz[1], bead: !!st.bead, wm: 0,
+          desc: st.desc + ' ' + DR.wheelLb(k, sz[0], sz[1]) + ' lb each.' + (sz[1] < 6 ? ' A skinny front-runner size.' : '') });
+      });
+    });
+    return list;
+  }
+
   function listOptions(cat, inst) {
     var car = DR.CARS[inst.carId], i, list = [];
     if (cat === 'engine') {
@@ -807,11 +934,8 @@
       DR.TRANS_SHOP.forEach(function (t) { if (t !== fac && DR.transFits(inst, t) && (dslE ? DR.TRANS[t].dsl || DSL_RACE[t] : !DR.TRANS[t].dsl)) list.push({ id: t, name: DR.TRANS[t].name, price: DR.TRANS[t].price, desc: transDesc(t) }); });
       return list;
     }
-    if (cat === 'rtires') {
-      list.push({ id: car.tire, name: DR.TIRES[car.tire].name + ' (Factory)', price: 0, desc: tireDesc(car.tire) });
-      DR.TIRE_SHOP.forEach(function (t) { if (t !== car.tire) list.push({ id: t, name: DR.TIRES[t].name, price: DR.TIRES[t].price, lvl: DR.TIRES[t].lvl, desc: tireDesc(t) }); });
-      return list;
-    }
+    if (cat === 'rtires' || cat === 'ftires') return tireOptions(cat, inst);
+    if (cat === 'wheels' || cat === 'fwheels') return wheelOptions(cat, inst);
     if (cat === 'fi') {
       var st = DR.stockPart('fi', inst);
       list.push({ id: st, name: st === 'none' ? 'None (Naturally Aspirated)' : DR.FI[st].name + ' (Factory)', price: 0, desc: st === 'none' ? '' : 'Max ' + DR.FI[st].maxBoost + ' psi, feeds ~' + DR.FI[st].flow + ' hp.' });
@@ -1019,8 +1143,10 @@
   }
   function tireDesc(t) {
     var x = DR.TIRES[t];
-    return x.kind + '. Launch grip ' + x.mu.toFixed(2) + ', cornering grip ' + x.lat.toFixed(2) + ', best at ' + x.optP + ' psi & ' + x.topt + '°C. ' + Math.round(x.r * 2 / 0.0254) + '" tall.' +
-      (x.kind === 'Drag Radial' ? ' Soft sidewalls: weak in corners.' : x.kind === 'Slick' ? ' A drag slick: almost no cornering grip.' : x.kind === 'Track' ? ' A road-course tire: sticky in corners.' : x.kind === 'Race Slick' ? ' A road-race slick: the most cornering grip there is.' : '');
+    if (x.kind === 'Front Runner') return 'A skinny front runner: light, rolls easy, ' + (x.r * 2 / 0.0254).toFixed(1) + '" tall, for a ' + x.rim + ' in wheel ' + x.wmin + '-' + x.wmax + ' in wide. Almost no cornering or braking grip; not a drive tire.';
+    return x.kind + '. Launch grip ' + x.mu.toFixed(2) + ', cornering grip ' + x.lat.toFixed(2) + ', best at ' + x.optP + ' psi & ' + x.topt + '°C. ' + (x.r * 2 / 0.0254).toFixed(1) + '" tall' +
+      (x.rim ? ', fits a ' + x.rim + ' in wheel ' + x.wmin + '-' + x.wmax + ' in wide' : '') + '.' +
+      (x.kind === 'Drag Radial' ? ' Soft sidewalls: weak in corners.' : x.kind === 'Slick' ? ' A bias-ply drag slick: wrinkles and forgives a rough track, grows taller at speed; almost no cornering grip.' : x.kind === 'Radial Slick' ? ' A radial drag slick: stiff sidewalls that don\'t wrinkle, runs 15-17 psi, rolls easier and repeats pass after pass; best behind an automatic. Almost no cornering grip.' : x.kind === 'Track' ? ' A road-course tire: sticky in corners.' : x.kind === 'Race Slick' ? ' A road-race slick: the most cornering grip there is.' : '');
   }
 
   // Engine-related categories that get removed on an engine swap.

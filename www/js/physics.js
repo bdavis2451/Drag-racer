@@ -714,6 +714,26 @@
 
     // ---- tires & rotating mass
     S.tireId = tireId; S.tire = tire;
+    // ---- wheels & tires per axle (players' cars; rivals keep the figures
+    // their times were set with: the old single drive-tire model)
+    var wx = DR.wheelsTires ? DR.wheelsTires(inst, S.drive) : null;
+    var legacyWT = ai || !wx || wx.legacy;
+    S.wheels = legacyWT ? null : wx;
+    if (!legacyWT) S.fitIssues = wx.issues;
+    // (the factory tires keep the figures the stock cars were set with)
+    if (!legacyWT && !wx.tD.factory) {
+      // the tire as fitted: a radial on a wide wheel takes more pressure
+      if (wx.tD.kind === 'Drag Radial' || wx.tD.kind === 'Radial Slick') tire = S.tire = Object.assign({}, tire, { optP: Math.round((tire.optP + 1.5 * wx.stretch) * 2) / 2 });
+      // bias slicks grow down track (about half an inch of radius at 150 mph)
+      S.grow = tire.kind === 'Slick' ? 0.0127 / tire.r : 0;
+      // the sidewall: a taller one gives on the hit (a softer launch) but
+      // wrinkles more (shake); a stretched tire on a wide wheel is steadier
+      S.sideRel = wx.sideRel; S.stretch = wx.stretch;
+      S.shakeTK = (1 + 0.25 * wx.sideRel) * (1.12 - 0.24 * wx.stretch);
+      S.hitK = 1 + 0.02 * wx.sideRel;
+    }
+    // AWD: the front axle drives too, on its own tires
+    S.awdTire = !legacyWT && S.drive === 'AWD' && !(wx.tD.factory && wx.tO.factory) ? wx.tO : null;
     // consumables: how worn the drive tires and the clutch are (players'
     // cars only). A worn drag tire has been heat-cycled hard and lost grip;
     // a worn clutch disc holds less.
@@ -725,8 +745,9 @@
     if (S.clCap) S.clCap *= 1 - 0.35 * Math.pow(S.clutchWear, 1.5);
     S.r = tire.r;
     S.tslip = tire.slip; S.tfall = tire.fall; S.tfk = tire.fk || 1;
-    S.bead = !!wheels.bead;
-    var wheelMass = 22 + (ai && wheels.aiWm != null ? wheels.aiWm : wheels.wm) + brakes.bkg * 0.5;
+    S.bead = legacyWT ? !!wheels.bead : !!wx.wD.bead;
+    var wDm = legacyWT ? (ai && wheels.aiWm != null ? wheels.aiWm : wheels.wm) : wx.wmD;
+    var wheelMass = 22 + wDm + brakes.bkg * 0.5;
     var Iaxle = tire.m * tire.r * tire.r * 0.75 + wheelMass * Math.pow(tire.r * 0.55, 2) + 0.9 * shaft.shaft;
     S.Iw = Iaxle * (S.drive === 'AWD' ? 1.8 : 1);
 
@@ -743,12 +764,19 @@
     // builds keep the figures their times were set with)
     var batAi = ai && batt.aiBat != null ? batt.aiBat : batt.bat;
     var batBack = ai ? batAi + Math.min(0, batt.batkg) : batt.bat + batt.batkg, batFront = ai ? batAi - Math.max(0, batt.batkg) : batt.bat;
-    var extraRear = (tire.m - stockTire.m) + (ai && wheels.aiWm != null ? wheels.aiWm : wheels.wm) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0);
-    var extraFront = ftires.fm + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5;
+    // wheels and tires: the drive axle's (and, for players, the other
+    // axle's) against the factory ones, on the axle they sit on
+    var axD = legacyWT ? (tire.m - stockTire.m) + wDm : wx.massD, axO = legacyWT ? ftires.fm : wx.massO;
+    var fwdAx = !legacyWT && S.drive === 'FWD';
+    var extraRear = (fwdAx ? axO : axD) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0);
+    var extraFront = (fwdAx ? axD : axO) + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5;
     var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
     S.f = clamp(front / S.m, 0.2, 0.72);
+    // AWD on its own front tires: the front axle's share of the grip comes
+    // from them (front runners on an AWD car are drive tires too)
+    S.awdMu = S.awdTire && S.awdTire !== tire ? clamp((S.f * S.awdTire.mu + (1 - S.f) * tire.mu) / tire.mu, 0.4, 1.3) : 1;
     S.L = car.wb;
     S.b = S.L * S.f;                      // CG to rear axle
     S.h = car.h - (wt.low || 0) + (tire.r - stockTire.r) * 0.5;   // ride height is added below
@@ -828,7 +856,7 @@
     var pf = d <= 0 ? 1 + 0.25 * (-d) - (S.bead ? 0.55 : 1.4) * d * d : 1 - 0.5 * d - 0.6 * d * d;
     if (T.psi < 9 && !S.bead) pf *= 0.82;          // tire spins on the rim
     S.pf = clamp(pf, 0.4, 1.1);
-    S.crr = 0.012 * (1 + Math.max(0, -d) * 0.6) * ftires.roll;
+    S.crr = 0.012 * (1 + Math.max(0, -d) * 0.6) * (legacyWT ? ftires.roll : wx.roll);
 
     // ---- suspension: front and rear corners with their own spring, bump /
     // rebound damping, bump stops and droop limits under a body that heaves
@@ -1258,9 +1286,9 @@
   // most of the difference by day) and a colder track that grips less and
   // pulls the heat out of the tires sooner.
   DR.SURFACES = {
-    prep:   { name: 'Prepped strip', k: { Street: 1, 'Drag Radial': 1, Slick: 1, Track: 1, 'Race Slick': 1 } },
-    noprep: { name: 'No-prep', k: { Street: 0.96, 'Drag Radial': 0.84, Slick: 0.76, Track: 0.92, 'Race Slick': 0.85 } },
-    street: { name: 'Street', k: { Street: 0.9, 'Drag Radial': 0.8, Slick: 0.7, Track: 0.87, 'Race Slick': 0.8 } }
+    prep:   { name: 'Prepped strip', k: { Street: 1, 'Drag Radial': 1, Slick: 1, Track: 1, 'Race Slick': 1, 'Radial Slick': 1, 'Front Runner': 1 } },
+    noprep: { name: 'No-prep', k: { Street: 0.96, 'Drag Radial': 0.84, Slick: 0.76, Track: 0.92, 'Race Slick': 0.85, 'Radial Slick': 0.79, 'Front Runner': 0.96 } },
+    street: { name: 'Street', k: { Street: 0.9, 'Drag Radial': 0.8, Slick: 0.7, Track: 0.87, 'Race Slick': 0.8, 'Radial Slick': 0.74, 'Front Runner': 0.9 } }
   };
   // { surface, night } -> full conditions (air and track temperature, C)
   DR.conditions = function (surface, night) {
@@ -1331,7 +1359,7 @@
     if (this.cond && SHAKY[S.tire.kind]) {
       var tn = S.tune || {}, optP = S.tire.optP, psi = tn.psi != null ? tn.psi : optP;
       this.shakeK = clamp(1 + (optP - psi) / optP * 1.5, 0.6, 1.8) * ({ prep: 1, noprep: 0.6, street: 0.5 }[this.cond.surface] || 1) *
-        (opts.shakeRnd != null ? opts.shakeRnd : 1) * SHAKY[S.tire.kind];
+        (opts.shakeRnd != null ? opts.shakeRnd : 1) * SHAKY[S.tire.kind] * (S.shakeTK || 1);
       this.shakeDamp = 1 + ((tn.rebR != null ? tn.rebR : 5) - 5) * 0.1;
     }
     this.dist = opts.dist || DR.QUARTER;
@@ -1372,7 +1400,7 @@
   }
 
   Sim.prototype.tireForce = function (ww, N, mu) {
-    var S = this.S, r = S.r, v = this.v;
+    var S = this.S, r = this.rr || S.r, v = this.v;
     var den = Math.max(Math.abs(v), 2.5);
     var s = (ww * r - v) / den, as = Math.abs(s), x = as / S.tslip, f, df;
     if (x < 1) { f = 2 * x - x * x; df = (2 - 2 * x) / S.tslip; }
@@ -1385,7 +1413,7 @@
   // the narrowest window (tire makers: haze them and stage), a slick takes
   // more heat, a street tire somewhere between.
   // tires that shake (sidewalls built to wrinkle), and how readily
-  var SHAKY = { 'Drag Radial': 1, Slick: 0.8 };
+  var SHAKY = { 'Drag Radial': 1, Slick: 0.8, 'Radial Slick': 0.3 };   // (a radial slick's stiff sidewall barely wrinkles)
   var HOT = { 'Drag Radial': [15, 0.009], Street: [25, 0.006] };
   Sim.prototype.tempFactor = function () {
     var t = this.S.tire, T = this.tireT, hot = (this.cond && HOT[t.kind]) || [30, 0.005];
@@ -1406,7 +1434,7 @@
   // most of its grip). [window above the carcass in C, grip lost per C past
   // it, the least it keeps]
   // [.., lowest it goes]
-  var SURF = { 'Drag Radial': [30, 0.0045, 0.55], Slick: [45, 0.003, 0.65], Street: [40, 0.003, 0.72], Track: [40, 0.003, 0.72], 'Race Slick': [40, 0.003, 0.7] };
+  var SURF = { 'Drag Radial': [30, 0.0045, 0.55], Slick: [45, 0.003, 0.65], Street: [40, 0.003, 0.72], Track: [40, 0.003, 0.72], 'Race Slick': [40, 0.003, 0.7], 'Radial Slick': [40, 0.0035, 0.62] };
   Sim.SURF_TAU = 0.5; Sim.SURF_K = 1.9e-3;
   Sim.prototype.surfFactor = function () {
     var w = SURF[this.S.tire.kind] || SURF.Street, over = (this.tsurf || 0) - w[0];
@@ -1437,7 +1465,7 @@
   // how fast a tire comes up to heat in the burnout box: drag radials (thin,
   // soft sidewalls and a thin tread) heat quickly and only want a light
   // burnout; a big slick takes a good long one
-  Sim.burnHeat = function (tire) { return tire.kind === 'Drag Radial' ? 1.6 : tire.kind === 'Slick' ? 1 : 1.25; };
+  Sim.burnHeat = function (tire) { return tire.kind === 'Drag Radial' ? 1.6 : tire.kind === 'Slick' ? 1 : tire.kind === 'Radial Slick' ? 1.2 : 1.25; };
   // a gear up in the burnout box (an automatic shifts itself as the wheels
   // speed up; racers do most of the burnout in 2nd or 3rd)
   Sim.prototype.burnShift = function () {
@@ -1500,7 +1528,7 @@
         // speed: the allowed spin is the target % of the car's speed, never
         // less than that % of ~15 mph (a % of nearly nothing at the hit
         // would read as huge spin)
-        var spinV = this.ww * S.r - this.v, allowV = tgt * Math.max(this.v, 7);
+        var spinV = this.ww * (this.rr || S.r) - this.v, allowV = tgt * Math.max(this.v, 7);
         var over = (spinV - allowV) / allowV;
         // timing retard answers the spin right now (up to ~20 degrees, ~30%
         // of the torque); only spin that keeps going (the integral) adds the
@@ -1660,7 +1688,7 @@
     this.Nr = Nr; this.Nf = Nf;
     var N = S.drive === 'FWD' ? Nf : S.drive === 'AWD' ? Nr + Nf : Nr;
     var loadSens = Math.pow(Math.max(N, 100) / this.N0, -0.08);
-    var mu = S.tire.mu * this.track * (S.wearK || 1) * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? S.mountK || 1 : 1);
+    var mu = S.tire.mu * this.track * (S.wearK || 1) * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? (S.mountK || 1) * (S.hitK || 1) : 1) * (S.awdMu || 1);
     if (!this.cond && this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
     if (this.burnMode) mu *= 0.5;                  // water in the burnout box
     // Tire shake: a soft drag tire loaded right at its limit wraps up and
@@ -1687,7 +1715,8 @@
     this.mu = mu;
 
     // -------- drivetrain
-    var r = S.r, eta = S.eff;
+    // a bias slick grows taller with speed (a taller gear down track)
+    var r = this.rr = S.grow ? S.r * (1 + S.grow * Math.min(1, this.v * this.v / 4489)) : S.r, eta = S.eff;
     var Gr = S.ratios[this.gear] * S.fd;
     var Fx = 0, tf;
     var held = pre || this.finished && this.v < 0.5;

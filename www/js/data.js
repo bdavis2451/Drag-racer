@@ -195,7 +195,109 @@ DR.TIRES = {
   tr_315: { name: 'Track Tire 315/30R18 (R-Compound)', kind: 'Track', lat: 1.15, mu: 1.62, optP: 30, slip: 0.10, fall: 0.22, fk: 1.1, r: 0.335, m: 24, topt: 72, cold: 0.14, price: 1800, lvl: 3 },
   rr_slk: { name: 'Road Race Slick 300/680R18',        kind: 'Race Slick', lat: 1.42, mu: 1.75, optP: 26, slip: 0.10, fall: 0.24, fk: 1.0, r: 0.340, m: 22, topt: 80, cold: 0.25, price: 3200, lvl: 4 },
 };
-DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_245', 'dr_275', 'dr_315', 'ets_28', 'sl_31', 'sl_33', 'sl_36'];
+// Wheels & tires (Nov 14 rework): every tire's real size (M/T / Hoosier
+// spec sheets: rim diameter, the wheel widths it is approved for, section
+// width in inches). Tires added in the rework follow the same fields.
+(function () {
+  var SZ = {
+    st_195: [15, 5.5, 7, 7.7], st_225: [17, 7, 8.5, 8.9], st_255: [18, 8.5, 9.5, 10.0], st_305: [20, 10, 11, 12.0],
+    dr_245: [16, 7, 8.5, 9.6], dr_275: [17, 9, 11, 10.9], dr_315: [15, 8.5, 11, 13.3],
+    ets_28: [15, 9, 11, 12.5], sl_31: [15, 12, 14, 15.7], sl_33: [15, 15, 17, 20.0], sl_36: [16, 15, 16, 19.0],
+    tr_255: [17, 8.5, 9.5, 10.0], tr_315: [18, 10.5, 11.5, 12.4], rr_slk: [18, 10.5, 12, 11.8]
+  };
+  for (var k in SZ) { var t = DR.TIRES[k]; t.rim = SZ[k][0]; t.wmin = SZ[k][1]; t.wmax = SZ[k][2]; t.sec = SZ[k][3]; }
+  DR.TIRES.sl_33.name = 'Drag Slick 33x16.5';
+  // new in the rework
+  var add = {
+    dr_275s: { name: 'Drag Radial 275/60R15', kind: 'Drag Radial', lat: 0.84, mu: 1.90, optP: 17, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.358, m: 27, topt: 60, cold: 0.15, price: 850, rim: 15, wmin: 7.5, wmax: 9.5, sec: 11.1 },
+    rsl_28: { name: 'Radial Slick 28x10.5R15', kind: 'Radial Slick', lat: 0.78, mu: 2.30, optP: 16, slip: 0.14, fall: 0.27, fk: 0.8, r: 0.356, m: 26, topt: 65, cold: 0.2, price: 1900, lvl: 3, rim: 15, wmin: 10, wmax: 12, sec: 12.2 },
+    rsl_31: { name: 'Radial Slick 31x13.5R15', kind: 'Radial Slick', lat: 0.76, mu: 2.70, optP: 16, slip: 0.15, fall: 0.28, fk: 0.85, r: 0.405, m: 37, topt: 68, cold: 0.24, price: 2800, lvl: 4, rim: 15, wmin: 12, wmax: 14, sec: 16.3 },
+    fr_26: { name: 'Front Runner 26x4.0-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.331, m: 11, topt: 40, cold: 0.05, price: 500, rim: 15, wmin: 3.5, wmax: 4, sec: 6.2, roll: 0.75 },
+    fr_26b: { name: 'Front Runner 26x4.0-17', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.337, m: 10, topt: 40, cold: 0.05, price: 550, rim: 17, wmin: 3.5, wmax: 4, sec: 5.4, roll: 0.75 },
+    fr_28: { name: 'Front Runner 28x4.5-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.356, m: 12, topt: 40, cold: 0.05, price: 600, rim: 15, wmin: 3.5, wmax: 4.5, sec: 7.2, roll: 0.75 },
+    fr_18: { name: 'Front Runner 26x6.0R18', kind: 'Front Runner', lat: 0.66, mu: 1.0, optP: 32, slip: 0.12, fall: 0.3, fk: 1, r: 0.330, m: 14, topt: 40, cold: 0.05, price: 650, rim: 18, wmin: 4.5, wmax: 6, sec: 7.0, roll: 0.8 }
+  };
+  for (k in add) DR.TIRES[k] = add[k];
+  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_245', 'dr_275s', 'dr_275', 'dr_315', 'rsl_28', 'rsl_31', 'ets_28', 'sl_31', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
+  // tire outside diameter (inches) from its rolling radius
+  DR.tireOD = function (t) { return Math.round(t.r / 0.0127 * 10) / 10; };
+
+  // Wheel styles. k: weight (lb) = k x (0.55 x diameter + 0.9 x width),
+  // fitted to retailer weights (a one-piece 15x10 drag wheel ~15 lb, a
+  // 15x3.5 runner ~10, a cast 18x8 ~22, a forged 18x9 ~18); a beadlock adds
+  // its ring (+5 lb). Prices per pair.
+  DR.WHEEL_STYLES = {
+    street: { name: 'Street 5-Spoke', price: 600, k: 1.29, desc: 'Cast aluminum: the look, at about factory weight.',
+      sizes: [[15, 7], [15, 8], [16, 7], [16, 8], [17, 8], [17, 9], [17, 10], [18, 8], [18, 9], [18, 10], [19, 9], [19, 10], [20, 9], [20, 10]] },
+    forged: { name: 'Forged Lightweight', price: 1800, k: 1.0, lvl: 2, desc: 'Forged: strong and about 4 lb lighter a corner than cast.',
+      sizes: [[17, 8], [17, 9], [17, 10], [18, 8], [18, 9], [18, 10], [18, 11], [19, 9], [19, 10], [19, 11], [20, 9], [20, 10], [20, 11], [21, 12], [21, 13]] },
+    drag: { name: 'Drag Wheel', price: 900, k: 0.87, desc: 'One-piece spun aluminum: light, with skinny front-runner sizes.',
+      sizes: [[15, 3.5], [17, 4], [18, 5], [15, 8], [15, 10], [15, 12], [17, 10]] },
+    bead: { name: 'Beadlock Drag', price: 2200, k: 0.87, add: 5, bead: true, lvl: 3, desc: 'A ring bolts the tire\'s bead to the wheel: very low tire pressure without the tire spinning on the rim.',
+      sizes: [[15, 10], [15, 12], [15, 14], [15, 16], [16, 16], [17, 10], [17, 11]] }
+  };
+  DR.wheelLb = function (style, d, w) { var s = DR.WHEEL_STYLES[style]; return Math.round((s.k * (0.55 * d + 0.9 * w) + (s.add || 0)) * 10) / 10; };
+
+  // Per car (researched Nov 14, docs/features/wheels-tires.md): factory
+  // wheel front / rear (diameter x width), factory tire front / rear, the
+  // widest rear tire (section, in) the stock wells take, the smallest wheel
+  // over the factory brakes front / rear, and over drag brakes.
+  DR.CAR_WT = {
+    fox: ['15x7', '15x7', '225/60R15', '225/60R15', 12.5, [15, 15], [15, 15]],
+    fox23: ['14x5.5', '14x5.5', '195/75R14', '195/75R14', 12.5, [14, 14], [15, 15]],
+    camaro6: ['16x7.5', '16x7.5', '215/60R16', '215/60R16', 12.5, [15, 15], [15, 15]],
+    camss: ['20x8', '20x9', '245/45R20', '275/40R20', 12.0, [18, 17], [15, 15]],
+    hachi: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.0, [13, 13], [15, 15]],
+    supra: ['17x8', '17x9.5', '235/45R17', '255/40R17', 12.5, [17, 17], [15, 15]],
+    ronin: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.0, [13, 13], [15, 15]],
+    bolt: ['16x6', '16x6', '205/55R16', '205/55R16', 9.0, [15, 15], [15, 15]],
+    pip: ['13x4.5', '13x4.5', '155/80R13', '155/80R13', 8.0, [12, 12], [15, 15]],
+    kaze: ['15x6', '15x6', '195/55R15', '195/55R15', 9.0, [15, 15], [15, 15]],
+    volta: ['17x7', '17x7', '225/45R17', '225/45R17', 9.6, [16, 15], [15, 15]],
+    cobaltss: ['18x7.5', '18x7.5', '225/40R18', '225/40R18', 9.6, [17, 15], [15, 15]],
+    beetle: ['15x4.5', '15x4.5', '165R15', '165R15', 8.2, [15, 15], [15, 15]],
+    mira: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.0, [13, 13], [15, 15]],
+    silvia: ['16x6.5', '16x6.5', '205/55R16', '205/55R16', 10.2, [15, 15], [15, 15]],
+    s2k: ['16x6.5', '16x7.5', '205/55R16', '225/50R16', 10.2, [16, 16], [15, 15]],
+    rx7: ['16x8', '16x8', '225/50R16', '225/50R16', 10.2, [16, 16], [15, 15]],
+    evo: ['17x8', '17x8', '235/45R17', '235/45R17', 10.9, [17, 17], [15, 15]],
+    sti: ['17x7.5', '17x7.5', '225/45R17', '225/45R17', 10.2, [17, 17], [15, 15]],
+    r34: ['18x9', '18x9', '245/40R18', '245/40R18', 10.9, [17, 17], [15, 15]],
+    z35: ['17x7.5', '17x8', '225/50R17', '235/45R17', 10.9, [17, 17], [15, 15]],
+    gtr: ['20x9.5', '20x10.5', '255/40R20', '285/35R20', 12.4, [18, 18], [17, 15]],
+    m3: ['18x8', '18x9', '225/45R18', '255/40R18', 10.9, [17, 17], [15, 15]],
+    p911: ['19x8.5', '19x11', '235/35R19', '305/30R19', 12.4, [18, 18], [17, 15]],
+    lambo: ['20x9', '21x13', '255/30R20', '355/25R21', 14.0, [20, 20], [19, 19]],
+    nova: ['14x7', '14x7', 'F70-14', 'F70-14', 11.5, [14, 14], [15, 15]],
+    chevelle: ['14x7', '14x7', 'F70-14', 'F70-14', 12.0, [15, 14], [15, 15]],
+    charger: ['14x5.5', '14x5.5', 'F70-14', 'F70-14', 12.0, [15, 14], [15, 15]],
+    cuda: ['15x7', '15x7', 'F60-15', 'F60-15', 11.5, [15, 14], [15, 15]],
+    belair: ['14x5', '14x5', '7.50-14', '7.50-14', 11.5, [14, 14], [15, 15]],
+    willys: ['15x5', '15x8', '6.70-15', '9.00-15', 16.5, [15, 15], [15, 15]],
+    monte: ['15x7', '15x7', '215/65R15', '215/65R15', 12.5, [15, 15], [15, 15]],
+    gnx: ['16x8', '16x8', '245/50R16', '245/50R16', 12.5, [15, 15], [15, 15]],
+    camaro: ['16x8', '16x8', '245/50R16', '245/50R16', 12.5, [15, 15], [15, 15]],
+    cobra03: ['17x9', '17x9', '275/40R17', '275/40R17', 11.5, [17, 16], [15, 15]],
+    stang15: ['18x8', '18x8', '235/50R18', '235/50R18', 12.6, [18, 17], [15, 15]],
+    vette5: ['17x8.5', '18x9.5', '245/45R17', '275/40R18', 12.6, [17, 16], [15, 15]],
+    z06: ['18x9.5', '19x12', '275/35R18', '325/30R19', 13.1, [18, 18], [15, 15]],
+    hellcat: ['20x9.5', '20x9.5', '275/40R20', '275/40R20', 11.8, [18, 17], [15, 15]],
+    viper: ['18x11', '19x13', '295/25R18', '355/30R19', 14.0, [18, 19], [17, 15]],
+    hauler: ['15x7', '15x7', '235/75R15', '235/75R15', 13.0, [15, 15], [15, 15]],
+    lightning: ['18x9.5', '18x9.5', '295/45R18', '295/45R18', 13.0, [17, 17], [15, 15]],
+    diesel: ['17x8', '17x8', 'LT265/70R17', 'LT265/70R17', 13.0, [17, 17], [17, 17]],
+    promod: ['15x3.5', '15x16', '26x4.0-15', '33x16.5-15', 99, [15, 15], [15, 15]],
+    rail: ['17x2.5', '16x16', '22x2.5-17', '36x17-16', 99, [15, 15], [15, 15]]
+  };
+  // a factory tire's section width (in) from its size
+  DR.sizeSec = function (s) {
+    var m = /(\d{3})\/\d{2}/.exec(s); if (m) return Math.round(+m[1] / 25.4 * 10) / 10;
+    m = /x(\d+(\.\d+)?)/.exec(s); if (m) return +m[1] + 1.5;
+    m = /^([A-Z])\d{2}/.exec(s); if (m) return { E: 7.6, F: 8.1, G: 8.6 }[m[1]] || 8;
+    m = /^(\d+(\.\d+)?)[-R]/.exec(s); if (m) return +m[1] > 20 ? +m[1] / 25.4 : +m[1];
+    return 8;
+  };
+})();
 
 // ---------------------------------------------------------------------------
 // VEHICLES
