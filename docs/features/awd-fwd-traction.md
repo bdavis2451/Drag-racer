@@ -1,8 +1,149 @@
 # AWD & FWD traction (to revisit)
 
-Status: **parked: test results only, no changes yet.** Owner (Nov 11): make
-this its own update, run 1,500 / 2,000 hp AWD and FWD and a 3,000 hp AWD
-truck, and keep the results here.
+Status: **Nov 14: plan approved (all FWD items 1-7, front ballast added,
+Race drive package keeps FWD cars FWD). AWD tire package fix ships first, on
+its own. Then the FWD build.** Owner (Nov 11):
+make this its own update, run 1,500 / 2,000 hp AWD and FWD and a 3,000 hp AWD
+truck, and keep the results here. Owner (Nov 14): start the FWD research,
+recheck AWD (FWD/AWD only, not the whole W&T work), keep weight in mind and
+audit the weight system.
+
+## Nov 14 recheck (after wheels & tires)
+
+### Bench (good driver, prepped, median of 5, launch rpm swept, race parts,
+methanol, sequential, 2-step + anti-lag, real fitment per car)
+| Build | 60 ft | ET | Before W&T (Nov 12) |
+|---|---|---|---|
+| FWD Civic K20 1,000 hp (24.5x8 slick, the biggest the wells take) | 2.10 | 11.16 @ 142 | 8.70 (36x17 slick) |
+| FWD Civic K20 1,500 hp, same | 2.02 | 10.93 @ 143 | 8.82 |
+| same, tune optimised (launch, boost by gear, TC, clutch) | 1.99 | 10.26 @ 163 | |
+| AWD Civic 1,500 hp (31x13 rear, 24.5x8 front) | 1.20 | 7.22 @ 201 | 6.97 |
+| Evo 1,500 hp | 1.26 | 7.69 @ 186 | |
+| GT-R 1,500 hp | 1.31 | 7.86 @ 181 | 7.91 |
+Real: FWD 1,500 hp Civic 7.80 @ 188 (Aleman, SFWD); AWD 1,500 hp Civic
+7.45 @ 186 (P-Racing) (Autopian, f41). AWD stays close; FWD fell ~1.5 s
+because the W&T rework made the front wells the limit (right for stock
+fenders, but there is no way to fit a bigger front tire).
+
+### Why FWD is slow (traces, scr/fa3-fa6.js)
+1. **Grip ceiling.** Accel sits at mu x front load: 2.0 x ~0.44 = ~0.85 g the
+   whole of 1st. The 24.5x8 slick is the biggest that fits; real 7-second FWD
+   cars run widened one-piece front ends and bigger slicks (DSport f40:
+   "widened one-piece front ends on most front-wheel-drive drag cars";
+   Honda-Tech/DSMTuners: 24.5 to ~400-500 whp, 26 in past ~600 whp with
+   fender work).
+2. **Front weight goes the wrong way.** Every drag package moves the battery
+   to the trunk (also on FWD): -1.2 to -2.1 points front. Race-built FWD cars
+   end at f 0.60 (stock 0.62). Real FWD racers do the opposite: weight
+   forward, "light as possible behind the drive wheels" (DSport f40; se-r.net
+   f31).
+3. **Weight transfer.** FWD cars use the wheelie bar to limit transfer off the
+   front (DSport f40: "perfecting the wheelie bar to limit weight
+   transfer"). In the game the bar only acts in a wheelie, so it does nothing
+   on FWD (and packages skip it there).
+4. **The hit.** At the launch the fronts flash-spin (slip 4-9x), traction
+   control pulls them back, the clutch locks at road speed and the engine
+   drops to ~1,500-2,500 rpm: off boost for ~0.5 s. Real FWD cars slip a
+   slider clutch through this and stay on boost.
+5. Boost by gear works (an earlier test passed a bad value); it helps little
+   while 1-4 dominate.
+
+Lever sizes (1,500 hp FWD Civic, tune optimised each time):
+| Change | 60 ft | ET |
+|---|---|---|
+| now | 1.99 | 10.26 @ 163 |
+| front slick grip 2.4 (26x10-class) | 1.91 | 9.73 @ 171 |
+| + front weight +6 pts | 1.82 | 9.35 @ 177 |
+| grip 2.6 + front weight +8 pts | 1.77 | 9.04 @ 185 |
+| + bar limiting transfer (x0.6) | 1.67 | 8.61 @ 191 |
+| grip 2.8 + weight + bar | 1.62 | 8.41 @ 195 |
+The rest of the gap to ~7.8 is the hit (4).
+
+### AWD
+- **Bug (from W&T):** the tire packages fit only the rear axle; on AWD the
+  factory fronts lower the grip, so Sport/Race/Extreme tires make AWD cars
+  slower than stock: Evo 13.81 -> 13.92, STI 13.41 -> 13.46, R34 13.32 ->
+  13.48, GT-R 10.94 -> 10.96, 911 10.67 -> 10.69, Ram 16.04 -> 16.10.
+- The 3,000 hp Lightning reading (8.18) was my bench missing the converter
+  and transbrake; with them it is unchanged (6.9).
+- AWD grip uses the whole car's weight, so weight transfer doesn't matter;
+  real centre diffs can spin the fronts first. Results are close to real, so
+  left alone.
+
+### Weight audit
+- Curb weights (they include ~80 kg driver) match the real cars within ~3%:
+  EG Civic, Neon R/T, Integra R, GTI, Cobalt SS, Evo IX, STI, R34, R35,
+  997 Turbo, SVJ, Ram 2500 all checked.
+- Weight reduction takes the same share off the front and the rear chassis,
+  so the balance barely moves (+0.2 to +1.0 pt front). Real FWD builds strip
+  the back half.
+- Trunk battery: -1.2 to -2.1 pts front on FWD; its text says "over the drive
+  wheels" (wrong on FWD). Packages fit it on every car.
+- Mass enters launch grip only through the load (mu x N), so lighter = same g
+  at the hit and quicker everywhere else; no other weight bugs found.
+
+### Plan (approved Nov 14)
+Owner's picks: all four FWD items; battery: hide the trunk options on FWD
+and **also add a Front Ballast part**; AWD fix ships now on its own; the
+Race drive package keeps FWD cars FWD (RWD conversion stays a separate
+shop choice).
+
+FWD (players only; rivals keep their snapshot):
+1. **Front wheel wells for FWD**, in the slot where the rear tubs are
+   (Suspension), shown as "Front Wheel Wells" on FWD cars (rear tubs hidden
+   there, they do nothing for a FWD car):
+   - Rolled & Pulled Fenders, $600: about 1 in more room (a 26x8.5-class slick).
+   - Wide One-Piece Front End, $6,000, -8 kg (fibreglass): the wells
+     rebuilt, room for a 26x10 or 28x10.5 slick.
+2. **New tire: Drag Slick 26x10.0-15** (~$1,500, grip ~2.35), the classic
+   FWD slick; the 28x10.5 slicks fit too with the wide front end. Packages:
+   Race fits the fenders + 26x10 on FWD, Extreme the front end + 28x10.5.
+3. **Keep the weight on the front:** packages stop moving the battery to the
+   trunk on FWD; the trunk battery says what it does on FWD (weight off the
+   drive wheels) or is hidden there.
+4. **Weight reduction on FWD comes off the back half more** (rear seats,
+   glass, hatch), as real FWD builds do: about +2-3 pts front at Stage 3.
+5. **Wheelie bar on FWD limits weight transfer:** set low, the bar picks up
+   the rear as the car squats and keeps load on the front tires (bar height
+   in Tuning, as now). Packages fit it on FWD from Race.
+6. **The hit:** look at why the fronts flash-spin and the clutch then locks
+   low (off boost ~0.5 s); likely the slider clutch base range (allow
+   lower) and the lock rule. Check RWD manual cars for the same.
+7. Tuner and help texts: the tuner knows the FWD bar and the new parts;
+   help/spec text on FWD launches.
+Target: a 1,500 hp FWD Civic in the high 7s / low 8s, 60 ft ~1.4-1.5.
+
+AWD:
+8. **Fix the tire package bug:** on AWD both axles get the package's tires
+   (the best that fit the front wells and brakes).
+
+Left out: a centre-diff torque split for AWD (results already close to
+real), front ballast (adds weight; asked as an option), aero changes.
+
+Saves: nothing changes on load (new parts are optional); FWD cars with a
+bar or Stage weight reduction get quicker. Rivals: unchanged (bar physics and
+the weight split for players only; snapshot checked).
+
+### Build notes
+- **AWD fix (shipped Nov 14):** parts.js `tiresPkg`: on AWD a candidate must
+  also fit the other axle (wells, brakes; drag brakes added if the front
+  needs them) and the same tire + a matching wheel go on both axles
+  (`plan.owheel`); the front-axle fit runs even when the rear needs no
+  change; tier 3 list gets dr_275 as a fallback. Bench (stock power, none ->
+  t0/t1/t2/t3): evo 13.81 -> 13.82/13.82/13.83/13.83; sti 13.41 ->
+  13.41/13.39/13.41/13.27; r34 13.32 -> 13.28/13.28/13.31/13.31; gtr 10.94
+  -> 10.92/10.81/10.83/10.94; 911 10.67 -> 10.67/10.54/10.56/10.67; diesel
+  16.04 -> 15.98/15.98/16.00/16.09 (taller 305s, equal with power). Rivals 0
+  diffs; package snapshot: only the 23 AWD tire packages changed; pkgsmoke,
+  c2, drv, qolsmoke clean. Scripts scr/awdpkg.js, awdpkg2.js, awdui.js.
+
+### Sources (Nov 14)
+- f40 DSport, Papadakis, "AEM Drag Civic: the 7s" (page 1; pages 2-3 behind
+  a bot check, not read): dsportmag.com/?p=4852
+- f41 The Autopian, AWD CR-V parts in Civics (7.80 FWD vs 7.45 AWD)
+- f31 se-r.net FWD launch tips; f3 Dragzine scaling (RWD 50-55% rear)
+- Forum threads (anecdotal): honda-tech drag slick fitment / recommended
+  size; dsmtuners "FWD racers what size slicks"
 
 ## Update (Nov 12)
 - **AWD burnouts shipped** (not traction): AWD cars now do one quick hit

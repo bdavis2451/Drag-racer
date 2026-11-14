@@ -1479,16 +1479,16 @@
     // mini-tubs, drag brakes, front runners.
     function tiresPkg() {
       var CAND = [['dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'], ['rsl_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'],
-        ['rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'sl_24', 'dr_225'], ['sl_31', 'rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_305', 'sl_24']][tier];
+        ['rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'sl_24', 'dr_225'], ['sl_31', 'rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_305', 'dr_275', 'sl_24']][tier];
       var axD = DR.axleOf(copy, 'wheels'), axO = axD === 'front' ? 'rear' : 'front';
-      var curMu = DR.TIRES[DR.partId('rtires', copy)].mu;
+      var curMu = DR.TIRES[DR.partId('rtires', copy)].mu, awd = DR.driveOf(copy) === 'AWD';
       function ok(cat, id) { var o = DR.getOption(cat, copy, id); return o && o.id === id && unl(cat, o) ? o : null; }
-      function wheelFor(t, styles) {
+      function wheelFor(t, styles, wcat) {
         for (var i = 0; i < styles.length; i++) {
           var st = DR.WHEEL_STYLES[styles[i]];
           var z = st.sizes.filter(function (q) { return q[0] === t.rim && q[1] >= t.wmin && q[1] <= t.wmax && q[1] >= 6; })
             .sort(function (a, b) { return Math.abs(a[1] - (t.wmin + t.wmax) / 2) - Math.abs(b[1] - (t.wmin + t.wmax) / 2); })[0];
-          if (z && ok('wheels', styles[i] + z[0] + 'x' + z[1])) return styles[i] + z[0] + 'x' + z[1];
+          if (z && ok(wcat || 'wheels', styles[i] + z[0] + 'x' + z[1])) return styles[i] + z[0] + 'x' + z[1];
         }
         return null;
       }
@@ -1513,15 +1513,33 @@
           if (tier < 2 || axD !== 'rear' || !ok('tubs', 'tub1') || t.sec > 16.5) continue;
           tub = 'tub1';
         }
-        if (tier === 3 && axD === 'rear' && !tub && DR.partId('tubs', copy) === 'stock' && ok('tubs', 'tub1')) tub = 'tub1';
-        plan = { tire: tid, wheel: wid, brk: brk, tub: tub };
+        // AWD: the same tire has to fit the other axle too (its wells, its
+        // brakes with the same brake kit)
+        var owid = null;
+        if (awd) {
+          if (!ok('ftires', tid) || t.sec > DR.wellLimit(copy, axO) + 0.01) continue;
+          if (!brk && t.rim < DR.minWheel(copy, axO)) {
+            if (tier < 1 || !ok('brakes', 'br1') || DR.CAR_WT[copy.carId][6][axO === 'front' ? 0 : 1] > t.rim) continue;
+            brk = 'br1';
+          }
+          if (brk) copy.parts.brakes = brk;
+          if (t.rim >= DR.minWheel(copy, axO)) owid = wheelFor(t, tier >= 2 ? ['bead', 'drag'] : ['drag', 'street'], 'fwheels');
+          if (brWas) copy.parts.brakes = brWas; else delete copy.parts.brakes;
+          if (!owid) continue;
+        }
+        if (tier === 3 && axD === 'rear' && !awd && !tub && DR.partId('tubs', copy) === 'stock' && ok('tubs', 'tub1')) tub = 'tub1';
+        plan = { tire: tid, wheel: wid, brk: brk, tub: tub, owheel: owid };
       }
-      if (!plan) return;
-      if (plan.brk) fit('brakes', plan.brk);
-      if (plan.tub) fit('tubs', plan.tub);
-      fit('wheels', plan.wheel); fit('rtires', plan.tire);
+      if (plan) {
+        if (plan.brk) fit('brakes', plan.brk);
+        if (plan.tub) fit('tubs', plan.tub);
+        fit('wheels', plan.wheel); fit('rtires', plan.tire);
+      }
+      // AWD: the front axle drives too, so it gets the same tire (an AWD
+      // driveline wants the same size front and rear)
+      if (plan && plan.owheel) { fit('fwheels', plan.owheel); fit('ftires', plan.tire); }
       // front runners (not on AWD: both axles drive there)
-      if (tier >= 2 && DR.driveOf(copy) !== 'AWD' && DR.tireSpec(copy, 'ftires').kind !== 'Front Runner') {
+      if (plan && tier >= 2 && DR.driveOf(copy) !== 'AWD' && DR.tireSpec(copy, 'ftires').kind !== 'Front Runner') {
         var mO = DR.minWheel(copy, axO), rw = mO <= 15 ? ['drag15x3.5', 'fr_26'] : mO <= 17 ? ['drag17x4', 'fr_26b'] : mO <= 18 ? ['drag18x5', 'fr_18'] : null;
         if (rw && ok('fwheels', rw[0]) && ok('ftires', rw[1])) { fit('fwheels', rw[0]); fit('ftires', rw[1]); }
       }

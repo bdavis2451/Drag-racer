@@ -5,11 +5,19 @@ the top of each section.
 
 ## In progress
 
+- **FWD/AWD traction** (plan approved Nov 14, `docs/features/awd-fwd-traction.md`):
+  AWD tire-package fix shipped first. FWD build next: front wheel wells
+  (rolled fenders / wide one-piece front end) and a 26x10 slick, battery
+  stays up front on FWD + a Front Ballast part, weight reduction comes off
+  the back half on FWD, wheelie bar limits weight transfer on FWD, the
+  launch hit (flash spin, clutch locks low, off boost), Race drive package
+  keeps FWD cars FWD. Bench target: a 1,500 hp FWD Civic in the high 7s /
+  low 8s (now 10.3; real 7.8).
 - **Wheels & tires rework** (plan approved Nov 14: 4 slots, 5 wheel styles,
   20 tires incl. radial slicks, tubs + brake rule, Claude draws the wheels,
   per-car limits researched, old saves keep over-size tires flagged until
   tubbed; everything in one update). Shipped Nov 15 (owner OK'd the art).
-  Next: **FWD traction**.
+  Next: **FWD traction** (started Nov 14, see above).
   Owner notes Nov 14: wheel width and diameter, a good wheel selection, tire
   selection, chosen separately per axle (front labelled Front; the drive
   axle isn't labelled, the game knows it), new wheel/tire assets and a path

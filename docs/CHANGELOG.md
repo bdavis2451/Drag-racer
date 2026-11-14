@@ -2,6 +2,21 @@
 
 Short notes for testing, newest first.
 
+## AWD tire packages fixed
+
+- **Wheels & Tires packages on AWD cars now fit both axles with the same
+  tire** (an AWD driveline wants the same size front and rear). Before,
+  they only changed the rear tires, and the factory fronts made the car
+  slower than stock (an R34 on the Extreme tires lost 0.14 s).
+- **Try:** an Evo, STI, R34, GT-R, 911 Turbo or the Ram diesel: buy a tire
+  package and check both Front and Rear Tires change, and the car is no
+  slower than before.
+- On a stock-power AWD car, bigger tires don't help much (it isn't short of
+  grip yet): the gain comes with power.
+- The Extreme package can now fall back to a 275/40R17 drag radial on cars
+  with big brakes (the 911 got nothing before).
+- Rivals unchanged. FWD traction is next.
+
 ## Wheels & tires rework
 
 - **Four slots: Front Wheels, Front Tires, Rear Wheels, Rear Tires**
