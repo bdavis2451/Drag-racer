@@ -119,17 +119,37 @@
     spriteOrder.push(key);
     while (spriteOrder.length > SPRITE_MAX) delete spriteCache[spriteOrder.shift()];
   }
+  // an axle as drawn: tire radius, how much of the height is wheel (the
+  // sidewall from the real sizes), the wheel style ('w_drag'...; null for
+  // the factory wheels, which the car's art draws)
+  function axleLooks(inst) {
+    if (inst.ai || !DR.CAR_WT || !DR.CAR_WT[inst.carId] || !DR.wheelsTires) return null;
+    var p = inst.parts || {};
+    if ({ wh1: 1, wh2: 1, wh3: 1 }[p.wheels] || { ft1: 1, ft2: 1 }[p.ftires]) return null;
+    var dFront = DR.axleOf(inst, 'wheels') === 'front';
+    function one(wc, tc) {
+      var ws = DR.wheelSpec(inst, wc), t = DR.tireSpec(inst, tc), od = t.r / 0.0127;
+      return { r: t.r, ratio: Math.round(Math.max(0.5, Math.min(0.86, (ws.d + 1) / od)) * 100) / 100, style: ws.factory ? null : 'w_' + ws.style,
+        slick: t.kind === 'Slick' || t.kind === 'Radial Slick', radial: t.kind === 'Drag Radial', runner: t.kind === 'Front Runner' };
+    }
+    var d = one('wheels', 'rtires'), o = one('fwheels', 'ftires');
+    return { front: dFront ? d : o, rear: dFront ? o : d };
+  }
   DR.carLook = function (inst) {
     var car = DR.CARS[inst.carId] || DR.CARS_RESERVE[inst.carId];
     var fi = DR.partId('fi', inst), fiu = DR.FI[fi];
     var aero = DR.partId('aero', inst);
     var tire = DR.TIRES[DR.partId('rtires', inst)];
+    // each axle's own wheel and tire (players' cars; rival builds keep the
+    // old look: the drive tire at the back, runners a 0.30 m front)
+    var ax = axleLooks(inst);
     return {
       carId: inst.carId, body: car.body, len: car.len,
       color: inst.color || car.col, stripe: inst.stripe || '', rim: inst.rim || '#c8c8c8',
       kit: inst.kit || null, vis: inst.vis && Object.keys(inst.vis).length ? inst.vis : null,
-      tireR: tire.r, frontR: car.body === 'dragster' ? 0.24 : DR.partId('ftires', inst) !== 'stock' ? 0.30 : DR.TIRES[car.tire].r,
-      slick: tire.kind === 'Slick' || tire.kind === 'Radial Slick', radial: tire.kind === 'Drag Radial',
+      tireR: ax ? ax.rear.r : tire.r, frontR: car.body === 'dragster' ? 0.24 : ax ? ax.front.r : DR.partId('ftires', inst) !== 'stock' ? 0.30 : DR.TIRES[car.tire].r,
+      slick: ax ? ax.rear.slick : tire.kind === 'Slick' || tire.kind === 'Radial Slick', radial: ax ? ax.rear.radial : tire.kind === 'Drag Radial',
+      wR: ax ? ax.rear : null, wF: ax ? ax.front : null,
       blower: !!(fiu.price && (fiu.type === 'roots' || fiu.type === 'screw')),
       scoop: !!(fiu.price && fiu.type === 'turbo' && fiu.flow > 1000),
       wing: aero === 'a2' ? 2 : aero === 'a1' ? 1 : 0,
@@ -489,7 +509,8 @@
     var rimStyle = vis.rims ? (B.rims[vis.rims] ? 'sheet:' + look.carId + ':' + B.rims[vis.rims] : vis.rims) : 'sheet:' + look.carId + ':0';
     var spr = { canvas: cv, under: cvU, RS: RS, raw: raw, w: W / RS, h: H / RS, padL: padLp / RS, lenPx: raw.lenPx / RS, groundY: groundY / RS,
       wheelR: sc(wheelR), wheelF: sc(wheelF), tail: sc(raw.tail), head: sc(raw.head), exhaust: sc(raw.exhaust),
-      rail: false, bar: look.bar, look: look, rim: rimStyle, neon: vis.neon || null };
+      rail: false, bar: look.bar, look: look, rim: rimStyle, neon: vis.neon || null,
+      rimR: look.wR && look.wR.style || null, rimF: look.wF && look.wF.style || null };
     spriteCache[key] = spr; touchSprite(key);
     return spr;
   }
@@ -994,7 +1015,8 @@
     function sc(o) { if (!o) return o; var r = {}; for (var kk in o) r[kk] = o[kk] / RS; return r; }
     var spr = { canvas: cv, under: cvU, RS: RS, raw: raw, w: W / RS, h: H / RS, padL: padL / RS, lenPx: lenPx / RS, groundY: groundY / RS,
       wheelR: sc(wheelR), wheelF: sc(wheelF), tail: sc(raw.tail), head: sc(raw.head), exhaust: sc(raw.exhaust),
-      rail: !!A.rail, bar: look.bar, look: look, rim: vis.rims || A.rim || 'five', neon: vis.neon || null };
+      rail: !!A.rail, bar: look.bar, look: look, rim: vis.rims || A.rim || 'five', neon: vis.neon || null,
+      rimR: look.wR && look.wR.style || null, rimF: look.wF && look.wF.style || null };
     spriteCache[key] = spr; touchSprite(key);
     return spr;
   }
@@ -1010,16 +1032,25 @@
     mesh:    { n: 8,  w: function (p, rr) { return Math.abs(p - 0.5) < 0.13 + 0.1 * (1 - rr); } },
     five:    { n: 5,  w: function (p, rr) { return Math.abs(p - 0.5) < 0.1 + 0.17 * (1 - rr); } },
     split:   { n: 5,  w: function (p, rr) { var w = 0.055 + 0.06 * (1 - rr); return Math.abs(p - 0.38) < w || Math.abs(p - 0.62) < w || (rr < 0.42 && Math.abs(p - 0.5) < 0.22); } },
-    drag:    { n: 5,  w: function (p, rr) { return Math.abs(p - 0.5) < 0.045 + 0.05 * (1 - rr); } }
+    drag:    { n: 5,  w: function (p, rr) { return Math.abs(p - 0.5) < 0.045 + 0.05 * (1 - rr); } },
+    // the wheels sold in the rework (Upgrade > Wheels & Tires)
+    // cast street 5-spoke: broad spokes that taper to the lip
+    w_street: { n: 5, w: function (p, rr) { return Math.abs(p - 0.5) < 0.12 + 0.2 * (1 - rr); } },
+    // forged: ten thin spokes in pairs, a lot of open space
+    w_forged: { n: 5, w: function (p, rr) { var w = 0.04 + 0.05 * (1 - rr); return Math.abs(p - 0.36) < w || Math.abs(p - 0.64) < w || rr < 0.3; } },
+    // one-piece drag wheel: five thin straight spokes
+    w_drag:  { n: 5, w: function (p, rr) { return Math.abs(p - 0.5) < 0.05 + 0.04 * (1 - rr); } },
+    // beadlock drag wheel: the drag spokes plus the bolted ring
+    w_bead:  { n: 5, bead: true, w: function (p, rr) { return Math.abs(p - 0.5) < 0.06 + 0.05 * (1 - rr); } }
   };
-  function wheelImage(r, style, rim, slick, radial, step, steps, blur) {
-    var key = [r, style, rim, slick, radial, step, blur].join('|');
+  function wheelImage(r, style, rim, slick, radial, step, steps, blur, ratio) {
+    var key = [r, style, rim, slick, radial, step, blur, ratio].join('|');
     if (wheelCache[key]) return wheelCache[key];
     var R = Math.ceil(r) + 1, S = R * 2 + 1;
     var cv = document.createElement('canvas'); cv.width = S; cv.height = S;
     var ctx = cv.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
     var rc = hexToRgb(rim), st = RIMS[style] || RIMS.five, rl = lum(rc);
-    var rimR = r * (slick ? 0.58 : radial ? 0.64 : 0.7);
+    var rimR = r * (ratio || (slick ? 0.58 : radial ? 0.64 : 0.7));
     var rot = step / steps * Math.PI * 2 / st.n;
     for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) {
       var dx = x + 0.5 - R - 0.5, dy = y + 0.5 - R - 0.5, dist = Math.sqrt(dx * dx + dy * dy);
@@ -1036,7 +1067,12 @@
         var rr = dist / rimR, ang = Math.atan2(dy, dx) - rot;
         ang = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         var per = ang / (Math.PI * 2) * st.n, p = per - Math.floor(per);
-        if (rr > 0.86) c = paint(rc, rr > 0.95 ? (ny > 0 ? 0.9 : -0.4) : (ny > 0 ? -0.35 : 0.6), rl);   // polished lip, dish shadow
+        if (st.bead && rr > 0.8) {
+          // a beadlock ring bolted over the lip: a raised band with its bolts
+          var bp = ang / (Math.PI * 2) * 16, bf = bp - Math.floor(bp);
+          c = rr > 0.85 && rr < 0.95 && Math.abs(bf - 0.5) < 0.22 ? [24, 24, 28] : rr < 0.84 ? [44, 46, 52] : paint(rc, rr > 0.95 ? 0.95 : 0.55 + ny * 0.35, rl);
+        }
+        else if (rr > 0.86) c = paint(rc, rr > 0.95 ? (ny > 0 ? 0.9 : -0.4) : (ny > 0 ? -0.35 : 0.6), rl);   // polished lip, dish shadow
         else if (rr < 0.2) c = paint(rc, rr < 0.08 ? 0.9 : -0.1 + ny * 0.4, rl);                         // centre cap
         else if (blur) c = mix(paint(rc, 0.05 + ny * 0.2, rl), [30, 30, 34], 0.45);
         else if (st.w(p, rr)) {
@@ -1067,7 +1103,7 @@
     var per = Math.PI * 2 / st.n;
     var blur = Math.abs(spin || 0) > 38;
     var stp = ((Math.floor(((ang % per) + per) % per / per * steps)) % steps + steps) % steps;
-    var rimR = r * (look.slick ? 0.58 : look.radial ? 0.64 : 0.7);
+    var rimR = r * (look.ratio || (look.slick ? 0.58 : look.radial ? 0.64 : 0.7));
     // barrel, brake rotor (drilled) and caliper behind the spokes
     ctx.fillStyle = '#0e0e10'; circle(ctx, x, y, rimR * 0.95);
     ctx.fillStyle = '#3c3e44'; circle(ctx, x, y, rimR * 0.74);
@@ -1078,7 +1114,7 @@
       ctx.fillStyle = caliper; ctx.fillRect(Math.round(x + rimR * 0.12), Math.round(y - rimR * 0.86), cw, ch);
       ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(Math.round(x + rimR * 0.12), Math.round(y - rimR * 0.86), cw, 1);
     }
-    var w = wheelImage(Math.round(r * 2) / 2, style, look.rim, look.slick, look.radial, blur ? 0 : stp, steps, blur);
+    var w = wheelImage(Math.round(r * 2) / 2, style, look.rim, look.slick, look.radial, blur ? 0 : stp, steps, blur, look.ratio);
     ctx.drawImage(w.canvas, Math.round(x - w.R - 0.5), Math.round(y - w.R - 0.5));
   }
 
@@ -1149,9 +1185,11 @@
     // in the burnout box the undriven axle is held still (the front, or the
     // rear on a front-driver)
     var holdF = opts.frontStill && !opts.fwd, holdR = opts.frontStill && opts.fwd;
-    drawWheel(ctx, 0, -R.wheelR.r, R.wheelR.r, holdR ? 0.3 : wheelAng, look, look.slick ? 'drag' : spr.rim, holdR ? 0 : sp, null);
+    var lkR = look.wR ? { rim: look.rim, slick: look.wR.slick, radial: look.wR.radial, ratio: look.wR.ratio } : look;
+    var lkF = look.wF ? { rim: look.rim, slick: look.wF.slick, radial: look.wF.radial, ratio: look.wF.ratio } : look;
+    drawWheel(ctx, 0, -R.wheelR.r, R.wheelR.r, holdR ? 0.3 : wheelAng, lkR, spr.rimR || (look.slick && !look.wR ? 'drag' : spr.rim), holdR ? 0 : sp, null);
     var fk = holdF ? 0 : R.wheelR.r / R.wheelF.r;
-    drawWheel(ctx, R.wheelF.x - rx, -R.wheelF.r, R.wheelF.r, holdF ? 0.3 : wheelAng * fk, look, spr.rail ? 'drag' : spr.rim, sp * fk, spr.rail ? null : '#b3202a');
+    drawWheel(ctx, R.wheelF.x - rx, -R.wheelF.r, R.wheelF.r, holdF ? 0.3 : wheelAng * fk, lkF, spr.rail ? 'drag' : spr.rimF || spr.rim, sp * fk, spr.rail || (look.wF && look.wF.runner) ? null : '#b3202a');
     ctx.save(); bodyXf();
     ctx.drawImage(spr.canvas, bx, by);
     if (opts.brake > 0.05) {

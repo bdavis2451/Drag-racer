@@ -64,9 +64,13 @@
     var drive = S.tire, factory = DR.TIRES[car.tire];
     var road = { Street: 1, Track: 1, 'Race Slick': 1 };
     // the tires on the axle that isn't driven
-    var other = ft.lat ? { lat: ft.lat, name: 'Skinny front runners', kind: 'Runner' } : ft.match && road[drive.kind] ? drive : factory;
+    // (players' cars: that axle's own tires; rival builds: the old front
+    // tire option)
+    var other = S.wheels ? (S.wheels.tO.factory ? factory : S.wheels.tO)
+      : ft.lat ? { lat: ft.lat, name: 'Skinny front runners', kind: 'Runner' } : ft.match && road[drive.kind] ? drive : factory;
     var front = S.drive === 'RWD' ? other : drive, rear = S.drive === 'FWD' ? other : drive;
-    if (S.drive === 'AWD') { front = drive; rear = drive; }
+    // AWD: both drive; a player's front axle on its own tires
+    if (S.drive === 'AWD') { front = S.wheels ? other : drive; rear = drive; }
     var hg = (springs.hg || 1) * (shocks.hg || 1) * (sway.hg || 1) * era(car);
     var muF = front.lat * hg * (front === drive ? pressK : 1);
     var muR = rear.lat * hg * (rear === drive ? pressK : 1);

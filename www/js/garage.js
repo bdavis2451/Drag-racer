@@ -808,7 +808,15 @@
     DR.drawPreview(cv, inst, { aspect: 0.34 });
     var stars = DR.starRating(inst);
     var grid = h('div', { class: 'pgrid' });
-    visOptions(slot).forEach(function (o) {
+    // the wheels are parts now (Upgrade > Wheels & Tires): this spot links there
+    if (slot.id === 'rims') {
+      var ws = DR.wheelStars(inst);
+      grid = h('div', { class: 'col' },
+        h('p', {}, 'Wheels are parts now: the wheels you fit are the wheels you see, front and rear, with their sizes and weight. They add to the visual rating too (street and drag +0.5, forged +0.75, beadlock +1, both axles).'),
+        h('div', { class: 'dim' }, 'Your wheels: ' + (ws ? '+' + (Math.round(ws * 100) / 100) + ' stars' : 'factory') + (inst.vis.rims ? '. Your ' + DR.RIM_NAMES[inst.vis.rims] + ' rims stay on the factory wheels.' : '.')),
+        btn('Go to Wheels & Tires', function () { DR.UI.remember({ bayCat: DR.axleOf(inst, 'wheels') === 'rear' ? 'wheels' : 'fwheels', shopGroup: 'tires', shopCat: 'wheels' }); UI.show(UI.Parts); }, 'primary'));
+    }
+    if (slot.id !== 'rims') visOptions(slot).forEach(function (o) {
       var on = visOn(inst, slot, o), owned = visOwned(inst, slot, o), locked = o.tier && !G.visUnlocked(slot.id, o.tier), lvl = o.tier ? o.tier + 1 : 0;
       grid.appendChild(h('div', { class: 'pcard l' + lvl + (locked ? ' locked' : '') + (on ? ' inst' : ''), onclick: function () { if (!on) bodyModal(inst, slot, o); } },
         h('div', { class: 'pic' }, iconEl('v_' + slot.id, lvl, '', 44)),

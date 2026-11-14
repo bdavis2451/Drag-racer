@@ -33,17 +33,27 @@
   DR.visSlot = function (id) { for (var i = 0; i < DR.VISUAL.length; i++) if (DR.VISUAL[i].id === id) return DR.VISUAL[i]; return null; };
 
   // Visual rating, 0-10 stars.
+  // the wheels' show stars (Upgrade > Wheels & Tires): the two axles'
+  // styles averaged (the factory wheels count none)
+  DR.wheelStars = function (inst) {
+    if (!DR.CAR_WT || !DR.CAR_WT[inst.carId] || inst.ai || !DR.wheelSpec) return 0;
+    var a = DR.wheelSpec(inst, 'wheels'), b = DR.wheelSpec(inst, 'fwheels');
+    function st(w) { return w.factory ? 0 : (DR.WHEEL_STYLES[w.style].stars || 0); }
+    return (st(a) + st(b)) / 2;
+  };
   DR.starRating = function (inst) {
-    var v = inst.vis || {}, s = 0;
+    var v = inst.vis || {}, s = 0, rimS = 0;
     DR.VISUAL.forEach(function (slot) {
       var x = v[slot.id];
       if (!x) return;
-      if (slot.styles) { for (var t = 0; t < 3; t++) if (slot.tiers[t].indexOf(x) >= 0) s += slot.stars[t]; return; }
+      if (slot.styles) { for (var t = 0; t < 3; t++) if (slot.tiers[t].indexOf(x) >= 0) rimS = slot.stars[t]; return; }
       if (slot.id === 'finish' && x === 'matte') { s += slot.extra.matte[2]; return; }
       if (slot.id === 'neon') { s += slot.tiers[1][2]; return; }
       var tier = slot.tiers[x - 1];
       if (tier) s += tier[2];
     });
+    // (rims bought before the rework still count, on the factory wheels)
+    s += Math.max(rimS, DR.wheelStars(inst));
     if (inst.stripe) s += 0.25;
     return Math.min(10, Math.round(s * 4) / 4);
   };

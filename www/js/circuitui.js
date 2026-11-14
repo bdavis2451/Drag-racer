@@ -419,11 +419,12 @@
   function advice(inst, S, fig) {
     var H = fig.H, out = [], o = function (cat) { return DR.getOption(cat, inst); };
     var road = { Street: 1, Track: 1, 'Race Slick': 1 };
-    if (o('ftires').lat) out.push('Skinny front runners: light for drag, but they let go early in corners. Matching Tires All Round fixes it.');
+    var tO = S.wheels ? S.wheels.tO : null, ax = S.drive === 'FWD' ? 'rear' : 'front';
+    if (tO ? tO.kind === 'Front Runner' : o('ftires').lat) out.push('Skinny front runners: light for drag, but they let go early in corners. Road tires on the ' + ax + ' wheels fix it.');
     if (!road[S.tire.kind]) out.push(S.tire.kind + ' tires on the drive wheels: great off the line, but they slide in corners. Street or track tires corner far harder.');
     if (H.bcap < 1) out.push('Drag brakes: light, but they can\'t stop hard from speed. A Big Brake Kit stops much shorter.');
-    var other = S.drive === 'FWD' ? H.rear : H.front, mixed = S.drive !== 'AWD' && !o('ftires').lat && !o('ftires').match && road[S.tire.kind] && S.tire.lat > other.lat + 0.03;
-    if (mixed) out.push('Your ' + S.tire.kind.toLowerCase() + ' tires are only on the drive wheels: the ' + (S.drive === 'FWD' ? 'rears' : 'fronts') + ' are still factory tires, so that end lets go first. Matching Tires All Round puts them on all four.');
+    var other = S.drive === 'FWD' ? H.rear : H.front, mixed = S.drive !== 'AWD' && (tO ? tO.kind !== 'Front Runner' : !o('ftires').lat && !o('ftires').match) && road[S.tire.kind] && S.tire.lat > other.lat + 0.03;
+    if (mixed) out.push('Your ' + S.tire.kind.toLowerCase() + ' tires are only on the drive wheels: the ' + (S.drive === 'FWD' ? 'rears' : 'fronts') + ' have ' + (tO && !tO.factory ? tO.name : 'the factory tires') + ', so that end lets go first. The same tires on the ' + ax + ' wheels (Wheels & Tires) fix it.');
     else if (fig.limit === 'front') out.push('Understeer: the front tires give up first. ' + (o('sway').adjR ? 'Move Anti-Roll Bar Balance toward the rear (−) in Tuning.' : 'Adjustable anti-roll bars let you move the balance.'));
     else if (fig.limit === 'rear') out.push('Oversteer: the rear lets go first. ' + (o('sway').adjR ? 'Move Anti-Roll Bar Balance toward the front (+) in Tuning.' : 'Adjustable anti-roll bars let you move the balance.'));
     var d = Math.abs(S.tune.psi - S.tire.optP) / S.tire.optP;

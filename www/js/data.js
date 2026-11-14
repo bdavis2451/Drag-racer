@@ -232,13 +232,13 @@ DR.TIRES = {
   // 15x3.5 runner ~10, a cast 18x8 ~22, a forged 18x9 ~18); a beadlock adds
   // its ring (+5 lb). Prices per pair.
   DR.WHEEL_STYLES = {
-    street: { name: 'Street 5-Spoke', price: 600, k: 1.29, desc: 'Cast aluminum: the look, at about factory weight.',
+    street: { name: 'Street 5-Spoke', price: 600, k: 1.29, stars: 0.5, desc: 'Cast aluminum: the look, at about factory weight.',
       sizes: [[15, 7], [15, 8], [16, 7], [16, 8], [17, 8], [17, 9], [17, 10], [18, 8], [18, 9], [18, 10], [19, 9], [19, 10], [20, 9], [20, 10]] },
-    forged: { name: 'Forged Lightweight', price: 1800, k: 1.0, lvl: 2, desc: 'Forged: strong and about 4 lb lighter a corner than cast.',
+    forged: { name: 'Forged Lightweight', price: 1800, k: 1.0, lvl: 2, stars: 0.75, desc: 'Forged: strong and about 4 lb lighter a corner than cast.',
       sizes: [[17, 8], [17, 9], [17, 10], [18, 8], [18, 9], [18, 10], [18, 11], [19, 9], [19, 10], [19, 11], [20, 9], [20, 10], [20, 11], [21, 12], [21, 13]] },
-    drag: { name: 'Drag Wheel', price: 900, k: 0.87, desc: 'One-piece spun aluminum: light, with skinny front-runner sizes.',
+    drag: { name: 'Drag Wheel', price: 900, k: 0.87, stars: 0.5, desc: 'One-piece spun aluminum: light, with skinny front-runner sizes.',
       sizes: [[15, 3.5], [17, 4], [18, 5], [15, 8], [15, 10], [15, 12], [17, 10], [18, 10]] },
-    bead: { name: 'Beadlock Drag', price: 2200, k: 0.87, add: 5, bead: true, lvl: 3, desc: 'A ring bolts the tire\'s bead to the wheel: very low tire pressure without the tire spinning on the rim.',
+    bead: { name: 'Beadlock Drag', price: 2200, k: 0.87, add: 5, bead: true, lvl: 3, stars: 1, desc: 'A ring bolts the tire\'s bead to the wheel: very low tire pressure without the tire spinning on the rim.',
       sizes: [[15, 10], [15, 12], [15, 14], [15, 16], [16, 16], [17, 10], [17, 11], [18, 10]] }
   };
   DR.wheelLb = function (style, d, w) { var s = DR.WHEEL_STYLES[style]; return Math.round((s.k * (0.55 * d + 0.9 * w) + (s.add || 0)) * 10) / 10; };
