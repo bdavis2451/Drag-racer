@@ -762,7 +762,19 @@
   DR.partLevel = function (price) { return !price ? 0 : price <= 700 ? 1 : price <= 1300 ? 2 : price <= 4500 ? 3 : price <= 12000 ? 4 : 5; };
   function lvlOf(o) { return !o.price ? 0 : o.lvl || DR.partLevel(o.price); }
   DR.partOptions = function (cat, inst) {
-    return listOptions(cat, inst).map(function (o) { if (o.lvl == null) o.lvl = lvlOf(o); return o; });
+    var list = listOptions(cat, inst).map(function (o) { if (o.lvl == null) o.lvl = lvlOf(o); return o; });
+    // an engine built to rev (e.rx: a 4G63, an SR20) gets more from race
+    // valve springs and oiling than the plain figure: say its real number
+    if (cat === 'valvetrain' || cat === 'oiling') {
+      var e = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine], rx = e && !e.rotary ? e.rx || 0 : 0;
+      if (rx) list = list.map(function (o) {
+        var n = cat === 'valvetrain' ? (o.vt ? o.vt + rx * Math.min(1, o.vt / 2300) : 0) : (o.be ? o.be + rx * Math.max(0, Math.min(1, (o.be - 800) / 1800)) : 0);
+        if (!n || !o.desc) return o;
+        n = Math.round(n / 50) * 50;
+        return Object.assign({}, o, { desc: cat === 'valvetrain' ? o.desc.replace(/Valves float \d+ rpm later/, 'Valves float ' + n + ' rpm later') : o.desc.replace(/\+\d+ rpm/, '+' + n + ' rpm') });
+      });
+    }
+    return list;
   };
   // Full option list for a category on this car instance.
   function listOptions(cat, inst) {

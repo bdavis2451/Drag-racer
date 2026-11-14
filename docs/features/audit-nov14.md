@@ -111,4 +111,23 @@ race starts with the AWD hit.
 
 
 ## 3. Engine ceilings + knock (d261384, c0452d1, 7d6b4a6)
-(in progress)
+
+Checked: the diffs; every rival against its knock point (2 of 126 slightly
+into the timing-pulled zone, none detonating); the shop's turbo lists
+against the ceiling builds; part descriptions that quote rpm or psi; the
+knock integration pass from Nov 14 (weather, logger, failure roll, race
+intro, tuner, packages, nitrous); stock benchmark and rival snapshot after
+every fix (stock unchanged; rivals unchanged by the audit fixes).
+
+Found and fixed:
+- **Valvetrain and oiling descriptions** quoted the plain gain ("valves
+  float 2300 rpm later") on engines the ceilings update lets rev further
+  (a 4G63's Pro Mod valvetrain really gives 3,900). They now give each
+  engine's real number.
+- (Turbo audit) knock point floor at 0 psi, boost used and torque never
+  below zero.
+- (Diesel audit) the race triples at 100 psi read "misfiring".
+
+Found, waiting on the owner: **question 1** (the shop doesn't sell the
+turbos the record builds need). The changelog note for the tester says so.
+

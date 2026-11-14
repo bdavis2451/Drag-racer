@@ -226,3 +226,14 @@ owner.
 Scripts (scratchpad scr/): `allmax.js` (every engine, best adder),
 `fourmax.js` / `fourmax2.js` (4-cylinders, X env to override limits),
 `bighp3.js` (ET builds), `gtrhold.js` (boost hold by rpm).
+
+## Audit (Nov 14): the record builds use turbos the shop doesn't sell
+The calibration (scr/calibk.js) set the best turbo directly. In the shop a
+turbo is only listed if the *stock* engine reaches 15 psi before its stock
+redline (DR.turboFits), so 40 of 44 engines can't buy the turbo their
+target used (a 4G63 tops out at the 7275, ~1,000 hp). On the engine as it
+can be built (race revs and breathing) every one of those turbos spools in
+time. Waiting on the owner (audit-nov14.md question 1). Until then the
+targets above are reachable only with turbos the shop doesn't offer yet.
+Also fixed in the audit: valvetrain and oiling descriptions now give an
+engine's real gain (a 4G63's Pro Mod valvetrain: 3,900 rpm, not 2,300).
