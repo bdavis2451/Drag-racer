@@ -5,8 +5,6 @@ the top of each section.
 
 ## In progress
 
-- **Audit of the turbo, diesel and engine power/knock updates** under the
-  new quality rule (owner, Nov 14), with the nitrous-on-boost knock follow-up.
 - **Wheels & tires rework** (next after the audit), then **FWD traction**.
   Owner notes Nov 14: wheel width and diameter, a good wheel selection, tire
   selection, chosen separately per axle (front labelled Front; the drive
@@ -23,9 +21,20 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **A fuel setting for diesels** (Setup): turn the fuel down to cool the
-  exhaust or spare the internals, the way real diesel tuners do; the tuner
-  would use it. Today the tuner only advises. Asked Nov 14.
+- **Dyno-only tuner sessions are always refunded** (found Nov 14, from the
+  Nov 6 tuner rework): "no gain, no pay" only judges the track work, so a
+  session booked for the engine alone ends "Nothing I found beat what you
+  came in with" and refunds the whole fee, while the dyno tune stays on the
+  car. Options: charge for the dyno work always (it's calibration, not a
+  bet on ET); charge when the dyno made more power or made the engine safer;
+  or keep it free. Asked Nov 14.
+
+- **Head studs on a diesel lower its boost limit** (found Nov 14): a diesel's
+  factory head holds 45 psi, the ARP studs part says 40 (written for gas
+  engines), so fitting them makes a Cummins worse. Real Cummins studs are the
+  usual fix past ~50-60 psi. Options: studs never lower the limit (simple
+  fix), or diesel-specific numbers (studs ~65, O-rings ~100). Changes the
+  diesel packages that include studs. Asked Nov 14.
 
 
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
@@ -38,6 +47,12 @@ the top of each section.
   not now (2026-11-10).
 
 ## Parked ideas
+
+- **Diesel fuel by rpm** (a boost-referenced fuel limit on the race tune):
+  a big compound setup's hottest exhaust is at 1,500 rpm, before the big
+  turbo lights, so the single Fuel setting has to come down for the whole
+  pass (compounds + 200% injectors: 60%). Real race calibrations limit fuel
+  by boost down low. Idea only (Nov 14).
 
 - **Boost by rpm** (a taper setting): the knock model makes the midrange
   give up a little at high boost; real tunes taper boost from the midrange.
@@ -85,6 +100,12 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Diesel fuel setting** (owner, Nov 14): shipped. Setup > Engine > Fuel
+  (60-100%) on a tuned diesel; the tuner sets boost to the head gasket, then
+  turns the fuel down for the exhaust and internals. Also fixed: the tuner's
+  "never slower" check now compares with the dyno tune, not the tune from
+  before the dyno (it could undo the dyno's safety work).
 
 - **Audit answers (Nov 14):** shop lists turbos the built engine can use (A);
   blowers filtered by engine; nitrous spools turbos; diesel power packages

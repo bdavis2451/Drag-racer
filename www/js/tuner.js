@@ -24,7 +24,7 @@
     pro: { name: 'Pro tuner', eng: 84, chs: 80, dat: 82, dyno: 950, day: 700, blurb: 'A name in the pits. Close on the first call, and knows a bad pass when they see one.' }
   };
   TU.JOBS = [
-    { id: 'engine', name: 'Engine (dyno)', what: 'Boost, rev limiter, shift points' },
+    { id: 'engine', name: 'Engine (dyno)', what: 'Boost and fuel, rev limiter, shift points' },
     { id: 'chassis', name: 'Chassis (track)', what: 'Tire pressure, front shocks & limiter, instant centre, rear shocks, wheelie bars' },
     { id: 'launch', name: 'Launch (track)', what: 'Boost in 1st & 2nd, 2-step rpm, launch throttle, traction control' },
     { id: 'drive', name: 'Drivetrain (track)', what: 'Slider clutch, converter stall, lockup, final drive (last: gear a car once it hooks)' },
@@ -71,7 +71,7 @@
     if (GB[k] != null) return v >= 99 ? 'no cap' : (+v).toFixed(1) + ' psi';
     if (k === 'gearBoost' && Array.isArray(v)) return v.slice(0, 3).map(function (b, i) { return ['1st', '2nd', '3rd'][i] + ' ' + (+b).toFixed(1); }).join(', ') + ' psi';
     if (k === 'launchRpm' || k === 'stall' || k === 'shiftRpm' || k === 'revLimit') return Math.round(v) + ' rpm';
-    if (k === 'launchThr' || k === 'tcSlip' || k === 'clBase') return v + '%';
+    if (k === 'launchThr' || k === 'tcSlip' || k === 'clBase' || k === 'dslFuel') return v + '%';
     if (k === 'clLock' || k === 'nosDelay' || k === 'nosRamp') return (+v).toFixed(1) + ' s';
     if (k === 'thrRamp') return (+v).toFixed(1) + ' s';
     if (k === 'fd') return (+v).toFixed(2) + ':1';
@@ -104,6 +104,8 @@
     if (jobs.indexOf('engine') >= 0) {
       if (S0.jets) ss.items.push({ k: 'jets' });
       if (S0.fiType !== 'none' && def('boost').show(S0)) ss.items.push({ k: 'boost' });
+      // a tuned diesel: boost for air first, then the fuel (see dslFuel)
+      if (def('dslFuel').show(S0)) ss.items.push({ k: 'dslFuel' });
       if (def('revLimit').show(S0)) ss.items.push({ k: 'revLimit' });
       ss.items.push({ k: 'shiftRpm' });
     }
@@ -154,15 +156,21 @@
       lean: S.fuelDemand > (S.fuelW / DR.HP) * (1 - (a.fuel || 0.03) - (1 - e) * 0.03) || DR.fuelShort(S).ratio > 1.015,
       safe: S.peakHp + S.nosHp > S.safeHp * (1 - a.hp - (1 - e) * 0.08),
       spark: S.fiType !== 'none' && S.boostSet > S.sparkPsi,
+      // the head gasket (a diesel's boost limit: it has no knock point)
+      head: !!S.dsl && S.fiType !== 'none' && (S.boostTop || S.boostSet) > headMax(ss, S),
       top: S.boostSet >= S.maxBoost - 0.01
     };
   }
+  // the most boost a tuner runs on a diesel's head gasket
+  function headMax(ss, S) { return S.headPsi - ss.agg.psi * 0.5 - (1 - ss.who.eng / 100); }
   function fuelWhy(S) {
     var both = Math.abs(S.fuelInj - S.fuelPump) < 1;
     var what = both ? 'injectors and pump are' : S.fuelInj < S.fuelPump ? 'injectors are' : 'fuel pump is';
     return 'the ' + what + ' maxed out: they feed about ' + Math.round(Math.min(S.fuelInj, S.fuelPump) * S.fuelFF) + ' hp' + (S.fuelFF < 1 ? ' on ' + (S.fuelId === 'meth' ? 'methanol' : 'E85') : '') + '. Bigger ' + (both ? 'injectors and pump' : S.fuelInj < S.fuelPump ? 'injectors' : 'pump') + ' to go further';
   }
-  function why(l, S) { return l.knock ? 'knock: it was pulling timing and the extra boost wasn\'t buying power any more' : l.lean ? (S ? fuelWhy(S) : 'the fuel system is maxed out') : l.spark ? 'the ignition started to misfire' : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : ''; }
+  function why(l, S) {
+    if (S && S.dsl) return l.head ? (S._parts && S._parts.headstud && S._parts.headstud !== 'stock' ? 'the head studs hold about ' + S.headPsi + ' psi' : 'the head gasket holds about ' + S.headPsi + ' psi; head studs hold more') : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : '';
+    return l.knock ? 'knock: it was pulling timing and the extra boost wasn\'t buying power any more' : l.lean ? (S ? fuelWhy(S) : 'the fuel system is maxed out') : l.spark ? 'the ignition started to misfire' : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : ''; }
   // a pull's sheet: wheel power and torque, boost and air/fuel against rpm
   function sheet(S) {
     var dy = DR.dyno(S), lam = S.fiType !== 'none' ? 0.78 : 0.86, cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1, st = STOICH[S.fuelId] || 14.7;
@@ -170,12 +178,22 @@
     var pk = pts.reduce(function (a, p) { return p.hp > a.hp ? p : a; }, pts[0]);
     return { pts: pts, peakHp: pk.hp, peakRpm: pk.rpm, afr: pk.afr, red: S.red, boost: S.boostSet, fi: S.fiType, maxBoost: S.maxBoost };
   }
+  // how hot a tuner lets a diesel's exhaust run at full power (F): drag
+  // racers live with ~1,600 F; past ~1,700 F pistons melt. A greener tuner
+  // leaves more margin.
+  function egtTarget(ss) { var a = ss.aggKey === 'safe' ? 1450 : ss.aggKey === 'edge' ? 1650 : 1550; return a - (1 - ss.who.eng / 100) * 100; }
   // a diesel's exhaust temperature after the boost is set: the tuner says
   // what's running it hot and what fixes it (boost can't: less air runs a
   // diesel hotter, not cooler)
   function dieselEgtNote(ss) {
     var S = G.spec(ss.inst), t = Math.round((S.egtPk || 0) / 10) * 10;
     if (!S.dsl || t <= 1450) return;
+    // (with the fuel adjustable the fuel pulls say it; only when even the
+    // least fuel runs it hot)
+    if (def('dslFuel').show(S)) {
+      if (S.egtPk > egtTarget(ss)) ss.log.push({ pit: 'Even at ' + fmt('dslFuel', S.tune.dslFuel) + ' fuel the exhaust hits ' + t + ' F: the injectors are far too big for the turbo. A bigger turbo (or compounds) or smaller injectors.' });
+      return;
+    }
     ss.log.push({ pit: t > 1700 ? 'Exhaust hits ' + t + ' F at full power: more fuel than the turbo has air for. Turning the boost down won\'t cool it (less air runs a diesel hotter). A bigger turbo, smaller injectors or the street diesel tune will.'
       : 'Exhaust runs ' + t + ' F at full power: fine for a pass, hot for towing. A bigger turbo would cool it.' });
   }
@@ -200,7 +218,12 @@
         if (it.b == null) { it.b = val(ss, 'boost'); it.dir = 0; it.n = 0; }
         setTune(ss, 'boost', Math.round(clamp(it.b, bd.min(S1), bd.max(S1)) * 2) / 2);
         S = G.spec(inst); l = limits(ss, S); it.n++;
-        var bad = l.knock || l.lean || l.safe || l.spark, note;
+        // a tuned diesel runs all the air the head gasket holds (more air
+        // burns the fuel cleaner and cooler); the fuel setting then looks
+        // after the internals
+        var dslF = S.dsl && def('dslFuel').show(S);
+        // (a diesel always runs lean: its fuel is the power, not the air)
+        var bad = dslF ? l.head : S.dsl ? l.safe || l.head : l.knock || l.lean || l.safe || l.spark, note;
         if (it.dir === 0) it.dir = bad ? -1 : 1;
         if (it.fine) step = 0.5;
         if (it.dir > 0 && !bad && !l.top && it.n < 14) { note = 'Clean. Up ' + step + ' psi.'; it.ok = it.b; it.b += step; }
@@ -209,14 +232,40 @@
           // a big step too far: come back and creep up half a psi at a time
           if (bad && it.ok != null && it.b - it.ok > 0.5 && it.n < 14) { note = 'Too far (' + why(l, S) + '). Half a psi at a time from ' + fmt('boost', it.ok) + '.'; it.fine = true; it.b = it.ok + 0.5; return pull(ss, 'Boost ' + fmt('boost', S.boostSet), note, S); }
           if (bad && it.ok != null) { setTune(ss, 'boost', it.ok); note = 'Too far (' + why(l, S) + '). Back to ' + fmt('boost', it.ok) + '.'; }
-          else note = l.top ? 'That\'s all the hardware has: ' + fmt('boost', it.b) + '.' : 'Set.';
+          else note = l.top ? 'That\'s all the hardware has: ' + fmt('boost', S.boostSet) + '.' : 'Set.';
           ss.items.shift();
         }
-        else if (bad && it.n < 14) { note = 'Over the line (' + why(l, S) + '). Down ' + step + ' psi.'; it.b -= step; }
+        else if (bad && it.n < 14) {
+          note = 'Over the line (' + why(l, S) + '). Down ' + step + ' psi.'; it.b -= step;
+          // a head gasket's limit is known: straight down to it
+          var creep = (S.boostTop || S.boostSet) - S.boostSet, hb = Math.floor((headMax(ss, S) - creep) * 2) / 2;
+          if (l.head && it.b > hb) { it.b = hb; note = 'Over the line (' + why(l, S) + '). Down to ' + fmt('boost', hb) + '.'; }
+        }
         else { note = 'Safe here.'; ss.items.shift(); }
         var bp = pull(ss, 'Boost ' + fmt('boost', S.boostSet), note, S);
-        if (ss.items[0] !== it) dieselEgtNote(ss);
+        if (ss.items[0] !== it && !dslF) dieselEgtNote(ss);
         return bp;
+      }
+      if (it.k === 'dslFuel') {
+        // a diesel's fuel, from all of it down 5% a pull until the exhaust
+        // and the internals are happy (the way diesel tuners work: the air
+        // decides how much fuel burns cleanly)
+        var fdf = def('dslFuel');
+        if (it.f == null) { it.f = fdf.max(); it.why = null; }
+        var cur = it.f;
+        setTune(ss, 'dslFuel', cur); S = G.spec(inst); l = limits(ss, S);
+        var tgt = egtTarget(ss), egt = Math.round(S.egtPk / 10) * 10, hot = S.egtPk > tgt, fnote;
+        if ((hot || l.safe) && cur > fdf.min()) { fnote = (hot ? 'Exhaust ' + egt + ' F: more fuel than the turbo has air for.' : 'Over the line (' + why(l, S) + ').') + ' Down 5%.'; it.why = hot ? 'egt' : 'safe'; it.f -= 5; }
+        else {
+          fnote = hot || l.safe ? 'As far down as it goes.'
+            : it.why === 'egt' ? 'Exhaust ' + egt + ' F. That\'s all the fuel the turbo has air for: a bigger turbo lets it use more.'
+            : it.why === 'safe' ? 'Exhaust ' + egt + ' F, and that\'s what the internals will take (' + Math.round(S.peakHp) + ' hp).'
+            : 'All of it: the exhaust runs ' + egt + ' F and the internals take it.';
+          ss.items.shift();
+        }
+        var fpl = pull(ss, 'Fuel ' + fmt('dslFuel', cur), fnote, S);
+        if (ss.items[0] !== it) dieselEgtNote(ss);
+        return fpl;
       }
       if (it.k === 'revLimit') {
         var rd = def('revLimit'); S = G.spec(inst);
@@ -481,7 +530,7 @@
       ss.confirmEt = et;
       note = 'The final tune: ' + (et < 90 ? et.toFixed(3) : 'DNF') + (ss.baseEt < 90 && et < 90 ? ' (baseline ' + ss.baseEt.toFixed(3) + ').' : '.');
     } else if (pass.k === null) {
-      ss.best = et; ss.refEt = et; if (ss.baseEt == null) ss.baseEt = et; note = 'Baseline ' + (et < 90 ? et.toFixed(3) : 'DNF') + '.';
+      ss.best = et; ss.refEt = et; if (ss.baseEt == null) { ss.baseEt = et; ss.tBase = JSON.parse(JSON.stringify(ss.inst.tune)); } note = 'Baseline ' + (et < 90 ? et.toFixed(3) : 'DNF') + '.';
     } else if (pass.k === '_combo') {
       // the launch package, kept or undone as a whole
       var cb = pass.combo, keys = Object.keys(cb.set), mWith = scoreNow(ss);
@@ -761,10 +810,13 @@
     var paid = ss.cost.labor + ss.cost.dyno + ss.cost.track + ss.cost.fuel + ss.cost.driver;
     if (!ss.changed) return { keep: true, refund: paid, why: 'Nothing I found beat what you came in with.' };
     if (ss.confirmEt == null || !(ss.baseEt < 90)) return { keep: true };
+    // (against the tune the baseline pass ran on: the dyno's work, done for
+    // the engine's sake (knock, exhaust heat, internals), isn't judged on ET)
+    var base = ss.tBase || ss.t0, dyno = JSON.stringify(base) !== JSON.stringify(ss.t0);
     var now = JSON.parse(JSON.stringify(ss.inst.tune)), mNow = scoreNow(ss);
-    ss.inst.tune = JSON.parse(JSON.stringify(ss.t0)); var mWas = scoreNow(ss); ss.inst.tune = now;
+    ss.inst.tune = JSON.parse(JSON.stringify(base)); var mWas = scoreNow(ss); ss.inst.tune = now;
     var d = 0.6 * (ss.confirmEt < 90 ? ss.confirmEt - ss.baseEt : 0.2) + 0.4 * (mNow - mWas);
-    if (d > -0.003) return { keep: false, refund: paid, why: 'Couldn\'t beat what you came in with (' + ss.baseEt.toFixed(3) + '): your old tune is back on.' };
+    if (d > -0.003) return { keep: false, tune: base, dyno: dyno, refund: paid, why: 'Couldn\'t beat what you came in with (' + ss.baseEt.toFixed(3) + '): ' + (dyno ? 'the track changes are undone (the dyno tune stays).' : 'your old tune is back on.') };
     return { keep: true, gain: -d };
   };
   // the session's notes, one row per pull, check and pass
@@ -827,9 +879,9 @@
   }
   function notes(ss) {
     var vd = TU.verdict(ss);
-    if (!vd.keep) { ss.inst.tune = JSON.parse(JSON.stringify(ss.t0)); G.save(); }
+    if (!vd.keep) { ss.inst.tune = JSON.parse(JSON.stringify(vd.tune || ss.t0)); G.save(); }
     if (vd.refund) { G.earn(vd.refund); ss.refunded = vd.refund; }
-    var ch = vd.keep ? TU.finish(ss) : (TU.finish(ss), {}), close, n = 0;
+    var ch = TU.finish(ss), close, n = 0;   // (what's on the car now against what came in)
     TU.active = null;
     var saved = ss.broke || ss.inst.damage ? null : saveSetup(ss);
     var then = ss.then && !ss.broke && !ss.inst.damage ? ss.then : null;
@@ -840,7 +892,7 @@
       ss.passes ? h('div', { class: 'tbslip' },
         h('div', {}, h('div', { class: 'dim gsmall' }, 'CAME IN'), h('div', { class: 'pix' }, ss.baseEt != null && ss.baseEt < 90 ? ss.baseEt.toFixed(3) : '-')),
         h('div', {}, h('div', { class: 'dim gsmall' }, vd.keep ? 'LEAVES ON' : 'BEST TRIED'), h('div', { class: 'pix' }, fin != null && fin < 90 ? fin.toFixed(3) : '-')),
-        h('div', {}, h('div', { class: 'dim gsmall' }, 'CHANGE'), h('div', { class: 'pix ' + (gain != null && gain < 0 && vd.keep ? 'good' : 'dim') }, gain != null && vd.keep ? (gain <= 0 ? '' : '+') + gain.toFixed(3) : 'kept the old tune'))) : null,
+        h('div', {}, h('div', { class: 'dim gsmall' }, 'CHANGE'), h('div', { class: 'pix ' + (gain != null && gain < 0 && vd.keep ? 'good' : 'dim') }, gain != null && vd.keep ? (gain <= 0 ? '' : '+') + gain.toFixed(3) : vd.dyno ? 'dyno tune only' : 'kept the old tune'))) : null,
       etChart(ss),
       h('div', { class: 'tunerlog' }, logRows(ss)),
       h('p', {}, Object.keys(ch).length ? 'Set: ' + Object.keys(ch).map(function (k) { return label(k) + ' ' + fmt(k, ch[k]); }).join(' • ') : 'Nothing changed.'),

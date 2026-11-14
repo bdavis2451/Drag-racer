@@ -103,7 +103,7 @@
   };
 
   // the settings that matter on a timeslip, as they were for the pass
-  var KEYS = ['boost', 'launchRpm', 'shiftRpm', 'revLimit', 'psi', 'launchThr', 'thrRamp', 'tcSlip', 'tcGain', 'stall', 'luGear', 'fd', 'antiSquat', 'nosDelay'];
+  var KEYS = ['boost', 'dslFuel', 'launchRpm', 'shiftRpm', 'revLimit', 'psi', 'launchThr', 'thrRamp', 'tcSlip', 'tcGain', 'stall', 'luGear', 'fd', 'antiSquat', 'nosDelay'];
   L.add = function (inst, info, rec) {
     var sim = info.sim, S = info.S, me = info.me, tune = {};
     KEYS.forEach(function (k) {

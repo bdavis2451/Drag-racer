@@ -98,7 +98,7 @@
   var DSL_BSFC = 5.83e-8;   // kg of fuel per J of work
   function dieselState(S, rpm, boost, thr) {
     var d = S.dsl, w = Math.max(rpm, 300) * RPM2W;
-    var Tf = d.Tf * shape(S, rpm);
+    var Tf = d.Tf * (d.fuelK || 1) * shape(S, rpm);
     if (S.mech && rpm > S.mech) Tf *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
     if (d.tqCap) Tf = Math.min(Tf, d.tqCap);
     var ma = airMass(S, rpm, TB.P1 + Math.max(0, boost) / 0.145, 1);
@@ -303,7 +303,7 @@
     // a diesel's exhaust is as heavy and as hot as the fuel it burns: more
     // fuel lights a bigger turbo (what the smoke limiter lets through)
     if (S.dsl) {
-      var d = S.dsl, mf = Math.min(d.Tf * shape(S, rpm) * Math.max(rpm, 300) * RPM2W * DSL_BSFC * (thr == null ? 1 : thr), ma / d.afrLim);
+      var d = S.dsl, mf = Math.min(d.Tf * (d.fuelK || 1) * shape(S, rpm) * Math.max(rpm, 300) * RPM2W * DSL_BSFC * (thr == null ? 1 : thr), ma / d.afrLim);
       var afr = mf > 0 ? ma / mf : 60;
       mx = ma + mf; t3k = clamp(((400 + 19000 / Math.max(afr, 8) - 32) / 1.8 + 273) / 957, 0.6, 1.5);
     }
@@ -585,7 +585,7 @@
       var manCal = tlev === 0 && DR.facTrans && DR.facTrans(inst) === 'm6_g56' && inst.engine === stockEng.id;
       var reqHp = tlev === 0 ? (manCal ? 350 : e.hp) : tlev === 1 ? Math.max(e.hp * 1.35, e.hp + 120) * (1 + 0.15 * B) : capHp;
       reqHp = Math.min(reqHp, capHp);
-      S.dsl = { tune: tlev, hp: reqHp, cap: capHp, manCal: manCal, tqCap: manCal ? 660 / 0.7376 : 0,
+      S.dsl = { tune: tlev, hp: reqHp, cap: capHp, manCal: manCal, fuelK: 1, tqCap: manCal ? 660 / 0.7376 : 0,
         afrLim: [20, 17, 13][tlev], gearLim: tlev === 0 ? [0.8, 0.93] : null };
       S.dsl.Tf = reqHp * DR.HP / (S.pkRpm * RPM2W * shape(S, S.pkRpm));
       S.fuelW = capHp * 1.05 * DR.HP;
@@ -766,6 +766,8 @@
     // long its clamp takes to build to full lock)
     if (S.slider) S.slider = [T.clBase / 100, T.clLock];
     S.tune = T;
+    // a diesel's fuel setting: the share of what the calibration asks for
+    if (S.dsl) S.dsl.fuelK = (T.dslFuel || 100) / 100;
     S.boostSet = S.fiType === 'none' ? 0 : T.boost;
     // ---- jetting (a carb or mechanical injection): the jets meter fuel
     // for the air the engine pulls. Breathing parts (heads, cam, headers,
@@ -907,6 +909,7 @@
     var fiDef = S.eng.fi && S.fiId === S.eng.fi.part ? S.eng.fi.boost : S.diesel ? S.maxBoost : Math.min(8, S.maxBoost);
     return {
       boost: fiDef,
+      dslFuel: 100,
       // manuals launch near peak torque, or for a turbo near its full-boost
       // rpm (a 2-step builds boost there before the clutch drops)
       launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) :
@@ -947,6 +950,9 @@
     { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost; },
       show: function (S) { return S.fiType !== 'none'; }, req: 'Requires a turbo or supercharger', group: 'Engine',
       help: 'More boost = more power, but watch how much your engine takes on its fuel (knock) and your internals.' },
+    { key: 'dslFuel', label: 'Fuel', unit: '%', step: 5, min: function () { return 60; }, max: function () { return 100; },
+      show: function (S) { return !!(S.dsl && S.dsl.tune >= 1); }, only: function (S) { return !!S.dsl; }, req: 'Requires a diesel tune (handheld or race)', group: 'Engine',
+      help: 'How much of the fuel your tune and injectors can deliver it gets. On a diesel the fuel makes the power: less fuel is less power, a cooler exhaust and less load on the pistons, rods and gearbox. Turn it down when the exhaust runs hot (more fuel than the turbo has air for).' },
     { key: 'gearBoost', label: 'Boost by Gear', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost || 0; },
       show: function (S) { return S.fiType === 'turbo' && S.ebc; }, req: 'Requires a turbo with an electronic boost controller (or a tuned factory turbo ECU)', group: 'Engine',
       help: 'A cap on boost in each gear, as electronic controllers do: run less in 1st and 2nd where the tires can\'t take it, the full target from where they can. Set to the target (or above) for no cap.' },
@@ -1223,7 +1229,7 @@
       var egtPk = 0;
       for (var er = 1500; er <= S.red; er += 250) egtPk = Math.max(egtPk, dieselState(S, er, steadyBoost(S, er)).egt);
       S.egtPk = Math.round(egtPk);
-      if (egtPk > 1700) { r.engine += Math.min(0.6, (egtPk - 1700) / 400); r.notes.push('Exhaust temperature hits ' + Math.round(egtPk / 10) * 10 + ' F: more fuel than air. A bigger turbo (more air) or less fuel cools it'); }
+      if (egtPk > 1700) { r.engine += Math.min(0.6, (egtPk - 1700) / 400); r.notes.push('Exhaust temperature hits ' + Math.round(egtPk / 10) * 10 + ' F: more fuel than air. A bigger turbo (more air) or less fuel' + (S.dsl.tune >= 1 ? ' (Setup: Fuel)' : '') + ' cools it'); }
       else if (egtPk > 1450) r.notes.push('Exhaust runs ' + Math.round(egtPk / 10) * 10 + ' F at full power: fine for a pass, hot for towing');
     }
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);

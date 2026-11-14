@@ -160,7 +160,8 @@ turbos the record builds need). The changelog note for the tester says so.
    changed).
 5. **The tuner on a diesel** says when the exhaust is hot and what fixes it
    (a bigger turbo, smaller injectors or the street tune; not less boost).
-   A real fuel setting for diesels is a separate question (asked).
+   **Then (owner: build it): a Fuel setting** on tuned diesels, used by the
+   tuner (see `diesel.md`, "Fuel setting").
 6. Wheels & tires questions: held for the rework (owner).
 
 Tested: shop lists per engine (turbos and blowers), spec sheets (Evo 9498,

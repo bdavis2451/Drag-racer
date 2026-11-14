@@ -2,6 +2,28 @@
 
 Short notes for testing, newest first.
 
+## Diesel fuel setting
+
+- **New: Fuel (Setup > Engine) on a tuned diesel**, 60-100%. On a diesel the
+  fuel makes the power: turn it down for a cooler exhaust and less strain on
+  the engine and gearbox; turn it up for power. The Setup panel now shows the
+  exhaust temperature (amber past 1,450 F, red past 1,700 F). Needs a diesel
+  tune (handheld or race); stays at 100% unless you change it.
+- **The tuner on a diesel** runs the boost up to what the head gasket holds,
+  then turns the fuel down pull by pull until the exhaust and internals are
+  happy (Safe ~1,450 F, Balanced ~1,550 F, On the edge ~1,650 F). Example:
+  the truck with race tune, 100% injectors and the stock-size VGT went from
+  775 hp at 1,800 F (engine risk) to 680 hp at 1,510 F.
+- **Fixed (tuner):** when the track work didn't pay off, the tuner put back
+  the tune from before the dyno, undoing the dyno's work (a fuel cut, or
+  boost brought back from the knock point). Now only the track changes are
+  undone; the dyno tune stays.
+
+**Try:** the diesel truck with the race tune and bigger injectors: move the
+Fuel slider and watch power and EXHAUST; book a tuner (Engine) and read the
+dyno notes. **Look out for:** the Fuel slider on a gas car (it shouldn't be
+there), or a tuner session that leaves a diesel's exhaust red.
+
 ## Big turbos for built engines, blowers that fit, nitrous spools turbos, safe diesel packages
 
 - **The shop now sells the turbos a built engine can use:** a 4G63 or SR20

@@ -601,6 +601,7 @@
         statInner.innerHTML = '';
         [gst('POWER', UI.fmtHp(S2.peakHp) + ' @ ' + S2.peakHpRpm, 'acc'), gst('TORQUE', Math.round(S2.peakTq) + ' lb-ft'),
           S2.nosHp ? gst('NITROUS', '+' + S2.nosHp + ' hp') : null, gst('REDLINE', S2.red + ' rpm'),
+          S2.dsl ? gst('EXHAUST', Math.round(S2.egtPk / 10) * 10 + ' F', S2.egtPk > 1700 ? 'bad' : S2.egtPk > 1450 ? 'warn' : '') : null,
           gst('BEST 1/8', best.e ? best.e.toFixed(3) + 's' : '—', 'good'),
           gst('BEST 1/4', best.q ? best.q.toFixed(3) + 's' : '—', 'good')].concat(UI.riskBox(S2)).forEach(function (el) { if (el) statInner.appendChild(el); });
       }, 120);
@@ -608,6 +609,7 @@
     DR.TUNE_DEFS.forEach(function (def) {
       if (def.group !== tuneGroup) return;
       var unlocked = def.show(S);
+      if (!unlocked && def.only && !def.only(S)) return;   // (a setting this kind of car never gets)
       if (!unlocked) { lockedRows.push(h('div', { class: 'tune-row locked' }, h('span', { class: 'lab' }, '🔒 ' + def.label), h('span', { class: 'help' }, def.req))); return; }
       if (def.key === 'gears') {
         var gg = h('div', { class: 'gear-grid' });
@@ -636,7 +638,7 @@
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; DR.syncSetup(inst); G.save(); UI.refresh(); } : null);
       var ab = allSetupsBtn(inst, def.key, def.label), labSpan = row.querySelector('.lab span');
       if (ab && labSpan) labSpan.appendChild(ab);
-      row.appendChild(h('div', { class: 'help' }, def.help + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' && S.knock < 90 ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F). This engine (' + S.cr + ':1) knocks past about ' + S.knock + ' psi on this fuel (' + S.knockLo + ' at peak torque, ' + S.knockHi + ' up top). Past it the tune pulls timing: each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and further it detonates.' + (S.nosKnock ? ' With the nitrous spraying it knocks about ' + S.nosKnock + ' psi sooner (' + DR.knockSafe(S) + ' psi).' : '') : '')));
+      row.appendChild(h('div', { class: 'help' }, (def.key === 'boost' && S.dsl ? 'On a diesel boost is air: more of it burns the fuel cleaner and cooler (and lets more fuel make power). The head gasket sets the limit: about ' + S.headPsi + ' psi.' : def.help) + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' && S.knock < 90 ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F). This engine (' + S.cr + ':1) knocks past about ' + S.knock + ' psi on this fuel (' + S.knockLo + ' at peak torque, ' + S.knockHi + ' up top). Past it the tune pulls timing: each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and further it detonates.' + (S.nosKnock ? ' With the nitrous spraying it knocks about ' + S.nosKnock + ' psi sooner (' + DR.knockSafe(S) + ' psi).' : '') : '')));
       // jets: how the plugs read (any data logger brings a wideband: the
       // exact air/fuel ratio)
       if (def.key === 'jets') {

@@ -352,3 +352,58 @@ tune, 100% injectors, compounds; a still-risky build gets its injectors
 stepped down. Results: Pro power 600 hp 1,370 F, Extreme power 600 hp 1,518 F,
 full Extreme 851 hp 1,351 F, no engine risk. The tuner notes a hot exhaust and
 its fix. Open: a diesel fuel setting in Setup (asked).
+
+## Fuel setting (Nov 14, owner: "go ahead and build the fuel setting")
+**What:** Setup > Engine > **Fuel**, 60-100% (5% steps) of what the tune and
+injectors deliver. Shown on a diesel with a diesel tune (handheld or race);
+locked with "Requires a diesel tune" on a stock-tune diesel; not shown at all
+on gas cars. Default 100%, so old saves, rivals and packages are unchanged.
+
+**Physics:** scales the fuel the calibration asks for (`S.dsl.fuelK`, set
+right after the tune in buildSpec), before the smoke limiter and the
+hardware cap: race, dyno, EGT, smoke, the turbo's exhaust energy, risk and
+the data logger all follow it. Less fuel = less power, cooler exhaust, less
+load on the internals and gearbox. Where the fuel is already capped by the
+air (smoke limiter, or the race tune short of air) the first few % change
+nothing. Less fuel also spools the turbo a little less (a diesel's exhaust
+energy is its fuel).
+
+**Tuner (engine job on a tuned diesel):**
+1. Boost: up to what the head gasket holds (head limit less a margin by
+   aggression and skill; a known limit, so it goes straight there), not
+   down for knock (none), lean (a diesel always runs lean) or internals.
+2. Fuel: from 100% down 5% a pull until the exhaust is under the target
+   (Safe 1,450 F, Balanced 1,550 F, On the edge 1,650 F; a greener tuner
+   up to 100 F cooler) and the internals take the power.
+3. If even 60% runs hot: a note to fit a bigger turbo or smaller injectors.
+- Stock-tune diesels: boost only, stopping for the internals or the head.
+
+**Tuner verdict fix (found here):** "never leave it slower" compared the
+final tune with the tune from *before* the dyno and put that back, which
+would undo a fuel cut (or a gas car's boost brought back to its knock point)
+whenever the track work didn't pay. Now it compares with, and puts back, the
+tune the baseline pass ran on (the dyno tune): "the track changes are undone
+(the dyno tune stays)". Open question (backlog): dyno-only sessions are
+always refunded.
+
+**Screens and texts:** Setup's stat panel shows EXHAUST (amber past 1,450 F,
+red past 1,700 F); the boost help on a diesel says boost is air and the head
+gasket is the limit (not knock); the risk note and the turbo spec sheet point
+to Setup: Fuel on a tuned diesel; the tuner's engine job reads "Boost and
+fuel, rev limiter, shift points"; the data logger records the setting with
+each pass (logbook KEYS).
+
+**Results (truck, Pro tuner, Balanced):** race tune + 100% injectors + VGT:
+775 hp / 1,800 F at 50 psi (head lifting) -> 44 psi, 80% fuel, 680 hp,
+1,510 F, no engine risk; ET 12.44 at 100% -> 12.97 at 80% (safe). S366 + 50%
+injectors: 95%, 665 hp, 1,480 F. Compounds + 200% + O-ring studs: 74 psi,
+60%, 630 hp, 1,530 F (the hottest point is 1,500 rpm before the big turbo
+lights; see backlog "Diesel fuel by rpm"). Handheld tune: 40 psi, 100%,
+1,280 F. Stock: unchanged.
+
+**Tests** (scratchpad scr/): dslfuel.js / dslfuel2.js / dslfuel3.js (fuel
+sweep and tuner by aggression and skill), dslrace.js (race ET and smoke by
+fuel), dslui.js (Setup screen: tuned, stock diesel, gas), dsltunui.js (tuner
+UI flow), dslverdict2.js (verdict keeps the dyno tune). Regressions: rivals
+0/126, packages 0/1,440, stock bench identical, tunev2 (gas tuner), tubest,
+qolsmoke, pkgsmoke, kntuner, invloss, knedge, crawl mid: clean.
