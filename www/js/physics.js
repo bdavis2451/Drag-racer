@@ -703,7 +703,8 @@
     S.mountK = mounts.mk || 1;   // stiffer mounts: the hit goes to the tires
     // the boost the head gasket holds: factory bolts to ~22 psi (a factory
     // turbo engine a little past its own boost), studs and O-rings far more
-    S.headPsi = ai ? 999 : hstud.psi || (e.diesel ? 45 : Math.max(22, e.fi ? e.fi.boost + 8 : 0));
+    S.headPsi = ai ? 999 : e.diesel ? hstud.dpsi || 45 : hstud.psi || Math.max(22, e.fi ? e.fi.boost + 8 : 0);
+    S.headKit = hstud.psi ? hstud.id : null;   // (head studs fitted)
     // cooling: the radiator is sized for the car's factory engine
     S.coolHp = stockEng.hp * 1.6 + (coolP.cap || 0);
     S.chute = !!safe.chute;
@@ -1201,7 +1202,7 @@
     if (S.diesel || S.fiType === 'none') { /* no spark knock */ }
     else if (bTop > kTopR + 0.5) { r.engine += Math.min(0.7, (bTop - kTopR) * 0.08); r.notes.push('Detonating: past about ' + kTopR + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression' + (nkR ? ', or a smaller shot' : '')); }
     else if (bTop > kR + 0.5) { r.engine += Math.min(0.1, (bTop - kR) * 0.015); r.notes.push('Timing pulled: past ' + kR + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + kTopR + ' psi, and the exhaust runs hot'); }
-    if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)'); }
+    if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: ' + (S.headKit ? 'the head lifts past about ' + S.headPsi + ' psi even on studs' + (S.headKit === 'hs1' ? ' (an O-ringed block holds more, Top End)' : '') : 'the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)')); }
     if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
     // short of fuel it runs lean: it makes what the fuel allows (or the

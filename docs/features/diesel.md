@@ -407,3 +407,13 @@ fuel), dslui.js (Setup screen: tuned, stock diesel, gas), dsltunui.js (tuner
 UI flow), dslverdict2.js (verdict keeps the dyno tune). Regressions: rivals
 0/126, packages 0/1,440, stock bench identical, tunev2 (gas tuner), tubest,
 qolsmoke, pkgsmoke, kntuner, invloss, knedge, crawl mid: clean.
+
+## Head studs on a diesel (owner, Nov 14: "diesel stud numbers")
+The stud parts were rated for gas engines (ARP 40 psi, O-ring 75), so on a
+diesel (factory head ~45 psi) studs lowered the limit. Now `dpsi`: ARP studs
+65, O-ringed block 100 (parts.js headstud; physics `S.headPsi`, `S.headKit`).
+Shop text shows the diesel number; the risk note says "even on studs" with
+studs fitted. Sources: DieselHub Cummins performance (stock bolts a concern
+from ~40-50 psi, varies by truck), Diesel Army ARP 625 stud guide, seller
+listings (studs for 45+ psi builds). Packages: no diesel package fits studs,
+so all 1,440 unchanged; rivals 0/126.

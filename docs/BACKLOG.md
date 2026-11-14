@@ -21,22 +21,6 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **Dyno-only tuner sessions are always refunded** (found Nov 14, from the
-  Nov 6 tuner rework): "no gain, no pay" only judges the track work, so a
-  session booked for the engine alone ends "Nothing I found beat what you
-  came in with" and refunds the whole fee, while the dyno tune stays on the
-  car. Options: charge for the dyno work always (it's calibration, not a
-  bet on ET); charge when the dyno made more power or made the engine safer;
-  or keep it free. Asked Nov 14.
-
-- **Head studs on a diesel lower its boost limit** (found Nov 14): a diesel's
-  factory head holds 45 psi, the ARP studs part says 40 (written for gas
-  engines), so fitting them makes a Cummins worse. Real Cummins studs are the
-  usual fix past ~50-60 psi. Options: studs never lower the limit (simple
-  fix), or diesel-specific numbers (studs ~65, O-rings ~100). Changes the
-  diesel packages that include studs. Asked Nov 14.
-
-
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
   spool). Records are ~3,000 / ~3,500. Option: a ~100 mm single or twin
@@ -100,6 +84,13 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Dyno work is always paid** (owner, Nov 14): "no gain, no pay" covers the
+  track work only; a dyno-only booking costs what its quote says (no track
+  day fee for its check pass). Shipped.
+- **Diesel head studs** (owner, Nov 14): diesel numbers, studs ~65 psi,
+  O-ringed block ~100 psi (factory head ~45). Gas engines unchanged; no
+  package used studs on a diesel, so packages unchanged. Shipped.
 
 - **Diesel fuel setting** (owner, Nov 14): shipped. Setup > Engine > Fuel
   (60-100%) on a tuned diesel; the tuner sets boost to the head gasket, then

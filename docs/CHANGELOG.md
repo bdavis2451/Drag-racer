@@ -2,6 +2,21 @@
 
 Short notes for testing, newest first.
 
+## Tuner pricing, diesel head studs
+
+- **Dyno work is always paid now.** "No gain, no pay" covers the track work
+  only. Before, a dyno-only booking was always refunded in full (and said it
+  found nothing) while the dyno tune stayed on the car. A dyno-only booking
+  now costs what the quote says, plus the check pass's ticket and fuel (no
+  track day fee).
+- **Head studs on a diesel:** they used to *lower* a diesel's boost limit
+  (45 -> 40 psi). Now ARP studs hold about 65 psi on a diesel and the
+  O-ringed block about 100 (gas engines unchanged). The shop text gives the
+  diesel numbers.
+
+**Try:** book a tuner for the Engine only, then Engine + Launch, and check the
+money; studs on the diesel truck with a big turbo (boost limit in Setup).
+
 ## Diesel fuel setting
 
 - **New: Fuel (Setup > Engine) on a tuned diesel**, 60-100%. On a diesel the

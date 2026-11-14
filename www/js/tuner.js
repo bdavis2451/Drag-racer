@@ -169,7 +169,7 @@
     return 'the ' + what + ' maxed out: they feed about ' + Math.round(Math.min(S.fuelInj, S.fuelPump) * S.fuelFF) + ' hp' + (S.fuelFF < 1 ? ' on ' + (S.fuelId === 'meth' ? 'methanol' : 'E85') : '') + '. Bigger ' + (both ? 'injectors and pump' : S.fuelInj < S.fuelPump ? 'injectors' : 'pump') + ' to go further';
   }
   function why(l, S) {
-    if (S && S.dsl) return l.head ? (S._parts && S._parts.headstud && S._parts.headstud !== 'stock' ? 'the head studs hold about ' + S.headPsi + ' psi' : 'the head gasket holds about ' + S.headPsi + ' psi; head studs hold more') : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : '';
+    if (S && S.dsl) return l.head ? (S.headKit ? 'the head studs hold about ' + S.headPsi + ' psi' : 'the head gasket holds about ' + S.headPsi + ' psi; head studs hold more') : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : '';
     return l.knock ? 'knock: it was pulling timing and the extra boost wasn\'t buying power any more' : l.lean ? (S ? fuelWhy(S) : 'the fuel system is maxed out') : l.spark ? 'the ignition started to misfire' : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : ''; }
   // a pull's sheet: wheel power and torque, boost and air/fuel against rpm
   function sheet(S) {
@@ -288,7 +288,7 @@
     // the dyno time: a freelancer's tune price covers it, your staff tuner
     // books the dyno by the pull
     if (ss.who.staff) { var f = DR.dynoFee(S); G.pay(f); ss.cost.dyno += f; }
-    else if (!ss.dynoPaid) { var fee = Math.round((ss.who.dyno + S.peakHp * 1.0) / 50) * 50; G.pay(fee); ss.cost.labor += fee; ss.dynoPaid = true; }
+    else if (!ss.dynoPaid) { var fee = Math.round((ss.who.dyno + S.peakHp * 1.0) / 50) * 50; G.pay(fee); ss.cost.labor += fee; ss.dynoLabor = fee; ss.dynoPaid = true; }
     var p = { label: lbl, note: note, sheet: sheet(S) };
     ss.pulls.push(p); ss.log.push({ pull: lbl, note: note, whp: p.sheet.peakHp, afr: p.sheet.afr });
     // a pull past the knock line can hurt it (a careful tuner backs off quick)
@@ -517,7 +517,9 @@
   TU.record = function (ss, pass, res) {
     var S = G.spec(ss.inst), fuel = DR.runCost(S).total;
     G.pay(fuel + TU.TRACK_FEE); ss.cost.fuel += fuel; ss.cost.track += TU.TRACK_FEE; ss.passes++;
-    if (!ss.who.staff && !ss.dayPaid) { var dayFee = Math.round(ss.who.day * (ss.costK || 1) / 10) * 10; G.pay(dayFee); ss.cost.labor += dayFee; ss.dayPaid = true; }
+    // (a freelancer's day at the track: only when track work was booked; a
+    // dyno-only booking's check pass is part of the dyno tune)
+    if (!ss.who.staff && !ss.dayPaid && ss.jobs.some(function (j) { return j !== 'engine'; })) { var dayFee = Math.round(ss.who.day * (ss.costK || 1) / 10) * 10; G.pay(dayFee); ss.cost.labor += dayFee; ss.dayPaid = true; }
     var note, et = res.et;
     ss.log.push({ pass: pass.label, et: res.et, sixty: res.sixty, aborted: res.aborted });
     // a bad pass: a tuner who reads data well doesn't learn from it
@@ -807,8 +809,12 @@
   // gets its old tune back and the session is on the tuner: refunded.
   TU.verdict = function (ss) {
     if (ss.broke || ss.inst.damage) return { keep: true };
-    var paid = ss.cost.labor + ss.cost.dyno + ss.cost.track + ss.cost.fuel + ss.cost.driver;
-    if (!ss.changed) return { keep: true, refund: paid, why: 'Nothing I found beat what you came in with.' };
+    // no gain, no pay covers the track work; the dyno work (calibration for
+    // the engine's sake) is always paid (owner, Nov 14)
+    var dynoPaid = (ss.dynoLabor || 0) + ss.cost.dyno;
+    var paid = Math.max(0, ss.cost.labor + ss.cost.dyno + ss.cost.track + ss.cost.fuel + ss.cost.driver - dynoPaid);
+    var trackJob = ss.jobs.some(function (j) { return j !== 'engine'; });
+    if (!ss.changed) return trackJob ? { keep: true, refund: paid, why: 'Nothing I found on the track beat what you came in with.' + (dynoPaid ? ' The dyno work stays on and is paid.' : '') } : { keep: true };
     if (ss.confirmEt == null || !(ss.baseEt < 90)) return { keep: true };
     // (against the tune the baseline pass ran on: the dyno's work, done for
     // the engine's sake (knock, exhaust heat, internals), isn't judged on ET)
@@ -816,7 +822,7 @@
     var now = JSON.parse(JSON.stringify(ss.inst.tune)), mNow = scoreNow(ss);
     ss.inst.tune = JSON.parse(JSON.stringify(base)); var mWas = scoreNow(ss); ss.inst.tune = now;
     var d = 0.6 * (ss.confirmEt < 90 ? ss.confirmEt - ss.baseEt : 0.2) + 0.4 * (mNow - mWas);
-    if (d > -0.003) return { keep: false, tune: base, dyno: dyno, refund: paid, why: 'Couldn\'t beat what you came in with (' + ss.baseEt.toFixed(3) + '): ' + (dyno ? 'the track changes are undone (the dyno tune stays).' : 'your old tune is back on.') };
+    if (d > -0.003) return { keep: false, tune: base, dyno: dyno, refund: paid, why: 'Couldn\'t beat what you came in with (' + ss.baseEt.toFixed(3) + '): ' + (dyno ? 'the track changes are undone (the dyno tune stays, and is paid).' : 'your old tune is back on.') };
     return { keep: true, gain: -d };
   };
   // the session's notes, one row per pull, check and pass

@@ -574,11 +574,13 @@
     opt('co3', 'Endurance Cooling Package', 2200, { lvl: 3, cap: 1500, kg: 6 }, 'Radiator, oil, transmission and diff coolers, ducted: about 1500 hp more, lap after lap.')
   ]};
   // Head studs: factory head bolts stretch under high cylinder pressure and
-  // the head lifts off the gasket. psi: the boost it holds.
+  // the head lifts off the gasket. psi: the boost it holds (dpsi: on a
+  // diesel, whose factory head already holds ~45: Cummins studs are the
+  // usual fix past ~45-50 psi, O-rings / fire rings for 100 psi compounds).
   C.headstud = { name: 'Head Studs & Gasket', options: [
     opt('stock', 'Factory Head Bolts', 0, { psi: 0 }),
-    opt('hs1', 'ARP Head Studs + MLS Gasket', 450, { psi: 40 }, 'Chromoly studs clamp the head harder than stretch-to-yield bolts, with a multi-layer steel gasket: good to about 40 psi.'),
-    opt('hs2', 'Studs + O-Ringed Block + Copper Gasket', 1800, { lvl: 3, psi: 75 }, 'Stainless O-rings in the deck bite into a copper gasket: the race way to seal big boost, to about 75 psi.')
+    opt('hs1', 'ARP Head Studs + MLS Gasket', 450, { psi: 40, dpsi: 65 }, 'Chromoly studs clamp the head harder than stretch-to-yield bolts, with a multi-layer steel gasket: good to about 40 psi.'),
+    opt('hs2', 'Studs + O-Ringed Block + Copper Gasket', 1800, { lvl: 3, psi: 75, dpsi: 100 }, 'Stainless O-rings in the deck bite into a copper gasket: the race way to seal big boost, to about 75 psi.')
   ]};
   // Water-methanol injection: a fine mist after the intercooler cools the
   // charge as it evaporates and acts like more octane, so a pump-gas car can
@@ -773,6 +775,11 @@
         n = Math.round(n / 50) * 50;
         return Object.assign({}, o, { desc: cat === 'valvetrain' ? o.desc.replace(/Valves float \d+ rpm later/, 'Valves float ' + n + ' rpm later') : o.desc.replace(/\+\d+ rpm/, '+' + n + ' rpm') });
       });
+    }
+    // head studs on a diesel: its own numbers
+    if (cat === 'headstud') {
+      var de = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine];
+      if (de && de.diesel) list = list.map(function (o) { return o.dpsi && o.desc ? Object.assign({}, o, { desc: o.desc.replace(/about \d+ psi/, 'about ' + o.dpsi + ' psi on this diesel (its factory head holds about 45)') }) : o; });
     }
     return list;
   };

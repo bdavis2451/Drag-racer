@@ -211,3 +211,11 @@ Rivals (no tuner), the dyno pulls (engine items), prices, the booking UI.
   is judged by the model, not the slip.
 - Regressions: rivsnap 0 diffs (126), qolsmoke, c2, drv, tubest clean;
   crawl mid same as before (Settings 1, pre-existing).
+
+## Nov 14: dyno always paid (owner)
+"No gain, no pay" now refunds the track part only (day fee, passes, driver);
+the dyno work (freelancer's dyno tune price `ss.dynoLabor`, staff dyno time
+`ss.cost.dyno`) is always paid. A dyno-only booking: no refund, no "nothing
+found" note, and no track day fee for its check pass (it wasn't in the
+quote). The verdict compares with and restores the tune the baseline pass ran
+on (the dyno tune), not the pre-dyno tune. Test: scratchpad scr/refund.js.
