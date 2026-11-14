@@ -6,6 +6,9 @@ Short notes for testing, newest first.
 
 - **Fixed: the dyno could crash with the sound off** (or before sound had
   started): the Pull button froze the game. Same for the circuit screen.
+- **Shop texts:** race valve springs and oiling now say what they really
+  give on engines built to rev (a 4G63's Pro Mod valvetrain: 3,900 rpm more,
+  not 2,300).
 - **Diesels:** no more "Misfiring" or ignition warnings at big boost (a
   diesel has no spark); the shop's status no longer raises a diesel's
   failure risk every time it's shown; the dyno and data logger show a

@@ -11,7 +11,8 @@ the top of each section.
   Owner notes Nov 14: wheel width and diameter, a good wheel selection, tire
   selection, chosen separately per axle (front labelled Front; the drive
   axle isn't labelled, the game knows it), new wheel/tire assets and a path
-  for adding more. `docs/features/wheels-tires.md`,
+  for adding more. Research done Nov 14, options + 5 questions in
+  `docs/features/wheels-tires.md`,
   `docs/features/awd-fwd-traction.md`.
 - **Career/rival balance after the engine ceilings too:** 19 rivals moved
   (3.2 I6 rivals at 20 psi up to 0.32 s slower, 2JZ-GTE rivals ~0.1 s
