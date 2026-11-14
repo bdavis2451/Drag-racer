@@ -2,6 +2,29 @@
 
 Short notes for testing, newest first.
 
+## Big turbos for built engines, blowers that fit, nitrous spools turbos, safe diesel packages
+
+- **The shop now sells the turbos a built engine can use:** a 4G63 or SR20
+  can buy the 9498, a 2JZ the twin 7685s, an LS the Pro Mod twins. On an
+  engine that isn't built yet the spec sheet says so ("too big for this
+  engine as it is ... it comes alive built: race heads, cams, valvetrain and
+  bottom end"). The record power from the engine-ceilings update is
+  reachable now.
+- **Superchargers that fit the engine:** no more 14-71 Pro Mod blower for a
+  1.0 three-cylinder. Big blowers show on big engines, small ones on small.
+  A blower already on your car still shows.
+- **Nitrous lights a turbo:** spraying brings a laggy turbo on boost much
+  sooner (a 150 shot on a 2JZ with an 8891: full boost about 2.5 s sooner).
+- **Diesel power packages are safe now:** they run the turbo to what the
+  head gasket holds and match the injectors to the turbo; no more 1,800 F
+  exhaust. Pro and Extreme power: about 600 hp on a stock bottom end; the
+  full Extreme build about 850 hp.
+- **Diesel tuner:** says when the exhaust runs hot and what fixes it.
+
+**Try:** a stock Evo or S13 in the turbo shop (big turbos listed, with the
+note); a turbo car with a nitrous shot; a diesel power package. **Look out
+for:** a turbo or blower listed for an engine where it makes no sense.
+
 ## Audit fixes: diesel warnings, dyno with sound off
 
 - **Fixed: the dyno could crash with the sound off** (or before sound had
@@ -29,9 +52,6 @@ Short notes for testing, newest first.
   fuel** made almost no power (the dyno could even show negative power).
   It now makes about what the engine does without boost while it detonates,
   with the same high chance of breaking.
-- **Known, waiting on a decision:** the biggest turbos (9498, twin 7685,
-  Pro Mod twins) aren't sold for most engines yet, so the record power from
-  the engine-ceilings update can't be reached in the shop yet.
 
 **Try:** park a car with spare parts on the shelf, switch to a different
 kind of car, close and reopen the game. **Look out for:** anything missing

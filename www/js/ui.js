@@ -352,7 +352,10 @@
       ['Full boost', pull && pull.full ? '~' + r100(pull.full) + ' rpm on a pull (holds it from ~' + r100(steady) + ')' : 'not before your ' + S1.red + ' rpm limiter', pull && pull.full ? 'good' : 'bad']
     ];
     var warn = [];
-    if (!pull || !pull.full) warn.push('Too big for this engine at ' + psi + ' psi: it won\'t reach full boost before the limiter. A smaller turbo, more revs or more engine.');
+    // (a turbo listed for the engine built: say what it takes)
+    var forBuilt = !S1.dsl && DR.turboFitsBuilt && !DR.turboFits(fiId, e.id) && DR.turboFitsBuilt(fiId, e.id);
+    if (!pull || !pull.full) warn.push('Too big for this engine as it is at ' + psi + ' psi: it won\'t reach full boost before the limiter.' + (forBuilt ? ' It comes alive on this engine built: race heads, cams and intake, and a valvetrain and bottom end to rev on.' : ' A smaller turbo, more revs or more engine.'));
+    else if (forBuilt && pull.full > S1.red - 1500) warn.push('A big turbo for this engine: it\'s at its best built to rev (race heads, cams, valvetrain and bottom end).');
     else if (pull.full > S1.red - 800) warn.push('Comes in late: full boost only ' + (S1.red - r100(pull.full)) + ' rpm before the limiter. ' + (S1.dsl ? 'More fuel lights it sooner; a looser converter and a transbrake help it leave.' : 'Plan on a 2-step and a loose converter.'));
     if (S1.dsl && S1.egtPk > 1450) warn.push('Short of air for your fuel: black smoke and ' + Math.round(S1.egtPk / 10) * 10 + ' F exhaust at full power. A bigger turbo (or compounds) burns it clean.');
     else if (S1.flowW && S1.peakHp >= S1.flowW / DR.HP * 0.98) warn.push('Runs out of air: the compressor chokes at about ' + Math.round(S1.flowW / DR.HP) + ' hp, so power flattens up top.');

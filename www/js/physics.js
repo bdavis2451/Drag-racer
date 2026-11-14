@@ -356,11 +356,13 @@
   // the rotor: its energy (1/2 I w^2) sets the compressor's tip speed and so
   // the boost it can make; the turbine's surplus over the compressor's need
   // spins it up, bearing drag slows it
-  function tbStep(S, st, rpm, thr, tgt, dt, closed) {
+  // (exK: extra exhaust energy over the engine's own, e.g. nitrous: 1.5 =
+  // half again as much driving the turbine)
+  function tbStep(S, st, rpm, thr, tgt, dt, closed, exK) {
     var tb = S.tb, U = st.U || 0, w = U / tb.r, E = 0.5 * tb.I * w * w;
     var made = tbU2psi(U), boost = Math.min(made, tgt);
     var f = tbFlow(S, rpm, TB.P1 + boost * thr / 0.145, Math.max(thr, 0.04));
-    var surplus = f.Wt - f.Wc - tb.fric * 0.02 * E;
+    var surplus = f.Wt * (exK || 1) - f.Wc - tb.fric * 0.02 * E;
     // throttle shut (a shift): with a blow-off valve the compressor vents
     // and the rotor coasts; without one it surges and stalls the wheel
     if (closed) surplus -= E / Math.max(0.1, S.bovT || 0.15) * 0.5;
@@ -402,6 +404,55 @@
       ok = !!pull && pull.full != null && pull.full <= Math.max(e.red, e.bp || 0) - 300 && u.flow >= e.hp * 1.15;
     }
     return (fitCache[k] = ok);
+  };
+  // ...or will it, once the engine is built? (the shop lists these: race
+  // heads, cams and intake, a race valvetrain and bottom end to rev on,
+  // race fuel and a race tune.) Packages, which go on a mostly stock
+  // engine, keep to DR.turboFits.
+  var builtFitCache = {};
+  var BUILT = { airfilter: 'af3', intake: 'i3', throttle: 'tb3', exhaust: 'e3', heads: 'hd3', cams: 'c4', valvetrain: 'vt4', pistons: 'p4', rods: 'r4', crank: 'k3', block: 'b3', oiling: 'o3',
+    headstud: 'hs2', ic: 'ic3', fueltype: 'meth', injectors: 'inj6', fuelpump: 'fp5', ecu: 'ecu3', ignition: 'ig3', wastegate: 'wg2', tmanifold: 'tm2', downpipe: 'dp2', theat: 'th2' };
+  DR.turboFitsBuilt = function (fiId, engId) {
+    if (DR.turboFits(fiId, engId)) return true;
+    var k = engId + '|' + fiId;
+    if (builtFitCache[k] != null) return builtFitCache[k];
+    var e = DR.ENGINES[engId], u = DR.FI[fiId], ok = false;
+    if (!u.diesel && !e.diesel && !(u.twin && (e.rotary || e.cyl < 6)) && u.flow >= e.hp * 1.15) {
+      try {
+        var inst = { carId: 'camaro', engine: engId, parts: Object.assign({}, BUILT, { fi: fiId }), tune: {} };
+        if (e.carb) inst.parts.intake = 'mpi';
+        // revs to what the built engine takes
+        var S0 = DR.buildSpec(inst);
+        inst.tune = { revLimit: S0.mech, boost: Math.min(15, u.maxBoost) };
+        var S = DR.buildSpec(inst), pull = DR.turboPull(S, 500, 1500, S.boostSet);
+        ok = !!pull && pull.full != null && pull.full <= S.red - 300;
+      } catch (er) { ok = false; }
+    }
+    return (builtFitCache[k] = ok);
+  };
+
+  // Does this supercharger suit this engine? It has to feed more than the
+  // engine makes stock, and not be grossly bigger than the engine could ever
+  // use (its flow past 1.5x what the engine, built, makes at the blower's
+  // most boost: a 14-71 belongs on a big-inch V8, not a 1.0 three-cylinder).
+  var blowerFitCache = {}, builtNaCache = {};
+  DR.blowerFits = function (fiId, engId) {
+    var k = engId + '|' + fiId;
+    if (blowerFitCache[k] != null) return blowerFitCache[k];
+    var e = DR.ENGINES[engId], u = DR.FI[fiId], ok = false;
+    if (!e.diesel && u.flow >= e.hp * 1.15) {
+      if (builtNaCache[engId] == null) {
+        try {
+          var parts = Object.assign({}, BUILT); delete parts.ic; delete parts.wastegate; delete parts.tmanifold; delete parts.downpipe; delete parts.theat; delete parts.fueltype; delete parts.headstud;
+          var inst = { carId: 'camaro', engine: engId, parts: parts, tune: {} };
+          if (e.carb) inst.parts.intake = 'mpi';
+          inst.tune = { revLimit: DR.buildSpec(inst).mech };
+          builtNaCache[engId] = DR.buildSpec(inst).peakHp;
+        } catch (er) { builtNaCache[engId] = e.hp * 1.5; }
+      }
+      ok = u.flow <= 1.5 * builtNaCache[engId] * (1 + u.maxBoost / 14.7);
+    }
+    return (blowerFitCache[k] = ok);
   };
 
   // ---------------------------------------------------------------- spec builder
@@ -1502,7 +1553,12 @@
         var closed = thrB < 0.3;
         // anti-lag keeps the turbine lit through a shift
         if (this.shifting && S.twostep === 2) closed = false;
-        this.boost = tbStep(S, this.tbSt, rpm, thrB, tgt, dt, closed) * thrB;
+        // nitrous lights a turbo: the shot burns extra fuel and oxygen, and
+        // its exhaust drives the turbine on top of the engine's own (the
+        // more so the less the engine is making yet, low in the revs)
+        var exK = 1;
+        if (this.nosLvl > 0 && S.nosW) exK = 1 + Math.min(1.5, this.nosLvl * S.nosW * this.nosP / Math.max(5000, boostedTorque(S, rpm, this.boost) * rpm * RPM2W * this.airK));
+        this.boost = tbStep(S, this.tbSt, rpm, thrB, tgt, dt, closed, exK) * thrB;
       }
     } else if (S.fiType !== 'none') {
       this.boost = steadyBoost(S, rpm) * thrB;

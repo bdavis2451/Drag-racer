@@ -344,3 +344,11 @@ offered on diesels but did nothing (hidden until it's built); dyno, tuner
 sheet and data logger showed a gasoline air-fuel ratio (now the diesel's
 own, 14-30:1 scale on the dyno); lockup/bolt-together converters added after
 the rework now map to the race billet diesel converter on old saves.
+
+## Packages and tuner (Nov 14, owner approved)
+Diesel packages run the turbo to the head-gasket limit (44 psi) instead of
+leaving it at stock boost; Pro: race tune, 50% injectors, S366; Extreme: race
+tune, 100% injectors, compounds; a still-risky build gets its injectors
+stepped down. Results: Pro power 600 hp 1,370 F, Extreme power 600 hp 1,518 F,
+full Extreme 851 hp 1,351 F, no engine risk. The tuner notes a hot exhaust and
+its fix. Open: a diesel fuel setting in Setup (asked).

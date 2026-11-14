@@ -170,6 +170,15 @@
     var pk = pts.reduce(function (a, p) { return p.hp > a.hp ? p : a; }, pts[0]);
     return { pts: pts, peakHp: pk.hp, peakRpm: pk.rpm, afr: pk.afr, red: S.red, boost: S.boostSet, fi: S.fiType, maxBoost: S.maxBoost };
   }
+  // a diesel's exhaust temperature after the boost is set: the tuner says
+  // what's running it hot and what fixes it (boost can't: less air runs a
+  // diesel hotter, not cooler)
+  function dieselEgtNote(ss) {
+    var S = G.spec(ss.inst), t = Math.round((S.egtPk || 0) / 10) * 10;
+    if (!S.dsl || t <= 1450) return;
+    ss.log.push({ pit: t > 1700 ? 'Exhaust hits ' + t + ' F at full power: more fuel than the turbo has air for. Turning the boost down won\'t cool it (less air runs a diesel hotter). A bigger turbo, smaller injectors or the street diesel tune will.'
+      : 'Exhaust runs ' + t + ' F at full power: fine for a pass, hot for towing. A bigger turbo would cool it.' });
+  }
   // the next pull: { label, note, sheet, S } (null when the dyno work is done)
   TU.nextPull = function (ss) {
     var inst = ss.inst;
@@ -205,7 +214,9 @@
         }
         else if (bad && it.n < 14) { note = 'Over the line (' + why(l, S) + '). Down ' + step + ' psi.'; it.b -= step; }
         else { note = 'Safe here.'; ss.items.shift(); }
-        return pull(ss, 'Boost ' + fmt('boost', S.boostSet), note, S);
+        var bp = pull(ss, 'Boost ' + fmt('boost', S.boostSet), note, S);
+        if (ss.items[0] !== it) dieselEgtNote(ss);
+        return bp;
       }
       if (it.k === 'revLimit') {
         var rd = def('revLimit'); S = G.spec(inst);

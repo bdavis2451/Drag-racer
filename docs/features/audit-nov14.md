@@ -131,3 +131,40 @@ Found and fixed:
 Found, waiting on the owner: **question 1** (the shop doesn't sell the
 turbos the record builds need). The changelog note for the tester says so.
 
+
+## Owner's answers (Nov 14) and what was built
+1. **A: the shop lists turbos the engine can use once built** (race heads,
+   cams, intake, valvetrain and bottom end, race fuel and tune), with the
+   spec sheet saying "too big for this engine as it is ... it comes alive on
+   this engine built". Packages keep the stock-engine rule. Now every engine
+   can buy the turbo its record build uses (the air-cooled VW tops out at
+   the 7275). physics.js `DR.turboFitsBuilt`; parts.js turbo list; ui.js sheet.
+2. **Superchargers filtered by engine:** a blower is listed if it feeds more
+   than the engine makes stock and its flow is no more than 1.5x what the
+   built engine makes at the blower's most boost (`DR.blowerFits`). The 14-71
+   shows only on big-inch engines; the Geo, air-cooled VW and D15 get none;
+   the M90 drops off the big V8s. A blower already on a car always shows.
+3. **Nitrous lights a turbo:** while it sprays, the shot's exhaust drives
+   the turbine on top of the engine's own (`tbStep` exK, up to 2.5x; most
+   where the engine makes little yet). Supra + 8891: full boost 4.33 s dry,
+   2.64 s with a 75 shot, 1.75 s with a 150; S13 + 7275: 2.72 -> 0.79 s;
+   an LS1 + 7685 (already quick) barely changes. One rival 0.007 s quicker.
+4. **Diesel power packages made safe:** diesel packages run the turbo up to
+   what the head gasket holds (44 psi) instead of leaving it at 30, Pro uses
+   50% injectors with the S366, Extreme the S366/S480 compounds with 100%
+   injectors, and if a build is still risky the package steps the injectors
+   down a size (only while that lowers the engine, gearbox and axle risk).
+   Truck: Pro power 600 hp / 1,370 F, Extreme power 600 hp / 1,518 F, full
+   Pro 692 hp, full Extreme 851 hp / 1,351 F; no engine risk on any. Gas
+   packages: all 1,432 identical to before (only the 8 truck diesel ones
+   changed).
+5. **The tuner on a diesel** says when the exhaust is hot and what fixes it
+   (a bigger turbo, smaller injectors or the street tune; not less boost).
+   A real fuel setting for diesels is a separate question (asked).
+6. Wheels & tires questions: held for the rework (owner).
+
+Tested: shop lists per engine (turbos and blowers), spec sheets (Evo 9498,
+S13 8891), nitrous spool runs, diesel package grid and snapshot of every
+package (1,440), diesel tuner, stock benchmark (unchanged), rivals (1 of 126,
+-0.007 s), qolsmoke, pkgsmoke, burnui, tubest, tuner, shelf-loss test,
+edge cases, every car x power adder sweep (663 builds, clean).

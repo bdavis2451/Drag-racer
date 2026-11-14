@@ -23,12 +23,10 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **Audit questions (Nov 14), `docs/features/audit-nov14.md`:** big turbos
-  aren't sold for the engines whose record builds need them (A list what
-  the built engine can use, B what it can use as built now, C keep and lower
-  the ceilings); filter superchargers by engine like turbos; nitrous helps
-  a turbo spool; diesel Pro/Extreme power packages run 31% risk; a fuel
-  setting (or advice) for the tuner on diesels.
+- **A fuel setting for diesels** (Setup): turn the fuel down to cool the
+  exhaust or spare the internals, the way real diesel tuners do; the tuner
+  would use it. Today the tuner only advises. Asked Nov 14.
+
 
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
@@ -87,6 +85,11 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Audit answers (Nov 14):** shop lists turbos the built engine can use (A);
+  blowers filtered by engine; nitrous spools turbos; diesel power packages
+  made safe; diesel tuner advises on EGT. Shipped. Wheels & tires questions
+  held for the rework.
 
 - **Nitrous on boost lowers the knock point** (Nov 14): shipped.
 

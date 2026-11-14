@@ -334,3 +334,10 @@ pass comes after (agreed).
   Next: add rotor inertia (transient), turbine capacity ~ A/R^0.5, diesel
   exhaust temp by fuel, calibrate to ranges; then a "spool table" for every
   engine x turbo in the shop to check nothing is silly.
+
+## Nov 14 (audit decisions)
+- The shop lists a turbo when the engine, **built**, spools it
+  (`DR.turboFitsBuilt`); packages keep `DR.turboFits` (stock engine). The
+  spec sheet says when it's too big for the engine as it is.
+- Superchargers filtered by engine (`DR.blowerFits`).
+- Nitrous drives the turbine while it sprays (`tbStep` exK).

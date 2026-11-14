@@ -812,9 +812,10 @@
       if (st !== 'none' && DR.FI[st].type === 'turbo') { var tbf = DR.turboSpec(st, DR.ENGINES[fEng]); if (tbf && tbf.name) list[0].name = tbf.name + ' (Factory)'; }
       DR.FI_SHOP.forEach(function (f) {
         var u = DR.FI[f], dE = !!DR.ENGINES[fEng].diesel;
-        // only the turbos that suit this engine (the one fitted always shows);
-        // a diesel gets diesel turbos, no blowers
-        if (f !== fCur && (u.type !== 'turbo' ? dE : (!!u.diesel !== dE || (DR.turboFits && !DR.turboFits(f, fEng))))) return;
+        // only the turbos that suit this engine, built (the one fitted always
+        // shows; the spec sheet says when it's too big for it as it is);
+        // a diesel gets diesel turbos, no blowers; blowers sized to the engine
+        if (f !== fCur && (u.type !== 'turbo' ? dE || (DR.blowerFits && !DR.blowerFits(f, fEng)) : (!!u.diesel !== dE || (DR.turboFitsBuilt && !DR.turboFitsBuilt(f, fEng))))) return;
         list.push({ id: f, name: u.name, price: u.price, lvl: u.lvl, tune: 'hard', group: u.type !== 'turbo' ? 'Superchargers' : u.compound ? 'Compound turbos' : u.twin ? 'Twin turbos' : 'Single turbos',
           desc: u.desc + ' Max ' + u.maxBoost + ' psi, feeds ~' + u.flow + ' hp. Needs an ECU tune: the stock one can only run ~5 psi. Plan on injectors and a pump too.' });
       });
@@ -1034,8 +1035,10 @@
   DR.PACKAGES_DSL = { power: [
     [['ecu', 'dtune'], ['injectors', 'dinj25']],
     [['ecu', 'dtune'], ['injectors', 'dinj50'], ['fuelpump', 'dlift'], ['fi', 'd_vgt63']],
-    [['ecu', 'drace'], ['injectors', 'dinj100'], ['fuelpump', 'dcp3s'], ['fi', 'd_s366']],
-    [['ecu', 'drace'], ['injectors', 'dinj200'], ['fuelpump', 'dcp3d'], ['fi', 'd_s480']]] };
+    // (race-tuned diesels: injectors the turbo can burn clean, or the
+    // exhaust runs past 1,700 F)
+    [['ecu', 'drace'], ['injectors', 'dinj50'], ['fuelpump', 'dcp3s'], ['fi', 'd_s366']],
+    [['ecu', 'drace'], ['injectors', 'dinj100'], ['fuelpump', 'dcp3d'], ['fi', 'd_cmp']]] };
   DR.PKG_TIERS = [{ id: 'budget', name: 'Budget', lvl: 1 }, { id: 'street', name: 'Street', lvl: 2 }, { id: 'pro', name: 'Pro', lvl: 3 }, { id: 'extreme', name: 'Extreme', lvl: 4 }];
   DR.PKG_DISCOUNT = 0.1;
   function auto(inst) { return DR.TRANS[DR.partId('trans', inst)].type === 'auto'; }
@@ -1249,6 +1252,9 @@
   DR.packagePlan = function (inst, groups, tier, anyLevel) {
     var copy = JSON.parse(JSON.stringify(inst)), steps = [];
     copy.parts = copy.parts || {}; copy.tune = copy.tune || {};
+    // the boost it ran before, if the player never set one (a diesel's
+    // default follows its turbo)
+    var boost0 = inst.tune && inst.tune.boost != null ? null : DR.buildSpec(inst).boostSet;
     // A package fits the best parts you have unlocked up to its tier's pick
     // (so it can always be bought, and gets better as the career opens up)
     function unl(cat, opt) { return anyLevel || !DR.Game || !DR.Game.partUnlocked || DR.Game.partUnlocked(cat, opt.lvl, opt.id); }
@@ -1301,15 +1307,26 @@
     function setBoost() {
       var S = DR.buildSpec(copy);
       if (S.fiType === 'none') return;
-      var want = Math.min(DR.PKG_BOOST[tier], DR.knockSafe(S) - 1, S.sparkPsi, S.maxBoost);
-      var was = S.boostSet;
+      // (a diesel runs its turbo near flat out - more air burns its fuel
+      // cleaner and cooler - up to what the head gasket holds)
+      var want = S.diesel ? Math.min(S.maxBoost, S.headPsi - 1) : Math.min(DR.PKG_BOOST[tier], DR.knockSafe(S) - 1, S.sparkPsi, S.maxBoost);
+      var was = S.diesel && boost0 != null ? Math.min(S.boostSet, boost0) : S.boostSet;
       copy.tune.boost = Math.max(was, Math.round(want * 2) / 2);
       // more boost heats the charge and lowers the knock limit: back off
       // until it is a psi under it again
       while (copy.tune.boost > was && DR.knockSafe(DR.buildSpec(copy)) - 1 < copy.tune.boost) copy.tune.boost -= 0.5;
       // and no more than the engine's internals take (that's the bottom-end
       // package's job)
-      while (copy.tune.boost > was && DR.buildSpec(copy).risk.engine > 0) copy.tune.boost -= 0.5;
+      if (!S.diesel) { while (copy.tune.boost > was && DR.buildSpec(copy).risk.engine > 0) copy.tune.boost -= 0.5; return; }
+      // (a diesel: only while that really lowers the risk - less air runs
+      // it hotter, not safer)
+      var rNow = DR.buildSpec(copy).risk.engine;
+      while (copy.tune.boost > was && rNow > 0) {
+        copy.tune.boost -= 0.5;
+        var rLess = DR.buildSpec(copy).risk.engine;
+        if (rLess >= rNow) { copy.tune.boost += 0.5; break; }
+        rNow = rLess;
+      }
     }
     var boostPkg = groups.indexOf('power') >= 0;
     groups.forEach(function (gid) {
@@ -1371,7 +1388,24 @@
       });
       // the fuel may have uncapped the power, or a strong enough gearbox
       // isn't unlocked yet: boost back within what the car can hold
-      if (boostPkg && copy.tune.boost != null) {
+      if (boostPkg && copy.tune.boost != null && DR.buildSpec(copy).diesel) {
+        // a diesel's power is its fuel, not its boost (less air only runs it
+        // hotter): step the package's injectors down a size until the build
+        // is safe, never below what the truck already had
+        var INJ = ['dinjr', 'dinj300', 'dinj200', 'dinj100', 'dinj50', 'dinj25'], inj0 = INJ.indexOf(DR.partId('injectors', inst));
+        // (less fuel is less torque too: the engine's, gearbox's and axles'
+        // risk, and only while a smaller size really lowers it)
+        var rsk = function () { var r = DR.buildSpec(copy).risk; return r.engine + r.trans + (r.axle || 0); };
+        var st = steps.filter(function (x) { return x.cat === 'injectors'; })[0], rE = rsk();
+        while (st && rE > 0) {
+          var cur = INJ.indexOf(DR.partId('injectors', copy)), nx = INJ[cur + 1];
+          if (cur < 0 || !nx || (inj0 >= 0 && cur + 1 > inj0)) break;
+          copy.parts.injectors = nx;
+          var rN = rsk();
+          if (rN >= rE) { copy.parts.injectors = INJ[cur]; break; }
+          st.id = nx; st.opt = DR.getOption('injectors', copy, nx); rE = rN;
+        }
+      } else if (boostPkg && copy.tune.boost != null) {
         var floor = DR.buildSpec(inst).boostSet;
         while (copy.tune.boost > floor && risky()) copy.tune.boost -= 0.5;
       }
