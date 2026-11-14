@@ -199,6 +199,14 @@
         // a rear wheel well cut out and widened, a big slick inside
         r(1, 4, 22, 3, M3); r(1, 4, 3, 17, M3); r(20, 4, 3, 17, M3); r(1, 4, 22, 1, M2);
         disc(12, 15, 7, BK); disc(12, 15, 3, M2); r(4, 7, 2, 12, ac); r(18, 7, 2, 12, ac); break;
+      case 'fwells':
+        // a front fender pulled out over a wide slick
+        r(2, 6, 20, 3, ac); r(2, 6, 20, 1, DR.shadeHex(ac, 0.3)); r(1, 8, 3, 6, ac); r(20, 8, 3, 6, ac);
+        disc(12, 16, 7, BK); disc(12, 16, 3, M2); r(5, 9, 2, 12, M3); r(17, 9, 2, 12, M3); break;
+      case 'ballast':
+        // steel plates bolted to a bracket
+        r(4, 6, 16, 4, M3); r(4, 11, 16, 4, M3); r(4, 16, 16, 4, M3); r(4, 6, 16, 1, M2); r(4, 11, 16, 1, M2); r(4, 16, 16, 1, M2);
+        r(7, 4, 2, 18, ac); r(15, 4, 2, 18, ac); break;
       case 'wheels': case 'fwheels':
         disc(12, 12, 10, M2); disc(12, 12, 8, M4);
         for (k = 0; k < 6; k++) { var a4 = k * Math.PI / 3; for (var q = 2; q <= 7; q++) r(Math.round(12 + Math.cos(a4) * q), Math.round(12 + Math.sin(a4) * q), 1, 1, M1); }
@@ -975,14 +983,16 @@
             auto && S.tbrake ? line('Transbrake', 'yes') : null, S.mvb ? line('Valve body', 'manual: you shift') : null, line('Final drive', S.fd.toFixed(2) + ':1' + (S.qc ? ' (quick-change)' : '')), line('Differential', o('diff')), line('Layout', S.drive)])),
         h('div', {},
           sect('CHASSIS', [line('Weight', UI.kgLb(S.m) + ', ' + Math.round(S.f * 100) + '% front'), line('Chassis', o('chassis')), line('Rear suspension', o('rearsusp')),
-            line('Shocks', o('shocks')), line('Wheelie bar', DR.partApplies('wheeliebar', inst) && DR.partId('wheeliebar', inst) !== 'stock' ? o('wheeliebar') : null), line('Safety', o('safety'))]),
+            line('Shocks', o('shocks')), line('Wheelie bar', DR.partApplies('wheeliebar', inst) && DR.partId('wheeliebar', inst) !== 'stock' ? o('wheeliebar') : null),
+            line('Ballast', DR.partApplies('ballast', inst) && DR.partId('ballast', inst) !== 'stock' ? o('ballast') : null), line('Safety', o('safety'))]),
           sect('WHEELS & TIRES', S.wheels ? (function () {
             // front then rear, each wheel and tire; the drive tires' pressure and wear
             var X = S.wheels, fD = X.axD === 'front', wn = function (wh) { return wh.factory ? 'Factory ' + wh.d + 'x' + wh.w : DR.WHEEL_STYLES[wh.style].name + ' ' + wh.d + 'x' + wh.w; };
             var tn = function (t) { return t.factory ? 'Factory ' + t.size : t.name; };
             return [line('Front', wn(fD ? X.wD : X.wO) + ', ' + tn(fD ? X.tD : X.tO)), line('Rear', wn(fD ? X.wO : X.wD) + ', ' + tn(fD ? X.tO : X.tD)),
               line('Drive tire pressure', (T.psi != null ? T.psi : S.tire.optP) + ' psi'), line('Wear', w.rtires ? Math.round(w.rtires.w * 100) + '% (' + w.rtires.n + ' passes)' : 'new'),
-              DR.partId('tubs', inst) !== 'stock' ? line('Tubs', o('tubs')) : null];
+              DR.partApplies('tubs', inst) && DR.partId('tubs', inst) !== 'stock' ? line('Tubs', o('tubs')) : null,
+              DR.partApplies('fwells', inst) && DR.partId('fwells', inst) !== 'stock' ? line('Front wells', o('fwells')) : null];
           })() : [line('Drive tires', DR.TIRES[S.tireId].name + ' @ ' + (T.psi != null ? T.psi : S.tire.optP) + ' psi'), line('Wear', w.rtires ? Math.round(w.rtires.w * 100) + '% (' + w.rtires.n + ' passes)' : 'new'), line('Wheels', o('wheels'))]),
           sect('TIMESLIPS', [line('Best 1/8', best.e ? best.e.toFixed(3) + ' s' : '—'), line('Best 1/4', best.q ? best.q.toFixed(3) + ' s' : '—'), line('Top trap', best.qt ? best.qt + ' mph' : '—')]))),
       mods.length ? h('div', { class: 'bss' }, h('div', { class: 'bst' }, 'MODIFICATIONS'), mods) : h('div', { class: 'dim' }, 'Bone stock.'));

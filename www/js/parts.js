@@ -506,7 +506,7 @@
   ]};
   C.wheeliebar = { name: 'Wheelie Bars', options: [
     opt('stock', 'None', 0, { bar: 0 }),
-    opt('wb1', 'Adjustable Wheelie Bars', 1500, { bar: 1 }, 'Stops big wheelies. Set the height in Tuning.')
+    opt('wb1', 'Adjustable Wheelie Bars', 1500, { bar: 1 }, 'Stops big wheelies. On a front-drive car, set low, they hold the nose down and keep weight on the front tires. Set the height in Tuning.')
   ]};
   C.aero = { name: 'Aero', options: [
     // cla: downforce (lift coefficient x area, m^2); claF: share on the
@@ -543,10 +543,17 @@
   // 'wheels'); options are listed per car (sizes over its brakes)
   C.fwheels = { name: 'Wheels', options: [opt('stock', 'Factory Wheels', 0, {})] };
   // rear wheel tubs: room for wider rear tires
-  C.tubs = { name: 'Rear Wheel Tubs', options: [
+  C.tubs = { name: 'Rear Wheel Tubs', notFwd: true, options: [
     opt('stock', 'Factory Wheel Wells', 0, { tubW: 0 }),
     opt('tub1', 'Mini-Tubs', 2500, { tubW: 16.5, lvl: 3 }, 'The inner wheel wells cut out and widened about 2-3 inches each side: room for a 315 radial or a 31x13 slick.'),
     opt('tub2', 'Full Tubs (Back-Half)', 6000, { tubW: 99, lvl: 4, kg: -10 }, 'The rear floor and wells rebuilt around a narrowed rear end: any slick fits. -10 kg.')
+  ]};
+  // front wheel wells on a front-drive car: room for a wider drive tire
+  // (wellF: inches over the factory wells; 99: rebuilt, room to 13 in)
+  C.fwells = { name: 'Front Wheel Wells', fwdCar: true, options: [
+    opt('stock', 'Factory Fenders', 0, { wellF: 0 }),
+    opt('fw1', 'Rolled & Pulled Fenders', 600, { wellF: 1.2, lvl: 3 }, 'The fender lips rolled and the fenders pulled out: about an inch more room, enough for a 26x10 slick on a compact.'),
+    opt('fw2', 'Wide One-Piece Front End', 6000, { wellF: 99, lvl: 4, kg: -8 }, 'A fibreglass one-piece front end (hood, fenders and bumper in one, flipped up for service) with the inner wells rebuilt: room for a 28x10.5 slick. -8 kg.')
   ]};
   C.weight = { name: 'Weight Reduction', options: [
     opt('stock', 'Stock', 0, { wr: 0 }),
@@ -560,8 +567,17 @@
   // bat: kg moved from the nose to the trunk; bkgW: kg saved
   C.battery = { name: 'Battery', options: [
     opt('stock', 'Stock Battery (Engine Bay)', 0, { bat: 0, batkg: 0 }),
-    opt('bt1', 'Trunk Battery Relocation', 250, { bat: 20, batkg: 3 }, 'Moves the 20 kg battery to the back of the car, over the drive wheels (+3 kg of cable and box).'),
-    opt('bt2', 'Lightweight Race Battery (Trunk)', 650, { bat: 20, batkg: -12, aiBat: 8 }, 'A small race battery mounted in the trunk: 12 kg lighter, and its weight moves over the drive wheels.')
+    opt('bt1', 'Trunk Battery Relocation', 250, { bat: 20, batkg: 3, onFwd: false }, 'Moves the 20 kg battery to the back of the car, over the drive wheels (+3 kg of cable and box).'),
+    opt('bt2', 'Lightweight Race Battery (Trunk)', 650, { bat: 20, batkg: -12, aiBat: 8, onFwd: false }, 'A small race battery mounted in the trunk: 12 kg lighter, and its weight moves over the drive wheels.'),
+    // (front drive: the battery stays over the drive wheels)
+    opt('bt3', 'Lightweight Race Battery (Front)', 500, { bat: 0, batkg: 0, nose: 12, onFwd: true }, 'A small race battery in the factory spot: 12 kg lighter, and what\'s left stays over the front (drive) wheels.')
+  ]};
+  // Ballast: bolted-in weight ahead of the front axle. On a front-drive car
+  // it puts more load on the drive tires, at the cost of more weight.
+  C.ballast = { name: 'Front Ballast', fwdOnly: true, options: [
+    opt('stock', 'No Ballast', 0, { blkg: 0 }),
+    opt('bl1', 'Front Ballast 25 kg', 150, { blkg: 25, lvl: 2 }, '25 kg (55 lb) of steel bolted in behind the front bumper: about 32 kg more on the front tires, 25 kg more to accelerate.'),
+    opt('bl2', 'Front Ballast 50 kg', 250, { blkg: 50, lvl: 3 }, '50 kg (110 lb) behind the front bumper: about 65 kg more on the front tires, 50 kg more to accelerate.')
   ]};
   // ---- more of what real builds use
   // Accessory drive: the water pump, alternator and power steering pump take
@@ -670,9 +686,9 @@
     { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['carb', 'injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu', 'logger'] },
     { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'tmanifold', 'downpipe', 'theat', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
     { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'valvebody', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
-    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'tubs', 'wheeliebar', 'aero'] },
+    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'tubs', 'fwells', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['wheels', 'rtires', 'fwheels', 'ftires', 'brakes'] },
-    { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'safety'] }
+    { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'ballast', 'safety'] }
   ];
   // Which side of the career opens a part (anything not listed is shared:
   // either discipline opens it). Drag racing opens the launch and straight-
@@ -780,6 +796,12 @@
   function lvlOf(o) { return !o.price ? 0 : o.lvl || DR.partLevel(o.price); }
   DR.partOptions = function (cat, inst) {
     var list = listOptions(cat, inst).map(function (o) { if (o.lvl == null) o.lvl = lvlOf(o); return o; });
+    // options only for (or never for) a front-drive car (what's fitted now
+    // always stays listed)
+    if (list.some(function (o) { return o.onFwd != null; })) {
+      var fwdNow = DR.driveOf(inst) === 'FWD', curO = inst.parts && inst.parts[cat];
+      list = list.filter(function (o) { return o.onFwd == null || o.onFwd === fwdNow || o.id === curO; });
+    }
     // an engine built to rev (e.rx: a 4G63, an SR20) gets more from race
     // valve springs and oiling than the plain figure: say its real number
     if (cat === 'valvetrain' || cat === 'oiling') {
@@ -837,9 +859,15 @@
   DR.wellLimit = function (inst, axle) {
     var w = DR.CAR_WT[inst.carId], fwd = DR.CARS[inst.carId].drive === 'FWD';
     // (the undriven end: the factory tire plus about 50 mm, as on real cars)
-    if (axle === 'front') return fwd ? w[4] : Math.round((facOf(inst, 'front').sec + 2) * 10) / 10;
+    if (axle === 'front') {
+      if (!fwd) return Math.round((facOf(inst, 'front').sec + 2) * 10) / 10;
+      // fender work (front-drive cars): rolled fenders add about an inch, a
+      // rebuilt one-piece front end takes up to 13 in
+      var fw = DR.partApplies('fwells', inst) ? DR.getOption('fwells', inst).wellF || 0 : 0;
+      return fw >= 99 ? Math.max(w[4], 13) : Math.round((w[4] + fw) * 10) / 10;
+    }
     var lim = fwd ? Math.round((facOf(inst, 'rear').sec + 2) * 10) / 10 : w[4];
-    return Math.max(lim, DR.getOption('tubs', inst).tubW || 0);
+    return Math.max(lim, DR.partApplies('tubs', inst) ? DR.getOption('tubs', inst).tubW || 0 : 0);
   };
   // the tire on a slot -> its data (a factory tire: the car's own, at its
   // real size)
@@ -878,7 +906,8 @@
       var ax = a[0], wh = a[3], t = a[4], AX = ax === 'front' ? 'Front' : 'Rear';
       if (wh.d < DR.minWheel(inst, ax)) issues.push({ cat: a[1], text: AX + ' wheels (' + wh.d + ' in) don\'t clear the brakes: ' + DR.minWheel(inst, ax) + ' in or bigger' + (DR.partId('brakes', inst) !== 'br1' && DR.CAR_WT[inst.carId][6][ax === 'front' ? 0 : 1] < wh.d + 1 ? ', or drag brakes' : '') });
       if (!DR.tireFits(t, wh)) issues.push({ cat: a[2], text: AX + ' tires don\'t fit the ' + AX.toLowerCase() + ' wheels (' + (t.factory ? t.size : t.name) + ' on ' + wh.d + 'x' + wh.w + ')' });
-      if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' ? 'tubs' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' ? ': tubs fix it (Suspension: Rear Wheel Tubs)' : '') });
+      var fender = ax === 'front' && DR.partApplies('fwells', inst), tubOK = DR.partApplies('tubs', inst);
+      if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' && tubOK ? 'tubs' : fender ? 'fwells' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' && tubOK ? ': tubs fix it (Suspension: Rear Wheel Tubs)' : fender ? ': fender work fixes it (Suspension: Front Wheel Wells)' : '') });
       if (a[1] === 'wheels' && t.kind === 'Front Runner') issues.push({ cat: 'rtires', text: 'Front runners can\'t drive the car' });
     });
     return {
@@ -1114,6 +1143,10 @@
     if (c.needsShifter) return tr.type === 'manual';
     if (c.needsNos) return DR.partId('nitrous', inst) !== 'stock';
     if (c.notTurbo) return !!inst.ai || DR.FI[DR.partId('fi', inst)].type !== 'turbo';
+    // front-drive cars: front wells and ballast instead of rear tubs
+    if (c.notFwd) return DR.driveOf(inst) !== 'FWD';
+    if (c.fwdOnly) return DR.driveOf(inst) === 'FWD';
+    if (c.fwdCar) return DR.CARS[inst.carId].drive === 'FWD' && DR.driveOf(inst) !== 'RWD';
     return true;
   };
 
@@ -1167,7 +1200,7 @@
     'injectors', 'ignition', 'ecu', 'downpipe', 'theat', 'flywheel', 'carb'];
   // Made for the car (its suspension pickup points, body, frame, driveline
   // length): they only go back on the same model.
-  DR.CAR_BOUND = ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero', 'brakes', 'driveshaft', 'mounts', 'cooling', 'rearend', 'layout'];
+  DR.CAR_BOUND = ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero', 'brakes', 'driveshaft', 'mounts', 'cooling', 'rearend', 'layout', 'fwells'];
 
   // ---------------------------------------------------------------- packages
   // Quick upgrade packages (like Need for Speed: Underground 2's Street / Pro
@@ -1294,6 +1327,11 @@
     return best && best !== cur && best !== 'stock' ? best : null;
   }
   function torqueNm(inst) { var S = DR.buildSpec(inst); return S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * Math.PI / 30) : 0); }
+  // the battery: to the trunk over the drive wheels, but a front-drive car
+  // keeps it up front (the race battery in the factory spot)
+  function batFor(lvl) {
+    return function (inst) { return DR.driveOf(inst) === 'FWD' ? (lvl >= 2 ? 'bt3' : null) : lvl >= 2 ? 'bt2' : 'bt1'; };
+  }
   function transFor(inst) {
     var tr = DR.TRANS[DR.partId('trans', inst)], need = torqueNm(inst) * 1.08;
     if (tr.maxTq >= need) return null;
@@ -1354,23 +1392,24 @@
       [['trans', transFor], ['clutch', clutchFor(1)], ['converter', converterFor('tcl')], ['shifter', 'ss1'], ['valvebody', 'vb1'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)]],
       [['trans', transFor], ['clutch', clutchFor(2)], ['converter', converterFor('tcm')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['valvebody', 'vb2'], ['flywheel', 'fw1'], ['diff', 'lsd'], ['driveshaft', 'ds1'], ['rearend', axleFor(1)], ['mounts', 'mm1'], ['gears', gearsFor]],
       [['trans', transFor], ['clutch', clutchFor(3)], ['converter', converterFor('tcp7')], ['transbrake', 'tb1'], ['shifter', 'ss2'], ['valvebody', 'vb2'], ['flywheel', 'fw2'], ['diff', 'spool'], ['driveshaft', 'ds2'], ['rearend', axleFor(2)], ['mounts', 'mm2'], ['gears', gearsFor],
-        // a front-driver making real power is converted to drive the rear
-        ['layout', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? 'rwd' : null; }]]],
+        // (a front-driver stays front-drive: the RWD conversion is its own
+        // choice in the shop, owner Nov 14)
+        ]],
     susp: [
       [['springs', 'sp1'], ['rearsusp', 'rs0'], ['chassis', 'cg1']],
       [['springs', 'sp1'], ['shocks', 'sh1'], ['rearsusp', 'rs1'], ['chassis', 'cg1']],
       [['springs', 'sp2'], ['shocks', 'sh2'], ['rearsusp', 'rs2'], ['chassis', 'cg2'], ['frontsusp', 'fs1']],
-      [['springs', 'sp3'], ['shocks', 'sh3'], ['rearsusp', 'rs3'], ['chassis', 'cg3'], ['frontsusp', 'fs2'], ['wheeliebar', function (i) { return DR.CARS[i.carId].drive === 'FWD' ? null : 'wb1'; }]]],
+      [['springs', 'sp3'], ['shocks', 'sh3'], ['rearsusp', 'rs3'], ['chassis', 'cg3'], ['frontsusp', 'fs2'], ['wheeliebar', 'wb1']]],
     tires: [
       [['rtires', 'dr_245']],
       [['rtires', 'dr_275'], ['wheels', 'wh1']],
       [['rtires', 'dr_315'], ['wheels', 'wh2'], ['brakes', 'br1']],
       [['rtires', 'sl_31'], ['wheels', 'wh3'], ['brakes', 'br2'], ['ftires', 'ft1']]],
     body: [
-      [['weight', 'w0'], ['battery', 'bt1']],
-      [['weight', 'w1'], ['battery', 'bt1']],
-      [['weight', 'w2'], ['battery', 'bt2'], ['safety', 'sf1']],
-      [['weight', 'w3'], ['battery', 'bt2'], ['safety', 'sf2']]]
+      [['weight', 'w0'], ['battery', batFor(1)]],
+      [['weight', 'w1'], ['battery', batFor(1)]],
+      [['weight', 'w2'], ['battery', batFor(2)], ['safety', 'sf1']],
+      [['weight', 'w3'], ['battery', batFor(2)], ['safety', 'sf2']]]
   };
   // boost a package leaves the car on, if it fits a turbo / blower
   DR.PKG_BOOST = [8, 10, 15, 20];
@@ -1479,7 +1518,7 @@
     // mini-tubs, drag brakes, front runners.
     function tiresPkg() {
       var CAND = [['dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'], ['rsl_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'],
-        ['rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'sl_24', 'dr_225'], ['sl_31', 'rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_305', 'dr_275', 'sl_24']][tier];
+        ['rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'sl_26', 'sl_24', 'dr_225'], ['sl_31', 'rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_305', 'dr_275', 'sl_26', 'sl_24']][tier];
       var axD = DR.axleOf(copy, 'wheels'), axO = axD === 'front' ? 'rear' : 'front';
       var curMu = DR.TIRES[DR.partId('rtires', copy)].mu, awd = DR.driveOf(copy) === 'AWD';
       function ok(cat, id) { var o = DR.getOption(cat, copy, id); return o && o.id === id && unl(cat, o) ? o : null; }
@@ -1507,17 +1546,44 @@
         var wid = wheelFor(t, tier >= 2 ? ['bead', 'drag'] : ['drag', 'street']);
         if (brWas) copy.parts.brakes = brWas; else delete copy.parts.brakes;
         if (!wid) continue;
-        // wells: mini-tubs from Race up (Extreme always), if needed
-        var tub = null, well = DR.wellLimit(copy, axD);
+        // wells: mini-tubs from Race up (Extreme always), if needed; on a
+        // front-drive car rolled fenders from Race, the one-piece front end
+        // at Extreme
+        var tub = null, fend = null, well = DR.wellLimit(copy, axD);
         if (t.sec > well + 0.01) {
-          if (tier < 2 || axD !== 'rear' || !ok('tubs', 'tub1') || t.sec > 16.5) continue;
-          tub = 'tub1';
+          if (axD === 'front') {
+            if (tier < 2 || !DR.partApplies('fwells', copy)) continue;
+            var fwWas = copy.parts.fwells;
+            ['fw1', 'fw2'].forEach(function (fid) {
+              if (fend || (fid === 'fw2' && tier < 3) || !ok('fwells', fid)) return;
+              copy.parts.fwells = fid;
+              if (t.sec <= DR.wellLimit(copy, axD) + 0.01) fend = fid;
+            });
+            if (fwWas) copy.parts.fwells = fwWas; else delete copy.parts.fwells;
+            if (!fend) continue;
+          } else {
+            if (tier < 2 || !ok('tubs', 'tub1') || t.sec > 16.5) continue;
+            tub = 'tub1';
+          }
         }
         // AWD: the same tire has to fit the other axle too (its wells, its
         // brakes with the same brake kit)
         var owid = null;
         if (awd) {
-          if (!ok('ftires', tid) || t.sec > DR.wellLimit(copy, axO) + 0.01) continue;
+          if (!ok('ftires', tid)) continue;
+          // (a front-drive car converted to AWD: fender work up front, as on
+          // the front-drive car)
+          if (t.sec > DR.wellLimit(copy, axO) + 0.01) {
+            if (tier < 2 || axO !== 'front' || !DR.partApplies('fwells', copy)) continue;
+            var fwW = copy.parts.fwells;
+            ['fw1', 'fw2'].forEach(function (fid) {
+              if (fend || (fid === 'fw2' && tier < 3) || !ok('fwells', fid)) return;
+              copy.parts.fwells = fid;
+              if (t.sec <= DR.wellLimit(copy, axO) + 0.01) fend = fid;
+            });
+            if (fwW) copy.parts.fwells = fwW; else delete copy.parts.fwells;
+            if (!fend) continue;
+          }
           if (!brk && t.rim < DR.minWheel(copy, axO)) {
             if (tier < 1 || !ok('brakes', 'br1') || DR.CAR_WT[copy.carId][6][axO === 'front' ? 0 : 1] > t.rim) continue;
             brk = 'br1';
@@ -1528,11 +1594,12 @@
           if (!owid) continue;
         }
         if (tier === 3 && axD === 'rear' && !awd && !tub && DR.partId('tubs', copy) === 'stock' && ok('tubs', 'tub1')) tub = 'tub1';
-        plan = { tire: tid, wheel: wid, brk: brk, tub: tub, owheel: owid };
+        plan = { tire: tid, wheel: wid, brk: brk, tub: tub, fend: fend, owheel: owid };
       }
       if (plan) {
         if (plan.brk) fit('brakes', plan.brk);
         if (plan.tub) fit('tubs', plan.tub);
+        if (plan.fend) fit('fwells', plan.fend);
         fit('wheels', plan.wheel); fit('rtires', plan.tire);
       }
       // AWD: the front axle drives too, so it gets the same tire (an AWD

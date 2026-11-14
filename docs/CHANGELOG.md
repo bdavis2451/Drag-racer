@@ -2,6 +2,37 @@
 
 Short notes for testing, newest first.
 
+## Front-drive drag cars
+
+- **Front Wheel Wells** (Suspension, front-drive cars only): Rolled & Pulled
+  Fenders ($600, room for the new **Drag Slick 26x10**) and a Wide One-Piece
+  Front End ($6,000, room for a 28x10.5 slick). Rear tubs no longer show on
+  front-drive cars (they did nothing there).
+- **Weight stays on the front:** the trunk battery is gone from front-drive
+  cars; instead a **Lightweight Race Battery (Front)** saves 12 kg in the
+  engine bay. New **Front Ballast** (25 or 50 kg behind the bumper): more
+  load on the drive tires, more weight to move. Weight reduction on a
+  front-drive car now strips the back half, so the car gets more
+  front-heavy (Stage 3: about 64% front instead of 60%).
+- **Wheelie bars on front-drive cars** now do something: set low (Tuning:
+  0 to 1 degree), they hold the nose down and keep weight on the front
+  tires.
+- **Slider clutch:** base pressure now goes down to 10% and lockup time up
+  to 4 s, so a big turbo car can launch without flash-spinning the tires.
+- **Packages:** front-drive Race/Extreme tire packages bring the fender work
+  and the bigger slick; the Extreme drivetrain package no longer converts a
+  front-drive car to rear drive (the RWD conversion is still in the shop).
+- **Try:** a Civic, Integra, Neon, GTI or Cobalt with power: fit the fenders
+  and the 26x10, the front battery, ballast and wheelie bars at 0-0.5
+  degrees, and the slider clutch low (15-20%, 3-4 s). A 1,500 hp Civic went
+  from 10.3 to about 8.8 in testing. Look out for: the bigger slick wants a
+  new launch rpm (try lower); anything odd with the bars or the battery
+  options on rear-drive and AWD cars (they should be unchanged).
+- Real 1,500 hp front-drive Civics run 7.8 with a 1.35 60-foot; we're at
+  about 8.8 / 1.70. Next step on that is a question for the owner.
+- Fix: Full Tubs now really take off the 10 kg they promise.
+- Rivals unchanged.
+
 ## AWD tire packages fixed
 
 - **Wheels & Tires packages on AWD cars now fit both axles with the same

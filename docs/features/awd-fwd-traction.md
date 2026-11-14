@@ -1,8 +1,8 @@
 # AWD & FWD traction (to revisit)
 
-Status: **Nov 14: plan approved (all FWD items 1-7, front ballast added,
-Race drive package keeps FWD cars FWD). AWD tire package fix ships first, on
-its own. Then the FWD build.** Owner (Nov 11):
+Status: **Nov 14: AWD tire package fix shipped (80a8224). FWD build shipped
+(items 1-7 + front ballast). Open: the remaining ~1 s gap to real 7-second
+FWD cars (grip ceiling), question to the owner.** Owner (Nov 11):
 make this its own update, run 1,500 / 2,000 hp AWD and FWD and a 3,000 hp AWD
 truck, and keep the results here. Owner (Nov 14): start the FWD research,
 recheck AWD (FWD/AWD only, not the whole W&T work), keep weight in mind and
@@ -137,11 +137,69 @@ the weight split for players only; snapshot checked).
   diffs; package snapshot: only the 23 AWD tire packages changed; pkgsmoke,
   c2, drv, qolsmoke clean. Scripts scr/awdpkg.js, awdpkg2.js, awdui.js.
 
+- **FWD build (Nov 14):**
+  - data.js: `sl_26` Drag Slick 26x10.0-15 (mu 2.25, sec 10.6, rim 15 8-10,
+    $1,500, Pro), in TIRE_SHOP after sl_24.
+  - parts.js: `C.fwells` Front Wheel Wells (fwdCar: base car FWD and not
+    converted to RWD): fw1 Rolled & Pulled Fenders $600 (+1.2 in), fw2 Wide
+    One-Piece Front End $6,000 -8 kg (room 13 in). `C.tubs` notFwd. Battery
+    bt1/bt2 `onFwd: false`, new bt3 Lightweight Race Battery (Front) $500
+    (`nose: 12`), `onFwd: true` (generic onFwd filter in `DR.partOptions`;
+    the fitted option always stays listed). `C.ballast` Front Ballast (fwdOnly):
+    bl1 25 kg $150, bl2 50 kg $250. `DR.wellLimit` front on FWD adds the
+    fender work; fit issues point to Front Wheel Wells. Packages: tires on
+    FWD fit fw1 + sl_26 at Race, fw2 + 28x10.5 at Extreme (AWD-converted
+    FWD cars too); body: bt3 on FWD from Race (none below); susp Extreme
+    fits wheelie bars on FWD too; drive Extreme no longer converts FWD to
+    RWD. Groups: fwells in Suspension, ballast in Weight & Safety; fwells is
+    CAR_BOUND. Wheelie bar text mentions FWD.
+  - physics.js (players only, `!ai`): weight reduction on FWD takes 40% of
+    what comes out from the front (Stage 3 about +3.7 pts front, tube chassis
+    +5.5); bt3 takes 12 kg off the nose; ballast 1.3x on the front, -0.3x
+    rear; tubs/fwells kg now counted (tub2 -10 kg was never applied before).
+    FWD wheelie bar (`S.barFwd`): a stiff contact (400 kN/m, 22 kN s/m) at
+    the bar wheels (CG to rear axle + 1.6 m) once the nose-up pitch passes
+    the bar height; it adds to the heave/pitch equations (rear tire load
+    Nr excludes it). `sim.barF` = bar force. barDeg default 0.5 on FWD, min
+    0 (0.5 elsewhere); help text updated. Slider clutch ranges: base
+    pressure min 30 -> 10%, lockup max 3 -> 4 s.
+  - garage.js: icons for fwells and ballast; build sheet lines (Front wells,
+    Ballast; tubs only where they apply). ui.js help: fender work, a FWD
+    paragraph (weight forward, slicks, bars low).
+  - Tests: rivals 0 diffs (126); package snapshot: only FWD drive|3 and
+    FWD tires|2/3 changed (plus the earlier AWD ones); pkgsmoke, c2, drv,
+    qolsmoke, tubest clean; crawl mid clean (Settings audio debug text is
+    old); screenshots scr/fwd1-6.png. Tuner session on a 1,500 hp FWD build
+    runs clean (it calls the slider clutch and bar "already right": the
+    known search-window weakness, see the tuner v2 plan).
+  - Bench (1,500 hp FWD Civic K20, tune optimised): 24.5x8 10.09 -> fenders
+    + 26x10 9.66 -> front end + 28x10.5 9.48 -> + 50 kg ballast 9.29 -> +
+    bars 9.16 -> + ballast + bars 8.99 -> + clutch 15%/4 s and bars at 0:
+    **8.79 @ 192, 60 ft 1.70** (was 10.26 / 1.99). Real: 7.80 @ 188, 60 ft
+    1.347 (Aleman; honda-tech via search summary, the site blocks downloads).
+  - FWD career packages (default tune, all groups; before -> after):
+    Civic t2 12.24 -> 11.99, Integra t2 12.03 -> 11.89, Metro t2 13.96 ->
+    13.50, GTI 12.43 -> 12.35, Cobalt 12.42 -> 12.25; Neon t2 12.36 -> 12.52
+    on the default launch rpm, but 11.84 -> 11.64 with the launch rpm set
+    (the bigger slick wants a different launch). Extreme stays FWD now:
+    Civic 10.53 (RWD) -> 10.81, Integra 9.53 -> 10.22, GTI 11.81 -> 11.14,
+    Cobalt 11.18 -> 11.27.
+  - **Remaining gap (open):** the launch now hooks (no flash spin with the
+    clutch set low) but the front grip tops out near 1.25 g (mu 2.4 x 0.52
+    of the weight on the fronts). A 1.35 60 ft needs ~1.8 g. Faster TC adds
+    only ~0.03 s; bar preload ~0.07 s. Real XFWD cars run "massive front
+    tires" on widened front ends (size not found: honda-tech blocked, no
+    other source). Options for the owner: let the wide front end take a
+    31x13 slick; a FWD slick compound; leave it.
+
 ### Sources (Nov 14)
 - f40 DSport, Papadakis, "AEM Drag Civic: the 7s" (page 1; pages 2-3 behind
   a bot check, not read): dsportmag.com/?p=4852
 - f41 The Autopian, AWD CR-V parts in Civics (7.80 FWD vs 7.45 AWD)
 - f31 se-r.net FWD launch tips; f3 Dragzine scaling (RWD 50-55% rear)
+- Honda-Tech, "Hellish 1500-HP Honda Civic El Violento" (60 ft 1.347, 7.803
+  @ 187.86): read via search summary only; the site returns error 1005 to
+  downloads.
 - Forum threads (anecdotal): honda-tech drag slick fitment / recommended
   size; dsmtuners "FWD racers what size slicks"
 

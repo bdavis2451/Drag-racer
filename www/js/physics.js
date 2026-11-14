@@ -756,7 +756,11 @@
     // ---- mass & geometry
     var share = car.ep === 'front' ? 0.9 : car.ep === 'mid' ? 0.15 : -0.2;
     var chassis = (car.m - stockEng.w) * (1 - wt.wr);
-    var chassisFront = (car.m * car.f - stockEng.w * share) * (1 - wt.wr);
+    // weight reduction comes off the chassis evenly, except on a front-drive
+    // build (players): it strips the back half (seats, glass, hatch, rear
+    // subframe), so only ~40% of what comes out is from the front
+    var fwdW = !ai && S.drive === 'FWD';
+    var chassisFront = fwdW ? car.m * car.f - stockEng.w * share - (car.m - stockEng.w) * wt.wr * 0.4 : (car.m * car.f - stockEng.w * share) * (1 - wt.wr);
     var fiW = (fiId !== 'none' && DR.FI[fiId].price) ? DR.FI[fiId].w : 0;
     // an AWD conversion's weight (kg front, middle, rear): a lengthways
     // one adds a transfer case and front diff up front; a transverse one a
@@ -765,13 +769,17 @@
     // the battery: what leaves the nose and what lands in the trunk (rival
     // builds keep the figures their times were set with)
     var batAi = ai && batt.aiBat != null ? batt.aiBat : batt.bat;
-    var batBack = ai ? batAi + Math.min(0, batt.batkg) : batt.bat + batt.batkg, batFront = ai ? batAi - Math.max(0, batt.batkg) : batt.bat;
+    var batBack = ai ? batAi + Math.min(0, batt.batkg) : batt.bat + batt.batkg, batFront = ai ? batAi - Math.max(0, batt.batkg) : batt.bat + (batt.nose || 0);
+    // front-drive extras (players): fender work, ballast ahead of the front
+    // axle (~1.3x its weight on the front tires, a little off the rear), and
+    // what full tubs save at the back
+    var fwl = o('fwells'), blst = o('ballast'), tubsO = o('tubs'), blkg = ai ? 0 : blst.blkg || 0;
     // wheels and tires: the drive axle's (and, for players, the other
     // axle's) against the factory ones, on the axle they sit on
     var axD = legacyWT ? (tire.m - stockTire.m) + wDm : wx.massD, axO = legacyWT ? ftires.fm : wx.massO;
     var fwdAx = !legacyWT && S.drive === 'FWD';
-    var extraRear = (fwdAx ? axO : axD) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0);
-    var extraFront = (fwdAx ? axD : axO) + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5;
+    var extraRear = (fwdAx ? axO : axD) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0) + (ai ? 0 : (tubsO.kg || 0)) - blkg * 0.3;
+    var extraFront = (fwdAx ? axD : axO) + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5 + (ai ? 0 : (fwl.kg || 0)) + blkg * 1.3;
     var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
@@ -889,6 +897,7 @@
     S.bar = !!bar.bar;
     S.barRad = T.barDeg * Math.PI / 180;
     S.barLen = 1.6;
+    S.barFwd = S.bar && S.drive === 'FWD' && !ai;
 
     // ---- summary numbers
     var dyno = DR.dyno(S);
@@ -958,7 +967,7 @@
       springF: 5, springR: 5, rideF: 0, rideR: 0, rollBal: 0,
       bumpF: 5, rebF: 5, bumpR: 5, rebR: 5, limitF: 0,
       antiSquat: DR.getOption('rearsusp', inst).as,
-      barDeg: 3,
+      barDeg: S.drive === 'FWD' && !S.ai ? 0.5 : 3,   // (front drive: set low, to hold the nose down)
       launchThr: 100, thrRamp: 0,
       burnRpm: S.red,
       tcSlip: 0, tcGain: 5,
@@ -1013,10 +1022,10 @@
       show: function () { return true; }, group: 'Drivetrain', help: 'The shift light comes on here. Auto-shift also uses it.' },
     { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function (S) { return S.qc || !S.fdSet ? 2.2 : S.fdSet; }, max: function (S) { return S.qc || !S.fdSet ? 6.5 : S.fdSet; },
       show: function (S) { return !!S.qc; }, req: 'Set by your gear set: a quick-change rear end (Drivetrain: Ring & Pinion) makes it adjustable', group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed. A quick-change rear: swap gear sets in minutes for each track.' },
-    { key: 'clBase', label: 'Slider Clutch Base Pressure', unit: '%', step: 5, min: function () { return 30; }, max: function () { return 100; },
+    { key: 'clBase', label: 'Slider Clutch Base Pressure', unit: '%', step: 5, min: function () { return 10; }, max: function () { return 100; },
       show: function (S) { return !!S.slider; }, req: 'Requires a slider (slipper) clutch', group: 'Drivetrain',
       help: 'How much of the engine\'s torque the clutch holds on the hit. Less: it slips more, the engine stays up on the boost and the tires get it gently. Too little and the car is lazy off the line; too much and it hits the tires like a plain clutch.' },
-    { key: 'clLock', label: 'Slider Clutch Lockup Time', unit: 's', step: 0.1, min: function () { return 0.3; }, max: function () { return 3; },
+    { key: 'clLock', label: 'Slider Clutch Lockup Time', unit: 's', step: 0.1, min: function () { return 0.3; }, max: function () { return 4; },
       show: function (S) { return !!S.slider; }, req: 'Requires a slider (slipper) clutch', group: 'Drivetrain',
       help: 'How long the clamp takes to build to full lock. Too short and it locks while the car is slow, pulling the engine down off the boost; too long and it slips (and heats) past where it should have locked.' },
     { key: 'stall', label: 'Converter Stall', unit: 'rpm', step: 100, min: function () { return 3000; }, max: function () { return 7500; },
@@ -1065,9 +1074,9 @@
       max: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).asMax || 1.3; },
       show: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).adjA; }, req: 'Requires ladder bars or a 4-link', group: 'Suspension',
       help: 'Higher plants the tires harder & lifts the front. Too high can unload the tires or wheelie.' },
-    { key: 'barDeg', label: 'Wheelie Bar Height', unit: '°', step: 0.5, min: function () { return 0.5; }, max: function () { return 10; },
+    { key: 'barDeg', label: 'Wheelie Bar Height', unit: '°', step: 0.5, min: function (S) { return S && S.drive === 'FWD' && !S.ai ? 0 : 0.5; }, max: function () { return 10; },
       show: function (S) { return S.bar; }, req: 'Requires wheelie bars', group: 'Suspension',
-      help: 'Max wheelie angle before the bars touch. Hitting the bars unloads the rear tires.' },
+      help: 'How far the nose can come up before the bars touch. Rear drive: hitting the bars unloads the rear tires. Front drive: set low, the bars hold the nose down and keep weight on the front tires.' },
     { key: 'nosDelay', label: 'Nitrous Activation Delay', unit: 's', step: 0.1, min: function () { return 0; }, max: function () { return 4; },
       show: function (S) { return S.prog; }, req: 'Requires a progressive nitrous controller', group: 'Nitrous',
       help: 'Seconds after launch before nitrous comes on by itself.' },
@@ -1654,8 +1663,18 @@
       var vf = -(this.dz + aF * this.dphi), vr = -(this.dz - bR * this.dphi);
       var Ff = mg * S.f + corner(S.kf, S.cbF, S.crF, S.bumpF, S.droopF, cf, vf);
       var Fr = mg * (1 - S.f) + corner(S.kr, S.cbR, S.crR, S.bumpR, S.droopR, cr, vr);
-      this.dz += dt * (Ff + Fr + Fj - mg) / m;
-      this.dphi += dt * (Ff * aF - (Fr + Fj) * bR + Fl * h) / S.Ip;
+      // Wheelie bars on a front-drive car (players): set low, the bar's
+      // wheels touch as the nose comes up and the rear squats, and hold the
+      // body there: the pitch stops growing, so more of the weight stays on
+      // the front (drive) tires
+      var Fb = 0;
+      if (S.barFwd) {
+        var Lb = bR + S.barLen, pen = -this.z + Lb * this.phi - Lb * S.barRad;
+        if (pen > 0) Fb = Math.max(0, 4e5 * pen + 2.2e4 * (-this.dz + Lb * this.dphi));
+        this.barF = Fb;
+      }
+      this.dz += dt * (Ff + Fr + Fj + Fb - mg) / m;
+      this.dphi += dt * (Ff * aF - (Fr + Fj) * bR - Fb * (bR + S.barLen) + Fl * h) / S.Ip;
       this.z += this.dz * dt; this.phi += this.dphi * dt;
       this.cf = cf; this.cr = cr;
       Nr = Fr + Fj; Nf = Ff;

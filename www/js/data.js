@@ -216,6 +216,9 @@ DR.TIRES = {
     // run; Brembo cars: an 18 in drag radial)
     dr_225: { name: 'Drag Radial 225/50R15', kind: 'Drag Radial', lat: 0.82, mu: 1.60, optP: 20, slip: 0.13, fall: 0.25, fk: 0.75, r: 0.306, m: 19, topt: 55, cold: 0.12, price: 600, rim: 15, wmin: 6, wmax: 8, sec: 9.1 },
     sl_24: { name: 'Drag Slick 24.5x8.0-15', kind: 'Slick', lat: 0.72, mu: 2.00, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.311, m: 15, topt: 70, cold: 0.22, price: 1400, lvl: 3, rim: 15, wmin: 7, wmax: 8.5, sec: 9.6 },
+    // (the classic front-drive drag slick: it needs the fenders rolled
+    // and pulled, or a wide front end, on a compact)
+    sl_26: { name: 'Drag Slick 26x10.0-15', kind: 'Slick', lat: 0.72, mu: 2.25, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.330, m: 19, topt: 70, cold: 0.23, price: 1500, lvl: 3, rim: 15, wmin: 8, wmax: 10, sec: 10.6 },
     dr_305: { name: 'Drag Radial 305/45R18', kind: 'Drag Radial', lat: 0.85, mu: 1.95, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.369, m: 29, topt: 60, cold: 0.15, price: 1250, lvl: 3, rim: 18, wmin: 9.5, wmax: 11.5, sec: 11.8 },
     fr_26: { name: 'Front Runner 26x4.0-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.331, m: 11, topt: 40, cold: 0.05, price: 500, rim: 15, wmin: 3.5, wmax: 4, sec: 6.2, roll: 0.75 },
     fr_26b: { name: 'Front Runner 26x4.0-17', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.337, m: 10, topt: 40, cold: 0.05, price: 550, rim: 17, wmin: 3.5, wmax: 4, sec: 5.4, roll: 0.75 },
@@ -223,7 +226,7 @@ DR.TIRES = {
     fr_18: { name: 'Front Runner 26x6.0R18', kind: 'Front Runner', lat: 0.66, mu: 1.0, optP: 32, slip: 0.12, fall: 0.3, fk: 1, r: 0.330, m: 14, topt: 40, cold: 0.05, price: 650, rim: 18, wmin: 4.5, wmax: 6, sec: 7.0, roll: 0.8 }
   };
   for (k in add) DR.TIRES[k] = add[k];
-  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_225', 'dr_245', 'dr_275s', 'dr_275', 'dr_305', 'dr_315', 'rsl_28', 'rsl_31', 'sl_24', 'ets_28', 'sl_31', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
+  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_225', 'dr_245', 'dr_275s', 'dr_275', 'dr_305', 'dr_315', 'rsl_28', 'rsl_31', 'sl_24', 'sl_26', 'ets_28', 'sl_31', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
   // tire outside diameter (inches) from its rolling radius
   DR.tireOD = function (t) { return Math.round(t.r / 0.0127 * 10) / 10; };
 
