@@ -1,7 +1,7 @@
 # Wheels & tires rework
 
 Status: **started Nov 14 (owner: "let's start the wheels & tires rework").
-Plan approved Nov 14 (below). Per-car research done; building.** FWD traction after
+Shipped Nov 15 (owner approved the screenshots).** FWD traction after
 this.
 
 ## Owner's notes

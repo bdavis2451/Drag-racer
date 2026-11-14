@@ -8,8 +8,8 @@ the top of each section.
 - **Wheels & tires rework** (plan approved Nov 14: 4 slots, 5 wheel styles,
   20 tires incl. radial slicks, tubs + brake rule, Claude draws the wheels,
   per-car limits researched, old saves keep over-size tires flagged until
-  tubbed; everything in one update). Built; screenshots sent, waiting for
-  the owner's OK to ship. Then **FWD traction**.
+  tubbed; everything in one update). Shipped Nov 15 (owner OK'd the art).
+  Next: **FWD traction**.
   Owner notes Nov 14: wheel width and diameter, a good wheel selection, tire
   selection, chosen separately per axle (front labelled Front; the drive
   axle isn't labelled, the game knows it), new wheel/tire assets and a path
