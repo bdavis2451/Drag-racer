@@ -421,3 +421,37 @@ Batch 2:
   weights for M/T 275/60R15s; Weld wheel weights (JEGS, Summit listings);
   Automation and Gran Turismo forum threads on tire sizing. JEGS'
   "Beginner's guide to drag tires" blocks automated readers (403).
+
+## Build notes (Nov 14-15)
+**Where the code lives**
+- data.js: tire sizes (`rim`, `wmin`/`wmax`, `sec`), new tires (dr_275s,
+  dr_225, dr_305, rsl_28, rsl_31, sl_24, fr_26, fr_26b, fr_28, fr_18),
+  `DR.WHEEL_STYLES` (street / forged / drag / bead: sizes, weight formula,
+  price per pair, show stars), `DR.CAR_WT` (per-car table above).
+- parts.js: slots `wheels`/`rtires` (drive axle), `fwheels`/`ftires` (other
+  axle), `tubs`; `DR.axleOf`, `DR.wheelSpec`, `DR.tireSpec`, `DR.tireFits`,
+  `DR.minWheel` (brakes), `DR.wellLimit` (wells + tubs),
+  `DR.wheelsTires` (both axles: weights, sidewall, stretch, problems);
+  dynamic wheel/tire lists; names by axle (`DR.catName`, `DR.groupCats`);
+  Wheels & Tires packages (`tiresPkg`).
+- physics.js: players' cars use the per-axle model (rivals keep the old one,
+  `legacyWT`): real wheel/tire weights on the axle they sit on, sidewall and
+  stretch -> shake and launch give, radial pressure, bias-slick growth
+  (Sim `this.rr`), AWD front axle on its own tires (`S.awdMu`), radial slick
+  rolls easier; problems stop the car (`S.noRunFit`) and show in the shop.
+- game.js: save conversion `wheelsV1`, shelf names, factory tires bound to
+  their car. garage.js: wheel picker, fit box with buy-together chips,
+  fit changes for brakes/tubs, build sheet, Style link. cars.js: each axle
+  drawn with its own wheel and tire (sidewall from real sizes), four drawn
+  styles (w_street, w_forged, w_drag, w_bead). circuit.js/circuitui.js:
+  the other axle's own tires. career.js: wheel stars, 275-class tires.
+- Factory tires keep today's physics (stock ETs unchanged); new effects
+  apply to bought tires.
+
+**Tested**: stock bench identical; rivals 0/126; packages: only the 178
+Wheels & Tires packages changed, all 360 W&T package builds (45 cars x 4
+tiers x 2) fit with no problems; save conversion of 10 legacy builds (flags
+as decided); shop flows and screenshots; race screen; circuit handling;
+qolsmoke, pkgsmoke, tubest, kntuner, invloss, knedge, crawler (mid): clean.
+Radial vs bias slick on a prepped track with shake: rsl_28 10.137 every pass
+vs ets_28 10.14-10.26; 15 in radial 10.75 vs 17 in 10.91 (Fox 6.2 turbo).

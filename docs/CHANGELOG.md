@@ -2,6 +2,40 @@
 
 Short notes for testing, newest first.
 
+## Wheels & tires rework
+
+- **Four slots: Front Wheels, Front Tires, Rear Wheels, Rear Tires**
+  (Upgrade > Wheels & Tires). Pick a wheel style, then its size (diameter x
+  width); tires come in real sizes and go on a wheel of their diameter and
+  width. The shop ticks what fits and offers the other half to buy with it.
+- **Wheels:** Street 5-Spoke, Forged Lightweight, Drag Wheel (with skinny
+  front-runner sizes) and Beadlock Drag, each in its real sizes and
+  weights, drawn on the car. They add show stars (Style > Wheels links
+  there).
+- **Tires:** new 275/60R15 and 225/50R15 drag radials, a 305/45R18 for Brembo
+  cars, radial slicks (28x10.5R15, 31x13.5R15: steady pass after pass on a
+  prepped track, poor on no-prep), a 24.5x8 slick for front-drive cars,
+  and front runners for 15, 17 and 18 in wheels.
+- **What sizes do:** a 15 in wheel's taller sidewall softens the hit; a
+  wider wheel steadies the tire (less shake, radials take more pressure);
+  bias slicks grow taller down track.
+- **Fitment:** big brakes need big wheels (drag brakes clear 15s); wide rear
+  tires need tubs (Suspension > Rear Wheel Tubs: mini $2,500, full $6,000).
+  A car whose wheels and tires don't fit can't race until it's fixed.
+- **AWD:** the front tires drive too: front runners on an AWD car now cost
+  grip (no more free ET).
+- **Packages:** Wheels & Tires packages pick the biggest tire of each tier
+  that fits the car's wells and brakes.
+- **Your saves:** drive tires get wheels they fit (beadlocks stay beadlocks),
+  front runners become runners on runner wheels; a build that can't fit any
+  more (e.g. carbon brakes with 15 in beadlocks, a big slick under stock
+  wells) stays on but is flagged until you change it.
+
+**Try:** Upgrade > Wheels & Tires on a few cars (a Fox, a Civic, a Mustang
+'18); a slick with tubs; the Style > Wheels link. **Look out for:** a size
+that should fit but isn't ticked, wheels that look wrong on a car, a flag
+you don't understand.
+
 ## Tuner pricing, diesel head studs
 
 - **Dyno work is always paid now.** "No gain, no pay" covers the track work

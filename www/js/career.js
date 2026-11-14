@@ -22,7 +22,7 @@
     { id: 'spoiler', name: 'Spoiler', tiers: [['Ducktail', 400, 0.5], ['Mid Wing', 1200, 0.75], ['Carbon GT Wing', 2600, 1]] },
     { id: 'hood', name: 'Hood', tiers: [['Vented Hood', 600, 0.5], ['Cowl Hood', 1500, 0.75], ['Carbon Hood', 3000, 1]] },
     { id: 'roof', name: 'Roof Scoop', tiers: [null, ['Roof Scoop', 700, 0.5], null] },
-    { id: 'rims', name: 'Rims', styles: true, tiers: [['mesh', 'pony'], ['turbine', 'split'], ['deep', 'drag']], prices: [800, 1600, 3000], stars: [0.5, 0.75, 1] },
+    { id: 'rims', name: 'Wheels', styles: true, tiers: [['mesh', 'pony'], ['turbine', 'split'], ['deep', 'drag']], prices: [800, 1600, 3000], stars: [0.5, 0.75, 1] },
     { id: 'tint', name: 'Window Tint', tiers: [['Light Tint', 200, 0.25], ['Limo Tint', 500, 0.5], null] },
     { id: 'neon', name: 'Neon Underglow', tiers: [null, ['Underglow', 1200, 1], null], colors: ['#00e5ff', '#ff2bd6', '#39ff14', '#ff3030', '#8a5cff', '#ffffff'] },
     { id: 'finish', name: 'Paint Finish', tiers: [['Metallic', 600, 0.25], ['Pearl', 1500, 0.5], ['Candy', 3000, 0.75]], extra: { matte: ['Matte', 1500, 0.5, 2] } },
