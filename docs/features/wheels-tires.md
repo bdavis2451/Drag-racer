@@ -1,8 +1,7 @@
 # Wheels & tires rework
 
 Status: **started Nov 14 (owner: "let's start the wheels & tires rework").
-Owner answered the 8 questions; research gaps filled; written plan drafted
-(below), waiting for approval. No code.** FWD traction after
+Plan approved Nov 14 (below). Building: per-car research first.** FWD traction after
 this.
 
 ## Owner's notes
@@ -200,7 +199,18 @@ listing. Tables saved in scratchpad web/wt2 (mt_specs.txt).
   blocked): Stangnet, LS1Tech, JEGS tech articles, Summit, Weld's own site.
   The owner can paste anything from them that matters.
 
-## Plan (draft, waiting for approval)
+## Plan approval (owner, Nov 14)
+- **Catalog approved as listed** (5 wheel styles, 20 tires, prices per pair).
+- **Art: Claude draws it** (pixel sprites in code, matched to the car
+  sheets; screenshots to the owner before it ships).
+- **Old saves with a tire that now needs tubs: keep it, flagged:** the car
+  can't race until tubs are fitted (the shop/garage says why and what fixes
+  it).
+- **Per-car limits researched car by car** (factory wheel and tire, widest
+  rear tire without tubs, smallest wheel over the factory brakes), listed
+  here with sources.
+
+## Plan (approved Nov 14)
 **Where:** Upgrade > Wheels & Tires (replaces the Wheels, Drive Tires and
 Front Tires slots) with 4 slots: **Front Wheel, Front Tire, Rear Wheel, Rear
 Tire**. The driven axle isn't labelled. Tubs in Upgrade > Chassis. Wheel
