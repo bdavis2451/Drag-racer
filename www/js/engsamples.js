@@ -304,6 +304,9 @@
     } catch (e) { done(null); }
   };
   A.banksReady = function (engs) {
+    // (no audio at all - sound off or not started yet: nothing to wait for;
+    // otherwise a caller waiting on the banks would ask forever)
+    if (!A.ctx) return true;
     return (!DR.ENG_POPS || decoded.__pops !== undefined) && engs.every(function (e) { var id = DR.engineBank(e); return !id || decoded[id] !== undefined; });
   };
   // fn once every bank these engines need (and the pops) is decoded (or failed)

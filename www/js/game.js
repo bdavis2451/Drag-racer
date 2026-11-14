@@ -35,6 +35,7 @@
     try { vbV2(s); } catch (e) { /* keep what loaded */ }
     try { turboV2(s); } catch (e) { /* keep what loaded */ }
     try { dieselV2(s); } catch (e) { /* keep what loaded */ }
+    try { dieselV3(s); } catch (e) { /* keep what loaded */ }
     // traction control used to come switched off: cars that have the ECU and
     // never turned it on get it on, once
     if (!s.tcV2) { (s.cars || []).forEach(function (c) { if ((c.parts || {}).ecu === 'ecu3' && !(c.tune && c.tune.tcSlip > 0)) { c.tune = c.tune || {}; c.tune.tcSlip = DR.TC_DEFAULT || 12; } }); s.tcV2 = true; }
@@ -196,13 +197,24 @@
   }
   // the diesel rework (Nov 2026): a Cummins' gas parts become the nearest
   // diesel ones (injectors by fuel, pumps, ECU, turbo by power, converter)
+  // (the lockup and bolt-together converters came after the diesel rework:
+  // on a Cummins they become the race billet diesel converter)
+  function dieselV3(s) {
+    if (s.dieselV3) return;
+    var M = { tclu: 'dc30', tclu7: 'dc30', tcbt: 'dc30', tcbtlu: 'dc30' };
+    (s.cars || []).forEach(function (c) {
+      var e = DR.ENGINES[c.engine || (DR.CARS[c.carId] || {}).engine];
+      if (e && e.diesel && c.parts && M[c.parts.converter]) c.parts.converter = M[c.parts.converter];
+    });
+    s.dieselV3 = true;
+  }
   function dieselV2(s) {
     if (s.dieselV2) return;
     var M = {
       injectors: { inj0: 'dinj25', inj1: 'dinj25', inj2: 'dinj50', inj3: 'dinj100', inj4: 'dinj200', inj5: 'dinj300', inj6: 'dinjr' },
       fuelpump: { fpm1: 'dlift', fpe1: 'dlift', fpe2: 'dcp3s', fp0: 'dlift', fp1: 'dlift', fp2: 'dcp3s', fp3: 'dcp3d', fp4: 'dcp3t', fp5: 'dcp3t' },
       ecu: { ecu0: 'dtune', ecu1: 'dtune', ecu2: 'drace', ecu3: 'drace' },
-      converter: { tcl: 'dc26', tc32: 'dc30', tcm: 'dc30', tc44: 'dc30', tch: 'dc30', tc55: 'dc30', tcp6: 'dc30', tcp7: 'dc30' },
+      converter: { tcl: 'dc26', tc32: 'dc30', tcm: 'dc30', tc44: 'dc30', tch: 'dc30', tc55: 'dc30', tcp6: 'dc30', tcp7: 'dc30', tclu: 'dc30', tclu7: 'dc30', tcbt: 'dc30', tcbtlu: 'dc30' },
       clutch: { cl1: 'dcl1', cl2: 'dcl1', cl3: 'dcl2', cls: 'dcl2', cl4: 'dcl3', cl5: 'dcl3' }
     };
     (s.cars || []).forEach(function (c) {

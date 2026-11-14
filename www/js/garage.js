@@ -376,7 +376,7 @@
       if (cat === 'headstud') own.push(['own', Math.min(S0.headPsi, 99), Math.min(S1.headPsi, 99), 'psi head seal']);
       if (cat === 'mounts') own.push(['own', (S0.mountK - 1) * 100, (S1.mountK - 1) * 100, '% launch grip']);
       var lim = own.concat([['safe', S0.safeHp, S1.safeHp, 'hp safe'], ['fuel', S0.fuelW / DR.HP, S1.fuelW / DR.HP, 'hp fuel'],
-        ['rpm', S0.mech, S1.mech, 'rpm safe'], ['vt', S0.vtLimit, S1.vtLimit, 'rpm valves'], ['spark', S0.sparkPsi, S1.sparkPsi, 'psi spark'],
+        ['rpm', S0.mech, S1.mech, 'rpm safe'], ['vt', S0.vtLimit, S1.vtLimit, 'rpm valves'], S0.diesel || S1.diesel ? null : ['spark', S0.sparkPsi, S1.sparkPsi, 'psi spark'],
         ['boost', S0.maxBoost, S1.maxBoost, 'psi max'], ['axle', S0.axleTq, S1.axleTq, 'Nm axles'],
         G.simMode() ? null : ['risk', -DR.riskMax(S0.risk) * 100, -DR.riskMax(S1.risk) * 100, '% risk']].filter(Boolean));
       for (var i = 0; i < lim.length && out.length < 2; i++) {

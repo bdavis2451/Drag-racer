@@ -888,7 +888,7 @@
   // housings take the place of the bottom end. A diesel has no spark, no
   // throttle body and does not run gasoline or alcohol.
   DR.engineKind = function (inst) { var e = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine]; return e.rotary ? 'rotary' : e.diesel ? 'diesel' : 'piston'; };
-  var NOT_FOR = { rotary: { rods: 1, cams: 1, valvetrain: 1 }, diesel: { ignition: 1, throttle: 1, fueltype: 1, bov: 1, wastegate: 1, launch: 1 } };
+  var NOT_FOR = { rotary: { rods: 1, cams: 1, valvetrain: 1 }, diesel: { ignition: 1, throttle: 1, fueltype: 1, bov: 1, wastegate: 1, launch: 1, wmi: 1 } };   // (water-meth on a diesel: later)
   var DSL_CATS = { injectors: 1, fuelpump: 1, ecu: 1, clutch: 1, converter: 1 };
   // rotary versions of the bottom-end and head categories: same jobs (hold,
   // be, bw), rotary parts. Porting carries the breathing heads and cams give

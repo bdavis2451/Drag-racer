@@ -166,7 +166,7 @@
   // a pull's sheet: wheel power and torque, boost and air/fuel against rpm
   function sheet(S) {
     var dy = DR.dyno(S), lam = S.fiType !== 'none' ? 0.78 : 0.86, cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1, st = STOICH[S.fuelId] || 14.7;
-    var pts = dy.pts.map(function (p) { var ld = p.hp / dy.peakHp; return { rpm: p.rpm, hp: p.hp * S.eff, tq: p.tq * S.eff, boost: p.boost, afr: lam * (1 + (lean - 1) * ld * ld) * st }; });
+    var pts = dy.pts.map(function (p) { var ld = p.hp / dy.peakHp; return { rpm: p.rpm, hp: p.hp * S.eff, tq: p.tq * S.eff, boost: p.boost, afr: S.diesel ? Math.min(40, DR.dieselState(S, p.rpm, p.boost).afr) : lam * (1 + (lean - 1) * ld * ld) * st }; });
     var pk = pts.reduce(function (a, p) { return p.hp > a.hp ? p : a; }, pts[0]);
     return { pts: pts, peakHp: pk.hp, peakRpm: pk.rpm, afr: pk.afr, red: S.red, boost: S.boostSet, fi: S.fiType, maxBoost: S.maxBoost };
   }

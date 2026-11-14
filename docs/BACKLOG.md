@@ -26,7 +26,8 @@ the top of each section.
   aren't sold for the engines whose record builds need them (A list what
   the built engine can use, B what it can use as built now, C keep and lower
   the ceilings); filter superchargers by engine like turbos; nitrous helps
-  a turbo spool.
+  a turbo spool; diesel Pro/Extreme power packages run 31% risk; a fuel
+  setting (or advice) for the tuner on diesels.
 
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to

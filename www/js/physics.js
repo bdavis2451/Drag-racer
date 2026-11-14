@@ -541,7 +541,7 @@
     }
     // ignition: the factory coils light factory boost plus a few psi (about
     // 10 psi on an engine that never had a turbo)
-    S.sparkPsi = e.diesel ? 99 : (e.fi ? e.fi.boost + 6 : 10) + (ign.spark || 0);
+    S.sparkPsi = e.diesel ? 9999 : (e.fi ? e.fi.boost + 6 : 10) + (ign.spark || 0);   // (a diesel has no spark to blow out)
     S.sparkNos = e.diesel ? 9999 : 150 + (ign.spark || 0) * 15;
     // ---- boost range. A turbo's wastegate spring is the least boost it
     // runs (the gate opens at spring pressure); a boost controller holds the
@@ -1041,8 +1041,7 @@
       var egtPk = 0;
       for (var er = 1500; er <= S.red; er += 250) egtPk = Math.max(egtPk, dieselState(S, er, steadyBoost(S, er)).egt);
       S.egtPk = Math.round(egtPk);
-      if (egtPk > 1700) { r.engine += Math.min(0.6, (egtPk - 1700) / 400); r.notes.push('Exhaust temperature hits ' + Math.round(egtPk / 10) * 10 + ' F: more fuel than air. A bigger turbo (more air) or less fuel cools it'); }
-      else if (egtPk > 1450) r.notes.push('Exhaust runs ' + Math.round(egtPk / 10) * 10 + ' F at full power: fine for a pass, hot for towing');
+      // (its risk and the note are counted once, in DR.riskOf)
     }
     var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
     if (S.clCap && tqNm > S.clCap) out.clutch = 'Slipping';

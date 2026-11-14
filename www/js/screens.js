@@ -726,11 +726,11 @@
     var lam = S.fiType !== 'none' ? 0.78 : 0.86, cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1, st = STOICH[S.fuelId] || 14.7;
     var pts = dy.pts.map(function (p) {
       var ld = p.hp / dy.peakHp;
-      return { rpm: p.rpm, hp: +(p.hp * eff).toFixed(1), tq: +(p.tq * eff).toFixed(1), boost: +p.boost.toFixed(1), afr: +(lam * (1 + (lean - 1) * ld * ld) * st).toFixed(2), pull: p.pull ? 1 : 0 };
+      return { rpm: p.rpm, hp: +(p.hp * eff).toFixed(1), tq: +(p.tq * eff).toFixed(1), boost: +p.boost.toFixed(1), afr: +(S.diesel ? Math.min(40, DR.dieselState(S, p.rpm, p.boost).afr) : lam * (1 + (lean - 1) * ld * ld) * st).toFixed(2), pull: p.pull ? 1 : 0 };
     });
     var pk = pts.reduce(function (a, p) { return p.hp > a.hp ? p : a; }, pts[0]), pt = pts.reduce(function (a, p) { return p.tq > a.tq ? p : a; }, pts[0]);
     return { key: JSON.stringify([inst.engine, inst.parts, inst.tune]), at: Date.now(), pts: pts, peakHp: pk.hp, peakHpRpm: pk.rpm, peakTq: pt.tq, nosHp: Math.round(S.nosHp * eff), red: S.red,
-      maxBoost: S.maxBoost, fi: S.fiType, cf: +cf.toFixed(3), temp: temp, baro: baro, afrPk: pk.afr, crank: Math.round(dy.peakHp) };
+      maxBoost: S.maxBoost, fi: S.fiType, dsl: !!S.diesel, cf: +cf.toFixed(3), temp: temp, baro: baro, afrPk: pk.afr, crank: Math.round(dy.peakHp) };
   }
   UI.Dyno = function () {
     var inst = G.car(), S = G.spec(inst), fee = DR.dynoFee(S);
@@ -783,9 +783,11 @@
       line('tq', '#4da3ff'); line('hp', '#ffcc00');
       // boost; orange where the tune is pulling timing to stop knock
       if (dy.fi !== 'none') { dy.pts.forEach(function (p) { if (p.rpm <= limit) { ctx.fillStyle = p.pull ? '#ff8a00' : '#46e07a'; ctx.fillRect(Math.round(X(p.rpm)), Math.round(B - p.boost / Math.max(dy.maxBoost, 1) * (B - T) * 0.5), p.pull ? 2 : 1, p.pull ? 2 : 1); } }); }
-      // air/fuel on its own scale (10-16:1 for gasoline), along the top
+      // air/fuel on its own scale (10-16:1 for gasoline, 14-30:1 for a
+      // diesel), along the top
       var st0 = dy.pts[0] ? dy.pts[0].afr / (dy.fi !== 'none' ? 0.78 : 0.86) : 14.7;
-      ctx.fillStyle = '#ff3d9a'; dy.pts.forEach(function (p) { if (p.rpm <= limit && p.rpm > 1500) ctx.fillRect(Math.round(X(p.rpm)), Math.round(T + (1 - (p.afr / st0 - 0.68) / 0.42) * (B - T) * 0.45), 1, 1); });
+      var afrY = dy.dsl ? function (a) { return 1 - DR.clamp((a - 14) / 16, 0, 1); } : function (a) { return 1 - (a / st0 - 0.68) / 0.42; };
+      ctx.fillStyle = '#ff3d9a'; dy.pts.forEach(function (p) { if (p.rpm <= limit && p.rpm > 1500) ctx.fillRect(Math.round(X(p.rpm)), Math.round(T + afrY(p.afr) * (B - T) * 0.45), 1, 1); });
       if (sweep.p < 1) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(Math.round(X(limit)), T, 1, B - T); }
       DR.pixText(ctx, 'WHP', R + 2, T + 2, '#ffcc00'); DR.pixText(ctx, 'WTQ', R + 2, T + 10, '#4da3ff');
       if (dy.fi !== 'none') DR.pixText(ctx, 'PSI', R + 2, T + 18, '#46e07a');

@@ -2,6 +2,19 @@
 
 Short notes for testing, newest first.
 
+## Audit fixes: diesel warnings, dyno with sound off
+
+- **Fixed: the dyno could crash with the sound off** (or before sound had
+  started): the Pull button froze the game. Same for the circuit screen.
+- **Diesels:** no more "Misfiring" or ignition warnings at big boost (a
+  diesel has no spark); the shop's status no longer raises a diesel's
+  failure risk every time it's shown; the dyno and data logger show a
+  diesel's real air-fuel ratio (16-25:1, not gasoline numbers); water-meth
+  is no longer offered on diesels (it did nothing there yet).
+
+**Try:** the dyno with sound off; a race-built Cummins on the dyno.
+**Look out for:** any screen that freezes.
+
 ## Audit fixes: parts vanishing from the shelf, overdriven blowers
 
 - **Fixed: spare parts could disappear from your shelf when the game

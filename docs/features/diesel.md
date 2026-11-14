@@ -199,12 +199,12 @@ turbos, blow-off valve, wastegate parts and 2-step hidden):
 | | 100% over | ~750 hp | $3,800 |
 | | 200% over | ~950 hp | $5,500 |
 | | 300% over | ~1,150 hp | $7,000 |
-| | Race (400%+) | ~1,500 hp | $9,500 |
+| | Race (400%+) | ~1,500 hp (2,600 since the engine-ceilings update, Nov 13) | $9,500 |
 | Fuel Pump | Stock CP3 | ~500 hp | - |
 | | Lift pump (FASS / AirDog style) | ~600 hp | $1,000 |
 | | Stroker CP3 + lift pump | ~800 hp | $2,300 |
 | | Dual CP3 kit | ~1,200 hp | $3,800 |
-| | Triple CP3 race kit | ~1,800 hp | $7,500 |
+| | Triple CP3 race kit | ~1,800 hp (2,600 since Nov 13) | $7,500 |
 | ECU | Diesel tune (handheld) | more fuel and timing, ~+100 hp stock, low-gear limit off, smoke limiter loosened | $900 |
 | | Race tune | no smoke limiter, full timing, for big injectors | $1,600 |
 | Turbo | Factory HE300VG (VGT) | ~500 hp | - |
@@ -334,3 +334,13 @@ no knock, no spark limit, headPsi 45, fuelW ignores fuel type), parts.js
   dual disc (15.02), 100% + S366 ~758 hp 12.5, 200% + S480 955 hp 11.92,
   compounds 1,171 hp 11.25, over-fuelled stock turbo 1,820 F + risk.
   Rival snapshot: 0 diffs. Regressions clean.
+
+## Audit (Nov 14)
+See `docs/features/audit-nov14.md` section 2. Fixed: diesels reported
+"Misfiring" / "ignition can't light" past 99 psi (race triples run 100 since
+Nov 13; no spark limit on a diesel now); the part-status function added EGT
+risk to the car on every call (uncapped, duplicated notes); water-meth was
+offered on diesels but did nothing (hidden until it's built); dyno, tuner
+sheet and data logger showed a gasoline air-fuel ratio (now the diesel's
+own, 14-30:1 scale on the dyno); lockup/bolt-together converters added after
+the rework now map to the race billet diesel converter on old saves.
