@@ -199,7 +199,7 @@
   // small block): extra cash for a car built to the rule, never needed to
   // move on. They don't count toward the stage's wins or the boss.
   function adders(S) { return (S.fiType !== 'none' ? 1 : 0) + (S.nosHp ? 1 : 0); }
-  var RADIAL_275 = { st_195: 1, st_225: 1, st_255: 1, st_305: 1, dr_245: 1, dr_275: 1 };
+  var RADIAL_275 = { st_195: 1, st_225: 1, st_255: 1, st_305: 1, dr_225: 1, dr_245: 1, dr_275: 1, dr_275s: 1 };
   DR.CLASSES = {
     four:    { name: 'Four-Banger', rule: '4 cylinders or fewer', ok: function (S) { return S.eng.cyl <= 4 && !S.eng.rotary; } },
     stock:   { name: 'Stock Motor', rule: 'Factory engine, no added turbo, blower or nitrous', ok: function (S) { return S.engId === S.car.engine && !S.nosHp && (S.eng.fi ? S.fiId === S.eng.fi.part : S.fiType === 'none'); } },

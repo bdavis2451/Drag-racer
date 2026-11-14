@@ -527,9 +527,9 @@
     // bias: how close the front/rear balance gets to ideal
     opt('stock', 'Stock Brakes', 0, { bkg: 0, bcap: 1.3, bias: 0.95 }),
     opt('br0', 'Performance Pads + Race Fluid', 250, { bkg: 0, bcap: 1.45, bias: 0.97 }, 'Track pads and high-temperature fluid on the stock calipers: more bite, a better front\/rear balance, much less fade lap after lap.'),
-    opt('br1', 'Lightweight Drag Brakes', 900, { bkg: -10, bcap: 0.8, bias: 0.93 }, '-10 kg of rotating mass. Small rotors made to stop once from the end of a strip: weak on a circuit.'),
-    opt('br3', 'Big Brake Kit', 1600, { lvl: 2, bkg: 4, bcap: 1.8, bias: 0.98 }, 'Big rotors and calipers with track pads and a better front/rear balance. +4 kg.'),
-    opt('br2', 'Carbon Race Brakes', 3000, { bkg: -16, bcap: 2.2, bias: 0.98 }, '-16 kg of rotating mass, and they stop hard lap after lap.')
+    opt('br1', 'Lightweight Drag Brakes', 900, { bkg: -10, bcap: 0.8, bias: 0.93 }, '-10 kg of rotating mass. Small rotors made to stop once from the end of a strip: weak on a circuit. They clear 15 in drag wheels on most cars.'),
+    opt('br3', 'Big Brake Kit', 1600, { lvl: 2, bkg: 4, bcap: 1.8, bias: 0.98 }, 'Big rotors and calipers with track pads and a better front/rear balance. +4 kg. Needs 18 in wheels or bigger.'),
+    opt('br2', 'Carbon Race Brakes', 3000, { bkg: -16, bcap: 2.2, bias: 0.98 }, '-16 kg of rotating mass, and they stop hard lap after lap. Needs 19 in wheels or bigger.')
   ]};
   C.ftires = { name: 'Front Tires', options: [
     // circuit: what the tires on the axle that isn't driven are. stock: the
@@ -836,8 +836,9 @@
   // the widest tire (section, in) an axle's wells take
   DR.wellLimit = function (inst, axle) {
     var w = DR.CAR_WT[inst.carId], fwd = DR.CARS[inst.carId].drive === 'FWD';
-    if (axle === 'front') return fwd ? w[4] : facOf(inst, 'front').sec + 1.5;
-    var lim = fwd ? facOf(inst, 'rear').sec + 1.5 : w[4];
+    // (the undriven end: the factory tire plus about 50 mm, as on real cars)
+    if (axle === 'front') return fwd ? w[4] : Math.round((facOf(inst, 'front').sec + 2) * 10) / 10;
+    var lim = fwd ? Math.round((facOf(inst, 'rear').sec + 2) * 10) / 10 : w[4];
     return Math.max(lim, DR.getOption('tubs', inst).tubW || 0);
   };
   // the tire on a slot -> its data (a factory tire: the car's own, at its
@@ -877,7 +878,7 @@
       var ax = a[0], wh = a[3], t = a[4], AX = ax === 'front' ? 'Front' : 'Rear';
       if (wh.d < DR.minWheel(inst, ax)) issues.push({ cat: a[1], text: AX + ' wheels (' + wh.d + ' in) don\'t clear the brakes: ' + DR.minWheel(inst, ax) + ' in or bigger' + (DR.partId('brakes', inst) !== 'br1' && DR.CAR_WT[inst.carId][6][ax === 'front' ? 0 : 1] < wh.d + 1 ? ', or drag brakes' : '') });
       if (!DR.tireFits(t, wh)) issues.push({ cat: a[2], text: AX + ' tires don\'t fit the ' + AX.toLowerCase() + ' wheels (' + (t.factory ? t.size : t.name) + ' on ' + wh.d + 'x' + wh.w + ')' });
-      if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' ? 'tubs' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' ? ': tubs fix it (Chassis)' : '') });
+      if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' ? 'tubs' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' ? ': tubs fix it (Suspension: Rear Wheel Tubs)' : '') });
       if (a[1] === 'wheels' && t.kind === 'Front Runner') issues.push({ cat: 'rtires', text: 'Front runners can\'t drive the car' });
     });
     return {

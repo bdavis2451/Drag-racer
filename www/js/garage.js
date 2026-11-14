@@ -976,7 +976,14 @@
         h('div', {},
           sect('CHASSIS', [line('Weight', UI.kgLb(S.m) + ', ' + Math.round(S.f * 100) + '% front'), line('Chassis', o('chassis')), line('Rear suspension', o('rearsusp')),
             line('Shocks', o('shocks')), line('Wheelie bar', DR.partApplies('wheeliebar', inst) && DR.partId('wheeliebar', inst) !== 'stock' ? o('wheeliebar') : null), line('Safety', o('safety'))]),
-          sect('TIRES', [line('Drive tires', DR.TIRES[S.tireId].name + ' @ ' + (T.psi != null ? T.psi : S.tire.optP) + ' psi'), line('Wear', w.rtires ? Math.round(w.rtires.w * 100) + '% (' + w.rtires.n + ' passes)' : 'new'), line('Wheels', o('wheels'))]),
+          sect('WHEELS & TIRES', S.wheels ? (function () {
+            // front then rear, each wheel and tire; the drive tires' pressure and wear
+            var X = S.wheels, fD = X.axD === 'front', wn = function (wh) { return wh.factory ? 'Factory ' + wh.d + 'x' + wh.w : DR.WHEEL_STYLES[wh.style].name + ' ' + wh.d + 'x' + wh.w; };
+            var tn = function (t) { return t.factory ? 'Factory ' + t.size : t.name; };
+            return [line('Front', wn(fD ? X.wD : X.wO) + ', ' + tn(fD ? X.tD : X.tO)), line('Rear', wn(fD ? X.wO : X.wD) + ', ' + tn(fD ? X.tO : X.tD)),
+              line('Drive tire pressure', (T.psi != null ? T.psi : S.tire.optP) + ' psi'), line('Wear', w.rtires ? Math.round(w.rtires.w * 100) + '% (' + w.rtires.n + ' passes)' : 'new'),
+              DR.partId('tubs', inst) !== 'stock' ? line('Tubs', o('tubs')) : null];
+          })() : [line('Drive tires', DR.TIRES[S.tireId].name + ' @ ' + (T.psi != null ? T.psi : S.tire.optP) + ' psi'), line('Wear', w.rtires ? Math.round(w.rtires.w * 100) + '% (' + w.rtires.n + ' passes)' : 'new'), line('Wheels', o('wheels'))]),
           sect('TIMESLIPS', [line('Best 1/8', best.e ? best.e.toFixed(3) + ' s' : '—'), line('Best 1/4', best.q ? best.q.toFixed(3) + ' s' : '—'), line('Top trap', best.qt ? best.qt + ' mph' : '—')]))),
       mods.length ? h('div', { class: 'bss' }, h('div', { class: 'bst' }, 'MODIFICATIONS'), mods) : h('div', { class: 'dim' }, 'Bone stock.'));
     return h('div', { class: 'screen' }, UI.top('BUILD SHEET', function () { UI.show(UI.Garage); }), h('div', { class: 'content' }, sheet));

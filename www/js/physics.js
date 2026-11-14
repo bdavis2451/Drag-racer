@@ -858,7 +858,8 @@
     var pf = d <= 0 ? 1 + 0.25 * (-d) - (S.bead ? 0.55 : 1.4) * d * d : 1 - 0.5 * d - 0.6 * d * d;
     if (T.psi < 9 && !S.bead) pf *= 0.82;          // tire spins on the rim
     S.pf = clamp(pf, 0.4, 1.1);
-    S.crr = 0.012 * (1 + Math.max(0, -d) * 0.6) * (legacyWT ? ftires.roll : wx.roll);
+    // (a radial slick rolls easier than a bias slick: M/T)
+    S.crr = 0.012 * (1 + Math.max(0, -d) * 0.6) * (legacyWT ? ftires.roll : wx.roll) * (!legacyWT && tire.kind === 'Radial Slick' ? 0.85 : 1);
 
     // ---- suspension: front and rear corners with their own spring, bump /
     // rebound damping, bump stops and droop limits under a body that heaves
@@ -1291,8 +1292,8 @@
   // pulls the heat out of the tires sooner.
   DR.SURFACES = {
     prep:   { name: 'Prepped strip', k: { Street: 1, 'Drag Radial': 1, Slick: 1, Track: 1, 'Race Slick': 1, 'Radial Slick': 1, 'Front Runner': 1 } },
-    noprep: { name: 'No-prep', k: { Street: 0.96, 'Drag Radial': 0.84, Slick: 0.76, Track: 0.92, 'Race Slick': 0.85, 'Radial Slick': 0.79, 'Front Runner': 0.96 } },
-    street: { name: 'Street', k: { Street: 0.9, 'Drag Radial': 0.8, Slick: 0.7, Track: 0.87, 'Race Slick': 0.8, 'Radial Slick': 0.74, 'Front Runner': 0.9 } }
+    noprep: { name: 'No-prep', k: { Street: 0.96, 'Drag Radial': 0.84, Slick: 0.76, Track: 0.92, 'Race Slick': 0.85, 'Radial Slick': 0.70, 'Front Runner': 0.96 } },
+    street: { name: 'Street', k: { Street: 0.9, 'Drag Radial': 0.8, Slick: 0.7, Track: 0.87, 'Race Slick': 0.8, 'Radial Slick': 0.64, 'Front Runner': 0.9 } }
   };
   // { surface, night } -> full conditions (air and track temperature, C)
   DR.conditions = function (surface, night) {

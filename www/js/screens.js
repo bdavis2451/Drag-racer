@@ -16,7 +16,7 @@
   // ---------------------------------------------------------------- TITLE
   UI.Title = function () {
     var s = G.state;
-    var demo = { carId: 'fox', engine: 'v8_86b', parts: { fi: 'sc_1471', wheeliebar: 'wb1', aero: 'a2', rtires: 'sl_33' }, vis: { neon: '#ff2bd6', rims: 'drag', vinyl: 3 }, color: '#e31b6d', stripe: '#ffffff', rim: '#d0d0d0' };
+    var demo = { carId: 'fox', engine: 'v8_86b', parts: { fi: 'sc_1471', wheeliebar: 'wb1', aero: 'a2', rtires: 'sl_33', wheels: 'bead15x16', fwheels: 'drag15x3.5', ftires: 'fr_26', tubs: 'tub2' }, vis: { neon: '#ff2bd6', rims: 'drag', vinyl: 3 }, color: '#e31b6d', stripe: '#ffffff', rim: '#d0d0d0' };
     if (s.started && G.car()) demo = G.car();
     var cv = DR.roomCanvas(demo, { theme: 'garage', zoom: 2.6, sign: false });
     return h('div', { class: 'screen title2' }, cv, h('div', { class: 'titlemus' }, UI.musicBtn()),

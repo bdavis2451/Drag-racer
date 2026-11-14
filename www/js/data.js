@@ -210,8 +210,8 @@ DR.TIRES = {
   // new in the rework
   var add = {
     dr_275s: { name: 'Drag Radial 275/60R15', kind: 'Drag Radial', lat: 0.84, mu: 1.90, optP: 17, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.358, m: 27, topt: 60, cold: 0.15, price: 850, rim: 15, wmin: 7.5, wmax: 9.5, sec: 11.1 },
-    rsl_28: { name: 'Radial Slick 28x10.5R15', kind: 'Radial Slick', lat: 0.78, mu: 2.30, optP: 16, slip: 0.14, fall: 0.27, fk: 0.8, r: 0.356, m: 26, topt: 65, cold: 0.2, price: 1900, lvl: 3, rim: 15, wmin: 10, wmax: 12, sec: 12.2 },
-    rsl_31: { name: 'Radial Slick 31x13.5R15', kind: 'Radial Slick', lat: 0.76, mu: 2.70, optP: 16, slip: 0.15, fall: 0.28, fk: 0.85, r: 0.405, m: 37, topt: 68, cold: 0.24, price: 2800, lvl: 4, rim: 15, wmin: 12, wmax: 14, sec: 16.3 },
+    rsl_28: { name: 'Radial Slick 28x10.5R15', kind: 'Radial Slick', lat: 0.78, mu: 2.35, optP: 16, slip: 0.14, fall: 0.27, fk: 0.8, r: 0.356, m: 26, topt: 65, cold: 0.2, price: 1900, lvl: 3, rim: 15, wmin: 10, wmax: 12, sec: 12.2 },
+    rsl_31: { name: 'Radial Slick 31x13.5R15', kind: 'Radial Slick', lat: 0.76, mu: 2.75, optP: 16, slip: 0.15, fall: 0.28, fk: 0.85, r: 0.405, m: 37, topt: 68, cold: 0.24, price: 2800, lvl: 4, rim: 15, wmin: 12, wmax: 14, sec: 16.3 },
     // (front-drive compacts: the narrow drag radial and the 24.5 slick they
     // run; Brembo cars: an 18 in drag radial)
     dr_225: { name: 'Drag Radial 225/50R15', kind: 'Drag Radial', lat: 0.82, mu: 1.60, optP: 20, slip: 0.13, fall: 0.25, fk: 0.75, r: 0.306, m: 19, topt: 55, cold: 0.12, price: 600, rim: 15, wmin: 6, wmax: 8, sec: 9.1 },

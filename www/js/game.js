@@ -245,7 +245,9 @@
       }
       // the other axle
       var minO = DR.minWheel(c, axO);
-      if (oldF === 'ft1') {
+      // (an AWD car's front axle drives: its old runners go to the shelf)
+      if (oldF === 'ft1' && DR.driveOf(c) === 'AWD') (s.inv = s.inv || []).push({ uid: s.uid++, cat: 'ftires', id: 'fr_26', price: DR.TIRES.fr_26.price });
+      else if (oldF === 'ft1') {
         if (minO <= 15) { p.fwheels = 'drag15x3.5'; p.ftires = 'fr_26'; }
         else if (minO <= 17) { p.fwheels = 'drag17x4'; p.ftires = 'fr_26b'; }
         else if (minO <= 18) { p.fwheels = 'drag18x5'; p.ftires = 'fr_18'; }
@@ -468,7 +470,11 @@
   function partBaseName(item) {
     if (item.cat === 'engine') return DR.ENGINES[item.id].name;
     if (item.cat === 'trans') return DR.TRANS[item.id].name;
-    if (item.cat === 'rtires') return DR.TIRES[item.id].name;
+    // (factory drive tires: the car's own size)
+    if (item.cat === 'rtires' && item.stock && item.car && DR.CAR_WT && DR.CAR_WT[item.car]) return 'Factory Tires ' + DR.CAR_WT[item.car][DR.CARS[item.car].drive === 'FWD' ? 2 : 3];
+    if (item.cat === 'rtires' || (item.cat === 'ftires' && DR.TIRES[item.id])) return DR.TIRES[item.id].name;
+    var wm = (item.cat === 'wheels' || item.cat === 'fwheels') && /^(street|forged|drag|bead)(\d+)x([\d.]+)$/.exec(item.id);
+    if (wm) return DR.WHEEL_STYLES[wm[1]].name + ' ' + wm[2] + 'x' + wm[3];
     if (item.cat === 'fi') return DR.FI[item.id].name;
     var inst = G.car(), ctx = { carId: inst.carId, engine: item.eng || inst.engine, parts: {}, tune: {} };
     var opts = DR.partOptions(item.cat, ctx);
@@ -478,7 +484,7 @@
   // '' when the item can go on this car, otherwise why not.
   G.partFitIssue = function (item, inst) {
     // a generic factory part only fits the model it came off
-    if (item.stock && item.id === 'stock' && !G.isEngineBound(item.cat) && item.car && item.car !== inst.carId) return 'Factory part for the ' + DR.CARS[item.car].name;
+    if (item.stock && (item.id === 'stock' || item.cat === 'rtires') && !G.isEngineBound(item.cat) && item.car && item.car !== inst.carId) return 'Factory part for the ' + DR.CARS[item.car].name;
     if (DR.partId(item.cat, inst) === item.id && (item.id !== 'stock' || DR.stockPart(item.cat, inst) === 'stock')) return 'Already on this car';
     if (G.isEngineBound(item.cat) && item.eng !== inst.engine) return DR.ENGINES[item.eng] ? 'Made for the ' + DR.ENGINES[item.eng].name : 'Made for another engine';
     if (G.isCarBound(item.cat) && item.car && item.car !== inst.carId && DR.CARS[item.car]) return 'Made for the ' + DR.CARS[item.car].name;
@@ -512,7 +518,7 @@
   // keep: not pump gas, an empty nitrous slot, the factory weight or layout,
   // or the block (studs, girdles and sleeves go on the same block); a
   // factory turbo's bits only when the engine came boosted.
-  var NO_PART = { logger: 1, align: 1, wmi: 1, safety: 1, weight: 1, layout: 1, fueltype: 1, launch: 1, nitrous: 1, nosctrl: 1, nosheat: 1, transbrake: 1, wheeliebar: 1, aero: 1, chassis: 1, block: 1 };
+  var NO_PART = { logger: 1, align: 1, wmi: 1, safety: 1, weight: 1, layout: 1, fueltype: 1, launch: 1, nitrous: 1, nosctrl: 1, nosheat: 1, transbrake: 1, wheeliebar: 1, aero: 1, chassis: 1, block: 1, tubs: 1 };
   var FI_PARTS = { fi: 1, ic: 1, wastegate: 1, bov: 1 };
   G.stockIsPart = function (cat, inst) {
     if (cat === 'engine') return true;
@@ -538,7 +544,7 @@
     if (id === DR.stockPart(cat, inst)) {
       if (keepStock || !G.stockIsPart(cat, inst)) { if (!keepStock && inst.wear) delete inst.wear[cat]; return null; }
       var st = { uid: G.state.uid++, cat: cat, id: id, price: 0, stock: true, val: G.stockValue(cat, inst, id), from: inst.uid };
-      if (G.isEngineBound(cat)) st.eng = inst.engine; else if (id === 'stock' || G.isCarBound(cat)) st.car = inst.carId;
+      if (G.isEngineBound(cat)) st.eng = inst.engine; else if (id === 'stock' || G.isCarBound(cat) || cat === 'rtires') st.car = inst.carId;
       wearOff(inst, cat, st);
       G.state.inv.push(st);
       return st;
