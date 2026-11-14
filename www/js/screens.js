@@ -836,7 +836,7 @@
       if (voice) return;
       if (!run.paid) {
         if (inst.damage) return UI.toast('Repair your car first!');
-        if (S.noRun) return UI.toast(DR.noRunText(S));
+        if (S.noRun || S.noRunFit) return UI.toast(DR.noRunText(S));
         if (!G.canAfford(fee)) return UI.toast('A pull costs ' + DR.money(fee));
         G.pay(fee); UI.updMoney(); run.paid = true;
         if (dy) inst.dynoPrev = dy;

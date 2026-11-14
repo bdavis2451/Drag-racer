@@ -369,7 +369,7 @@
     return 'Tech: ' + (open && line === 13.5 ? 'open cars' : 'cars') + ' quicker than ' + line.toFixed(2) + ' need ' + what + ' (Suspension: Chassis)';
   };
   // Anything about this car that keeps it out of the event ('' = good to go).
-  G.carIssue = function (inst, ev) { return ev.type === 'show' ? DR.showIssue(ev, inst) : (ev.cls && DR.classIssue(ev.cls, inst)) || G.techIssue(inst, ev); };
+  G.carIssue = function (inst, ev) { var Sci = ev.type !== 'show' && G.spec(inst); if (Sci && (Sci.noRun || Sci.noRunFit)) return DR.noRunText(Sci); return ev.type === 'show' ? DR.showIssue(ev, inst) : (ev.cls && DR.classIssue(ev.cls, inst)) || G.techIssue(inst, ev); };
   DR.showIssue = function (ev, inst) {
     var sh = DR.showById(ev.show);
     if (DR.starRating(inst) < sh.minStars) return 'Needs a ' + sh.minStars + '-star car (yours: ' + (Math.floor(DR.starRating(inst) * 10) / 10) + ')';

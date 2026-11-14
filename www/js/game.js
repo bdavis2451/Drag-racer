@@ -36,6 +36,7 @@
     try { turboV2(s); } catch (e) { /* keep what loaded */ }
     try { dieselV2(s); } catch (e) { /* keep what loaded */ }
     try { dieselV3(s); } catch (e) { /* keep what loaded */ }
+    try { wheelsV1(s); } catch (e) { /* keep what loaded */ }
     // traction control used to come switched off: cars that have the ECU and
     // never turned it on get it on, once
     if (!s.tcV2) { (s.cars || []).forEach(function (c) { if ((c.parts || {}).ecu === 'ecu3' && !(c.tune && c.tune.tcSlip > 0)) { c.tune = c.tune || {}; c.tune.tcSlip = DR.TC_DEFAULT || 12; } }); s.tcV2 = true; }
@@ -97,6 +98,7 @@
       Object.keys(DR.FI || {}).forEach(function (f) { if (!DR.FI[f].alias) (catalogAll.fi = catalogAll.fi || {})[f] = catalogAll.fi[f] || { price: DR.FI[f].price || 0 }; });
       Object.keys(DR.TRANS || {}).forEach(function (t) { (catalogAll.trans = catalogAll.trans || {})[t] = catalogAll.trans[t] || { price: DR.TRANS[t].price || 0 }; });
       Object.keys(DR.TIRES || {}).forEach(function (t) { (catalogAll.rtires = catalogAll.rtires || {})[t] = catalogAll.rtires[t] || { price: DR.TIRES[t].price || 0 }; });
+      Object.keys(DR.TIRES || {}).forEach(function (t) { (catalogAll.ftires = catalogAll.ftires || {})[t] = catalogAll.ftires[t] || { price: DR.TIRES[t].price || 0 }; });
     }
     return (catalogAll[cat] || {})[id] || null;
   }
@@ -199,6 +201,64 @@
   // diesel ones (injectors by fuel, pumps, ECU, turbo by power, converter)
   // (the lockup and bolt-together converters came after the diesel rework:
   // on a Cummins they become the race billet diesel converter)
+  // the wheels & tires rework (Nov 2026): each axle has a wheel and a tire
+  // that must fit each other. The drive tire gets a wheel it fits (old
+  // beadlocks stay beadlocks, light wheels become forged, drag tires get
+  // drag wheels); old front runners become real runners on runner wheels
+  // sized for the car's brakes; matching tires all round become the same
+  // tire on the other axle. Anything that no longer fits (a big slick under
+  // stock wells, wheels inside big brakes) stays on and is flagged until
+  // it's fixed (owner, Nov 14).
+  function wheelsV1(s) {
+    if (s.wheelsV1) return;
+    var STY = { wh1: 'street', wh2: 'forged', wh3: 'bead' }, ROAD = { Street: 1, Track: 1, 'Race Slick': 1 };
+    function wheelFor(t, pref, min) {
+      var order = [pref, 'drag', 'bead', 'street', 'forged'], best = null;
+      order.forEach(function (k) {
+        if (best || !k) return;
+        var fit = DR.WHEEL_STYLES[k].sizes.filter(function (z) { return z[0] === t.rim && z[1] >= t.wmin && z[1] <= t.wmax; });
+        if (!fit.length) return;
+        fit.sort(function (a, b) { return Math.abs(a[1] - (t.wmin + t.wmax) / 2) - Math.abs(b[1] - (t.wmin + t.wmax) / 2); });
+        best = k + fit[0][0] + 'x' + fit[0][1];
+      });
+      return best;
+    }
+    (s.cars || []).forEach(function (c) {
+      var car = DR.CARS[c.carId];
+      if (!car || !DR.CAR_WT[c.carId]) return;
+      var p = c.parts = c.parts || {}, oldW = p.wheels, oldF = p.ftires;
+      var tid = p.rtires && p.rtires !== car.tire ? p.rtires : null, t = tid && DR.TIRES[tid];
+      delete p.wheels; delete p.ftires; delete p.fwheels;
+      var axD = DR.axleOf(c, 'wheels'), axO = axD === 'front' ? 'rear' : 'front';
+      // the drive axle
+      if (t && t.rim) {
+        var pref = STY[oldW] || (ROAD[t.kind] ? 'street' : 'drag');
+        if (pref === 'street' && !ROAD[t.kind]) pref = 'drag';
+        var w = wheelFor(t, pref, DR.minWheel(c, axD));
+        if (w) p.wheels = w;
+      } else if (STY[oldW]) {
+        // light wheels on factory tires: the same style at the factory size
+        // if it's made in it, else onto the shelf
+        var f = DR.factoryWT(c, axD), st = DR.WHEEL_STYLES[STY[oldW]], z = st.sizes.filter(function (q) { return q[0] === f.d && Math.abs(q[1] - f.w) <= 1.5; })[0];
+        if (z) p.wheels = STY[oldW] + z[0] + 'x' + z[1];
+        else (s.inv = s.inv || []).push({ uid: s.uid++, cat: 'wheels', id: { wh1: 'street17x8', wh2: 'forged18x9', wh3: 'bead15x10' }[oldW], price: DR.WHEEL_STYLES[STY[oldW]].price });
+      }
+      // the other axle
+      var minO = DR.minWheel(c, axO);
+      if (oldF === 'ft1') {
+        if (minO <= 15) { p.fwheels = 'drag15x3.5'; p.ftires = 'fr_26'; }
+        else if (minO <= 17) { p.fwheels = 'drag17x4'; p.ftires = 'fr_26b'; }
+        else if (minO <= 18) { p.fwheels = 'drag18x5'; p.ftires = 'fr_18'; }
+      } else if (oldF === 'ft2' && t && ROAD[t.kind] && p.wheels) {
+        p.ftires = tid; p.fwheels = p.wheels;
+      }
+    });
+    (s.inv || []).forEach(function (it) {
+      if (it.cat === 'wheels' && STY[it.id]) it.id = { wh1: 'street17x8', wh2: 'forged18x9', wh3: 'bead15x10' }[it.id];
+      if (it.cat === 'ftires' && (it.id === 'ft1' || it.id === 'ft2')) it.id = it.id === 'ft1' ? 'fr_26' : 'st_225';
+    });
+    s.wheelsV1 = true;
+  }
   function dieselV3(s) {
     if (s.dieselV3) return;
     var M = { tclu: 'dc30', tclu7: 'dc30', tcbt: 'dc30', tcbtlu: 'dc30' };

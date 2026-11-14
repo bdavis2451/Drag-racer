@@ -655,6 +655,12 @@
     opt('sf3', 'Full Safety: Chute, Fire System, Window Net', 2600, { lvl: 3, kg: 4, chute: true }, 'Parachute, on-board fire suppression, window net and a head-and-neck restraint: everything tech asks of a 150 mph car.')
   ]};
   DR.PART_CATS = C;
+  // a group's slots in the order they're shown: wheels and tires front
+  // axle first (the drive axle isn't named)
+  DR.groupCats = function (g, inst) {
+    if (g.id !== 'tires' || !inst || !DR.CAR_WT || !DR.CAR_WT[inst.carId]) return g.cats;
+    return DR.axleOf(inst, 'wheels') === 'front' ? ['wheels', 'rtires', 'fwheels', 'ftires', 'brakes'] : ['fwheels', 'ftires', 'wheels', 'rtires', 'brakes'];
+  };
 
   // Shop groups. unlock: which career unlock track the group's parts use.
   DR.PART_GROUPS = [
@@ -664,8 +670,8 @@
     { id: 'fuel',   name: 'Fuel & Spark',  icon: 'fuelsys', unlock: 'engine', cats: ['carb', 'injectors', 'fuelpump', 'fueltype', 'ignition', 'ecu', 'logger'] },
     { id: 'power',  name: 'Power Adders',  icon: 'fi',      cats: ['fi', 'tmanifold', 'downpipe', 'theat', 'ic', 'wastegate', 'bov', 'wmi', 'launch', 'nitrous', 'nosctrl', 'nosheat'] },
     { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'valvebody', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
-    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'wheeliebar', 'aero'] },
-    { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['rtires', 'wheels', 'ftires', 'brakes'] },
+    { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'tubs', 'wheeliebar', 'aero'] },
+    { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['wheels', 'rtires', 'fwheels', 'ftires', 'brakes'] },
     { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'safety'] }
   ];
   // Which side of the career opens a part (anything not listed is shared:
@@ -1081,7 +1087,7 @@
     if (!DR.getOption('fuelpump', inst).efiPump && pid !== 'fp4' && pid !== 'fp5') miss.push('an EFI fuel pump');
     return miss;
   };
-  DR.noRunText = function (S) { var m = S.noRun || []; return 'It won\'t run yet: the fuel injection needs ' + (m.length > 1 ? m.slice(0, -1).join(', ') + ' and ' + m[m.length - 1] : m[0]) + '.'; };
+  DR.noRunText = function (S) { if (!S.noRun && S.noRunFit) return 'It can\'t race like this: ' + S.noRunFit + '.'; var m = S.noRun || []; return 'It won\'t run yet: the fuel injection needs ' + (m.length > 1 ? m.slice(0, -1).join(', ') + ' and ' + m[m.length - 1] : m[0]) + '.'; };
   DR.carbOf = function (inst) {
     var e = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine];
     if (!e.carb) return null;
@@ -1122,8 +1128,11 @@
     return DR.getOption('valvebody', inst, id);
   };
   DR.VB_OF = VB_OF;
+  var WT_NAME = { wheels: 'Wheels', fwheels: 'Wheels', rtires: 'Tires', ftires: 'Tires' };
   DR.catName = function (cat, inst) {
     if (inst && ROTARY[cat] && DR.engineKind(inst) === 'rotary') return ROTARY[cat].name;
+    // wheels and tires go by the axle they're on (the drive axle isn't named)
+    if (WT_NAME[cat] && inst && DR.CAR_WT && DR.CAR_WT[inst.carId]) return (DR.axleOf(inst, cat) === 'front' ? 'Front ' : 'Rear ') + WT_NAME[cat];
     return DR.CAT_NAMES[cat] || (C[cat] && C[cat].name) || cat;
   };
 

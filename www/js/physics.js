@@ -720,6 +720,8 @@
     var legacyWT = ai || !wx || wx.legacy;
     S.wheels = legacyWT ? null : wx;
     if (!legacyWT) S.fitIssues = wx.issues;
+    // wheels and tires that don't go together (or on the car) stop it running
+    if (!legacyWT && wx.issues.length) S.noRunFit = wx.issues[0].text;
     // (the factory tires keep the figures the stock cars were set with)
     if (!legacyWT && !wx.tD.factory) {
       // the tire as fitted: a radial on a wide wheel takes more pressure
@@ -1099,6 +1101,8 @@
   // install bay flag these.
   DR.bottlenecks = function (S) {
     var out = {}, r = S.risk, hp = S.peakHp + S.nosHp;
+    // wheels and tires that don't go together (the car can't race)
+    (S.fitIssues || []).forEach(function (f) { if (!out[f.cat]) out[f.cat] = f.text; });
     if (hp > S.safeHp) out[S.safeWeak] = 'Can\'t take ' + Math.round(hp) + ' hp';
     if (S.red > S.vtLimit) out.valvetrain = 'Valves float past ' + S.vtLimit + ' rpm';
     if (S.red > S.beLimit) out[S.beWeak] = out[S.beWeak] || 'Not safe past ' + S.beLimit + ' rpm';

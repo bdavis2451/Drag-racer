@@ -934,6 +934,7 @@
       if (T.carAway(inst.uid)) return 'At the track';
       if (G.carBusy && G.carBusy(inst)) return 'In the bay';
       if (inst.damage) return 'Broken';
+      var Sfit = G.spec(inst); if (Sfit.noRun || Sfit.noRunFit) return 'Can\'t run';
       var why = T.eligible(inst, cls, ev);
       return why ? (/turn/.test(why) ? 'Can\'t turn' : 'Too quick') : '';
     }
@@ -944,7 +945,7 @@
         if (teams) { if (!why && cars2.length < 2 && !render.did) cars2.push(inst.uid); }
         else if (!selCar && !why) selCar = inst.uid;
         var on = teams ? cars2.indexOf(inst.uid) >= 0 : selCar === inst.uid;
-        carBox.appendChild(h('div', { class: 'entrow' + (on ? ' on' : '') + (why ? ' off' : ''), onclick: function () { if (why) return UI.toast(why === 'Too quick' || why === 'Can\'t turn' ? T.eligible(inst, cls, ev) : why); if (teams) pick2(cars2, inst.uid); else selCar = inst.uid; render(); } },
+        carBox.appendChild(h('div', { class: 'entrow' + (on ? ' on' : '') + (why ? ' off' : ''), onclick: function () { if (why) return UI.toast(why === 'Can\'t run' ? DR.noRunText(G.spec(inst)) : why === 'Too quick' || why === 'Can\'t turn' ? T.eligible(inst, cls, ev) : why); if (teams) pick2(cars2, inst.uid); else selCar = inst.uid; render(); } },
           h('span', { class: 'grow' }, DR.CARS[inst.carId].name), inst.ctune && inst.ctune.set ? h('span', { class: 'acc', title: 'Circuit setup by ' + inst.ctune.by }, '⚙') : null, h('span', { class: 'dim' }, 'rating ' + T.fmtLap(lap)), why ? h('span', { class: 'bad' }, why) : null));
       });
       free.forEach(function (d) { if (teams) { if (drvs2.length < 2 && !render.did) drvs2.push(d.id); } else if (!selDrv) selDrv = d.id; });

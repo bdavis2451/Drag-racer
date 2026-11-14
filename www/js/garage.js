@@ -189,12 +189,17 @@
       case 'aero':
         r(2, 6, 20, 4, ac); r(2, 6, 20, 1, DR.shadeHex(ac, 0.3)); r(1, 4, 2, 9, M4); r(21, 4, 2, 9, M4); r(7, 10, 2, 10, M3); r(15, 10, 2, 10, M3); break;
       case 'rtires': case 'ftires':
-        var slick = /^(sl|dr|pm|rad)/.test(id || '') || cat === 'rtires';
+        var slick = /^(sl|dr|pm|rad|rsl|ets)/.test(id || '') || (cat === 'rtires' && !/^st_|^tr_|^rr_/.test(id || ''));
+        if (/^fr_/.test(id || '')) { disc(12, 12, 11, BK); ring(12, 12, 11, 10, '#2b2c31'); disc(12, 12, 8, M2); disc(12, 12, 6, M3); disc(12, 12, 1, ac); break; }
         disc(12, 12, slick ? 11 : 10, BK); ring(12, 12, slick ? 11 : 10, slick ? 9 : 8, '#2b2c31');
         disc(12, 12, 6, M2); disc(12, 12, 4, M3); disc(12, 12, 1, ac);
         for (k = 0; k < 5; k++) { var a3 = k * Math.PI * 2 / 5; r(Math.round(12 + Math.cos(a3) * 4), Math.round(12 + Math.sin(a3) * 4), 1, 1, M1); }
         r(4, 3, 3, 1, '#4a4c55'); break;
-      case 'wheels':
+      case 'tubs':
+        // a rear wheel well cut out and widened, a big slick inside
+        r(1, 4, 22, 3, M3); r(1, 4, 3, 17, M3); r(20, 4, 3, 17, M3); r(1, 4, 22, 1, M2);
+        disc(12, 15, 7, BK); disc(12, 15, 3, M2); r(4, 7, 2, 12, ac); r(18, 7, 2, 12, ac); break;
+      case 'wheels': case 'fwheels':
         disc(12, 12, 10, M2); disc(12, 12, 8, M4);
         for (k = 0; k < 6; k++) { var a4 = k * Math.PI / 3; for (var q = 2; q <= 7; q++) r(Math.round(12 + Math.cos(a4) * q), Math.round(12 + Math.sin(a4) * q), 1, 1, M1); }
         disc(12, 12, 2, ac); break;
@@ -509,7 +514,31 @@
 
   // The parts for sale in a slot, as cards (tap one for the details, buy,
   // fit). Factory parts aren't sold.
+  // wheels: each style with the sizes it comes in (over this axle's
+  // brakes); the sizes the tires on that axle fit are marked
+  function wheelGrid(inst, cat) {
+    var cur = DR.partId(cat, inst), tcat = cat === 'wheels' ? 'rtires' : 'ftires', t = DR.tireSpec(inst, tcat), ax = DR.axleOf(inst, cat);
+    var by = {}, order = [];
+    DR.partOptions(cat, inst).forEach(function (o) { if (!o.price || !o.style) return; if (!by[o.style]) { by[o.style] = []; order.push(o.style); } by[o.style].push(o); });
+    var wrap = h('div', { class: 'col' },
+      h('div', { class: 'dim gsmall' }, 'Your ' + ax + ' tires: ' + (t.factory ? 'factory ' + t.size : t.name) + ' (a ' + t.rim + ' in wheel' + (t.factory ? '' : ', ' + t.wmin + '-' + t.wmax + ' in wide') + '). ✓ = they fit. Smallest wheel over your brakes: ' + DR.minWheel(inst, ax) + ' in.'));
+    order.forEach(function (k) {
+      var st = DR.WHEEL_STYLES[k], first = by[k][0], lvl = lvlOf(first), locked = !G.partUnlocked(cat, lvl, first.id);
+      var chips = h('div', { class: 'wchips' }, by[k].map(function (o) {
+        var fit = DR.tireFits(t, DR.wheelSpec(inst, cat, o.id)), on = o.id === cur;
+        return h('button', { class: 'wchip' + (on ? ' on' : '') + (fit ? ' fit' : ''), onclick: function () { partModal(inst, cat, o.id); } }, o.d + 'x' + o.w + (fit ? ' ✓' : '') + (on ? ' (on car)' : ''));
+      }));
+      wrap.appendChild(h('div', { class: 'pcard wrow l' + lvl + (locked ? ' locked' : '') },
+        h('div', { class: 'row', style: { alignItems: 'center', gap: '10px' } }, h('div', { class: 'pic' }, iconEl(cat, lvl, first.id, 48)),
+          h('div', { class: 'grow' }, h('div', { class: 'plvl' }, DR.LEVEL_NAMES[lvl]), h('div', { class: 'pname' }, st.name),
+            h('div', { class: 'dim gsmall' }, st.desc + ' ' + DR.money(G.partPrice(cat, first)) + ' a pair.'),
+            locked ? h('span', { class: 'tag' }, '🔒 ' + G.unlockWhere(cat, lvl, first.id)) : null)),
+        chips));
+    });
+    return wrap;
+  }
   function catalogGrid(inst, cat) {
+    if ((cat === 'wheels' || cat === 'fwheels') && DR.CAR_WT[inst.carId]) return wheelGrid(inst, cat);
     var curId = DR.partId(cat, inst), tunedNow = G.spec(inst).tuned, bestG = cat === 'gears' && DR.bestGears ? DR.bestGears(inst, function (o) { return G.partUnlocked('gears', lvlOf(o), o.id); }) : null;
     var grid = h('div', { class: 'pgrid' }), wrap = null, lastGroup = null;
     DR.partOptions(cat, inst).forEach(function (o) {
@@ -635,6 +664,46 @@
       ['Engine price', DR.money(opt.price), 'good']
     ].concat(opt.fit && !opt.fit.block ? opt.fit.lines.map(function (l) { return [l[0], DR.money(l[1])]; }).concat([['Installed price', DR.money(opt.price + opt.fit.install), 'acc']]) : []));
   }
+  // wheels & tires in the part window: what it goes with, and a quick way
+  // to buy the other half when the one on the car doesn't fit
+  var WT_PAIR = { wheels: 'rtires', rtires: 'wheels', fwheels: 'ftires', ftires: 'fwheels' };
+  function wtFitBox(inst, cat, id, S1, closeIt) {
+    if (!WT_PAIR[cat] || !DR.CAR_WT[inst.carId]) return null;
+    var other = WT_PAIR[cat], isWheel = cat === 'wheels' || cat === 'fwheels', ax = DR.axleOf(inst, cat);
+    var wh = isWheel ? DR.wheelSpec(inst, cat, id) : DR.wheelSpec(inst, other), t = isWheel ? DR.tireSpec(inst, other) : DR.tireSpec(inst, cat, id);
+    var ok = DR.tireFits(t, wh), rows = [];
+    if (!isWheel) rows.push(h('div', { class: 'dim' }, (t.factory ? 'Factory tires: they go on the factory wheels (or the same size).' : 'Goes on a ' + t.rim + ' in wheel ' + t.wmin + '-' + t.wmax + ' in wide.') + ' Section ' + t.sec + ' in; room in the ' + ax + ' wells: ' + DR.wellLimit(inst, ax) + ' in.'));
+    if (!ok) {
+      // the other half that fits, to buy together
+      var picks = DR.partOptions(other, inst).filter(function (o) {
+        if (!o.price && !o.factory) return false;
+        var w2 = isWheel ? wh : DR.wheelSpec(inst, other, o.id), t2 = isWheel ? DR.tireSpec(inst, other, o.id) : t;
+        return DR.tireFits(t2, w2) && !(cat === 'wheels' && t2.kind === 'Front Runner');
+      }).slice(0, 12);
+      rows.push(h('div', { class: 'warnbox' }, isWheel ? 'Your ' + ax + ' tires (' + (t.factory ? t.size : t.name) + ') don\'t go on this wheel.' : 'Doesn\'t go on your ' + ax + ' wheels (' + wh.d + 'x' + wh.w + ').',
+        picks.length ? ' Pick ' + (isWheel ? 'tires' : 'wheels') + ' for it (bought and fitted together):' : ' Nothing in the shop fits it on this car.'));
+      if (picks.length) rows.push(h('div', { class: 'wchips' }, picks.map(function (o) {
+        var p1 = G.partPrice(cat, DR.getOption(cat, inst, id)), p2 = o.price ? G.partPrice(other, o) : 0;
+        return h('button', { class: 'wchip fit', onclick: function () {
+          if (!G.canAfford(p1 + p2)) return UI.toast('Not enough money');
+          var a = G.buyPart(cat, id); G.installPart(inst, a.uid);
+          if (o.price) { var b = G.buyPart(other, o.id); G.installPart(inst, b.uid); } else G.removePart(inst, other);
+          A.cash(); UI.toast('Fitted: ' + DR.getOption(cat, inst, id).name + ' + ' + o.name); closeIt(); UI.refresh();
+        } }, o.name.replace(/^(Street 5-Spoke|Forged Lightweight|Drag Wheel|Beadlock Drag) /, function (m) { return m.split(' ')[0] + ' '; }) + (p2 ? ' +' + DR.money(p2) : ''));
+      })));
+    }
+    // what else would stop it racing like this
+    (S1.fitIssues || []).forEach(function (f) { if (f.cat !== other || ok) rows.push(h('div', { class: 'warnbox' }, 'Can\'t race like this: ' + f.text + '.')); });
+    return rows.length ? h('div', { class: 'col' }, rows) : null;
+  }
+  // wheels/tires problems a part causes or fixes (brakes, tubs, layout)
+  function fitDelta(S0, S1) {
+    var was = (S0.fitIssues || []).map(function (f) { return f.text; }), now = (S1.fitIssues || []).map(function (f) { return f.text; });
+    var added = now.filter(function (t) { return was.indexOf(t) < 0; }), fixed = was.filter(function (t) { return now.indexOf(t) < 0; });
+    if (!added.length && !fixed.length) return null;
+    return h('div', { class: 'col' }, added.map(function (t) { return h('div', { class: 'warnbox' }, 'Can\'t race like this: ' + t + '.'); }),
+      fixed.map(function (t) { return h('div', { class: 'good' }, 'Fixes: ' + t + '.'); }));
+  }
   function partModal(inst, cat, id) {
     var opt = DR.getOption(cat, inst, id), lvl = lvlOf(opt), locked = !G.partUnlocked(cat, lvl, id);
     var S0 = G.spec(inst), copy = hypothetical(inst, cat, id), S1 = DR.buildSpec(copy);
@@ -668,6 +737,8 @@
         owned ? ['In your inventory', '×' + owned, 'acc'] : null
       ]) : h('div', { class: 'warnbox' }, G.partFitIssue({ cat: cat, id: id }, inst)),
       fits ? UI.riskBox(S1) : null,
+      wtFitBox(inst, cat, id, S1, function () { close(); }),
+      WT_PAIR[cat] ? null : fitDelta(S0, S1),
       cat === 'fi' && DR.FI[id] && DR.FI[id].type === 'turbo' ? UI.turboSheet(inst, id, S0, S1) : null,
       cat === 'engine' && opt.fit && opt.fit.block ? h('div', { class: 'warnbox' }, opt.fit.block + '.') : null,
       cat === 'engine' ? h('div', { class: 'dim' }, 'Swapping engines moves your current engine and its engine parts to your inventory. The install is paid when the engine goes in.') : null,
@@ -786,7 +857,7 @@
     var list = h('div', { class: 'list bay-list' });
     DR.PART_GROUPS.forEach(function (g) {
       list.appendChild(h('div', { class: 'bay-h' }, g.name));
-      g.cats.forEach(function (c) {
+      DR.groupCats(g, inst).forEach(function (c) {
         var applies = DR.partApplies(c, inst);
         var spare = G.invFor(c).filter(function (it) { return !it.stock && !G.partFitIssue(it, inst); }).length;
         if (!applies && !G.invFor(c).length) return;
