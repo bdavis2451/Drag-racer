@@ -1,0 +1,2036 @@
+// ===========================================================================
+// PHYSICS — builds a physical spec from a car + parts + tune, and simulates
+// a drag run: engine, boost, clutch / torque converter, gearbox, tire slip,
+// tire temperature & pressure, suspension weight transfer and wheelies.
+// ===========================================================================
+(function () {
+  var DR = globalThis.DR;
+  var G = DR.G, RPM2W = Math.PI / 30, W2RPM = 30 / Math.PI;
+
+  function clamp(x, a, b) { return x < a ? a : x > b ? b : x; }
+  DR.clamp = clamp;
+
+  // ---------------------------------------------------------------- torque curve
+  // Normalised NA torque: a rounded rise to the torque peak, easing off so
+  // power peaks at pkRpm; past the power peak POWER (not torque) falls away
+  // gently, like a real engine running out of breath towards the limiter.
+  function shape(S, rpm) {
+    var x = rpm / S.tqRpm, s;
+    if (x < 1) s = 1 - S.lowK * (1 - x) * (1 - x);
+    else if (rpm <= S.pkRpm) s = 1 - S.highK * (x - 1) * (x - 1);
+    else {
+      var xp = S.pkRpm / S.tqRpm, sp = 1 - S.highK * (xp - 1) * (xp - 1), d = (rpm - S.pkRpm) / S.pkRpm;
+      s = sp * S.pkRpm * (1 - 1.8 * d * d) / rpm;
+    }
+    return Math.max(0.05, s);
+  }
+
+  // ---- charge air. Compressing air heats it: the outlet temperature is
+  // T1 (1 + (PR^0.288 - 1) / eta), eta the compressor's efficiency (a
+  // cheap or small unit pushed near its limit is less efficient and runs
+  // hotter). The intercooler takes back its share of the heat down to
+  // ambient (an ice tank cools below it), and E85 or methanol cool the
+  // charge as they evaporate. Hot air is thin (less power per psi) and
+  // knocks sooner: the knock point is for a 50 C charge and drops 0.12 psi
+  // per degree over it.
+  DR.AMBIENT_C = 25;
+  function chargeTemp(S, boost) {
+    if (S.fiType === 'none' || !(boost > 0)) return DR.AMBIENT_C;
+    var pr = (14.7 + boost) / 14.7, frac = S.fiMax ? boost / S.fiMax : 0;
+    var eta = Math.max(0.35, S.etaC - Math.max(0, frac - 0.75) * 0.3);
+    var t1 = DR.AMBIENT_C + 273.15, t2 = t1 * (1 + (Math.pow(pr, 0.288) - 1) / eta);
+    var sink = (S.icSink != null ? S.icSink : DR.AMBIENT_C) + 273.15;
+    return t2 - S.icE * (t2 - sink) - 273.15 - S.cool * Math.min(1, boost / 10);
+  }
+  // The knock point (psi) at a charge temperature and rpm. Knock is worst at
+  // peak torque (the end gas has the most time to light) and eases as the
+  // revs rise: about 10% under the mid-range figure at peak torque, 10% over
+  // at redline.
+  function knockAt(S, iat, rpm) {
+    var k = Math.min(S.knockFuel + 2, S.knockFuel - 0.12 * (iat - 50));
+    if (rpm != null && S.red > S.tqRpm) k += S.knockFuel * 0.1 * (2 * clamp((rpm - S.tqRpm) / (S.red - S.tqRpm), 0, 1) - 1);
+    // (a charge that hot knocks on any boost at all, never below none)
+    return Math.max(0, k);
+  }
+  // Past the knock point the tune pulls timing to stop it: each extra psi
+  // adds less until power stops climbing (the plateau, about 30% past the
+  // knock point: 6 psi on pump gas). Past that there's no timing left to
+  // pull: it detonates and loses power. Returns the boost the engine "uses".
+  function knockSpan(kn) { return Math.max(4, 0.3 * kn); }
+  function boostUsed(boost, kn) {
+    var x = boost - kn, P = knockSpan(kn);
+    if (x <= 0) return boost;
+    // (detonating hard it still makes at least what it would unboosted:
+    // what it really does is break, which the risk carries)
+    return Math.max(0, kn + (x <= P ? x - x * x / (2 * P) : P / 2 - (x - P) * 0.3));
+  }
+  DR.knockSpan = knockSpan;
+  // the boost an engine takes before knock, nitrous spraying included
+  DR.knockSafe = function (S) { return S.knock - (S.nosKnock || 0); };
+  // An engine's knock point on a fuel (psi, 50 C charge): the fuel's rating
+  // is for an 8.5:1 engine; each point of compression over that costs about
+  // 15% of it (3 psi on pump gas), and the combustion design (head, bore,
+  // direct injection: e.kd, psi on pump gas) adds or takes a little.
+  function engKnock(e, ref, crD) {
+    var cr = (e.cr || 9.5) + (crD || 0);
+    return ref * Math.max(0.35, 1 - 0.15 * (cr - 8.5)) + (e.kd || 0) * ref / 20;
+  }
+  // A factory boosted engine is built for its boost (lower compression,
+  // timing to match): it gets the knock margin it needs to run factory boost
+  // on pump gas with its own intercooler, plus 2 psi, even at peak torque.
+  var knockAddCache = {};
+  function engineKnockAdd(engId) {
+    if (knockAddCache[engId] != null) return knockAddCache[engId];
+    var e = DR.ENGINES[engId], add = 0;
+    if (e.fi && !e.diesel) {
+      var S = engineCore(e, { knock: 20, noAdd: true }, 1);
+      add = Math.max(0, e.fi.boost + 2 - knockAt(S, chargeTemp(S, e.fi.boost), S.tqRpm));
+    }
+    return (knockAddCache[engId] = add);
+  }
+  DR.chargeTemp = chargeTemp;
+  // ---- a diesel: the fuel makes the torque, the air decides how cleanly it
+  // burns. Fuel the calibration asks for (its torque curve) -> capped by
+  // the smoke limiter at the air there is -> air-fuel ratio. Richer than
+  // ~18:1 not all of it burns: black smoke, hot exhaust, less power per
+  // drop. Exhaust temperature (F, before the turbo) follows the ratio.
+  // Fuel: 210 g/kWh (a modern common-rail diesel at full load).
+  var DSL_BSFC = 5.83e-8;   // kg of fuel per J of work
+  function dieselState(S, rpm, boost, thr) {
+    var d = S.dsl, w = Math.max(rpm, 300) * RPM2W;
+    var Tf = d.Tf * shape(S, rpm);
+    if (S.mech && rpm > S.mech) Tf *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
+    if (d.tqCap) Tf = Math.min(Tf, d.tqCap);
+    var ma = airMass(S, rpm, TB.P1 + Math.max(0, boost) / 0.145, 1);
+    // no more air than the compressor can flow (its rated diesel power at
+    // about 18:1)
+    if (S.flowW) ma = Math.min(ma, S.flowW * DSL_BSFC * 18 * 1.05);
+    var mf = Math.min(Tf * w * DSL_BSFC, ma / d.afrLim) * (thr == null ? 1 : thr);
+    var afr = mf > 0 ? ma / mf : 99;
+    var eff = afr < 18 ? Math.max(0.7, 1 - 0.025 * (18 - afr)) : 1;
+    var egt = 400 + 19000 / Math.max(afr, 8) - (S.icE || 0) * 60;
+    return { T: mf * eff / DSL_BSFC / w, afr: afr, egt: egt };
+  }
+  DR.dieselState = function (S, rpm, boost) { return S.dsl ? dieselState(S, rpm, boost) : null; };
+  // Full-throttle torque (Nm) at rpm with a given boost (psi). No nitrous.
+  // (kdT: how much hotter the charge is than on a 25 C day, from the
+  // weather and heat soak: it moves the knock point only; the thinner air is
+  // the race's own correction. After a call, kLast holds how far past the
+  // knock point it ran (psi) and that point's pulled zone.)
+  var kLast = { x: 0, P: 1 };
+  function knockDeg(x, P) { return x <= 0 ? 0 : x <= P ? 10 * x / P : 10 + 2 * (x - P); }
+  DR.knockDeg = knockDeg;
+  // (kdP: psi off the knock point while the nitrous sprays)
+  function boostedTorque(S, rpm, boost, kdT, kdP) {
+    if (S.dsl) return Math.min(dieselState(S, rpm, boost).T, S.fuelW / Math.max(rpm, 300) / RPM2W);
+    var w = Math.max(rpm, 300) * RPM2W;
+    var Tna = S.Tpk * shape(S, rpm);
+    // past the mechanical limit the valves float: power falls away fast
+    if (S.mech && rpm > S.mech) Tna *= Math.max(0.3, 1 - (rpm - S.mech) / 1200);
+    var iat = boost > 0 ? chargeTemp(S, boost) : DR.AMBIENT_C, kn = boost > 0 ? knockAt(S, iat + (kdT || 0), rpm) - (kdP || 0) : 99;
+    var be = boostUsed(boost, kn);
+    kLast.x = boost - kn; kLast.P = knockSpan(kn);
+    // past what the ignition can light, cylinders misfire
+    if (S.sparkPsi != null && boost > S.sparkPsi) be -= (boost - S.sparkPsi) * 0.7;
+    // (S.bk: how well this engine family turns big boost into power: a
+    // factory turbo engine, low compression and built for boost, more; a
+    // high-compression NA engine less. Set so full race builds land on
+    // what the record engines make)
+    // (applies past 15 psi: mild boost works the same on any engine)
+    if (S.bk && S.bk !== 1 && be > 15) be = 15 + (be - 15) * S.bk;
+    var T = Tna * (1 + be / 14.7) * (DR.AMBIENT_C + 273.15) / (iat + 273.15);
+    if (S.fiType === 'roots' || S.fiType === 'screw' || S.fiType === 'cent')
+      T -= S.paras * S.Tpk * (boost / 14.7) * Math.min(1, rpm / S.ref) * 1.2;
+    // past what the compressor can flow it chokes and heats the charge:
+    // power falls away instead of holding flat (small turbos run out up top)
+    if (S.flowW && T * w > S.flowW) T = Math.max(Tna, S.flowW * (1 - 0.12 * Math.min(1, (T * w - S.flowW) / S.flowW)) / w);
+    // a carb (or throttle body) out of air: the top end flattens and falls
+    if (S.carbW) { var cw = S.carbW * (1 + Math.max(0, boost) / 14.7); if (T * w > cw) T = cw * (1 - 0.1 * Math.min(1, (T * w - cw) / cw)) / w; }
+    T = Math.min(T, S.fuelW / w);
+    // (a blower overdriven far past what the engine can use can cost more to
+    // spin than the engine makes: it never pushes the engine backwards)
+    return Math.max(0, T);
+  }
+
+  // Boost creep (psi) at this rpm: builds from the power peak to redline.
+  function creepAt(S, rpm) { var c = (S.creep || 0) + (S.creepEgt || 0); return c ? c * clamp((rpm - S.pkRpm) / Math.max(300, S.red - S.pkRpm), 0, 1) : 0; }
+  // Boost (psi) a fully spooled system makes at this rpm with full throttle.
+  function steadyBoost(S, rpm) {
+    if (S.fiType === 'none') return 0;
+    if (S.fiType === 'turbo') return (S.tbHoldT ? Math.min(S.boostSet, holdAt(S, rpm)) : 0) + creepAt(S, rpm);
+    if (S.fiType === 'cent') return S.boostSet * Math.pow(Math.min(rpm, S.ref) / S.ref, 2);
+    return S.boostSet * clamp(rpm / 1800, 0, 1);
+  }
+  DR.steadyBoost = steadyBoost;
+  DR.boostedTorque = boostedTorque;
+  DR.spoolAt = function (S, b) { return spoolAt(S, b); };
+
+  // Peak of the NA torque curve's power for Tpk = 1 (calibration helper).
+  function shapePeak(S) {
+    var best = 0, top = Math.max(S.red, S.pkRpm + 800);
+    for (var rpm = 1000; rpm <= top; rpm += 50) { var p = shape(S, rpm) * rpm * RPM2W; if (p > best) best = p; }
+    return best;
+  }
+  // Cache of NA peak torque per engine so stock engines hit their rated hp.
+  var tpkCache = {};
+  function stockTpk(engId) {
+    if (tpkCache[engId]) return tpkCache[engId];
+    var e = DR.ENGINES[engId];
+    var S = engineCore(e, {}, 1);
+    S.flowW = 0; S.fuelW = 1e12;
+    var best = 0;
+    for (var rpm = 1000; rpm <= S.red; rpm += 50) {
+      var p = boostedTorque(S, rpm, steadyBoost(S, rpm)) * rpm * RPM2W;
+      if (p > best) best = p;
+    }
+    tpkCache[engId] = e.hp * DR.HP / best;
+    return tpkCache[engId];
+  }
+
+  // Engine fundamentals shared by the spec builder and the stock calibration.
+  function engineCore(e, mods, Tpk) {
+    var S = {};
+    // breathing upgrades move the torque and power peaks (buildSpec)
+    S.tqRpm = mods.tq || e.tq;
+    S.pkRpm = mods.pk || e.pk;
+    S.ref = Math.max(e.red, S.pkRpm + 300);  // where the engine "breathes" to (sets blower curves)
+    S.red = e.red;                         // rev limiter; buildSpec sets the real one
+    S.idle = e.diesel ? 700 : 900;
+    S.bk = e.bk || 1;
+    S.lowK = 0.45 + (mods.low || 0);
+    var xp = Math.max(1.05, S.pkRpm / S.tqRpm);
+    S.highK = 1 / ((xp - 1) * (xp - 1) + 2 * xp * (xp - 1));
+    // a diesel's torque stays flatter to its power peak (370 hp at 2,800 on
+    // 800 lb-ft at 1,600)
+    if (e.diesel) S.highK = 0.133 / ((xp - 1) * (xp - 1));
+    S.Tpk = Tpk;
+    var fiId = mods.fi || (e.fi ? e.fi.part : 'none');
+    var fi = DR.FI[fiId];
+    S.fiId = fiId;
+    S.fiType = fi.type;
+    S.boostSet = mods.boost != null ? mods.boost : (e.fi ? e.fi.boost : 0);
+    S.maxBoost = fi.maxBoost || 0;
+    S.eng = e;
+    if (fi.type === 'turbo') S.tbs = DR.turboSpec(fiId, e);
+    S.paras = fi.paras || 0;
+    S.flowW = fi.flow ? fi.flow * DR.HP : 0;
+    // compressor efficiency, intercooler effectiveness (factory boosted
+    // engines have their own intercooler; a bolt-on kit has none) and fuel
+    // charge cooling
+    // (a factory turbo or blower is matched to its engine: it has headroom
+    // past factory boost before it falls off its sweet spot)
+    S.fiMax = fi.price ? fi.maxBoost || 0 : (fi.maxBoost || 0) * 1.25;
+    S.etaC = fi.eta || { turbo: 0.7, roots: 0.55, screw: 0.66, cent: 0.7 }[fi.type] || 0.7;
+    S.icE = mods.ic != null && mods.ic > 0 ? mods.ic : fiId.indexOf('fi_oem') === 0 || (e.diesel && fi.type === 'turbo') ? 0.65 : 0;
+    S.icSink = mods.icSink;
+    S.cool = mods.cool || 0;
+    S.cr = Math.round(((e.cr || 9.5) + (mods.crD || 0)) * 10) / 10;
+    S.knockFuel = S.knock = e.diesel ? 99 : engKnock(e, mods.knock || 20, mods.crD) + (mods.knockAdd || 0) + (mods.noAdd ? 0 : engineKnockAdd(e.id));
+    S.fuelW = 1e12;
+    if (S.tbs) tbInit(S);
+    return S;
+  }
+
+  function airDisp(e) { return e.rotary ? e.disp * 2 : e.disp; }
+  DR.airDisp = airDisp;
+  // ---------------------------------------------------------------- turbo
+  // How a turbo comes on boost, from the physics (Garrett Turbo Tech 103):
+  // the engine pumps air (displacement x rpm x how well it breathes x the
+  // density of the boosted charge); the exhaust (that air plus its fuel, hot)
+  // squeezes through the turbine housing and drives the turbine; the
+  // compressor spends that power making boost. Boost holds where the turbine
+  // can pay for it, so it arrives at the rpm where the exhaust is strong
+  // enough: a bigger engine, hotter exhaust or a smaller turbine gets there
+  // sooner, more boost later. The rotor also has to be spun up (its
+  // inertia): that's the lag on top. Calibrated to dyno pulls (Evo + 35R
+  // ~4,400, 5.3 LS + 76mm ~3,800, 6.0 + 88mm ~4,700, Cummins + S480 ~3,000).
+  var TB = { T1: 298, P1: 101.3, K: 0.042, AR: 0.35, SIG: 0.72 };
+  function tbU2psi(U) { return (Math.pow(1 + TB.SIG * U * U / (1005 * TB.T1), 3.5) - 1) * 14.7; }
+  function tbPsi2U(psi) { return Math.sqrt(Math.max(0, Math.pow(1 + Math.max(0, psi) / 14.7, 1 / 3.5) - 1) * 1005 * TB.T1 / TB.SIG); }
+  // the turbo's fixed numbers for this engine: rotor inertia, turbine flow
+  // capacity, exhaust heat. x: the parts around it (manifold, downpipe, heat
+  // shielding, twin-scroll), set by buildSpec.
+  function tbSetup(S, e, x) {
+    var t = S.tbs; x = x || {};
+    var n = t.twin ? 2 : 1, cex = t.cex || t.comp * 1.33;
+    var I1 = 7.6e-5 * Math.pow(cex / 82, 5) + 1.6e-4 * Math.pow(t.turb / 68, 5) * (t.ceramic ? 0.6 : 1);
+    var phi1 = TB.K * Math.pow(t.turb / 68, 2) * Math.pow(t.ar / 0.82, TB.AR);
+    // a single turbo on a V or flat engine is fed through long crossover
+    // pipes: the exhaust cools and its pulses smear out (about a third of the
+    // energy at the turbine); twins sit right at each bank
+    var vee = e.vee != null ? e.vee : / V\d|Flat-6|V8|V10|V12/.test(e.name) && !/Flat-4|Boxer-4/.test(e.name);
+    // (the crossover loss is kept apart: it shrinks as the flow grows, see tbFlow)
+    var xloss = vee && !t.twin ? 0.34 : 0;
+    var pulse = (vee && t.twin ? 0.95 : 1) * (x.man || 1) * (x.ts || (t.ts && x.stockMan !== false) ? 1.1 : 1);
+    var T3 = (e.diesel ? 1180 : e.rotary ? 1150 : 1200) * (x.heat || 1);
+    S.tb = { n: n, r: cex / 2000, I: I1 * n, phi: phi1 * n, phi1: phi1, I1: I1, T3e: T3 * pulse, xloss: xloss, c4: (x.c4 != null ? x.c4 : (e.diesel ? 15 : 40)) * (t.factory && x.stockDp !== false ? 2 : 1),
+      ve: 0.9 * (1 + 0.25 * (S.breathing || 0)), afr: e.diesel ? 16 : 11.8, fric: t.bb ? 0.5 : 1,
+      // small turbines are less efficient (more of the gas slips past the blades)
+      etaT: 0.58 + 0.14 * clamp((t.turb - 45) / 23, 0, 1), vgt: !!t.vgt, seq: t.seq || 0,
+      // the compressor's surge line: past about PR 2 at a quarter of its
+      // choke flow it stalls, so a huge compressor can't hold boost on a
+      // small engine at low rpm
+      mc: Math.max(0.05, (S.flowW ? S.flowW / DR.HP : 400) / 10 * 0.00756) };
+    if (t.compound) {
+      // the big stage: its own flow, and a share of its weight to spin up
+      var I2 = 7.6e-5 * Math.pow(t.cex2 / 82, 5) + 1.6e-4 * Math.pow(t.turb2 / 68, 5);
+      // (the small high-pressure stage sets the surge line)
+      S.tb.mcS = S.tb.mc * 0.4;
+      S.tb.cmp = true; S.tb.phi2 = TB.K * Math.pow(t.turb2 / 68, 2) * Math.pow(t.ar2 / 0.82, TB.AR) * 1.15;
+      S.tb.I = I1 + 0.35 * I2; S.tb.etaT = 0.7; S.tb.r = cex / 2000;
+    }
+    S.lag = 0.25 * Math.pow(S.tb.I / 2.4e-4, 0.35) * (t.bb ? 0.85 : 1);
+  }
+  // power the turbine makes and the compressor needs (W) at this rpm,
+  // manifold pressure P2 (kPa) and throttle
+  // air the engine pumps (kg/s) at this rpm, manifold pressure (kPa) and throttle
+  function airMass(S, rpm, P2, thr) {
+    var pr = Math.max(1, P2 / TB.P1), cpr = Math.pow(pr, 0.2857) - 1;
+    var T2 = TB.T1 * (1 + cpr / (S.etaC || 0.7)), Tm = T2 - (S.icE || 0) * (T2 - TB.T1);
+    // air per stroke follows the torque curve up to the power peak; past it
+    // the engine still pumps air (power falls more for friction and burn
+    // time than for breathing), so the exhaust flow eases off gently
+    var vs = shape(S, Math.min(rpm, S.pkRpm));
+    // a diesel's breathing is flat: its torque curve is the fuel, not the air
+    if (S.diesel) vs = Math.max(vs, 0.95);
+    if (rpm > S.pkRpm) { var d = (rpm - S.pkRpm) / S.pkRpm; vs *= Math.max(0.4, 1 - 0.6 * d * d); }
+    var ve = S.tb ? S.tb.ve : 0.9 * (1 + 0.25 * (S.breathing || 0));
+    return ve * vs * (thr == null ? 1 : thr) * (P2 * 1000 / (287 * Tm)) * airDisp(S.eng) / 1000 * rpm / 120;
+  }
+  function tbFlow(S, rpm, P2, thr) {
+    var tb = S.tb, pr = Math.max(1, P2 / TB.P1), cpr = Math.pow(pr, 0.2857) - 1;
+    var ma = airMass(S, rpm, P2, thr), mx = ma * (1 + 1 / tb.afr), t3k = 1;
+    // a diesel's exhaust is as heavy and as hot as the fuel it burns: more
+    // fuel lights a bigger turbo (what the smoke limiter lets through)
+    if (S.dsl) {
+      var d = S.dsl, mf = Math.min(d.Tf * shape(S, rpm) * Math.max(rpm, 300) * RPM2W * DSL_BSFC * (thr == null ? 1 : thr), ma / d.afrLim);
+      var afr = mf > 0 ? ma / mf : 60;
+      mx = ma + mf; t3k = clamp(((400 + 19000 / Math.max(afr, 8) - 32) / 1.8 + 273) / 957, 0.6, 1.5);
+    }
+    // a sequential pair runs on the small turbo alone until the hand-over;
+    // a variable-vane turbine closes down to a small one at low flow
+    var phi = tb.seq ? (rpm < tb.seq ? tb.phi1 : tb.phi) : tb.phi;
+    if (tb.vgt) phi *= clamp(0.55 + 0.45 * mx / (tb.mc * 1.07), 0.55, 1);
+    // compounds: at low flow the small high-pressure turbo does the work;
+    // as the flow grows the big one takes over
+    if (tb.cmp) phi = tb.phi1 + (tb.phi2 - tb.phi1) * clamp(mx / (tb.mc * 1.07), 0, 1);
+    // a single turbo on a V engine loses the most through its crossover
+    // pipes at low flow (cooled, smeared pulses: slow spool); flat out the
+    // exhaust is hot and dense all the way and most of it gets there
+    var fq = clamp(mx / (tb.mc * 1.07), 0, 1), T3 = tb.T3e * t3k * (1 - (tb.xloss || 0) * (1 - 0.6 * fq * fq));
+    var P4 = TB.P1 + tb.c4 * mx * mx, xx = mx * Math.sqrt(T3) / (phi * P4), ER = Math.sqrt(1 + xx * xx);
+    return { ma: ma, Wt: mx * 1150 * T3 * (1 - Math.pow(ER, -0.248)) * tb.etaT, Wc: ma * 1005 * TB.T1 * cpr / S.etaC };
+  }
+  // the most boost (psi) the turbo can hold at this rpm (steady, full throttle)
+  function tbHold(S, rpm) {
+    var lo = TB.P1, hi = TB.P1 * (1 + Math.max(S.maxBoost || 0, 30) / 14.7 * 1.4);
+    var ok = function (P2) { var f = tbFlow(S, rpm, P2); return f.Wt >= f.Wc && P2 / TB.P1 <= 1 + 8 * f.ma / (S.tb.mcS || S.tb.mc); };
+    if (!ok(TB.P1 + 1)) return 0;
+    for (var i = 0; i < 16; i++) { var m = (lo + hi) / 2; if (ok(m)) lo = m; else hi = m; }
+    return (lo - TB.P1) * 0.145;
+  }
+  function tbInit(S) {
+    if (!S.tbs) return;
+    tbSetup(S, S.eng, S.tbx);
+    var top = Math.max(S.red, S.pkRpm) + 1500, tab = [];
+    for (var r = 0; r <= top; r += 100) tab.push(r < 600 ? 0 : tbHold(S, r));
+    S.tbHoldT = tab;
+    S.spoolHi = spoolAt(S, S.boostSet || 8);
+    S.spoolLo = spoolAt(S, Math.max(1, (S.boostSet || 8) * 0.15));
+  }
+  function holdAt(S, rpm) {
+    var t = S.tbHoldT, i = rpm / 100, k = Math.floor(i);
+    if (k >= t.length - 1) return t[t.length - 1];
+    return k < 0 ? 0 : t[k] + (t[k + 1] - t[k]) * (i - k);
+  }
+  // the lowest rpm where the turbo holds this boost (steady state; a pull
+  // gets there a few hundred rpm later, see DR.turboPull)
+  function spoolAt(S, boost) {
+    var t = S.tbHoldT; if (!t) return 0;
+    for (var k = 6; k < t.length; k++) if (t[k] >= boost) {
+      var f = t[k - 1] < boost ? (boost - t[k - 1]) / Math.max(0.01, t[k] - t[k - 1]) : 0;
+      return (k - 1 + f) * 100;
+    }
+    return (t.length + 5) * 100;
+  }
+  // the rotor: its energy (1/2 I w^2) sets the compressor's tip speed and so
+  // the boost it can make; the turbine's surplus over the compressor's need
+  // spins it up, bearing drag slows it
+  function tbStep(S, st, rpm, thr, tgt, dt, closed) {
+    var tb = S.tb, U = st.U || 0, w = U / tb.r, E = 0.5 * tb.I * w * w;
+    var made = tbU2psi(U), boost = Math.min(made, tgt);
+    var f = tbFlow(S, rpm, TB.P1 + boost * thr / 0.145, Math.max(thr, 0.04));
+    var surplus = f.Wt - f.Wc - tb.fric * 0.02 * E;
+    // throttle shut (a shift): with a blow-off valve the compressor vents
+    // and the rotor coasts; without one it surges and stalls the wheel
+    if (closed) surplus -= E / Math.max(0.1, S.bovT || 0.15) * 0.5;
+    if (made >= tgt && surplus > 0) surplus = 0;   // the wastegate opens
+    E = Math.max(1e-4, E + surplus * dt);
+    st.U = Math.sqrt(2 * E / tb.I) * tb.r;
+    return Math.min(tbU2psi(st.U), tgt);
+  }
+  // a dyno pull at full throttle (rpm/s): where boost starts and where it's full
+  DR.turboPull = function (S, rate, from, psi) {
+    if (!S.tb) return null;
+    var st = { U: 0 }, rpm = from || 1500, dt = 0.004, tgt = psi || S.boostSet, out = { start: null, full: null, curve: [] }, nx = rpm;
+    while (rpm <= S.red) {
+      var b = tbStep(S, st, rpm, 1, tgt + creepAt(S, rpm), dt, false);
+      if (out.start == null && b >= Math.max(1, tgt * 0.1)) out.start = rpm;
+      if (out.full == null && b >= tgt * 0.95) out.full = rpm;
+      if (rpm >= nx) { out.curve.push([Math.round(rpm), Math.round(b * 10) / 10, Math.round(holdAt(S, rpm) * 10) / 10]); nx += 100; }
+      rpm += (rate || 500) * dt;
+    }
+    return out;
+  };
+  DR.turboHold = function (S, rpm) { return S.tbHoldT ? holdAt(S, rpm) : 0; };
+  DR._tbFlow = tbFlow;
+  // does this turbo suit this engine? (stock breathing, 15 psi): it has to
+  // come on boost before the limiter and feed more than the engine makes
+  // without it. Cached per engine.
+  var fitCache = {};
+  DR.turboFits = function (fiId, engId) {
+    var k = engId + '|' + fiId;
+    if (fitCache[k] != null) return fitCache[k];
+    var e = DR.ENGINES[engId], u = DR.FI[fiId], ok = true;
+    if (!!u.diesel !== !!e.diesel || (u.twin && (e.rotary || e.cyl < 6))) ok = false;
+    // the diesel turbos are picked for the Cummins (its fuel lights them)
+    else if (u.diesel) ok = true;
+    else {
+      var S = engineCore(e, { fi: fiId }, 1);
+      S.boostSet = Math.min(15, u.maxBoost); S.flowW = u.flow * DR.HP; S.red = Math.max(e.red, e.bp || 0); tbInit(S);
+      var pull = DR.turboPull(S, 500, 1500, S.boostSet);
+      ok = !!pull && pull.full != null && pull.full <= Math.max(e.red, e.bp || 0) - 300 && u.flow >= e.hp * 1.15;
+    }
+    return (fitCache[k] = ok);
+  };
+
+  // ---------------------------------------------------------------- spec builder
+  DR.buildSpec = function (inst, tuneOverride) {
+    var car = DR.CARS[inst.carId];
+    var engId = inst.engine || car.engine, e = DR.ENGINES[engId];
+    // a part that does not apply to this car (no cams on a rotary, no
+    // ignition on a diesel...) counts as the stock one
+    var o = function (cat) { return DR.partApplies(cat, inst) ? DR.getOption(cat, inst) : DR.getOption(cat, inst, 'stock'); };
+    var rotary = !!DR.ENGINES[inst.engine || car.engine].rotary;
+    var air = o('airfilter'), intake = o('intake'), tb = o('throttle'), exh = o('exhaust'), hdr = o('headers');
+    var cams = o('cams'), heads = o('heads'), vtrain = o('valvetrain');
+    var pist = o('pistons'), rods = o('rods'), crank = o('crank'), block = o('block'), oil = o('oiling');
+    var inj = o('injectors'), pump = o('fuelpump'), fuel = o('fueltype'), ign = o('ignition'), ecu = o('ecu');
+    var ic = o('ic'), gate = o('wastegate'), bov = o('bov'), launch = o('launch'), nos = o('nitrous'), nosc = o('nosctrl'), nheat = o('nosheat');
+    var axle = o('rearend'), chas = o('chassis'), fsus = o('frontsusp'), brakes = o('brakes'), batt = o('battery');
+    var trId = DR.partId('trans', inst), tr = DR.TRANS[trId];
+    var clutch = o('clutch'), conv = o('converter'), fly = o('flywheel'), shaft = o('driveshaft'), diff = o('diff');
+    var layout = o('layout'), springs = o('springs'), shocks = o('shocks'), rs = o('rearsusp'), bar = o('wheeliebar');
+    var aero = o('aero'), wheels = o('wheels'), ftires = o('ftires'), wt = o('chassis').tube ? o('chassis') : o('weight');
+    var tman = o('tmanifold'), dpipe = o('downpipe'), theat = o('theat');
+    var gset = o('gears'), pul = o('pulleys'), coolP = o('cooling'), hstud = o('headstud'), wmi = o('wmi'), mounts = o('mounts'), safe = o('safety');
+    var tireId = DR.partId('rtires', inst), tire = DR.TIRES[tireId], stockTire = DR.TIRES[car.tire];
+    var fiId = DR.partId('fi', inst);
+    var stockEng = DR.ENGINES[car.engine];
+    function fiU0() { return DR.FI[fiId]; }
+
+    // ---- breathing: B (0..1) of the engine's race headroom is unlocked.
+    // Power goes from stock towards bg x stock and the power peak from pk
+    // towards bp; the torque peak follows. The curve's peak torque is then
+    // solved so the NA-equivalent peak power lands on that target.
+    // ---- the tune: a flash (or standalone) recalibrates the ECU for the
+    // parts. Rival builds (inst.ai) are always set up properly. Parts that
+    // need it (part.tune): 'hard' won't run right without one, 'soft' runs
+    // but leaves power on the table.
+    // ---- induction on a carbureted engine (rival builds are set up as if
+    // fuel-injected: they come ready). A port-EFI kit brings a standalone
+    // ECU; a throttle-body kit tunes itself; a carb has no ECU at all.
+    var ai = !!inst.ai, cb = ai ? null : DR.carbOf(inst), cOpt = cb && cb.opt, efi = cb ? cb.efi : '';
+    if (cb && efi === 'mpfi' && DR.partId('ecu', inst) === 'stock') ecu = Object.assign({}, DR.getOption('ecu', inst, 'ecu2'), { name: 'Kit Standalone ECU' });
+    var tuned = ai || !!ecu.tune || (!!cb && efi !== 'mpfi'), untuned = [];
+    var camK = 1;
+    if (!tuned && cams.tune) { camK = cams.tune === 'soft' ? 0.5 : 0; untuned.push(cams.tune === 'soft' ? ['cams', 'Stage 1 cams on the stock tune: about half the gain, rough idle'] : ['cams', 'The stock tune can\'t run these cams: it surges and loses power']); }
+    var B = clamp([air, intake, tb, exh, hdr, tman, dpipe, heads, ecu].reduce(function (a, p) { return a + (p.bw || 0); }, 0) + (cams.bw || 0) * camK, 0, 1);
+    var bg = e.bg || 1.3, bp = e.bp || e.pk + 1000;
+    var pkB = e.pk + (bp - e.pk) * B;
+    var tqB = Math.min(e.tq + (Math.max(e.tq, bp * 0.76) - e.tq) * B, pkB - 400);
+    // compression: high-comp pistons (+1 point) make more power but knock
+    // sooner; low-comp ones (-1.5 points) the other way round
+    var crMul = pist.cr > 0 ? 1.04 : pist.cr < 0 ? 0.98 : 1, crD = pist.cr > 0 ? 1 : pist.cr < 0 ? -1.5 : 0;
+    // water-meth: worth most on pump or race gas; alcohol fuels already run cool
+    var wmK = fuel.ff < 0.6 ? 0.15 : fuel.ff < 0.9 ? 0.4 : 1;
+    var mods = { pk: pkB, tq: tqB, low: (intake.low || 0) + (cams.low || 0) + (cOpt && cOpt.low || 0), fi: fiId, ic: ic.ic || 0, icSink: ic.sink, cool: (fuel.cool || 0) + (wmi.cool || 0) * wmK + (theat.cool || 0),
+      knock: fuel.knock, crD: e.diesel ? 0 : crD, knockAdd: Math.round((wmi.knock || 0) * wmK * 2) / 2 };
+    var S = engineCore(e, mods, 1);
+    S.ai = ai;
+    var naStock = stockTpk(engId) * shapePeak(engineCore(e, {}, 1));
+    var untunedK = 1;
+    if (!tuned && cams.tune === 'hard') untunedK *= 0.94;
+    if (!tuned && inj.tune) { untunedK *= 0.88; untuned.push(['injectors', 'Bigger injectors on the stock tune: it runs pig-rich']); }
+    S.Tpk = naStock * (1 + (bg - 1) * B) * (e.diesel ? 1 : fuel.fmul * crMul) * (1 + (oil.pw || 0)) * (pul.pk || 1) * untunedK * (cOpt && cOpt.pw || 1) / shapePeak(S);
+    S.breathing = B;
+    S.carId = inst.carId; S.car = car; S.engId = engId; S.eng = e;
+    S.name = car.name;
+    S.diesel = !!e.diesel;
+    // ---- rev limits: the hardware sets how high the engine can safely
+    // spin (valvetrain & bottom end), the ECU sets where the limiter is
+    S.factoryRed = e.red;
+    // a rotary has no valves to float: its ports never run out of time
+    // (e.rx: how much further a full race build of this engine really revs
+    // than the generic parts give it, e.g. a race 4G63 to ~10,500; it comes
+    // in with the race valvetrain and bottom end)
+    var rxV = (e.rx || 0) * clamp((vtrain.vt || 0) / 2300, 0, 1);
+    S.vtLimit = rotary ? e.red + 3000 : Math.round((e.red + 400 + (vtrain.vt || 0) - (cams.stress || 0) + rxV) / 50) * 50;
+    var beBy = [['pistons', pist.be], ['rods', rods.be], ['crank', crank.be], ['oiling', oil.be]].filter(function (p) { return !rotary || p[0] !== 'rods'; }).sort(function (a, b) { return a[1] - b[1]; });
+    S.beLimit = Math.round((e.red + beBy[0][1] + (e.rx || 0) * clamp((beBy[0][1] - 800) / 1800, 0, 1)) / 50) * 50;
+    S.beWeak = beBy[0][0];
+    S.rotary = rotary;
+    S.partRpm = { pistons: e.red + pist.be, rods: e.red + rods.be, crank: e.red + crank.be, oiling: e.red + oil.be };
+    S.mech = Math.min(S.vtLimit, S.beLimit);
+    var safeRed = Math.max(e.red, S.mech - 200);
+    S.revAdj = !!cb && efi !== 'mpfi' && ((ign.spark || 0) >= 20 || efi === 'tbi');
+    if (ecu.ecu >= 2 || S.revAdj) {
+      var tsrc = tuneOverride || inst.tune || {};
+      S.red = tsrc.revLimit != null ? clamp(tsrc.revLimit, revMin(S), revMax(S)) : safeRed;
+    } else if (ecu.ecu === 1) S.red = Math.min(safeRed, e.red + 800);
+    else S.red = e.red;
+    S.red = Math.round(S.red / 50) * 50;
+    S.limit = S.red;
+    // the bottom end is as strong as its weakest part
+    var holdBy = [['pistons', pist.hold], ['rods', rods.hold], ['crank', crank.hold], ['block', block.hold]].filter(function (p) { return !rotary || p[0] !== 'rods'; }).sort(function (a, b) { return a[1] - b[1]; });
+    S.safeHp = e.safe * holdBy[0][1];
+    S.safeWeak = holdBy[0][0];
+    S.partHold = { pistons: e.safe * pist.hold, rods: e.safe * rods.hold, crank: e.safe * crank.hold, block: e.safe * block.hold };
+    // factory fuel systems: the injectors feed the engine they came on with
+    // ~25% to spare (~15% on a factory boosted one); the pump is the car's
+    // and has a little more (a Fox's 88 lph pump is good for ~250 hp NA)
+    var stockInj = ai ? Math.max(e.hp * 1.35 + 60, 300) : e.hp * (e.fi ? 1.15 : 1.25);
+    var stockPump = ai ? stockInj : Math.max(stockEng.hp * 1.3, 180);
+    // a stock Cummins: its injectors feed about 520 hp with a tune, the CP3 550
+    if (e.diesel && !ai) { stockInj = 520; stockPump = 550; }
+    S.fuelInj = inj.fuel || stockInj; S.fuelPump = pump.fuel || stockPump;
+    // ---- carburetor: its airflow caps the power (more with boost pushed
+    // through it), the jets meter the fuel (a carb's own fuel is never the
+    // limit, the pump can be); a throttle-body kit feeds what it's rated for
+    // and brings its pump, a port-EFI kit its injectors and a pump
+    S.carbNotes = [];
+    S.carb = cb ? { name: cOpt.name.replace(' (Factory)', ''), efi: efi, cfm: cOpt.cfm || 0, sec: cOpt.sec || '', fb: !!cOpt.fb } : null;
+    S.carbW = cb && cOpt.cfm ? cOpt.cfm * DR.CARB_HP * DR.HP : 0;
+    if (cb) {
+      if (efi === 'tbi') S.fuelInj = cOpt.fuel * (fiU0().type === 'none' ? 1 : 575 / 650);
+      else if (efi === 'mpfi') { if (!inj.fuel) S.fuelInj = cOpt.fuel; }
+      // fuel injection on a carb engine needs its parts and an EFI pump
+      // before it runs (the shop and the lanes say what's missing)
+      if (efi === 'tbi' || efi === 'mpfi') { var miss = DR.mpiMissing(inst); if (miss.length) S.noRun = miss; }
+      else S.fuelInj = Math.max(stockInj, (cOpt.cfm || 0) * DR.CARB_HP * 1.6);
+    }
+    S.stockFuel = !inj.fuel && !pump.fuel;
+    S.fuelW = Math.min(S.fuelInj, S.fuelPump) * (e.diesel ? 1 : fuel.ff) * DR.HP;
+    // ---- a diesel makes its power from fuel (see dieselState): the
+    // calibration asks for so much fuel, the injectors and pump cap it, and
+    // the ECU's smoke limiter holds back what the air can't burn cleanly.
+    // The factory calibration is the real truck's: 370 hp / 800 lb-ft with
+    // the automatic, 350 / 660 when it came with the G56, and it limits
+    // torque in 1st and 2nd. A tune adds fuel and loosens the limiter; a
+    // race tune takes it off.
+    S.dsl = null;
+    if (e.diesel) {
+      var tlev = ai ? 2 : (ecu.dslTune || 0), capHp = Math.min(S.fuelInj, S.fuelPump);
+      var manCal = tlev === 0 && DR.facTrans && DR.facTrans(inst) === 'm6_g56' && inst.engine === stockEng.id;
+      var reqHp = tlev === 0 ? (manCal ? 350 : e.hp) : tlev === 1 ? Math.max(e.hp * 1.35, e.hp + 120) * (1 + 0.15 * B) : capHp;
+      reqHp = Math.min(reqHp, capHp);
+      S.dsl = { tune: tlev, hp: reqHp, cap: capHp, manCal: manCal, tqCap: manCal ? 660 / 0.7376 : 0,
+        afrLim: [20, 17, 13][tlev], gearLim: tlev === 0 ? [0.8, 0.93] : null };
+      S.dsl.Tf = reqHp * DR.HP / (S.pkRpm * RPM2W * shape(S, S.pkRpm));
+      S.fuelW = capHp * 1.05 * DR.HP;
+    }
+    // ignition: the factory coils light factory boost plus a few psi (about
+    // 10 psi on an engine that never had a turbo)
+    S.sparkPsi = e.diesel ? 9999 : (e.fi ? e.fi.boost + 6 : 10) + (ign.spark || 0);   // (a diesel has no spark to blow out)
+    S.sparkNos = e.diesel ? 9999 : 150 + (ign.spark || 0) * 15;
+    // ---- boost range. A turbo's wastegate spring is the least boost it
+    // runs (the gate opens at spring pressure); a boost controller holds the
+    // gate shut longer: a manual bleed valve to about twice the spring, an
+    // electronic one to whatever the turbo can make. The compressor's own
+    // limit (where it chokes and overspeeds) caps it all. A factory turbo
+    // runs what the factory ECU asks for; a flash turns it up ~40%. A
+    // blower's boost is its pulley, up to the blower's limit. An internal
+    // gate too small for the engine can't dump enough exhaust up top, so
+    // boost creeps past the target at high rpm.
+    var fiU = DR.FI[fiId], comp = S.maxBoost, oem = !fiU.price;
+    S.boostMin = 0; S.creep = 0; S.ebc = false;
+    S.boostWhy = { type: fiU.type, comp: comp, oem: oem };
+    if (fiU.type === 'turbo') {
+      // the rest of the turbo system: the manifold (a short cast log keeps
+      // the most exhaust energy for the turbine; long tubular runners flow
+      // more up top but cool the gas; a divided twin-scroll keeps the
+      // pulses apart), the downpipe's back pressure and the heat kept in
+      var tsOk = !!tman.ts && DR.twinScrollFits(e);
+      S.tbx = { man: tman.man || 1, ts: tsOk, stockMan: DR.partId('tmanifold', inst) === 'stock', stockDp: DR.partId('downpipe', inst) === 'stock', c4: dpipe.c4 != null ? dpipe.c4 : (e.diesel ? 15 : 40), heat: theat.heat || 1 };
+      // the divided housing chokes a little sooner at big power
+      if (tsOk && S.flowW) S.flowW *= 0.95;
+      if (ai) {
+        if (fiU.price && !e.diesel) S.maxBoost = Math.round(S.maxBoost * gate.gate * 2) / 2;   // rival builds: the old gate model
+      } else {
+        var fSpring = oem && e.fi ? Math.round(e.fi.boost * 0.7 * 2) / 2 : 0;
+        var spring = Math.max(gate.spring || 7, fSpring), ctrl = gate.ctrl || 'none', top;
+        if (oem && (DR.partId('wastegate', inst) === 'stock' || e.diesel)) { ctrl = 'ecu'; spring = fSpring; top = tuned ? e.fi.boost * 1.4 : e.fi.boost; }
+        // a diesel turbo runs what the fuel drives it to (gate-less or
+        // set high): the turbo's own limit
+        else if (e.diesel) { ctrl = 'ebc'; spring = 0; top = comp; }
+        else top = ctrl === 'mbc' ? spring * 2 : ctrl === 'ebc' ? comp : spring;
+        S.maxBoost = Math.round(Math.min(comp, top) * 2) / 2;
+        S.boostMin = Math.min(spring, S.maxBoost);
+        // an electronic controller (or a tuned factory ECU) can set boost per gear
+        S.ebc = ctrl === 'ebc' || (ctrl === 'ecu' && tuned);
+        // creep: internal gates on a bolt-on turbo, worse on a big engine
+        if (!oem && !e.diesel) S.creep = Math.round((gate.creep || 0) * clamp((airDisp(e) * S.red / 1000 - 8) / 10, 0, 1) * 4 * 2) / 2;
+        S.boostWhy.spring = S.boostMin; S.boostWhy.ctrl = ctrl; S.boostWhy.ctrlMax = Math.round(top * 2) / 2; S.boostWhy.creep = S.creep;
+      }
+    }
+    // a carb can only take boost if it's built for it: sealed for a turbo
+    // or centrifugal to blow through, or set up to sit on a Roots / screw
+    // blower (EFI takes either)
+    S.carbBoost = null;
+    if (cb && fiU.type !== 'none') {
+      var okC = (fiU.type === 'turbo' || fiU.type === 'cent') ? !!cOpt.blow : !!cOpt.blower;
+      S.carbBoost = okC ? cOpt.boost || 0 : 0;
+      S.maxBoost = Math.min(S.maxBoost, S.carbBoost); S.boostMin = Math.min(S.boostMin, S.maxBoost);
+      S.boostWhy.carb = { name: S.carb.name, psi: S.carbBoost, need: fiU.type === 'turbo' || fiU.type === 'cent' ? 'blow' : 'blower' };
+    }
+    // without a tune the ECU can't fuel or time much boost: a bolt-on kit
+    // past ~5 psi (a factory turbo past about factory boost) runs lean and
+    // knocks
+    S.untunedBoost = ai || tuned || fiU.type === 'none' ? 0 : fiU.price ? 5 : (e.fi ? e.fi.boost + 1 : 5);
+    if (S.untunedBoost && fiU.price) untuned.push(['fi', 'The stock tune can\'t fuel or time more than ~5 psi']);
+    S.boostWhy.untuned = S.untunedBoost;
+    if (!tuned && fuel.tune) untuned.push(['fueltype', fuel.name + ' on a gasoline tune runs lean']);
+    S.untuned = untuned; S.tuned = tuned; S.e85Lean = !tuned && !!fuel.tune;
+    S.carbAlcLean = !!cb && !!fuel.tune && !cOpt.alc && efi !== 'tbi' && efi !== 'mpfi';
+    S.bovT = fiU.type === 'turbo' ? (fiU.price ? bov.bov : Math.max(0.3, bov.bov)) : 0.15;
+    S.ecu = ecu.ecu;
+    S.twostep = launch.twostep;
+    // on a carb a 2-step is an ignition box's job (it needs a CDI box);
+    // anti-lag needs fuel injection
+    if (cb && efi !== 'tbi' && efi !== 'mpfi' && S.twostep) {
+      if ((ign.spark || 0) < 20) { S.twostep = 0; S.carbNotes.push('A 2-step on a carbureted engine works through the ignition: it needs a CDI ignition box (Fuel & Spark)'); }
+      else S.twostep = Math.min(1, S.twostep);
+    }
+    S.nosHp = Math.round(nos.nos * (nos.nos ? nheat.nosk : 1));
+    S.nosRated = nos.nos;
+    S.fuelId = DR.partId('fueltype', inst);
+    S.nosCut = S.nosHp > S.sparkNos;
+    if (S.nosCut) S.nosHp = Math.round(S.sparkNos + (S.nosHp - S.sparkNos) * 0.4);   // spark blows out
+    S.nosW = S.nosHp * DR.HP;
+    // the fuel that feeds the spray: injectors and pump (dry), pump (wet) or
+    // its own system; what's there for it is worked out with the risk
+    S.nosFuel = nos.nosFuel || 'own';
+    if (cb && (!efi || efi === 'mech') && S.nosFuel === 'inj') S.nosFuel = 'pump';   // no injectors: a plate under the carb sprays its own fuel
+    S.fuelFF = e.diesel ? 1 : fuel.ff;
+    S.prog = nosc.prog && nos.nos > 0;
+    S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly * (crank.ie || 1);
+
+    // ---- drivetrain
+    S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift * ((DR.shiftOpt(inst) || {}).shiftK || 1); S.trMaxTq = tr.maxTq;
+    S.tbrake = tr.type === 'auto' && !!DR.getOption('transbrake', inst).tbrake;
+    // a manual valve body: the automatic holds each gear till you shift it
+    S.mvb = tr.type === 'auto' && !!(DR.shiftOpt(inst) || {}).mvb;
+    S.drive = layout.layout || car.drive;
+    S.eff = tr.eff * (S.drive === 'AWD' ? 0.95 : S.drive === 'FWD' ? 1.03 : 1) * (gset.eff || 1);   // FWD: no right-angle drive in the diff
+    // the final drive: a gear set (fixed), or a quick-change set in Tuning
+    // (rival builds come set up however they like)
+    S.qc = ai || !!gset.qc;
+    S.fdSet = Math.round(car.fd * (gset.fdk || 1) * 100) / 100;
+    if (tr.type === 'auto') {
+      S.stall = conv.stall; S.TR = conv.tr;
+      // a bolt-together converter: its stall is set by the stator fitted
+      // (Tuning), from the stall it ships with
+      S.convAdj = !ai && !!conv.adj;
+      S.lockup = !!conv.lockup && !!tr.lu;   // a lockup converter in a box that can work it
+    } else {
+      var stockTqNm = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.3;
+      S.clCap = clutch.cap || (e.diesel ? 950 : Math.max(420, stockTqNm * 1.4));
+      S.engage = clutch.engage;
+      S.slider = clutch.slide || null;   // [clamp share at the hit, seconds to full lock]
+    }
+    S.dgrip = diff.dgrip;
+    S.mountK = mounts.mk || 1;   // stiffer mounts: the hit goes to the tires
+    // the boost the head gasket holds: factory bolts to ~22 psi (a factory
+    // turbo engine a little past its own boost), studs and O-rings far more
+    S.headPsi = ai ? 999 : hstud.psi || (e.diesel ? 45 : Math.max(22, e.fi ? e.fi.boost + 8 : 0));
+    // cooling: the radiator is sized for the car's factory engine
+    S.coolHp = stockEng.hp * 1.6 + (coolP.cap || 0);
+    S.chute = !!safe.chute;
+    // axles: the factory ones hold a margin over the factory engine
+    var stockTq = stockEng.hp * DR.HP / (stockEng.pk * RPM2W) * 1.25;
+    S.axleTq = axle.axle || Math.max(500, stockTq * 1.8);
+
+    // ---- tires & rotating mass
+    S.tireId = tireId; S.tire = tire;
+    // consumables: how worn the drive tires and the clutch are (players'
+    // cars only). A worn drag tire has been heat-cycled hard and lost grip;
+    // a worn clutch disc holds less.
+    var wr = !ai && inst.wear || {};
+    S.tireWear = wr.rtires ? wr.rtires.w : 0;
+    S.wearK = 1 - 0.2 * Math.pow(S.tireWear, 1.5);
+    S.clutchWear = wr.clutch ? wr.clutch.w : 0;
+    S.clCapNew = S.clCap;
+    if (S.clCap) S.clCap *= 1 - 0.35 * Math.pow(S.clutchWear, 1.5);
+    S.r = tire.r;
+    S.tslip = tire.slip; S.tfall = tire.fall; S.tfk = tire.fk || 1;
+    S.bead = !!wheels.bead;
+    var wheelMass = 22 + (ai && wheels.aiWm != null ? wheels.aiWm : wheels.wm) + brakes.bkg * 0.5;
+    var Iaxle = tire.m * tire.r * tire.r * 0.75 + wheelMass * Math.pow(tire.r * 0.55, 2) + 0.9 * shaft.shaft;
+    S.Iw = Iaxle * (S.drive === 'AWD' ? 1.8 : 1);
+
+    // ---- mass & geometry
+    var share = car.ep === 'front' ? 0.9 : car.ep === 'mid' ? 0.15 : -0.2;
+    var chassis = (car.m - stockEng.w) * (1 - wt.wr);
+    var chassisFront = (car.m * car.f - stockEng.w * share) * (1 - wt.wr);
+    var fiW = (fiId !== 'none' && DR.FI[fiId].price) ? DR.FI[fiId].w : 0;
+    // an AWD conversion's weight (kg front, middle, rear): a lengthways
+    // one adds a transfer case and front diff up front; a transverse one a
+    // small transfer unit up front and a rear diff, halfshafts and subframe
+    var awdAdd = S.drive === 'AWD' && car.drive !== 'AWD' ? (layout.tv ? [20, 15, 40] : [60, 30, 0]) : null;
+    // the battery: what leaves the nose and what lands in the trunk (rival
+    // builds keep the figures their times were set with)
+    var batAi = ai && batt.aiBat != null ? batt.aiBat : batt.bat;
+    var batBack = ai ? batAi + Math.min(0, batt.batkg) : batt.bat + batt.batkg, batFront = ai ? batAi - Math.max(0, batt.batkg) : batt.bat;
+    var extraRear = (tire.m - stockTire.m) + (ai && wheels.aiWm != null ? wheels.aiWm : wheels.wm) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0);
+    var extraFront = ftires.fm + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5;
+    var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
+    S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
+    var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
+    S.f = clamp(front / S.m, 0.2, 0.72);
+    S.L = car.wb;
+    S.b = S.L * S.f;                      // CG to rear axle
+    S.h = car.h - (wt.low || 0) + (tire.r - stockTire.r) * 0.5;   // ride height is added below
+    S.cda = car.cda + aero.dcda;
+    S.cla = aero.cla;
+    S.Ip = S.m * S.L * S.L * 0.19;
+    // wheel torque the foot brake can hold on the line: the locked fronts'
+    // grip plus the rear brakes, which oppose the drive torque at the hub
+    S.brakeHold = 1.6 * S.m * G * S.r;
+
+    // ---- tune
+    var T = DR.fullTune(inst, S, tuneOverride);
+    if (S.convAdj) { S.stall = T.stall; S.TR = convTR(T.stall); }
+    // a slider clutch is set up like the real ones: base pressure (how much
+    // of the engine's torque it holds on the hit) and the lockup timer (how
+    // long its clamp takes to build to full lock)
+    if (S.slider) S.slider = [T.clBase / 100, T.clLock];
+    S.tune = T;
+    S.boostSet = S.fiType === 'none' ? 0 : T.boost;
+    // ---- jetting (a carb or mechanical injection): the jets meter fuel
+    // for the air the engine pulls. Breathing parts (heads, cam, headers,
+    // a bigger carb's signal) lean it out, about 4 jet sizes from stock to
+    // a full race build; boost through a carb wants it richer; a carb runs
+    // rich in hot, thin air and lean in cool, dense air (about one size
+    // between a hot day and a cool night). One size is about 2% fuel.
+    S.jets = null;
+    if (cb && efi !== 'tbi' && efi !== 'mpfi') {
+      var need = 4 * B + (S.boostSet || 0) / 8 - (cOpt.jet0 || 0);
+      S.jets = { set: T.jets || 0, need: Math.round(need * 2) / 2, tK: cOpt.fb ? 0.045 : 0.09, mech: efi === 'mech' };
+      S.mixK25 = DR.carbMix(S, DR.AMBIENT_C);
+      S.Tpk *= S.mixK25;
+    }
+    // off the line: soft vacuum secondaries, an air valve in between, a
+    // double pumper hits clean; a carb far too big for the engine stumbles
+    S.carbHit = 1;
+    if (cb && !efi) {
+      S.carbHit = cOpt.sec === 'vs' ? 0.9 : cOpt.sec === 'air' ? 0.95 : 1;
+      // the air it can pull: cubic inches x rpm / 3456 x volumetric efficiency
+      var dem = airDisp(e) * 61.02 * Math.max(S.red, S.pkRpm + 500) * (0.85 + 0.2 * B) / 3456 * (1 + (S.boostSet || 0) / 14.7);
+      S.carbBig = !cOpt.factory && !cOpt.dual && cOpt.cfm > dem * 1.6;
+      if (S.carbBig) S.carbHit *= 0.93;
+    }
+    S.boostTop = S.boostSet + (S.creep || 0);   // what it really sees up top
+    // boost by gear: a cap on the target in each gear (less in the low gears
+    // to stop wheelspin, the full target where the car can use it)
+    S.gearBoost = S.ebc && S.fiType === 'turbo' && Array.isArray(T.gearBoost) && T.gearBoost.some(function (b) { return b < S.boostSet; }) ? T.gearBoost : null;
+    tbInit(S);
+    // the charge at full boost, and the knock limit that leaves the fuel
+    S.iat = chargeTemp(S, S.boostSet);
+    if (S.fiType !== 'none') {
+      S.knock = Math.floor(knockAt(S, S.iat) * 2) / 2;
+      S.knockSpan = Math.round(knockSpan(S.knock) * 2) / 2;
+      // where power stops climbing, and the range across the revs
+      S.knockTop = Math.round((S.knock + S.knockSpan) * 2) / 2;
+      S.knockLo = Math.floor(knockAt(S, S.iat, S.tqRpm) * 2) / 2;
+      S.knockHi = Math.floor(knockAt(S, S.iat, S.red) * 2) / 2;
+      // pulled timing burns late: a hotter exhaust spins a turbo harder
+      // (up to about a psi of creep at the plateau)
+      S.creepEgt = S.fiType === 'turbo' && !S.diesel && S.boostSet > S.knock ? Math.round(Math.min(1, (S.boostSet - S.knock) / S.knockSpan) * 2) / 2 : 0;
+      S.boostTop += S.creepEgt;
+    }
+    // nitrous on a boosted engine: the shot burns fast and adds cylinder
+    // pressure, so the tune pulls timing for it (about 2 degrees per 50 hp
+    // on a 5.7 V8, more on a small engine where the same shot is a bigger
+    // share of the charge). On boost that means it knocks sooner while it
+    // sprays: about 0.43 psi of knock point per degree on pump gas, more on
+    // the stronger fuels.
+    S.nosDeg = S.nosHp && !S.diesel ? 2 * S.nosHp / 50 * Math.sqrt(5.7 / Math.max(1, airDisp(e))) : 0;
+    S.nosKnock = S.nosDeg && S.fiType !== 'none' ? Math.round(S.nosDeg * 0.43 * S.knockFuel / 20 * 2) / 2 : 0;
+    S.ratios = tr.adj ? T.gears.slice() : DR.boxRatios(trId, car);
+    S.fd = T.fd;
+
+    // tire pressure
+    var d = (T.psi - tire.optP) / tire.optP;
+    var pf = d <= 0 ? 1 + 0.25 * (-d) - (S.bead ? 0.55 : 1.4) * d * d : 1 - 0.5 * d - 0.6 * d * d;
+    if (T.psi < 9 && !S.bead) pf *= 0.82;          // tire spins on the rim
+    S.pf = clamp(pf, 0.4, 1.1);
+    S.crr = 0.012 * (1 + Math.max(0, -d) * 0.6) * ftires.roll;
+
+    // ---- suspension: front and rear corners with their own spring, bump /
+    // rebound damping, bump stops and droop limits under a body that heaves
+    // and pitches (see Sim.step). Ride height moves the CG, the drag and the
+    // travel left before the bump stops.
+    S.as = (rs.adjA ? T.antiSquat : rs.as) * chas.stiff;
+    var rideF = springs.adjS ? T.rideF / 1000 : -(springs.low || 0), rideR = springs.adjS ? T.rideR / 1000 : -(springs.low || 0);
+    S.rideF = rideF; S.rideR = rideR;
+    S.h += 0.9 * (rideF + rideR) / 2;
+    S.cda *= 1 + 1.1 * (rideF + rideR) / 2 + 0.6 * Math.max(0, rideR - rideF);   // low = less air under the car; rake costs a little
+    function rateMul(click) { return springs.adjS ? springs.rate[0] + (springs.rate[1] - springs.rate[0]) * (click - 1) / 9 : springs.sk; }
+    var mF = S.m * S.f, mR = S.m * (1 - S.f), wF = 2 * Math.PI * 1.45, wR = 2 * Math.PI * 1.65;
+    S.kf = mF * wF * wF * rateMul(T.springF);
+    S.kr = mR * wR * wR * rateMul(T.springR);
+    // damping: clicks 1..10 scale the shock's ratio 0.35x..1.9x; rebound is
+    // naturally firmer than bump
+    function zc(click, adj, base) { return adj ? shocks.z * base * (0.35 + 0.17 * (click - 1)) / 1.03 : shocks.z * base; }
+    var a2 = shocks.adjD === 2, a1 = shocks.adjD >= 1;
+    S.cbF = 2 * zc(T.bumpF, a2, 0.75) * Math.sqrt(S.kf * mF);
+    S.crF = 2 * zc(T.rebF, a1, 1.3) * Math.sqrt(S.kf * mF);
+    S.cbR = 2 * zc(T.bumpR, a1, 0.75) * Math.sqrt(S.kr * mR);
+    S.crR = 2 * zc(T.rebR, a2, 1.3) * Math.sqrt(S.kr * mR);
+    // travel: raising the car adds bump travel and takes away droop
+    S.bumpF = Math.max(0.012, 0.075 + rideF); S.bumpR = Math.max(0.012, 0.085 + rideR);
+    S.droopF = Math.max(0.01, 0.11 - rideF * 0.6); S.droopR = Math.max(0.01, 0.09 - rideR * 0.6);
+    if (shocks.lim && T.limitF > 0) S.droopF = Math.min(S.droopF, T.limitF / 1000);
+    S.bar = !!bar.bar;
+    S.barRad = T.barDeg * Math.PI / 180;
+    S.barLen = 1.6;
+
+    // ---- summary numbers
+    var dyno = DR.dyno(S);
+    // what the engine would make with all the fuel it wants (for lean risk)
+    var fw = S.fuelW; S.fuelW = 1e12; S.fuelDemand = DR.dyno(S).peakHp; S.fuelW = fw;
+    S.peakHp = dyno.peakHp; S.peakTq = dyno.peakTq; S.peakHpRpm = dyno.peakHpRpm;
+    S.totalHp = S.peakHp + S.nosHp;
+    // Launch clutch slip: a car that can't overpower its tires in 1st has its
+    // clutch slipped off the line (or it just bogs); one with torque to spare
+    // gets the clutch dumped raw. 1 = fully slipped .. 0 = raw.
+    var axleN = S.m * G * (S.drive === 'FWD' ? S.f : S.drive === 'AWD' ? 1 : 1 - S.f);
+    // (judged on the power the car makes once the turbo is lit, 2-step or
+    // not: a big turbo car is a high-power car even if it leaves off boost)
+    var lb = S.fiType === 'turbo' ? S.boostSet : S.fiType !== 'none' ? null : 0, tq0 = 0;
+    for (var lr = S.idle + 500; lr <= S.red; lr += 250) tq0 = Math.max(tq0, boostedTorque(S, lr, lb === null ? steadyBoost(S, lr) : lb));
+    var hit = tq0 * S.ratios[0] * S.fd * S.eff / S.r / (S.tire.mu * S.pf * S.dgrip * axleN);
+    S.slipAssist = S.trType === 'auto' ? 0 : clamp((1.5 - hit) / 0.5, 0, 1);
+    // what the body takes before it twists (hp, nitrous included), and the
+    // safety gear tech inspection sees (0 none, 1 roll bar, 2 cage). A tube
+    // chassis has both covered.
+    var tube = DR.partId('weight', inst) === 'w4' || !!chas.tube || car.shell === Infinity;
+    S.shell = tube ? Infinity : car.shell * (chas.shellK || 1);
+    S.caged = (chas.shellK || 1) >= 3;   // the best cage there is: next is a tube chassis
+    S.tech = tube ? 2 : chas.tech || 0;
+    S.risk = DR.riskOf(S);
+    return S;
+  };
+
+  function revMin(S) { return Math.round((S.idle + 2500) / 100) * 100; }
+  function revMax(S) { return Math.round((S.mech + 800) / 100) * 100; }
+
+  // the spec with stock gearing, for picking a default shift point before the
+  // tune (and with it the gear ratios) is known
+  function withRatios(S, ratios) { var o = Object.create(S); o.ratios = ratios; return o; }
+  // a box's ratios in a car: the factory box keeps the car's own gearing
+  DR.boxRatios = function (trId, car) {
+    var r = trId === car.trans && car.gears ? car.gears : DR.TRANS[trId].ratios;
+    return r.slice();
+  };
+
+  // a converter's torque multiplication at stall: looser converters
+  // (bigger stall, smaller diameter) multiply a little more
+  function convTR(stall) { return Math.round(Math.min(2.3, Math.max(1.9, 1.9 + (stall - 2200) * 0.000075)) * 100) / 100; }
+  DR.convTR = convTR;
+
+  // ---------------------------------------------------------------- tune
+  DR.tuneDefaults = function (inst, S) {
+    var tr = DR.TRANS[S.transId];
+    var auto = tr.type === 'auto';
+    var fiDef = S.eng.fi && S.fiId === S.eng.fi.part ? S.eng.fi.boost : S.diesel ? S.maxBoost : Math.min(8, S.maxBoost);
+    return {
+      boost: fiDef,
+      // manuals launch near peak torque, or for a turbo near its full-boost
+      // rpm (a 2-step builds boost there before the clutch drops)
+      launchRpm: Math.round((auto ? Math.min(S.red - 500, Math.max(S.idle + 1500, S.stall + 200)) :
+        S.tbHoldT ? Math.min(S.red - 700, Math.max(S.tqRpm * 0.85, spoolAt(S, (inst.tune && inst.tune.boost) || fiDef) * 0.95)) : S.tqRpm * 0.85) / 100) * 100,
+      psi: S.tire.optP,
+      jets: 0,
+      fd: S.fdSet || S.car.fd,
+      gears: DR.boxRatios(S.transId, S.car),
+      shiftRpm: Math.round(Math.min(S.red - 150, DR.suggestShift(withRatios(S, DR.boxRatios(S.transId, S.car)))) / 100) * 100,
+      revLimit: S.red,
+      gearBoost: DR.boxRatios(S.transId, S.car).map(function () { return S.maxBoost || 0; }),
+      luGear: DR.boxRatios(S.transId, S.car).length,
+      stall: S.stall || 0,
+      springF: 5, springR: 5, rideF: 0, rideR: 0, rollBal: 0,
+      bumpF: 5, rebF: 5, bumpR: 5, rebR: 5, limitF: 0,
+      antiSquat: DR.getOption('rearsusp', inst).as,
+      barDeg: 3,
+      launchThr: 100, thrRamp: 0,
+      burnRpm: S.red,
+      tcSlip: 0, tcGain: 5,
+      clBase: S.slider ? Math.round(S.slider[0] * 100) : 60, clLock: S.slider ? S.slider[1] : 0.9,
+      nosDelay: 0.6, nosRamp: 0.5
+    };
+  };
+
+  function coil(S) { return DR.getOption('springs', { carId: S.carId, parts: S._parts }).adjS; }
+  function shk(S) { return DR.getOption('shocks', { carId: S.carId, parts: S._parts }); }
+  function rideRange(S) { var sp = DR.getOption('springs', { carId: S.carId, parts: S._parts }); return sp.ride ? [Math.round(sp.ride[0] * 1000), Math.round(sp.ride[1] * 1000)] : [0, 0]; }
+  // Ranges for the tuning screen. `show(S)` decides whether it is unlocked.
+  DR.TUNE_DEFS = [
+    { key: 'jets', label: 'Jets', unit: '', step: 1, min: function () { return -6; }, max: function () { return 8; },
+      show: function (S) { return !!S.jets; }, req: 'Carbureted engines (or mechanical injection) only', group: 'Engine',
+      fmt: function (v, S) { return (v > 0 ? '+' : '') + v + ' size' + (Math.abs(v) === 1 ? '' : 's'); },
+      help: 'Main jet size against the carb\'s out-of-the-box jets (each size is about 2% fuel). Bigger heads, cams and headers need bigger jets. Lean costs power and can burn a piston; a touch rich is safe.' },
+    { key: 'revLimit', label: 'Rev Limiter', unit: 'rpm', step: 100, min: revMin, max: revMax,
+      show: function (S) { return S.ecu >= 2 || S.revAdj; }, req: 'Requires a Standalone ECU (a Flash tune raises it automatically), or on a carbureted engine a CDI ignition box', group: 'Engine',
+      help: 'Past your valvetrain or bottom-end limit the valves float and the engine may let go.' },
+    { key: 'boost', label: 'Boost Pressure', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost; },
+      show: function (S) { return S.fiType !== 'none'; }, req: 'Requires a turbo or supercharger', group: 'Engine',
+      help: 'More boost = more power, but watch how much your engine takes on its fuel (knock) and your internals.' },
+    { key: 'gearBoost', label: 'Boost by Gear', unit: 'psi', step: 0.5, min: function (S) { return S.boostMin || 0; }, max: function (S) { return S.maxBoost || 0; },
+      show: function (S) { return S.fiType === 'turbo' && S.ebc; }, req: 'Requires a turbo with an electronic boost controller (or a tuned factory turbo ECU)', group: 'Engine',
+      help: 'A cap on boost in each gear, as electronic controllers do: run less in 1st and 2nd where the tires can\'t take it, the full target from where they can. Set to the target (or above) for no cap.' },
+    { key: 'launchRpm', label: 'Launch RPM (2-Step)', unit: 'rpm', step: 100, min: function (S) { return S.idle + 600; }, max: function (S) { return S.red - 200; },
+      show: function (S) { return S.twostep > 0; }, req: 'Requires a 2-step launch control', group: 'Engine',
+      help: 'Engine RPM held on the line. Higher = harder launch & more boost, but more wheelspin.' },
+    // a third rpm limit for the burnout box (Hondata / Haltech "3-step"):
+    // the ECU holds the revs there instead of bouncing off the main limiter
+    { key: 'burnRpm', label: 'Burnout Rev Limit', unit: 'rpm', step: 100, min: function (S) { return S.idle + 1500; }, max: function (S) { return S.red; },
+      show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU', group: 'Engine',
+      fmt: function (v, S) { return S && v >= S.red ? 'Off' : null; },
+      help: 'Holds the revs here in the burnout box instead of bouncing off the rev limiter: a steady burnout. Off = the main limiter.' },
+    { key: 'launchThr', label: 'Launch Throttle', unit: '%', step: 5, min: function () { return 30; }, max: function () { return 100; },
+      show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU', group: 'Engine',
+      help: 'Throttle limit at the hit. Ramps to 100% over the ramp time below.' },
+    { key: 'thrRamp', label: 'Throttle Ramp Time', unit: 's', step: 0.05, min: function () { return 0; }, max: function () { return 2; },
+      show: function (S) { return S.ecu >= 2; }, req: 'Requires a Standalone ECU', group: 'Engine',
+      help: '0 = no throttle management.' },
+    { key: 'tcSlip', label: 'Traction Control', unit: '% slip', step: 1, min: function () { return 0; }, max: function () { return 40; },
+      show: function (S) { return S.ecu >= 3; }, req: 'Requires a Race ECU', group: 'Engine',
+      help: '0 = off. The slip the drive tires are allowed: the ECU compares driveshaft speed with the car\'s speed and, when the tires spin past this, pulls ignition timing to take torque away, smoothly, with the throttle left wide open so the turbos stay lit. Past about 20 degrees of retard it starts dropping cylinders (a soft cut). Radials like 8-12%, slicks 10-15%.' },
+    { key: 'tcGain', label: 'Traction Control Response', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return S.ecu >= 3; }, req: 'Requires a Race ECU', group: 'Engine',
+      help: 'How hard and fast it pulls timing for each % of slip over the target. Low: soft and smooth, lets the tires spin a bit more. High: catches spin fast, but too high and it hunts (pulls too much, the car slows, it puts it back) and the car shakes.' },
+    { key: 'shiftRpm', label: 'Shift Light / Auto-Shift RPM', unit: 'rpm', step: 100, min: function (S) { return S.idle + 1500; }, max: function (S) { return S.red; },
+      show: function () { return true; }, group: 'Drivetrain', help: 'The shift light comes on here. Auto-shift also uses it.' },
+    { key: 'fd', label: 'Final Drive Ratio', unit: ':1', step: 0.01, min: function (S) { return S.qc || !S.fdSet ? 2.2 : S.fdSet; }, max: function (S) { return S.qc || !S.fdSet ? 6.5 : S.fdSet; },
+      show: function (S) { return !!S.qc; }, req: 'Set by your gear set: a quick-change rear end (Drivetrain: Ring & Pinion) makes it adjustable', group: 'Drivetrain', help: 'Higher number = quicker acceleration, lower top speed. A quick-change rear: swap gear sets in minutes for each track.' },
+    { key: 'clBase', label: 'Slider Clutch Base Pressure', unit: '%', step: 5, min: function () { return 30; }, max: function () { return 100; },
+      show: function (S) { return !!S.slider; }, req: 'Requires a slider (slipper) clutch', group: 'Drivetrain',
+      help: 'How much of the engine\'s torque the clutch holds on the hit. Less: it slips more, the engine stays up on the boost and the tires get it gently. Too little and the car is lazy off the line; too much and it hits the tires like a plain clutch.' },
+    { key: 'clLock', label: 'Slider Clutch Lockup Time', unit: 's', step: 0.1, min: function () { return 0.3; }, max: function () { return 3; },
+      show: function (S) { return !!S.slider; }, req: 'Requires a slider (slipper) clutch', group: 'Drivetrain',
+      help: 'How long the clamp takes to build to full lock. Too short and it locks while the car is slow, pulling the engine down off the boost; too long and it slips (and heats) past where it should have locked.' },
+    { key: 'stall', label: 'Converter Stall', unit: 'rpm', step: 100, min: function () { return 3000; }, max: function () { return 7500; },
+      show: function (S) { return !!S.convAdj; }, req: 'Requires a bolt-together converter', group: 'Drivetrain',
+      help: 'The stall speed the converter flashes to on the hit, set by the stator you bolt into it. Higher gets a big turbo lit and the engine into its power, but slips more all the way down the track; lower couples tighter and carries more mph. A converter that wants more rpm than the engine can pull just slips at the limiter.' },
+    { key: 'luGear', label: 'Converter Lockup From Gear', unit: '', step: 1, min: function () { return 1; }, max: function (S) { return (S.ratios || DR.boxRatios(S.transId, S.car)).length; },
+      show: function (S) { return !!S.lockup; }, req: 'Requires a lockup converter', group: 'Drivetrain', fmt: function (v) { return ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][v - 1] + ' gear on'; },
+      help: 'The lockup clutch takes out the converter\'s slip from this gear on (applied just after each shift; in 1st, once the gearbox is turning near the converter\'s stall speed). Locking earlier gains mph, but the engine drops revs when it locks: with a tight converter or a big turbo that can pull it off boost. Try it and watch your timeslip.' },
+    { key: 'gears', label: 'Gear Ratios', unit: '', step: 0.01, min: function () { return 0.5; }, max: function () { return 4.5; },
+      show: function (S) { return !!DR.TRANS[S.transId].adj; }, req: 'Requires a sequential race gearbox', group: 'Drivetrain',
+      help: 'Each gear individually.' },
+    { key: 'psi', label: 'Drive Tire Pressure', unit: 'psi', step: 0.5, min: function () { return 4; }, max: function () { return 45; },
+      show: function () { return true; }, group: 'Tires',
+      help: 'Each tire has an ideal pressure. A little below it adds grip; lower wrinkles the sidewall more, which on radials and slicks is what tire shake feeds on; too low and the tire spins on the rim (beadlocks help).' },
+    { key: 'rollBal', label: 'Anti-Roll Bar Balance', unit: '', step: 1, min: function () { return -4; }, max: function () { return 4; },
+      show: function (S) { return DR.getOption('sway', { carId: S.carId, parts: S._parts }).adjR; }, req: 'Requires adjustable race anti-roll bars', group: 'Suspension',
+      help: 'Circuit only. Stiffer front (+) = more understeer: safe, pushes wide. Stiffer rear (-) = more oversteer. Fastest is close to neutral: see the balance on Race Team > Test Lap.' },
+    { key: 'rideF', label: 'Front Ride Height', unit: 'mm', step: 5, min: function (S) { return rideRange(S)[0]; }, max: function (S) { return rideRange(S)[1]; },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Lower drops the CG and the drag but leaves less bump travel. Raise the front over the rear for rake.' },
+    { key: 'rideR', label: 'Rear Ride Height', unit: 'mm', step: 5, min: function (S) { return rideRange(S)[0]; }, max: function (S) { return rideRange(S)[1]; },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Too low and the rear bottoms out on the bump stops at the hit.' },
+    { key: 'springF', label: 'Front Spring Rate', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Softer lets the nose rise and moves weight to the rear tires.' },
+    { key: 'springR', label: 'Rear Spring Rate', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: coil, req: 'Requires adjustable coilovers', group: 'Suspension',
+      help: 'Softer squats more and loads the tires gently; stiffer reacts faster.' },
+    { key: 'bumpF', label: 'Front Bump', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD === 2; }, req: 'Requires double-adjustable shocks', group: 'Suspension',
+      help: 'How hard the front resists compressing: firmer cuts nose dive under braking.' },
+    { key: 'rebF', label: 'Front Rebound', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD >= 1; }, req: 'Requires adjustable shocks', group: 'Suspension',
+      help: 'Loose (low) lets the front come up fast. Too loose = big wheelies and a bouncy launch.' },
+    { key: 'bumpR', label: 'Rear Bump', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD >= 1; }, req: 'Requires adjustable shocks', group: 'Suspension',
+      help: 'Firmer hits the tires harder at the launch; softer is gentler on them.' },
+    { key: 'rebR', label: 'Rear Rebound', unit: '', step: 1, min: function () { return 1; }, max: function () { return 10; },
+      show: function (S) { return shk(S).adjD === 2; }, req: 'Requires double-adjustable shocks', group: 'Suspension',
+      help: 'How fast the rear extends again: firmer keeps it planted over bumps and through the shifts, and damps out tire shake.' },
+    { key: 'limitF', label: 'Front Travel Limiter', unit: 'mm', step: 5, min: function () { return 0; }, max: function () { return 110; },
+      show: function (S) { return !!shk(S).lim; }, req: 'Requires adjustable drag shocks', group: 'Suspension',
+      help: 'Caps how far the front can extend (0 = off). Less rise keeps the car flatter but the front tires lift sooner.' },
+    { key: 'antiSquat', label: 'Anti-Squat / Instant Centre', unit: '', step: 0.05, min: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).asMin || 0.3; },
+      max: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).asMax || 1.3; },
+      show: function (S) { return DR.getOption('rearsusp', { carId: S.carId, parts: S._parts }).adjA; }, req: 'Requires ladder bars or a 4-link', group: 'Suspension',
+      help: 'Higher plants the tires harder & lifts the front. Too high can unload the tires or wheelie.' },
+    { key: 'barDeg', label: 'Wheelie Bar Height', unit: '°', step: 0.5, min: function () { return 0.5; }, max: function () { return 10; },
+      show: function (S) { return S.bar; }, req: 'Requires wheelie bars', group: 'Suspension',
+      help: 'Max wheelie angle before the bars touch. Hitting the bars unloads the rear tires.' },
+    { key: 'nosDelay', label: 'Nitrous Activation Delay', unit: 's', step: 0.1, min: function () { return 0; }, max: function () { return 4; },
+      show: function (S) { return S.prog; }, req: 'Requires a progressive nitrous controller', group: 'Nitrous',
+      help: 'Seconds after launch before nitrous comes on by itself.' },
+    { key: 'nosRamp', label: 'Nitrous Ramp-In Time', unit: 's', step: 0.1, min: function () { return 0; }, max: function () { return 3; },
+      show: function (S) { return S.prog; }, req: 'Requires a progressive nitrous controller', group: 'Nitrous',
+      help: 'Seconds to fade from 0 to the full shot.' }
+  ];
+
+  DR.fullTune = function (inst, S, over) {
+    S._parts = inst.parts || {};
+    var d = DR.tuneDefaults(inst, S), t = {}, src = over || inst.tune || {};
+    if (src.rebound != null && src.rebF == null) src = Object.assign({}, src, { rebF: src.rebound });   // older saves
+    if (src.comp != null && src.bumpR == null) src = Object.assign({}, src, { bumpR: src.comp });
+    for (var k in d) t[k] = (src[k] != null) ? src[k] : d[k];
+    if (!Array.isArray(t.gears) || t.gears.length !== d.gears.length) t.gears = d.gears;
+    DR.TUNE_DEFS.forEach(function (def) {
+      if (def.key === 'gears') {
+        t.gears = t.gears.map(function (g) { return clamp(g, 0.5, 4.5); });
+        return;
+      }
+      if (def.key === 'gearBoost') {
+        if (!Array.isArray(t.gearBoost) || t.gearBoost.length !== d.gearBoost.length) t.gearBoost = d.gearBoost;
+        t.gearBoost = t.gearBoost.map(function (b) { return clamp(b, S.boostMin || 0, S.maxBoost || 0); });
+        return;
+      }
+      t[def.key] = clamp(t[def.key], def.min(S), def.max(S));
+    });
+    return t;
+  };
+
+  // The parts holding a build back right now: { cat: why }. The shop and
+  // install bay flag these.
+  DR.bottlenecks = function (S) {
+    var out = {}, r = S.risk, hp = S.peakHp + S.nosHp;
+    if (hp > S.safeHp) out[S.safeWeak] = 'Can\'t take ' + Math.round(hp) + ' hp';
+    if (S.red > S.vtLimit) out.valvetrain = 'Valves float past ' + S.vtLimit + ' rpm';
+    if (S.red > S.beLimit) out[S.beWeak] = out[S.beWeak] || 'Not safe past ' + S.beLimit + ' rpm';
+    if (S.fuelW < S.peakHp * DR.HP * 1.001) {
+      if (S.fuelInj <= S.fuelPump) out.injectors = 'Maxed out';
+      if (S.fuelPump <= S.fuelInj) out.fuelpump = 'Maxed out';
+    }
+    var fs = DR.fuelShort(S);
+    if (fs.ratio > 1.02) out[fs.by] = out[fs.by] || (fs.nos ? 'Can\'t feed the nitrous' : 'Running lean');
+    if (S.untuned && S.untuned.length) out.ecu = 'Needs a tune';
+    if ((S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.sparkPsi) || S.nosCut) out.ignition = 'Misfiring';
+    var nk = S.nosKnock || 0, onSpray = nk ? ' on the spray' : '';
+    if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knockTop - nk + 0.5) out.fueltype = 'Detonating' + onSpray + ' at ' + (S.boostTop || S.boostSet) + ' psi';
+    else if (S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knock - nk + 0.5) out.fueltype = 'Timing pulled' + onSpray + ' past ' + (S.knock - nk) + ' psi';
+    if (S.fiType !== 'none' && (S.boostTop || S.boostSet) > S.headPsi + 0.5) out.headstud = 'Head lifts past ' + S.headPsi + ' psi';
+    if (S.peakHp + S.nosHp > S.coolHp * 1.05) out.cooling = 'Runs hot in long races';
+    if (S.creep) out.wastegate = 'Boost creeps +' + S.creep + ' psi';
+    if (S.fiType !== 'none' && !S.diesel && S.iat > 75) out.ic = 'Charge is ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F)';
+    if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) out.fi = 'Out of breath';
+    if (S.carbW && S.peakHp >= S.carbW / DR.HP * (1 + (S.boostSet || 0) / 14.7) * 0.97) out.carb = 'Out of air';
+    if (r.axle > 0.005) out.rearend = 'Axles may snap';
+    if (r.trans > 0.005) out.trans = 'Too much torque';
+    // a diesel's exhaust temperature: a drag pass lives with 1,600 F, past
+    // ~1,700 F pistons melt and turbine wheels crack
+    if (S.dsl) {
+      var egtPk = 0;
+      for (var er = 1500; er <= S.red; er += 250) egtPk = Math.max(egtPk, dieselState(S, er, steadyBoost(S, er)).egt);
+      S.egtPk = Math.round(egtPk);
+      // (its risk and the note are counted once, in DR.riskOf)
+    }
+    var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
+    if (S.clCap && tqNm > S.clCap) out.clutch = 'Slipping';
+    // a converter that can't flash to where the turbo makes boost: the car
+    // leaves, the engine is dragged below boost and falls on its face
+    if (S.trType === 'auto' && S.stall > S.red - 200) out.converter = 'Stall (' + S.stall + ' rpm) is past what the engine revs to';
+    else if (S.trType === 'auto' && S.fiType === 'turbo' && S.spoolHi && S.stall < S.spoolHi * 0.85) out.converter = 'Too tight for the turbo (boost at ' + Math.round(S.spoolHi / 100) * 100 + ' rpm)';
+    else if (S.trType === 'auto' && S.stall > S.peakHpRpm) out.converter = 'Looser than this engine needs (power peaks at ' + Math.round(S.peakHpRpm / 100) * 100 + ' rpm): it slips power away';
+    return out;
+  };
+
+  // Fits the cheapest axles and ignition a build needs (rival builds).
+  DR.fitSupport = function (inst) {
+    for (var pass = 0; pass < 2; pass++) {
+      var S = DR.buildSpec(inst), r = S.risk;
+      if (!r.axle && !(S.fiType !== 'none' && S.boostSet > S.sparkPsi) && !S.nosCut) break;
+      if (r.axle > 0) {
+        var ax = DR.PART_CATS.rearend.options, hit = r.hit;
+        for (var i = 1; i < ax.length; i++) if (ax[i].axle >= hit * 1.05 || i === ax.length - 1) { inst.parts.rearend = ax[i].id; break; }
+      }
+      if ((S.fiType !== 'none' && S.boostSet > S.sparkPsi) || S.nosCut) {
+        var ig = DR.PART_CATS.ignition.options, cur = DR.partId('ignition', inst);
+        for (var j = 0; j < ig.length; j++) if (ig[j].id === cur) { inst.parts.ignition = ig[Math.min(ig.length - 1, j + 1)].id; break; }
+      }
+    }
+    return inst;
+  };
+
+  // ---------------------------------------------------------------- dyno
+  DR.dyno = function (S) {
+    var pts = [], peakHp = 0, peakTq = 0, peakHpRpm = 0;
+    var maxR = S.red + 200;
+    for (var rpm = 1000; rpm <= maxR; rpm += 100) {
+      var b = steadyBoost(S, rpm);
+      var T = boostedTorque(S, rpm, b);
+      var hp = T * rpm * RPM2W / DR.HP;
+      var lbft = T * 0.7376;
+      // past the knock point here the tune is pulling timing
+      var pull = b > 0.5 && !S.diesel && S.fiType !== 'none' && b > knockAt(S, chargeTemp(S, b), rpm) + 0.25;
+      pts.push({ rpm: rpm, hp: hp, tq: lbft, boost: b, pull: pull });
+      if (rpm <= S.red) {
+        if (hp > peakHp) { peakHp = hp; peakHpRpm = rpm; }
+        if (lbft > peakTq) peakTq = lbft;
+      }
+    }
+    return { pts: pts, peakHp: peakHp, peakTq: peakTq, peakHpRpm: peakHpRpm };
+  };
+
+  // The worst failure chance per run, whatever breaks.
+  DR.riskMax = function (r) { return Math.max(r.engine, r.trans, r.axle || 0, r.chassis || 0); };
+  // Probability (0..1) of engine / gearbox failure on a run.
+  // Fuel the build needs against what the injectors and pump feed (hp):
+  // the engine's full demand, plus a dry shot (through the injectors) or a
+  // wet one (from the pump). { ratio, by: 'injectors' | 'fuelpump', need, cap, nos }
+  DR.fuelShort = function (S) {
+    var eng = S.fuelDemand || S.peakHp, nos = S.nosHp && S.nosFuel !== 'own' ? S.nosHp : 0;
+    var injNeed = eng + (S.nosFuel === 'inj' ? nos : 0), pumpNeed = eng + nos;
+    var injCap = S.fuelInj * S.fuelFF, pumpCap = S.fuelPump * S.fuelFF;
+    var ri = injNeed / injCap, rp = pumpNeed / pumpCap, inj = ri >= rp;
+    return { ratio: Math.max(ri, rp), ri: ri, rp: rp, by: inj ? 'injectors' : 'fuelpump', need: inj ? injNeed : pumpNeed, cap: inj ? injCap : pumpCap, nos: nos > 0 && (inj ? S.nosFuel === 'inj' : true) };
+  };
+  // Why the boost range is what it is, as lines for the tuning screen.
+  DR.boostWhy = function (S) {
+    var w = S.boostWhy || {}, out = [];
+    if (w.type === 'none' || !w.type) return out;
+    if (w.type !== 'turbo') {
+      out.push('Boost is set by the blower pulley: a smaller pulley spins it faster. This blower tops out at ' + w.comp + ' psi.');
+    } else if (w.spring == null) {
+      out.push('The turbo makes up to ' + S.maxBoost + ' psi.');
+    } else {
+      if (w.ctrl === 'ecu') out.push('Factory turbo: the ECU holds ' + S.eng.fi.boost + ' psi' + (S.tuned ? ', and your flash lets it run up to ' + w.ctrlMax + ' psi.' : '. A flash lets it run about 40% more; a boost controller works too.'));
+      else {
+        out.push('Wastegate spring: ' + w.spring + ' psi. The gate opens at spring pressure, so that is the least boost it runs.');
+        out.push(w.ctrl === 'none' ? 'No boost controller: boost stays at the spring. A manual controller doubles it; an electronic one goes to the turbo\'s limit.' :
+          w.ctrl === 'mbc' ? 'Manual boost controller: up to twice the spring, ' + w.ctrlMax + ' psi.' : 'Electronic boost controller: any target up to the turbo\'s limit.');
+      }
+      out.push('This turbo\'s compressor tops out at ' + w.comp + ' psi (past that it chokes and overspeeds).');
+      if (w.creep) out.push('The internal wastegate is too small for this engine: boost creeps ' + w.creep + ' psi over the target near redline. A ported gate halves it; an external gate stops it.');
+    }
+    if (w.untuned) out.push('No ECU tune: about ' + w.untuned + ' psi is all the stock tune can fuel and time. More runs lean and knocks.');
+    if (w.carb) out.push(w.carb.psi ? 'The ' + w.carb.name + ' takes up to ' + w.carb.psi + ' psi.' : 'The ' + w.carb.name + ' can\'t take boost: it needs ' + (w.carb.need === 'blow' ? 'a blow-through carb (sealed, with a boost-referenced fuel regulator)' : 'blower carbs or mechanical injection on top of the blower') + ', or EFI (Fuel & Spark).');
+    return out;
+  };
+  DR.riskOf = function (S) {
+    var r = { engine: 0, trans: 0, notes: [] };
+    var over = (S.peakHp + S.nosHp) / S.safeHp;
+    var WEAK = S.rotary ? { pistons: 'apex seals', crank: 'eccentric shaft', block: 'housings', oiling: 'oiling' } : { pistons: 'pistons', rods: 'connecting rods', crank: 'crankshaft', block: 'block', oiling: 'oiling' };
+    if (over > 1) { r.engine += Math.min(0.85, (over - 1) * 1.6); r.notes.push('Power is ' + Math.round(over * 100) + '% of what the ' + (WEAK[S.safeWeak] || 'internals') + ' can take'); }
+    if (S.red > S.mech) {
+      r.engine += Math.min(0.7, (S.red - S.mech) / 1000 * 0.8);
+      r.notes.push('Rev limiter is ' + (S.red - S.mech) + ' rpm past the ' + (S.vtLimit <= S.beLimit ? 'valvetrain (valve float)' : WEAK[S.beWeak] || 'bottom end'));
+    }
+    var bTop = S.boostTop || S.boostSet;
+    if (S.creepEgt) r.notes.push('Boost creeps ' + S.creepEgt + ' psi up top: pulled timing burns late, and the hot exhaust spins the turbo harder');
+    if (S.creep && S.fiType !== 'none') r.notes.push('Boost creeps ' + S.creep + ' psi past the target up top: the internal wastegate can\'t dump enough exhaust (a ported or external gate fixes it)');
+    if (bTop > S.sparkPsi + 0.5 && S.fiType !== 'none') r.notes.push('Ignition can\'t light ' + bTop + ' psi - misfiring past ' + S.sparkPsi + ' psi');
+    // (with nitrous: the worst case, while it sprays)
+    var nkR = S.nosKnock || 0, kR = S.knock - nkR, kTopR = S.knockTop - nkR;
+    var kWhy = (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + (nkR ? ' and the nitrous spraying (' + nkR + ' psi sooner)' : '');
+    if (S.diesel || S.fiType === 'none') { /* no spark knock */ }
+    else if (bTop > kTopR + 0.5) { r.engine += Math.min(0.7, (bTop - kTopR) * 0.08); r.notes.push('Detonating: past about ' + kTopR + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression' + (nkR ? ', or a smaller shot' : '')); }
+    else if (bTop > kR + 0.5) { r.engine += Math.min(0.1, (bTop - kR) * 0.015); r.notes.push('Timing pulled: past ' + kR + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + kTopR + ' psi, and the exhaust runs hot'); }
+    if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)'); }
+    if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
+    if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
+    // short of fuel it runs lean: it makes what the fuel allows (or the
+    // nitrous still hits) until it burns a piston
+    var fs = DR.fuelShort(S);
+    if (fs.ratio > 1.02) {
+      r.engine += Math.min(0.7, (fs.ratio - 1) * 2.5);
+      r.notes.push('Running lean: the ' + (fs.by === 'injectors' ? 'injectors feed' : 'fuel pump feeds') + ' ' + Math.round(fs.cap) + ' hp, the engine' + (fs.nos ? ' plus the shot' : '') + ' wants ' + Math.round(fs.need) + ' hp' + (fs.nos && S.nosFuel === 'inj' ? ' (a dry kit adds its fuel through the injectors)' : ''));
+    }
+    if (S.e85Lean) { r.engine += 0.45; r.notes.push('Alcohol fuel needs ~30% more fuel: on a gasoline tune it runs lean - get a tune'); }
+    if (S.carbAlcLean) { r.engine += 0.5; r.notes.push('Alcohol fuel through a gasoline carb runs dangerously lean: it needs an alcohol carb, mechanical injection or EFI'); }
+    if (S.jets) {
+      var je = DR.carbJetErr(S, DR.AMBIENT_C);
+      if (je < -1.5) { r.engine += Math.min(0.5, (-1.5 - je) * 0.12); r.notes.push('Jetted lean: about ' + Math.round(-je * 2) / 2 + ' jet sizes small for these parts - go up on the jets (Tuning), or have the tuner jet it'); }
+      else if (je > 2) r.notes.push('Jetted rich: about ' + Math.round(je * 2) / 2 + ' sizes big - it\'s safe but lazy');
+    }
+    (S.carbNotes || []).forEach(function (n) { r.notes.push(n); });
+    if (S.carbW && S.peakHp >= S.carbW / DR.HP * (1 + (S.boostSet || 0) / 14.7) * 0.97) r.notes.push('The ' + (S.carb.efi === 'tbi' ? 'throttle body' : 'carb') + ' is out of air: power is limited (a bigger carb or EFI)');
+    if (S.carbBig) r.notes.push('The carb is far too big for this engine: weak signal, it stumbles off the line');
+    (S.untuned || []).forEach(function (u) { if (u[0] !== 'fueltype' && u[0] !== 'fi') r.notes.push(u[1] + ' - get an ECU flash'); });
+    if (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98) r.notes.push('Turbo/blower is out of breath - power is limited');
+    // a diesel's exhaust temperature: a drag pass lives with 1,600 F, past
+    // ~1,700 F pistons melt and turbine wheels crack
+    if (S.dsl) {
+      var egtPk = 0;
+      for (var er = 1500; er <= S.red; er += 250) egtPk = Math.max(egtPk, dieselState(S, er, steadyBoost(S, er)).egt);
+      S.egtPk = Math.round(egtPk);
+      if (egtPk > 1700) { r.engine += Math.min(0.6, (egtPk - 1700) / 400); r.notes.push('Exhaust temperature hits ' + Math.round(egtPk / 10) * 10 + ' F: more fuel than air. A bigger turbo (more air) or less fuel cools it'); }
+      else if (egtPk > 1450) r.notes.push('Exhaust runs ' + Math.round(egtPk / 10) * 10 + ' F at full power: fine for a pass, hot for towing');
+    }
+    var tqNm = S.peakTq / 0.7376 + (S.nosW ? S.nosW / (4000 * RPM2W) : 0);
+    // gearbox ratings carry a little margin: trouble starts 5% past them
+    if (tqNm > S.trMaxTq * 1.05) { r.trans = Math.min(0.75, (tqNm / S.trMaxTq - 1.05) * 1.1); r.notes.push('Torque exceeds what the transmission can hold'); }
+    // axles take the launch hit: torque x converter multiplication
+    var hit = tqNm * (S.trType === 'auto' ? Math.min(1.4, S.TR / 1.5) : 1) * (S.slider ? 0.9 : 1);
+    r.axle = 0; r.hit = hit;
+    if (hit > S.axleTq) { r.axle = Math.min(0.7, (hit / S.axleTq - 1) * 1.2); r.notes.push('Launch torque is ' + Math.round(hit / S.axleTq * 100) + '% of what the axles hold'); }
+    if (S.nosCut) r.notes.push('Ignition blows out the spark on a ' + S.nosRated + ' shot - get a stronger ignition');
+    if (S.clCap && tqNm > S.clCap) r.notes.push('Clutch will slip - consider an upgrade');
+    // the body: past what the shell takes it twists on the launch and cracks
+    r.chassis = 0;
+    var shellX = (S.peakHp + S.nosHp) / (S.shell || Infinity);
+    if (shellX > 1) { r.chassis = Math.min(0.6, (shellX - 1) * 0.9); r.notes.push(S.caged ? 'Power is ' + Math.round(shellX * 100) + '% of what even the roll cage takes - a tube chassis (Chassis / Roll Cage) takes any power' : 'Power is ' + Math.round(shellX * 100) + '% of what the body takes - fit subframe connectors, a roll bar or a cage'); }
+    r.engine = Math.min(0.9, r.engine);
+    return r;
+  };
+
+  // ---------------------------------------------------------------- conditions
+  // The surface under the tires and the time of day. A prepped strip (rubber
+  // and traction compound) is what drag tires are made for: a slick on bare
+  // asphalt loses far more than a street tire does, which was built for it.
+  // Night: cooler, denser air (a little more power, a turbo's boost makes up
+  // most of the difference by day) and a colder track that grips less and
+  // pulls the heat out of the tires sooner.
+  DR.SURFACES = {
+    prep:   { name: 'Prepped strip', k: { Street: 1, 'Drag Radial': 1, Slick: 1, Track: 1, 'Race Slick': 1 } },
+    noprep: { name: 'No-prep', k: { Street: 0.96, 'Drag Radial': 0.84, Slick: 0.76, Track: 0.92, 'Race Slick': 0.85 } },
+    street: { name: 'Street', k: { Street: 0.9, 'Drag Radial': 0.8, Slick: 0.7, Track: 0.87, 'Race Slick': 0.8 } }
+  };
+  // { surface, night } -> full conditions (air and track temperature, C)
+  DR.conditions = function (surface, night) {
+    var c = { surface: DR.SURFACES[surface] ? surface : 'prep', night: !!night };
+    c.air = night ? 18 : 29; c.trackT = night ? 22 : 41;
+    return c;
+  };
+  DR.surfaceGrip = function (cond, tireKind) {
+    var k = (DR.SURFACES[cond.surface] || DR.SURFACES.prep).k[tireKind];
+    // a cold track grips less; a very hot one goes greasy
+    var tk = 1 - 0.003 * Math.max(0, 35 - cond.trackT) - 0.002 * Math.max(0, cond.trackT - 55);
+    return (k == null ? 1 : k) * tk;
+  };
+  // engine output against the 25 C the dyno figures are for
+  // how much hotter the charge is than on the 25 C day the dyno figures are
+  // for (C): the air outside, plus a heat-soaked intake between rounds
+  DR.knockDT = function (cond, engHeat) { return (cond ? cond.air - DR.AMBIENT_C : 0) + 0.5 * clamp((engHeat || 0) - 8, 0, 20); };
+  // the knock point and where power stops on the day (psi)
+  DR.knockOnDay = function (S, cond, engHeat) {
+    if (S.fiType === 'none' || S.diesel || S.knock == null) return null;
+    var d = DR.knockDT(cond, engHeat), sh = Math.round((knockAt(S, S.iat) - knockAt(S, S.iat + d)) * 2) / 2;
+    return { shift: sh, knock: Math.max(0, S.knock - sh), top: Math.max(0, S.knockTop - sh) };
+  };
+  DR.airPower = function (cond, S) {
+    return Math.pow((DR.AMBIENT_C + 273.15) / (cond.air + 273.15), S.fiType === 'turbo' ? 0.25 : 0.5);
+  };
+  // jets: how far the mixture is from right at an air temperature (jet
+  // sizes; + rich), and what that costs (lean costs more than rich)
+  DR.carbJetErr = function (S, airC) { var j = S.jets; return j ? j.set + j.tK * (airC - DR.AMBIENT_C) - j.need : 0; };
+  DR.carbMix = function (S, airC) {
+    if (!S.jets) return 1;
+    var e = DR.carbJetErr(S, airC);
+    return Math.max(0.85, 1 - (e >= 0 ? 0.004 : 0.008) * e * e);
+  };
+  // how the plugs (or the wideband, with a pro data logger) read
+  DR.carbRead = function (S, airC) {
+    var e = DR.carbJetErr(S, airC), afr = 12.6 * (1 - 0.02 * e);
+    return { err: e, afr: Math.round(afr * 10) / 10, text: e > 1.25 ? 'rich: sooty plugs, lazy' : e > 0.4 ? 'a touch rich (safe)' : e > -0.4 ? 'right on' : e > -1.25 ? 'a touch lean' : 'lean: white plugs, it\'ll burn a piston' };
+  };
+  DR.condLabel = function (cond) {
+    var F = function (c) { return Math.round(c * 1.8 + 32); };
+    return (DR.SURFACES[cond.surface] || DR.SURFACES.prep).name + ' • ' + (cond.night ? 'Night' : 'Day') + ' • air ' + F(cond.air) + '°F, track ' + F(cond.trackT) + '°F';
+  };
+
+  // ---------------------------------------------------------------- simulation
+  function Sim(S, opts) {
+    opts = opts || {};
+    this.S = S;
+    this.cond = opts.cond || null;
+    this.track = (opts.grip || 1.0) * (this.cond ? DR.surfaceGrip(this.cond, S.tire.kind) : 1);
+    this.trackT = this.cond ? this.cond.trackT : 25;
+    this.airK = this.cond ? DR.airPower(this.cond, S) : 1;
+    // (jetting doesn't drift with the weather for now: it's set by the parts)
+    // between rounds: an engine still heat-soaked from the last pass (C over
+    // its normal running temperature; the ECU pulls timing past ~8 C) and a
+    // nitrous bottle that has lost pressure as it emptied and cooled
+    if (opts.engHeat) this.airK *= 1 - 0.003 * clamp(opts.engHeat - 8, 0, 20);
+    // the charge runs as much hotter as the air is (and a heat-soaked
+    // engine's intake warms it more): the knock point drops with it
+    this.kdT = DR.knockDT(this.cond, opts.engHeat);
+    this.knockDeg = 0;
+    this.nosP = opts.nosP || 1;
+    // tire shake: how prone this run is (soft, low-pressure sidewalls on a
+    // sticky track shake; stiffer rear rebound settles it; and no two
+    // passes are quite the same)
+    this.shake = 0; this.shakePh = 0; this.shakeMax = 0;
+    this.tireE = 0; this.clutchE = 0;          // energy put through the tires and the clutch (J), for wear
+    if (this.cond && SHAKY[S.tire.kind]) {
+      var tn = S.tune || {}, optP = S.tire.optP, psi = tn.psi != null ? tn.psi : optP;
+      this.shakeK = clamp(1 + (optP - psi) / optP * 1.5, 0.6, 1.8) * ({ prep: 1, noprep: 0.6, street: 0.5 }[this.cond.surface] || 1) *
+        (opts.shakeRnd != null ? opts.shakeRnd : 1) * SHAKY[S.tire.kind];
+      this.shakeDamp = 1 + ((tn.rebR != null ? tn.rebR : 5) - 5) * 0.1;
+    }
+    this.dist = opts.dist || DR.QUARTER;
+    this.x = 0; this.v = 0; this.a = 0;
+    this.we = S.idle * RPM2W; this.ww = 0;
+    this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = S.engage || 0.3; this.locked = false;
+    this.launched = false; this.t = 0; this.time = 0;
+    this.boost = 0; this.tbSt = { U: 0 }; this.thr = 0; this.cut = false; this.cutT = 0; this.stepT = 0;
+    this.phi = 0; this.dphi = 0; this.z = 0; this.dz = 0;   // body pitch (nose up +) and heave (up +) on the springs
+    this.wheelie = false; this.th = 0; this.dth = 0; this.unload = 0; this.onBar = false;
+    this.tireT = opts.tireT != null ? opts.tireT : 28;
+    this.nosOn = false; this.nosLvl = 0; this.nosT = 0;
+    this.shifting = false; this.shiftT = 0; this.sinceShift = 9; this.lu = 0;
+    this.slip = 0; this.F = 0;
+    this.peakHp = 0; this.peakTqNm = 0;
+    this.crashed = false; this.blown = false; this.broke = false;
+    this.failAt = opts.failAt || 0; this.failType = opts.failType || '';
+    this.splits = {}; this.etStart = null; this.finished = false;
+    this.tcCut = 0; this.tcI = 0; this.tcRed = 0; this.brake = 0;
+    this.brakeLimited = false; this.creep = 0; this.creepV = 0;
+    this.events = [];          // for visuals: 'shift', 'backfire', 'bar', 'land'
+    var N0 = S.drive === 'FWD' ? S.m * G * S.f : S.drive === 'AWD' ? S.m * G : S.m * G * (1 - S.f);
+    this.N0 = N0;
+  }
+  DR.Sim = Sim;
+  DR.SPLITS = [['60ft', 60 * DR.FT], ['330ft', 330 * DR.FT], ['1/8', DR.EIGHTH], ['1000ft', 1000 * DR.FT], ['1/4', DR.QUARTER]];
+
+  Sim.prototype.rpm = function () { return this.we * W2RPM; };
+
+  // Suspension force (beyond static) at one corner: spring, bump / rebound
+  // damping, a stiff bump stop past the bump travel and a droop limit that
+  // pulls back once the corner is fully extended.
+  function corner(k, cb, cr, bump, droop, c, v) {
+    var F = k * c + (v > 0 ? cb : cr) * v;
+    if (c > bump) F += 9 * k * (c - bump) + 2 * cb * Math.max(0, v);
+    if (c < -droop) F += 9 * k * (c + droop) + 2 * cr * Math.min(0, v);
+    return F;
+  }
+
+  Sim.prototype.tireForce = function (ww, N, mu) {
+    var S = this.S, r = S.r, v = this.v;
+    var den = Math.max(Math.abs(v), 2.5);
+    var s = (ww * r - v) / den, as = Math.abs(s), x = as / S.tslip, f, df;
+    if (x < 1) { f = 2 * x - x * x; df = (2 - 2 * x) / S.tslip; }
+    else { var e = Math.exp(-(as - S.tslip) / S.tfk); f = 1 - S.tfall * (1 - e); df = -S.tfall * e / S.tfk; }
+    var sg = s < 0 ? -1 : 1;
+    return { F: sg * mu * N * f, dF: mu * N * df * r / den, s: s };
+  };
+
+  // A tire past its window goes greasy: a drag radial's soft compound has
+  // the narrowest window (tire makers: haze them and stage), a slick takes
+  // more heat, a street tire somewhere between.
+  // tires that shake (sidewalls built to wrinkle), and how readily
+  var SHAKY = { 'Drag Radial': 1, Slick: 0.8 };
+  var HOT = { 'Drag Radial': [15, 0.009], Street: [25, 0.006] };
+  Sim.prototype.tempFactor = function () {
+    var t = this.S.tire, T = this.tireT, hot = (this.cond && HOT[t.kind]) || [30, 0.005];
+    var k = this.surfFactor();
+    if (T < t.topt) return k * (1 - t.cold * clamp((t.topt - T) / (t.topt - 20), 0, 1));
+    if (T > t.topt + hot[0]) return k * Math.max(0.72, 1 - (T - t.topt - hot[0]) * hot[1]);
+    return k;
+  };
+  // The tread's surface. A tire turning near its peak slip makes little heat;
+  // one spinning hard puts tens of kilowatts into the thin surface layer of
+  // the tread (force x slip speed), which heats in tenths of a second and
+  // sheds it into the carcass and the track about as fast. Past what the
+  // compound takes it goes greasy: why spin costs a drag car so much more
+  // than a dry-road skid test suggests (a street tire locked on dry asphalt
+  // keeps ~88% of its peak). A drag radial is the least forgiving ("dead
+  // hook it"), a bias-ply slick is built to work with some slip, a street
+  // or track tire somewhere between (and a street tire sliding still keeps
+  // most of its grip). [window above the carcass in C, grip lost per C past
+  // it, the least it keeps]
+  // [.., lowest it goes]
+  var SURF = { 'Drag Radial': [30, 0.0045, 0.55], Slick: [45, 0.003, 0.65], Street: [40, 0.003, 0.72], Track: [40, 0.003, 0.72], 'Race Slick': [40, 0.003, 0.7] };
+  Sim.SURF_TAU = 0.5; Sim.SURF_K = 1.9e-3;
+  Sim.prototype.surfFactor = function () {
+    var w = SURF[this.S.tire.kind] || SURF.Street, over = (this.tsurf || 0) - w[0];
+    return over > 0 ? Math.max(w[2], 1 - over * w[1]) : 1;
+  };
+
+  Sim.prototype.launch = function () {
+    if (this.launched) return;
+    // the clutch comes out at its own engagement rate; how much it is slipped
+    // to save the launch depends on the car (S.slipAssist). The throttle is
+    // always the driver's.
+    this.launched = true; this.t = 0; this.clT = 0; this.clRamp = this.S.engage || 0.3; this.locked = false;
+    this.launchW = Math.max(this.we, this.S.idle * RPM2W * 1.3); this.firstLock = false;
+  };
+
+  // Standing burnout in the box: the line lock holds the non-driven wheels
+  // and the drive tires are free to spin on the wet pad. AWD cars can't.
+  // (an AWD car has no line lock: all four spin and it rolls through the
+  // water; the race screen moves it, the physics spins and heats the tires)
+  Sim.prototype.burnout = function (on) {
+    if (!!on === !!this.burnMode) return !!on;
+    this.burnMode = !!on;
+    this.gear = 0; this.cl = 0; this.clT = 0; this.clRamp = 0.15; this.locked = false;
+    if (!on) { this.ww = 0; this.slip = 0; }
+    return !!on;
+  };
+
+  // how fast a tire comes up to heat in the burnout box: drag radials (thin,
+  // soft sidewalls and a thin tread) heat quickly and only want a light
+  // burnout; a big slick takes a good long one
+  Sim.burnHeat = function (tire) { return tire.kind === 'Drag Radial' ? 1.6 : tire.kind === 'Slick' ? 1 : 1.25; };
+  // a gear up in the burnout box (an automatic shifts itself as the wheels
+  // speed up; racers do most of the burnout in 2nd or 3rd)
+  Sim.prototype.burnShift = function () {
+    var S = this.S;
+    if (!this.burnMode || this.gear >= Sim.burnTop(S)) return false;
+    this.gear++;
+    if (S.trType !== 'auto') { this.burnDrop = true; }
+    this.events.push('shift');
+    return true;
+  };
+  // the highest gear for a burnout: high on a Powerglide, 2nd on a 3-speed,
+  // 3rd on anything with more gears
+  Sim.burnTop = function (S) { var n = S.ratios.length; return n <= 2 ? n - 1 : n === 3 ? 1 : 2; };
+  Sim.prototype.shiftUp = function () {
+    var S = this.S;
+    if (!this.launched || this.shifting || this.gear >= S.ratios.length - 1 || this.crashed || this.blown) return false;
+    this.shifting = true; this.shiftT = 0; this.sinceShift = 0;
+    if (S.trType !== 'manual') { this.gear++; this.locked = false; }
+    this.events.push('shift');
+    return true;
+  };
+
+  // One physics step. inp = {throttle:0..1, nos:bool}
+  Sim.prototype.step = function (dt, inp) {
+    if (!(dt > 0)) return;
+    var S = this.S, m = S.m;
+    this.time += dt;
+    if (this.launched) this.t += dt;
+    var dead = this.crashed || this.blown || this.broke;
+
+    // -------- failures scheduled for this run
+    if (this.failAt && this.launched && !dead && this.t >= this.failAt) {
+      if (this.failType === 'trans' || this.failType === 'axle' || this.failType === 'chassis') { this.broke = true; this.brokeWhat = this.failType; this.events.push('broke'); }
+      else { this.blown = true; this.events.push('blown'); }
+      dead = true;
+    }
+
+    // -------- throttle & driver aids
+    var thrIn = dead || this.finished ? 0 : clamp(inp.throttle || 0, 0, 1);
+    if (this.launched && S.ecu >= 2 && S.tune.thrRamp > 0 && this.t < S.tune.thrRamp) {
+      var lt = S.tune.launchThr / 100;
+      thrIn = Math.min(thrIn, lt + (1 - lt) * this.t / S.tune.thrRamp);
+    }
+    this.tcRed = 0;
+    if (this.launched && S.ecu >= 3 && S.tune.tcSlip > 0) {
+      if (S.ai) {
+        // rivals' builds were set up on the old on/off throttle cut
+        if (this.slip > S.tune.tcSlip / 100) this.tcCut = Math.min(1, this.tcCut + dt * 10);
+        else this.tcCut = Math.max(0, this.tcCut - dt * 5);
+        thrIn *= 1 - 0.75 * this.tcCut;
+      } else {
+        // Modern drag traction management (Holley, FuelTech, MoTeC): driven
+        // speed against where it should be, and the answer is ignition
+        // timing, not throttle: retard comes in and out smoothly (a PI
+        // loop), up to ~20 degrees (~30% of the torque), then a soft cut
+        // drops cylinders for the rest. The throttle stays open, so boost
+        // holds.
+        var tgt = S.tune.tcSlip / 100, k = (S.tune.tcGain || 5) / 5;
+        // measured as speed, like a driveshaft sensor against the car's
+        // speed: the allowed spin is the target % of the car's speed, never
+        // less than that % of ~15 mph (a % of nearly nothing at the hit
+        // would read as huge spin)
+        var spinV = this.ww * S.r - this.v, allowV = tgt * Math.max(this.v, 7);
+        var over = (spinV - allowV) / allowV;
+        // timing retard answers the spin right now (up to ~20 degrees, ~30%
+        // of the torque); only spin that keeps going (the integral) adds the
+        // soft cut, so a short hit-spike the tires recover from by
+        // themselves doesn't drag the engine off boost
+        this.tcI = clamp((this.tcI || 0) + Math.min(over, 1.5) * dt * 1.5 * k, 0, 0.8);
+        var retard = clamp(over * 0.3 * k + Math.min(this.tcI, 0.3), 0, 0.3);
+        var want = retard + clamp(this.tcI - 0.3, 0, 0.5);
+        this.tcCut += clamp(want - this.tcCut, -dt * 6, dt * 8 * Math.sqrt(k));
+        this.tcCut = clamp(this.tcCut, 0, 0.8);
+        this.tcRed = this.tcCut;
+      }
+    } else this.tcCut = 0;
+    var pre = !this.launched && !this.burnMode;     // sitting on the brakes / transbrake
+    // the burnout rev limit: the ECU holds the revs with the throttle (no cut)
+    this.drvThr = thrIn;
+    if (this.burnMode && S.tune.burnRpm && S.tune.burnRpm < S.limit - 50) thrIn = Math.min(thrIn, clamp((S.tune.burnRpm - this.we * W2RPM) / 500 + 0.12, 0, 1));
+    // An H-pattern shift: the driver is off the gas with the clutch in (an
+    // engine left flat out on the limiter would dump the clutch in the next gear)
+    if (this.shifting && S.trType === 'manual') thrIn = 0;
+    this.thr += (thrIn - this.thr) * Math.min(1, dt / 0.04);
+    var rpm = this.we * W2RPM;
+
+    // -------- ignition cuts: rev limiter, 2-step, sequential shift cut
+    var limit = (pre && S.twostep) ? S.tune.launchRpm : S.limit;
+    if (rpm > limit) this.cut = true; else if (rpm < limit - (this.launched ? 120 : 60)) this.cut = false;
+    var seqCut = this.shifting && (S.trType === 'seq' || S.trType === 'dct');
+    var firing = !this.cut && !seqCut;
+    // how much of the time the ignition was cut, for the sound (the limiter
+    // flickers many times between two frames)
+    this.cutT += firing ? 0 : dt; this.stepT += dt;
+    if (this.cut && pre && S.twostep && Math.random() < dt * 25) this.events.push('backfire');
+
+    // -------- boost
+    var thrB = this.thr;
+    if (S.fiType === 'turbo') {
+      var bSet = S.gearBoost ? Math.min(S.boostSet, S.gearBoost[Math.min(this.gear, S.gearBoost.length - 1)]) : S.boostSet;
+      var tgt = bSet + creepAt(S, rpm);
+      this.tbSt = this.tbSt || { U: 0 };
+      if (pre) {
+        // revving with no load on it (clutch in, in neutral) a turbo makes
+        // next to no boost: only a 2-step builds it on the line (its cut and
+        // retarded spark light the exhaust), more the closer to where the
+        // turbo comes in
+        var target = Math.min(tgt, holdAt(S, rpm)) * thrB * 0.1;
+        // a diesel on the brake against an automatic's converter is under
+        // load: it fuels and builds real boost at the stall
+        if (S.dsl && S.trType === 'auto') target = Math.max(target, Math.min(tgt, holdAt(S, rpm)) * thrB * 0.6);
+        if (S.twostep && thrB > 0.5) {
+          var build = clamp((S.tune.launchRpm - S.spoolLo * 0.5) / (S.spoolHi * 0.85 - S.spoolLo * 0.5), 0.15, 1);
+          target = Math.max(target, bSet * (S.twostep === 2 ? 0.92 : 0.5) * build);
+        }
+        var tau = target > this.boost ? S.lag * Math.sqrt(S.spoolHi / Math.max(rpm, 1500)) : 0.15;
+        this.boost += (target - this.boost) * Math.min(1, dt / tau);
+        this.tbSt.U = tbPsi2U(this.boost);
+      } else {
+        var closed = thrB < 0.3;
+        // anti-lag keeps the turbine lit through a shift
+        if (this.shifting && S.twostep === 2) closed = false;
+        this.boost = tbStep(S, this.tbSt, rpm, thrB, tgt, dt, closed) * thrB;
+      }
+    } else if (S.fiType !== 'none') {
+      this.boost = steadyBoost(S, rpm) * thrB;
+    }
+    // -------- a diesel: air-fuel ratio, smoke and exhaust temperature
+    if (S.dsl) {
+      var ds = dieselState(S, rpm, this.boost, Math.max(0.05, thrB));
+      this.afr = ds.afr;
+      this.egt = (this.egt || 500) + ((thrB > 0.05 ? ds.egt : 450) - (this.egt || 500)) * Math.min(1, dt / 1.2);
+      this.smoke = thrB > 0.2 ? clamp((21 - ds.afr) / 7, 0, 1) : 0;
+      this.egtMax = Math.max(this.egtMax || 0, this.egt);
+    }
+
+    // -------- nitrous
+    var wantNos = inp.nos || (S.prog && this.launched && this.t >= S.tune.nosDelay);
+    this.nosOn = !!(S.nosW && wantNos && this.launched && !dead && !this.finished && this.thr > 0.8 && rpm > 2200);
+    if (this.nosOn) {
+      this.nosT += dt;
+      var ramp = S.prog ? S.tune.nosRamp : 0.05;
+      this.nosLvl = ramp > 0 ? Math.min(1, this.nosLvl + dt / ramp) : 1;
+    } else this.nosLvl = Math.max(0, this.nosLvl - dt * 8);
+
+    // -------- engine torque
+    var wE = Math.max(this.we, 30);
+    var fric = S.Tpk * (0.05 + 0.09 * rpm / S.ref);
+    var Te;
+    if (dead) Te = -fric * 2;
+    else if (firing) {
+      // a carb's secondaries off the line: vacuum ones open softly, an
+      // oversized carb stumbles for a moment before the signal comes up
+      var hitK = S.carbHit && this.launched && this.t < 0.5 ? S.carbHit + (1 - S.carbHit) * this.t / 0.5 : 1;
+      Te = boostedTorque(S, rpm, this.boost, this.kdT, this.nosLvl * (S.nosKnock || 0)) * (S.dsl && S.dsl.gearLim ? S.dsl.gearLim[this.gear] || 1 : 1) * this.airK * hitK * this.thr * (1 - this.tcRed) - fric * (1 - this.thr) + this.nosLvl * S.nosW * this.nosP / wE * (1 - this.tcRed);
+      // timing the tune pulled for knock (degrees, for the data logger)
+      this.knockDeg = S.diesel || !(this.boost > 0) ? 0 : knockDeg(kLast.x, kLast.P);
+      // a soft cut (TC past full retard) drops cylinders: heard as a crackle
+      if (this.tcRed > 0.3) this.cutT += dt * (this.tcRed - 0.3) / 0.5;
+      var p = Te * wE;
+      if (p / DR.HP > this.peakHp && this.launched) this.peakHp = p / DR.HP;
+      if (Te > this.peakTqNm && this.launched) this.peakTqNm = Te;
+    } else Te = -fric;
+    var idleW = S.idle * RPM2W;
+    if (this.we < idleW && !dead) Te += (idleW - this.we) / idleW * S.Tpk * 0.6;   // idle governor
+
+    // -------- normal loads (weight transfer + wheelies)
+    var L = S.L, h = S.h, Nr, Nf, mg = m * G;
+    if (!this.wheelie) {
+      // Body on two suspension corners. Fl: longitudinal force at the ground
+      // (drive or brakes) pitches the body about its CG; anti-squat feeds part
+      // of the drive force straight into the rear through the links.
+      var aF = L - S.b, bR = S.b;
+      var Fl = m * this.a, Fj = S.drive !== 'FWD' ? S.as * Math.max(0, this.F || 0) * h / L : 0;
+      var cf = -(this.z + aF * this.phi), cr = -(this.z - bR * this.phi);          // compression (+)
+      var vf = -(this.dz + aF * this.dphi), vr = -(this.dz - bR * this.dphi);
+      var Ff = mg * S.f + corner(S.kf, S.cbF, S.crF, S.bumpF, S.droopF, cf, vf);
+      var Fr = mg * (1 - S.f) + corner(S.kr, S.cbR, S.crR, S.bumpR, S.droopR, cr, vr);
+      this.dz += dt * (Ff + Fr + Fj - mg) / m;
+      this.dphi += dt * (Ff * aF - (Fr + Fj) * bR + Fl * h) / S.Ip;
+      this.z += this.dz * dt; this.phi += this.dphi * dt;
+      this.cf = cf; this.cr = cr;
+      Nr = Fr + Fj; Nf = Ff;
+      if (Nf < 0) { this.wheelie = true; this.th = 0; this.dth = 0.02; Nr = mg; Nf = 0; }
+    }
+    if (this.wheelie) {
+      var b = S.b, Ir = S.Ip + m * (b * b + h * h), th = this.th;
+      var mom = m * this.a * (b * Math.sin(th) + h * Math.cos(th)) - mg * (b * Math.cos(th) - h * Math.sin(th));
+      this.dth += mom / Ir * dt; this.th += this.dth * dt;
+      var Fbar = 0, wasOnBar = this.onBar;
+      this.onBar = false;
+      if (S.bar && this.th >= S.barRad) {
+        // the strike (once, coming up onto the bar) kicks load off the tires;
+        // riding the bar just carries part of the car's weight
+        if (!wasOnBar && this.dth > 0.05) { this.unload = Math.min(0.55 * mg, this.unload + Ir * this.dth / (S.barLen * 0.07)); this.events.push('bar'); }
+        this.th = S.barRad; this.dth = Math.min(0, this.dth);
+        Fbar = Math.max(0, mom) / S.barLen;
+        this.onBar = true;
+      }
+      if (this.th <= 0 && this.dth <= 0) {
+        if (this.dth < -0.6) this.events.push('land');
+        // front tires back down: the springs pick up from where the body is,
+        // with the nose's fall going into the front corners (bounce, no snap)
+        var aL = L - S.b;
+        this.dphi += this.dth; this.dz += this.dth * aL * 0.5;
+        this.wheelie = false; this.th = 0; this.dth = 0;
+      }
+      if (this.th > (this.maxTh || 0)) this.maxTh = this.th;
+      if (this.th > 1.15 && !this.crashed) { this.crashed = true; this.events.push('crash'); }
+      Nr = mg - Fbar; Nf = 0;
+    }
+    this.unload *= Math.exp(-dt / 0.07);
+    Nr = Math.max(Nr - this.unload, 0.05 * mg) + 0.5 * DR.RHO * S.cla * this.v * this.v;
+    Nf = Math.max(0, Nf);
+    this.Nr = Nr; this.Nf = Nf;
+    var N = S.drive === 'FWD' ? Nf : S.drive === 'AWD' ? Nr + Nf : Nr;
+    var loadSens = Math.pow(Math.max(N, 100) / this.N0, -0.08);
+    var mu = S.tire.mu * this.track * (S.wearK || 1) * S.pf * this.tempFactor() * S.dgrip * loadSens * (this.launched && this.t < 1.5 ? S.mountK || 1 : 1);
+    if (!this.cond && this.track < 1 && S.tire.kind === 'Slick') mu *= 0.93;
+    if (this.burnMode) mu *= 0.5;                  // water in the burnout box
+    // Tire shake: a soft drag tire loaded right at its limit wraps up and
+    // lets go over and over (8-10 times a second): the car hops, grip comes
+    // and goes, and it only stops if the driver lifts (or the tire breaks
+    // loose and spins). Early in the run, in the low gears.
+    if (this.shakeK && this.launched && !this.finished && !this.wheelie) {
+      var util = this.mu > 0 && this.Nd > 0 ? Math.abs(this.F || 0) / (this.mu * this.Nd) : 0, near = this.slip / S.tslip;
+      var exc = this.gear <= 1 && this.t > 0.15 && this.t < 3.5 && near > 0.5 && near < 1.6 && this.thr > 0.6 ? Math.max(0, util - 0.72) * 14 * this.shakeK : 0;
+      var damp = this.thr < 0.4 ? 9 : 1.2 * this.shakeDamp;
+      this.shake = clamp(this.shake + dt * (exc * (0.08 + this.shake) - damp * this.shake), 0, 1);
+      this.shakePh += dt * 2 * Math.PI * 9;
+      if (this.shake > 0.02) mu *= 1 - 0.6 * this.shake * (0.5 + 0.5 * Math.sin(this.shakePh));
+      if (this.shake > this.shakeMax) this.shakeMax = this.shake;
+      if (this.shake > 0.5 && !this.shakeEv) { this.shakeEv = true; this.events.push('shake'); }
+      // pedalling it (a quick lift) unloads the tire and resets the chassis:
+      // back in, it is past the point where it was shaking
+      if (this.thr < 0.4 && this.shake > 0.2 && !this.pedalled) { this.pedalled = true; this.shakeK *= 0.55; }
+      // ridden out, a hard shake hammers the driveline until something gives
+      if (this.shake > 0.75) this.shakeHard = (this.shakeHard || 0) + dt;
+      if (this.shakeHard > 0.9 && !this.shakeRolled) { this.shakeRolled = true; if (!this.failAt && Math.random() < 0.35) { this.failAt = this.t; this.failType = 'axle'; } }
+    }
+    this.Nd = N;
+    this.mu = mu;
+
+    // -------- drivetrain
+    var r = S.r, eta = S.eff;
+    var Gr = S.ratios[this.gear] * S.fd;
+    var Fx = 0, tf;
+    var held = pre || this.finished && this.v < 0.5;
+    if (this.burnMode) {
+      this.v = 0;
+      if (this.drvThr < 0.1) this.ww *= Math.exp(-dt * 4);     // on the brake between hits
+      // clutch in until the revs come up (a driver revs it, then drops it)
+      if (S.trType !== 'auto') {
+        if (this.drvThr < 0.25) { this.clT = 0; this.burnDrop = false; }
+        else if (!this.burnDrop) { if (this.we >= Math.min(S.red * 0.7, Math.max(S.tqRpm, S.idle + 2500), (S.tune.burnRpm || S.red) - 300) * RPM2W) this.burnDrop = true; else this.clT = 0; }
+        // the tires hooked and it's bogging: clutch in, rev it, drop it again
+        else if (this.we < (S.idle + 700) * RPM2W) { this.burnDrop = false; this.clT = 0; }
+      }
+    }
+
+    if (held && !this.launched) {
+      // On the line: brakes / transbrake hold the car
+      this.ww = 0; this.v = 0;
+      if (S.trType === 'auto') {
+        var K = this.convK();
+        var Timp = Math.pow(this.we / K, 2);
+        this.we += dt * (Te - Timp) / S.Ie;
+        if (!S.tbrake) {
+          // Foot brake (no transbrake): more converter torque than the brakes
+          // hold and the car creeps forward through them (out of the beams)
+          var Thold = Timp * S.TR * Gr * eta, over = Thold - S.brakeHold;
+          this.brakeLimited = over > -0.03 * S.brakeHold && thrIn > 0.1;
+          if (over > 0) this.creepV += dt * over / (r * m);
+          else this.creepV = Math.max(0, this.creepV - dt * 2);
+          this.creep += this.creepV * dt;
+        }
+      } else {
+        this.we += dt * Te / S.Ie;
+      }
+    } else if (this.finished) {
+      // Shutdown area: the driver lifts at the stripe, coasts for a moment,
+      // then gets on the brakes. Fast cars throw the parachute.
+      var since = this.time - this.finishTime;
+      this.we += (idleW * 1.4 - this.we) * Math.min(1, dt * 3);
+      this.brake = since > 0.45 ? Math.min(1, (since - 0.45) / 0.5) : 0;
+      if (this.chute === undefined) this.chute = this.trap > 140 ? 0 : -1;
+      if (this.chute >= 0 && since > 0.6) this.chute = Math.min(1, this.chute + dt * 2.5);
+      var vv = this.v * this.v;
+      var dec = 0.5 * DR.RHO * (S.cda + Math.max(0, this.chute) * 3.2) * vv / m + S.crr * G + this.brake * 6.5;
+      this.v = Math.max(0, this.v - dt * dec);
+      this.x += this.v * dt;
+      this.ww = this.v / r;
+      this.a += (-dec - this.a) * Math.min(1, dt / 0.05);
+      this.slip = 0;
+    } else if (S.trType === 'auto') {
+      var shiftScale = 1;
+      if (this.shifting) shiftScale = 0.55;
+      var K2 = this.convK();
+      var wT = this.ww * Gr;
+      var SR = this.we > 1 ? wT / this.we : 1;
+      // coupling: 1 at stall, falling to 0 as the turbine catches the engine
+      var P = CONV_P, sp = Math.pow(Math.min(Math.max(SR, 0), 1.2), P - 1);
+      var cs = SR < 1 ? 1 - sp * SR : -Math.min(1, sp * SR - 1);
+      var cap2 = Math.pow(this.we / K2, 2);
+      var Timp2 = cap2 * cs;
+      var TR = SR < 0.85 ? S.TR - (S.TR - 1) * Math.max(SR, 0) / 0.85 : 1;
+      var Ttur = Timp2 * TR * shiftScale;
+      // lockup clutch: applied (over ~0.15 s) a moment after the shift into
+      // the lockup gear, released for every shift; it drags the engine down
+      // to the turbine's speed and then holds them together
+      // (and, like a real lockup controller, not until the gearbox is
+      // turning near the converter's stall: locked at the hit, the engine
+      // would be dragged down to the wheels' speed)
+      var luOn = S.lockup && this.launched && !this.shifting && this.sinceShift > 0.12 && this.gear + 1 >= ((S.tune && S.tune.luGear) || S.ratios.length) &&
+        (this.lu > 0 || wT >= 0.85 * S.stall * RPM2W);
+      this.lu = luOn ? Math.min(1, this.lu + dt / 0.15) : 0;
+      if (this.lu >= 1 && Math.abs(this.we - wT) < Math.max(2, 0.004 * this.we)) {
+        // locked: engine, gearbox and wheels turn as one
+        var Jl = S.Ie * Gr * Gr + S.Iw;
+        tf = this.tireForce(this.ww, N, mu);
+        this.ww = Math.max(0, this.ww + dt * (Te * Gr * eta - tf.F * r) / (Jl + dt * r * Math.max(tf.dF, 0)));
+        this.we = this.ww * Gr;
+        tf = this.tireForce(this.ww, N, mu);
+        Fx = tf.F;
+        this.luLocked = true;
+      } else {
+      this.luLocked = false;
+      var Tlu = 0;
+      // the converter is a stiff coupling, so both sides are integrated
+      // semi-implicitly using its local slope
+      var dcs = SR < 1.2 ? P * sp : 0;                         // -d(cs)/d(SR)
+      var kE = Math.max(0, cap2 * (2 * cs + dcs * SR) / Math.max(this.we, 1));
+      this.we += dt * (Te - Timp2) / (S.Ie + dt * kE);
+      // the lockup clutch while it slips: friction torque up to its clamp,
+      // pulling the engine toward the turbine (never past it); what it takes
+      // off the engine's spin goes to the wheels
+      if (this.lu > 0) {
+        var gap = this.we - wT, capLU = this.lu * 2.2 * S.peakTq / 0.7376;
+        var dwl = Math.min(Math.abs(gap), dt * capLU / S.Ie);
+        this.we -= Math.sign(gap) * dwl;
+        Tlu = Math.sign(gap) * dwl * S.Ie / dt;
+      }
+      tf = this.tireForce(this.ww, N, mu);
+      var Tw = (Ttur + Tlu) * Gr * eta;
+      var kW = cap2 * dcs * TR * shiftScale * Gr * Gr * eta / Math.max(this.we, 1);
+      // the foot brake takes a moment to release; a transbrake lets go instantly
+      if (!S.tbrake && this.launched && this.t < 0.18) Tw -= S.brakeHold * (1 - this.t / 0.18);
+      this.ww += dt * (Tw - tf.F * r) / (S.Iw + dt * r * Math.max(tf.dF, 0) + dt * kW);
+      if (this.ww < 0) this.ww = 0;
+      tf = this.tireForce(this.ww, N, mu);
+      Fx = tf.F;
+      }
+    } else {
+      // Clutch: manual / sequential / dual-clutch
+      if (this.shifting && S.trType === 'manual') this.cl = 0;
+      else {
+        this.clT += dt;
+        var ramp = this.clRamp;
+        this.cl = clamp(this.clT / ramp, 0, 1);
+      }
+      var cap = S.clCap * this.cl;
+      // a slipper clutch's base pressure is set under the engine's torque:
+      // it slips at the hit so the engine stays up on the boost, and the
+      // clamp builds with time until it locks
+      if (S.slider && this.launched && this.t < S.slider[1] && !this.shifting) cap = Math.min(cap, S.peakTq / 0.7376 * (S.slider[0] + (1.3 - S.slider[0]) * this.t / S.slider[1]));
+      // Launch slip (low-power cars): until the clutch first locks it is let
+      // in so the engine doesn't bog below the revs it was launched at, and
+      // only as hard as the tires can take, eased back if they start to go.
+      // Blended towards a raw dump as the car's torque outgrows its tires.
+      if (S.slipAssist > 0 && this.gear === 0 && !this.firstLock && !this.shifting && !this.burnMode) {
+        // (no lower than it was launched at, nor higher than its torque and power peaks:
+        // slipping a clutch near the limiter just wastes the launch)
+        var hold = Math.max(S.idle * RPM2W * 1.3, Math.min(this.launchW * 0.82, (S.tqRpm + S.peakHpRpm) / 2 * RPM2W));
+        var held = Math.max(0, Math.max(Te, 0) * 1.05 + (this.we - hold) * S.Ie * 60);
+        var spinOver = Math.max(0, this.slip / S.tslip - 1.15);
+        held = Math.min(held, mu * N * r / (Gr * eta) * Math.max(0.5, 1.05 - spinOver * 0.5));
+        cap = S.slipAssist * Math.min(cap, held) + (1 - S.slipAssist) * cap;
+      }
+      // Base pressure: a racer sets a big multi-disc clutch's counterweights
+      // so it slips on the hit instead of bogging the engine (a dumped
+      // triple-disc would drag a turbo motor down off boost). The clamp
+      // holds the revs to about two-thirds of the launch rpm until it locks.
+      if (!S.ai && this.gear === 0 && this.launched && !this.firstLock && !this.shifting && !this.burnMode) {
+        var holdB = Math.max(S.idle * RPM2W * 1.3, Math.min(this.launchW * 0.65, S.peakHpRpm * 0.75 * RPM2W));
+        cap = Math.min(cap, Math.max(0, Math.max(Te, 0) * 1.05 + (this.we - holdB) * S.Ie * 60));
+      }
+      if (dead) cap = this.broke ? 0 : cap;
+      var done = false;
+      if (this.locked) {
+        var J = S.Ie * Gr * Gr + S.Iw;
+        tf = this.tireForce(this.ww, N, mu);
+        var wwn = this.ww + dt * (Te * Gr * eta - tf.F * r) / (J + dt * r * Math.max(tf.dF, 0));
+        var alphaE = (wwn - this.ww) * Gr / dt;
+        var Tcl = Te - S.Ie * alphaE;
+        if (Math.abs(Tcl) <= cap && wwn * Gr > idleW * 0.7) {
+          this.ww = Math.max(0, wwn); this.we = this.ww * Gr; done = true;
+        } else this.locked = false;
+      }
+      if (!done) {
+        var dw = this.we - this.ww * Gr;
+        // (at the same speed on both sides, e.g. the step after it broke
+        // loose from locked: it passes the engine's torque up to what it
+        // holds, not nothing)
+        var Tc = Math.abs(dw) < 1e-6 ? clamp(Te, -cap, cap) : (dw > 0 ? cap : -cap);
+        this.clutchE += Math.abs(Tc * dw) * dt;
+        var weN = this.we + dt * (Te - Tc) / S.Ie;
+        tf = this.tireForce(this.ww, N, mu);
+        var wwN = this.ww + dt * (Tc * Gr * eta - tf.F * r) / (S.Iw + dt * r * Math.max(tf.dF, 0));
+        if (wwN < 0) wwN = 0;
+        var dwN = weN - wwN * Gr;
+        if (this.cl > 0 && dw * dwN <= 0 && wwN * Gr > idleW * 0.7) {
+          var wc = (S.Ie * Gr * this.we + S.Iw * wwN) / (S.Ie * Gr * Gr + S.Iw);
+          this.ww = wc; this.we = wc * Gr; this.locked = true; this.firstLock = true;
+        } else { this.we = weN; this.ww = wwN; }
+      }
+      if (this.we < idleW * 0.55) this.we = idleW * 0.55;
+      tf = this.tireForce(this.ww, N, mu);
+      Fx = tf.F;
+    }
+    if (this.we > (S.red + 1200) * RPM2W) this.we = (S.red + 1200) * RPM2W;
+    if (this.we < 0) this.we = 0;
+
+    // -------- shift timing
+    this.sinceShift += dt;
+    if (this.shifting) {
+      this.shiftT += dt;
+      if (this.shiftT >= S.shiftTime) {
+        this.shifting = false;
+        if (S.trType === 'manual') { this.gear++; this.clT = 0; this.clRamp = 0.12; this.locked = false; }
+      }
+    }
+
+    // -------- body
+    if (this.launched && !this.finished) {
+      var Fd = 0.5 * DR.RHO * S.cda * this.v * this.v;
+      var Fr = this.v > 0.05 ? S.crr * mg : 0;
+      var aN = (Fx - Fd - Fr) / (m + 2 * 1.2 / (r * r));
+      // the brakes before the stripe (a bracket racer giving some back)
+      var brkIn = inp && inp.brake > 0 ? Math.min(1, inp.brake) : 0;
+      if (brkIn) aN -= brkIn * 6.5;
+      this.v += aN * dt;
+      if (brkIn && this.ww * r > this.v) this.ww = Math.max(0, this.v) / r;
+      if (this.v < 0) { this.v = 0; aN = Math.max(aN, 0); }
+      this.a += (aN - this.a) * Math.min(1, dt / 0.012);
+      if (this.crashed) { this.v *= Math.exp(-dt * 1.5); }
+      this.x += this.v * dt;
+      if (tf) {
+        this.slip = Math.max(0, tf.s);
+        this.F = Fx;
+        // real wheelspin in the first 60 m (seconds of it), for the tuner's advice
+        if (this.x < 60 && tf.s > S.tslip * 3) this.wspin = (this.wspin || 0) + dt;
+        var slipV = Math.max(0, this.ww * r - this.v);
+        this.tireT += Math.abs(Fx) * slipV * dt * 3.5e-5 * (30 / S.tire.m);
+        this.tireE += Math.abs(Fx) * slipV * dt;
+        // the tread surface: heated by the spin, shedding it in ~half a second
+        this.tsurf = (this.tsurf || 0) + Math.abs(Fx) * slipV * dt * Sim.SURF_K * (24 / S.tire.m) - (this.tsurf || 0) * dt / Sim.SURF_TAU;
+      }
+    } else if (this.burnMode) {
+      this.v = 0; this.a = 0; this.x = 0;
+      if (tf) {
+        this.slip = Math.max(0, tf.s); this.F = Fx;
+        this.tireT += Math.abs(Fx) * this.ww * r * dt * 1.1e-4 * (30 / S.tire.m) * Sim.burnHeat(S.tire);
+        this.tireE += Math.abs(Fx) * this.ww * r * dt;
+      }
+    } else if (!this.launched) { this.slip = 0; this.a = 0; }
+    this.tireT -= (this.tireT - this.trackT) * 0.006 * dt;
+
+    // -------- timing
+    if (this.launched && this.etStart === null && this.x > 0.3) this.etStart = this.time;
+    if (this.etStart !== null && !this.finished) {
+      for (var i = 0; i < DR.SPLITS.length; i++) {
+        var sp = DR.SPLITS[i];
+        if (!this.splits[sp[0]] && this.x >= sp[1] && sp[1] <= this.dist + 0.01) {
+          this.splits[sp[0]] = { t: this.time - this.etStart, mph: this.v * 2.23694 };
+        }
+      }
+      if (this.x >= this.dist) {
+        this.finished = true;
+        this.et = this.time - this.etStart;
+        this.trap = this.v * 2.23694;
+        this.finishTime = this.time;
+      }
+    }
+  };
+
+  // How fast the converter's grip falls away as the turbine catches the
+  // engine (capacity ~ 1 - SR^P): sized so an unlocked converter slips like
+  // real ones at the top end, ~3% for a tight street converter and ~7% for a
+  // 4000-5000 stall race converter (racers' and converter builders' figures)
+  var CONV_P = 6;
+  Sim.prototype.convK = function () {
+    var S = this.S;
+    if (!S._K) {
+      // converters are matched to the combination: it flashes to its rated
+      // stall with this engine's full-boost torque
+      var Tst = boostedTorque(S, S.stall, steadyBoost(S, S.stall));
+      S._K = S.stall * RPM2W / Math.sqrt(Math.max(Tst, 20));
+    }
+    return S._K;
+  };
+
+  // ---------------------------------------------------------------- AI driver
+  // skill 0..1: reaction time, shift accuracy and pedal control.
+  DR.AIDriver = function (skill, rnd) {
+    rnd = rnd || Math.random;
+    this.skill = skill;
+    this.react = 0.02 + (1 - skill) * 0.28 + rnd() * 0.06;
+    this.shiftErr = (rnd() - 0.5) * 600 * (1 - skill);
+    this.launchErr = (rnd() - 0.5) * 1600 * (1 - skill);
+    this.pedal = 1;
+  };
+
+  // A hired drag driver at the wheel: their reaction (how soon after the
+  // green, and how much it wanders), launch (revs off target, feeding the
+  // throttle, pedalling) and consistency (how much every pass varies).
+  DR.AIDriver.fromDrag = function (d, rnd) {
+    rnd = rnd || Math.random;
+    var r = d.rt / 100, c = d.con / 100, l = d.lau / 100;
+    var ai = new DR.AIDriver(l, rnd);
+    ai.react = 0.035 + (1 - r) * 0.22 + (rnd() - 0.5) * (0.012 + (1 - c) * 0.09);   // can go early: a red light
+    ai.launchErr = (rnd() - 0.5) * 1600 * (1 - l) * (0.5 + (1 - c));
+    ai.shiftErr = (rnd() - 0.5) * 500 * (1 - c);
+    ai.burnK = (rnd() - 0.5) * 24 * (1 - c);     // how far off the tire temperature they aim the burnout
+    // a drag driver stays in it through the spin at the hit (with a car
+    // tuned to hook, the tire bites); they pedal spin that keeps going, and
+    // once they've had to, they're on it straight away
+    ai.spinHold = 0.35;
+    return ai;
+  };
+
+  // The revs a driver brings a clutch car up to before dropping the clutch
+  // (no 2-step): the best of a sweep of short runs, found once per spec.
+  DR.aiLaunchRpm = function (S) {
+    if (S._aiLaunch) return S._aiLaunch;
+    var best = S.tune.launchRpm, bestT = 1e9;
+    for (var rpm = S.idle + 900; rpm <= S.limit - 100; rpm += S.ai ? 400 : 200) {
+      var sim = new Sim(S, { grip: 1, dist: DR.QUARTER, tireT: S.tire.topt });
+      var ai = new DR.AIDriver(1, function () { return 0.5; });
+      ai.react = 0; ai.launchAt = rpm;
+      var dt = 1 / 300, tG = -1.2;
+      while (tG < 4 && !sim.crashed) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
+      var t = sim.crashed ? 0 : -sim.x;            // furthest down the track 4 s after the green
+      if (t < bestT) { bestT = t; best = rpm; }
+    }
+    S._aiLaunch = best;
+    return best;
+  };
+  // tGreen = seconds since green light (negative before)
+  DR.AIDriver.prototype.input = function (sim, tGreen, dt) {
+    var S = sim.S, rpm = sim.rpm();
+    var inp = { throttle: 1, nos: false };
+    if (!sim.launched) {
+      var target = S.trType === 'auto' || S.twostep ? S.red : this.launchAt || Math.max(S.idle + 600, DR.aiLaunchRpm(S) + this.launchErr);
+      inp.throttle = rpm < target ? 1 : 0;
+      // on the foot brake: only as much throttle as the brakes will hold
+      if (S.trType === 'auto' && !S.tbrake) {
+        this.brk = this.brk == null ? 1 : sim.brakeLimited ? Math.max(0.1, this.brk - dt * 3) : Math.min(1, this.brk + dt * 1.5);
+        inp.throttle = Math.min(inp.throttle, this.brk);
+      }
+      if (tGreen >= this.react) sim.launch();
+      return inp;
+    }
+    // Pedal control: a skilled driver feathers to hold slip near the tire's peak.
+    var over = sim.slip / S.tslip;
+    // (a tire still has most of its grip a little past its peak, so it only
+    // backs off for real wheelspin, and never to a bog)
+    var spinning = over > 3 + (1 - this.skill) * 3;
+    if (this.spinHold && !this.pedalled) { this.spinT = spinning ? (this.spinT || 0) + dt : 0; spinning = this.spinT > this.spinHold; if (spinning) this.pedalled = true; }
+    if (spinning) this.pedal = Math.max(Math.min(this.pedal, 0.45), this.pedal - dt * (1.5 + 3 * this.skill));
+    else if (over < 2) this.pedal = Math.min(1, this.pedal + dt * (2 + 3 * this.skill));
+    if (sim.wheelie && sim.th > 0.2 + 0.15 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.3);
+    // tire shake: a good driver pedals it the moment it starts
+    if (sim.shake > 0.3 + 0.4 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.25);
+    // nose way up: right off the gas until it comes down
+    if (sim.wheelie && sim.th > 0.4 + 0.1 * (1 - this.skill)) this.pedal = 0;
+    inp.throttle = this.pedal;
+    var shiftAt = Math.min(S.red - 50, S.tune.shiftRpm + this.shiftErr);
+    var lineRpm = sim.ww * S.ratios[sim.gear] * S.fd * 30 / Math.PI;
+    var trig = S.trType === 'auto' ? Math.max(lineRpm / 0.95, rpm >= S.limit - 60 ? rpm : 0) : sim.locked ? rpm : lineRpm;
+    if (!sim.shifting && sim.sinceShift > 0.25 && trig >= shiftAt) sim.shiftUp();
+    inp.nos = sim.gear >= 1 || sim.t > 1.5;
+    if (this.bk) this.stripe(sim, inp);
+    return inp;
+  };
+
+  // Bracket racing: from about the 1000-ft mark the driver watches the other
+  // lane. Ahead: lift (and brake if it's a lot) to take the stripe by a few
+  // hundredths without running under the dial. Beaten: dump it near the
+  // line, so the other car may break out. Never quicker than the dial.
+  // c: consistency (how close they cut it, how well they read the gap),
+  // r: reaction (how soon they judge it). peek() is the race's view of both
+  // lanes: { lead (s, + = ahead on the package), et (this car's projected ET) }.
+  DR.AIDriver.bracket = function (c, r, dial, dist, peek, rnd) {
+    rnd = rnd || Math.random;
+    var g = (rnd() + rnd() + rnd() - 1.5) / 0.5;   // roughly normal
+    return { dial: dial, dist: dist, peek: peek, margin: 0.008 + (1 - c) * 0.03, err: g * (0.004 + (1 - c) * 0.025), judgeAt: 0.6 + (1 - r) * 0.15 };
+  };
+  DR.AIDriver.prototype.stripe = function (sim, inp) {
+    var b = this.bk, left = b.dist - sim.x;
+    if (!sim.launched || sim.finished || sim.crashed || sim.x < b.dist * b.judgeAt) return;
+    var o = b.peek && b.peek();
+    if (!o) return;
+    var lead = o.lead == null ? 0 : o.lead + b.err, thr = 1, brk = 0;
+    if (lead > b.margin) {
+      thr = 0;
+      if (lead > b.margin + 0.06 && left < 90) brk = Math.min(0.6, (lead - b.margin) * 3);
+    } else if (lead < -0.04 && left < 25) { thr = 0; brk = 0.8; }
+    if (o.et < b.dial + 0.004) { thr = 0; if (o.et < b.dial - 0.01 && left < 60) brk = Math.max(brk, 0.5); }
+    if (sim.v < 12) brk = 0;   // giving it back, not stopping
+    inp.throttle = Math.min(inp.throttle, thr);
+    if (brk) inp.brake = brk;
+    if (!thr) inp.nos = false;
+    this.stripeOn = !thr || brk > 0;
+    if (this.stripeOn) sim.lifted = true;   // not a full pass: the logbook marks it
+  };
+
+  // Headless run with a good driver: used for ET estimates and opponents.
+  DR.simulate = function (S, opts) {
+    opts = opts || {};
+    var dist = opts.dist || DR.QUARTER;
+    var sim = new Sim(S, { grip: opts.grip || 1, cond: opts.cond, dist: dist, tireT: opts.tireT != null ? opts.tireT : S.tire.topt });
+    var ai = new DR.AIDriver(opts.skill != null ? opts.skill : 1, function () { return 0.5; });
+    ai.react = 0;
+    var dt = 1 / 400, tG = -1.2, guard = 0;
+    while (!sim.finished && guard < 400 * 60) {
+      var inp = ai.input(sim, tG, dt);
+      sim.step(dt, inp);
+      tG += dt; guard++;
+      if (sim.crashed || sim.blown) break;
+      if (sim.launched && sim.t > 6 && sim.v < 0.5) break;
+    }
+    return { et: sim.finished ? sim.et : 99, trap: sim.trap || 0, splits: sim.splits, crashed: sim.crashed, sim: sim };
+  };
+
+  // Gear-by-gear optimal shift point (rpm) from the torque curve.
+  DR.suggestShift = function (S) {
+    var best = [];
+    for (var g = 0; g < S.ratios.length - 1; g++) {
+      var r1 = S.ratios[g], r2 = S.ratios[g + 1], pick = S.red;
+      for (var rpm = S.tqRpm; rpm <= S.red; rpm += 50) {
+        var f1 = boostedTorque(S, rpm, steadyBoost(S, rpm)) * r1;
+        var rpm2 = rpm * r2 / r1;
+        var f2 = boostedTorque(S, rpm2, steadyBoost(S, rpm2)) * r2;
+        if (f2 > f1) { pick = rpm; break; }
+      }
+      best.push(pick);
+    }
+    if (!best.length) return S.red - 100;
+    var avg = best.reduce(function (a, b) { return a + b; }, 0) / best.length;
+    return Math.round(Math.min(S.red, avg) / 100) * 100;
+  };
+
+  DR.fmtNum = function (x, d) { return x.toFixed(d == null ? 0 : d); };
+})();
