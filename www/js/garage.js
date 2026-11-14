@@ -673,15 +673,17 @@
     var wh = isWheel ? DR.wheelSpec(inst, cat, id) : DR.wheelSpec(inst, other), t = isWheel ? DR.tireSpec(inst, other) : DR.tireSpec(inst, cat, id);
     var ok = DR.tireFits(t, wh), rows = [];
     if (!isWheel) rows.push(h('div', { class: 'dim' }, (t.factory ? 'Factory tires: they go on the factory wheels (or the same size).' : 'Goes on a ' + t.rim + ' in wheel ' + t.wmin + '-' + t.wmax + ' in wide.') + ' Section ' + t.sec + ' in; room in the ' + ax + ' wells: ' + DR.wellLimit(inst, ax) + ' in.'));
+    var mainOpt = DR.getOption(cat, inst, id), mainLocked = !G.partUnlocked(cat, lvlOf(mainOpt), id);
     if (!ok) {
-      // the other half that fits, to buy together
-      var picks = DR.partOptions(other, inst).filter(function (o) {
+      // the other half that fits, to buy together (only parts you can buy)
+      var picks = mainLocked ? [] : DR.partOptions(other, inst).filter(function (o) {
         if (!o.price && !o.factory) return false;
+        if (o.price && !G.partUnlocked(other, lvlOf(o), o.id)) return false;
         var w2 = isWheel ? wh : DR.wheelSpec(inst, other, o.id), t2 = isWheel ? DR.tireSpec(inst, other, o.id) : t;
         return DR.tireFits(t2, w2) && !(cat === 'wheels' && t2.kind === 'Front Runner');
       }).slice(0, 12);
       rows.push(h('div', { class: 'warnbox' }, isWheel ? 'Your ' + ax + ' tires (' + (t.factory ? t.size : t.name) + ') don\'t go on this wheel.' : 'Doesn\'t go on your ' + ax + ' wheels (' + wh.d + 'x' + wh.w + ').',
-        picks.length ? ' Pick ' + (isWheel ? 'tires' : 'wheels') + ' for it (bought and fitted together):' : ' Nothing in the shop fits it on this car.'));
+        mainLocked ? '' : picks.length ? ' Pick ' + (isWheel ? 'tires' : 'wheels') + ' for it (bought and fitted together):' : ' Nothing you can buy yet fits it on this car.'));
       if (picks.length) rows.push(h('div', { class: 'wchips' }, picks.map(function (o) {
         var p1 = G.partPrice(cat, DR.getOption(cat, inst, id)), p2 = o.price ? G.partPrice(other, o) : 0;
         return h('button', { class: 'wchip fit', onclick: function () {
@@ -893,7 +895,7 @@
         })()),
       h('h3', {}, 'ON YOUR SHELF'));
     var items = G.invFor(bayCat);
-    if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat, inst).toLowerCase() + ' parts on your shelf.'));
+    if (!items.length) right.appendChild(h('div', { class: 'dim' }, 'No spare ' + DR.catName(bayCat, inst).toLowerCase() + (/wheels|tires/i.test(DR.catName(bayCat, inst)) ? '' : ' parts') + ' on your shelf.'));
     items.sort(function (a, b) { return (G.partFitIssue(a, inst) ? 1 : 0) - (G.partFitIssue(b, inst) ? 1 : 0) || b.price - a.price; }).forEach(function (it) {
       var why = G.partFitIssue(it, inst), lvl = lvlOf(G.itemOption(it) || { price: it.price, lvl: DR.partLevel(it.price) });
       right.appendChild(h('div', { class: 'item inv l' + lvl + (why ? ' locked' : '') },

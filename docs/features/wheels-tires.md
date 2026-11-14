@@ -210,6 +210,22 @@ listing. Tables saved in scratchpad web/wt2 (mt_specs.txt).
   rear tire without tubs, smallest wheel over the factory brakes), listed
   here with sources.
 
+## Build decisions (owner, Nov 14, during the build)
+- **Packages (Wheels & Tires):** each tier picks the biggest tire of its type
+  that fits the car's wells and brakes. Street: drag radial on drag wheels.
+  Sport: + drag brakes and a bigger radial or a 28x10.5 radial slick. Race:
+  28x10.5 slick or radial slick on beadlocks + front runners (+ mini-tubs if
+  needed). Extreme: 31x13 slick on beadlocks + mini-tubs + drag brakes +
+  front runners. Prices follow the parts.
+- **Style rims:** the wheels get a car-show star rating, stay in Upgrade >
+  Wheels & Tires, and Style's Rims spot becomes a link to them.
+- **Old saves with wheels inside the brakes** (the old Extreme tires
+  package: carbon brakes + 15 in beadlocks): kept, flagged, can't race until
+  changed (as the tubs rule).
+- (Found in the build) the drag wheel gets an **18x5** runner and a
+  **26x6.0R18** runner tire for Brembo cars; the 17 in runner is a 17x4
+  with a 26x4.0-17 tire (M/T's approved width).
+
 ## Plan (approved Nov 14)
 **Where:** Upgrade > Wheels & Tires (replaces the Wheels, Drive Tires and
 Front Tires slots) with 4 slots: **Front Wheel, Front Tire, Rear Wheel, Rear

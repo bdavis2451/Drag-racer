@@ -830,7 +830,7 @@
   DR.minWheel = function (inst, axle) {
     var w = DR.CAR_WT[inst.carId], i = axle === 'front' ? 0 : 1, b = DR.partId('brakes', inst);
     if (b === 'br1') return w[6][i];
-    var m = w[5][i];
+    var m = Math.min(w[5][i], facOf(inst, axle).d);   // (the factory wheel always clears its own brakes)
     return b === 'br3' ? Math.max(m, 18) : b === 'br2' ? Math.max(m, 19) : m;
   };
   // the widest tire (section, in) an axle's wells take
@@ -1381,7 +1381,7 @@
   // downgrade' checks
   function rank(cat, inst, id) {
     if (cat === 'fi') { var f = DR.FI[id]; return f.type === 'none' ? 0 : f.flow; }
-    if (cat === 'rtires') return DR.TIRE_SHOP.indexOf(id);
+    if (cat === 'rtires') return DR.TIRES[id] ? DR.TIRES[id].mu : -1;   // (by launch grip)
     if (cat === 'diff') return ['open', 'lsd', 'spool'].indexOf(id);
     if (cat === 'trans') return DR.TRANS[id].maxTq;
     var opts = DR.partOptions(cat, inst);
@@ -1470,9 +1470,65 @@
         rNow = rLess;
       }
     }
+    // Wheels & Tires (owner, Nov 14): each tier the biggest tire of its kind
+    // that fits this car's wells and brakes. Street: a drag radial on drag
+    // wheels; Sport: drag brakes and a bigger radial or a 28x10.5 radial
+    // slick; Race: a 28x10.5 slick or radial slick on beadlocks, front
+    // runners, mini-tubs if needed; Extreme: a 31x13 slick on beadlocks,
+    // mini-tubs, drag brakes, front runners.
+    function tiresPkg() {
+      var CAND = [['dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'], ['rsl_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'],
+        ['rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'sl_24', 'dr_225'], ['sl_31', 'rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_305', 'sl_24']][tier];
+      var axD = DR.axleOf(copy, 'wheels'), axO = axD === 'front' ? 'rear' : 'front';
+      var curMu = DR.TIRES[DR.partId('rtires', copy)].mu;
+      function ok(cat, id) { var o = DR.getOption(cat, copy, id); return o && o.id === id && unl(cat, o) ? o : null; }
+      function wheelFor(t, styles) {
+        for (var i = 0; i < styles.length; i++) {
+          var st = DR.WHEEL_STYLES[styles[i]];
+          var z = st.sizes.filter(function (q) { return q[0] === t.rim && q[1] >= t.wmin && q[1] <= t.wmax && q[1] >= 6; })
+            .sort(function (a, b) { return Math.abs(a[1] - (t.wmin + t.wmax) / 2) - Math.abs(b[1] - (t.wmin + t.wmax) / 2); })[0];
+          if (z && ok('wheels', styles[i] + z[0] + 'x' + z[1])) return styles[i] + z[0] + 'x' + z[1];
+        }
+        return null;
+      }
+      var plan = null;
+      for (var i = 0; i < CAND.length && !plan; i++) {
+        var tid = CAND[i], t = DR.TIRES[tid];
+        if (!ok('rtires', tid) || t.mu <= curMu) continue;
+        // brakes: drag brakes from Sport up, if the wheel needs them
+        var brk = null, minNow = DR.minWheel(copy, axD);
+        if (t.rim < minNow) {
+          if (tier < 1 || !ok('brakes', 'br1') || DR.CAR_WT[copy.carId][6][axD === 'front' ? 0 : 1] > t.rim) continue;
+          brk = 'br1';
+        }
+        // (the wheels on sale depend on the brakes)
+        var brWas = copy.parts.brakes; if (brk) copy.parts.brakes = brk;
+        var wid = wheelFor(t, tier >= 2 ? ['bead', 'drag'] : ['drag', 'street']);
+        if (brWas) copy.parts.brakes = brWas; else delete copy.parts.brakes;
+        if (!wid) continue;
+        // wells: mini-tubs from Race up (Extreme always), if needed
+        var tub = null, well = DR.wellLimit(copy, axD);
+        if (t.sec > well + 0.01) {
+          if (tier < 2 || axD !== 'rear' || !ok('tubs', 'tub1') || t.sec > 16.5) continue;
+          tub = 'tub1';
+        }
+        if (tier === 3 && axD === 'rear' && !tub && DR.partId('tubs', copy) === 'stock' && ok('tubs', 'tub1')) tub = 'tub1';
+        plan = { tire: tid, wheel: wid, brk: brk, tub: tub };
+      }
+      if (!plan) return;
+      if (plan.brk) fit('brakes', plan.brk);
+      if (plan.tub) fit('tubs', plan.tub);
+      fit('wheels', plan.wheel); fit('rtires', plan.tire);
+      // front runners (not on AWD: both axles drive there)
+      if (tier >= 2 && DR.driveOf(copy) !== 'AWD' && DR.tireSpec(copy, 'ftires').kind !== 'Front Runner') {
+        var mO = DR.minWheel(copy, axO), rw = mO <= 15 ? ['drag15x3.5', 'fr_26'] : mO <= 17 ? ['drag17x4', 'fr_26b'] : mO <= 18 ? ['drag18x5', 'fr_18'] : null;
+        if (rw && ok('fwheels', rw[0]) && ok('ftires', rw[1])) { fit('fwheels', rw[0]); fit('ftires', rw[1]); }
+      }
+    }
     var boostPkg = groups.indexOf('power') >= 0;
     groups.forEach(function (gid) {
       if (gid !== 'power' && boostPkg && steps.length) setBoost();
+      if (gid === 'tires' && DR.CAR_WT[copy.carId]) { tiresPkg(); return; }
       var dslPk = gid === 'power' && DR.ENGINES[copy.engine || DR.CARS[copy.carId].engine].diesel;
       ((dslPk ? DR.PACKAGES_DSL : DR.PACKAGES)[gid] || [])[tier].forEach(function (e) {
         var cat = e[0], id = typeof e[1] === 'function' ? e[1](copy) : e[1];

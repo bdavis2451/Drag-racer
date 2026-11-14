@@ -212,13 +212,18 @@ DR.TIRES = {
     dr_275s: { name: 'Drag Radial 275/60R15', kind: 'Drag Radial', lat: 0.84, mu: 1.90, optP: 17, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.358, m: 27, topt: 60, cold: 0.15, price: 850, rim: 15, wmin: 7.5, wmax: 9.5, sec: 11.1 },
     rsl_28: { name: 'Radial Slick 28x10.5R15', kind: 'Radial Slick', lat: 0.78, mu: 2.30, optP: 16, slip: 0.14, fall: 0.27, fk: 0.8, r: 0.356, m: 26, topt: 65, cold: 0.2, price: 1900, lvl: 3, rim: 15, wmin: 10, wmax: 12, sec: 12.2 },
     rsl_31: { name: 'Radial Slick 31x13.5R15', kind: 'Radial Slick', lat: 0.76, mu: 2.70, optP: 16, slip: 0.15, fall: 0.28, fk: 0.85, r: 0.405, m: 37, topt: 68, cold: 0.24, price: 2800, lvl: 4, rim: 15, wmin: 12, wmax: 14, sec: 16.3 },
+    // (front-drive compacts: the narrow drag radial and the 24.5 slick they
+    // run; Brembo cars: an 18 in drag radial)
+    dr_225: { name: 'Drag Radial 225/50R15', kind: 'Drag Radial', lat: 0.82, mu: 1.60, optP: 20, slip: 0.13, fall: 0.25, fk: 0.75, r: 0.306, m: 19, topt: 55, cold: 0.12, price: 600, rim: 15, wmin: 6, wmax: 8, sec: 9.1 },
+    sl_24: { name: 'Drag Slick 24.5x8.0-15', kind: 'Slick', lat: 0.72, mu: 2.00, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.311, m: 15, topt: 70, cold: 0.22, price: 1400, lvl: 3, rim: 15, wmin: 7, wmax: 8.5, sec: 9.6 },
+    dr_305: { name: 'Drag Radial 305/45R18', kind: 'Drag Radial', lat: 0.85, mu: 1.95, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.369, m: 29, topt: 60, cold: 0.15, price: 1250, lvl: 3, rim: 18, wmin: 9.5, wmax: 11.5, sec: 11.8 },
     fr_26: { name: 'Front Runner 26x4.0-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.331, m: 11, topt: 40, cold: 0.05, price: 500, rim: 15, wmin: 3.5, wmax: 4, sec: 6.2, roll: 0.75 },
     fr_26b: { name: 'Front Runner 26x4.0-17', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.337, m: 10, topt: 40, cold: 0.05, price: 550, rim: 17, wmin: 3.5, wmax: 4, sec: 5.4, roll: 0.75 },
     fr_28: { name: 'Front Runner 28x4.5-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.356, m: 12, topt: 40, cold: 0.05, price: 600, rim: 15, wmin: 3.5, wmax: 4.5, sec: 7.2, roll: 0.75 },
     fr_18: { name: 'Front Runner 26x6.0R18', kind: 'Front Runner', lat: 0.66, mu: 1.0, optP: 32, slip: 0.12, fall: 0.3, fk: 1, r: 0.330, m: 14, topt: 40, cold: 0.05, price: 650, rim: 18, wmin: 4.5, wmax: 6, sec: 7.0, roll: 0.8 }
   };
   for (k in add) DR.TIRES[k] = add[k];
-  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_245', 'dr_275s', 'dr_275', 'dr_315', 'rsl_28', 'rsl_31', 'ets_28', 'sl_31', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
+  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_225', 'dr_245', 'dr_275s', 'dr_275', 'dr_305', 'dr_315', 'rsl_28', 'rsl_31', 'sl_24', 'ets_28', 'sl_31', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
   // tire outside diameter (inches) from its rolling radius
   DR.tireOD = function (t) { return Math.round(t.r / 0.0127 * 10) / 10; };
 
@@ -232,9 +237,9 @@ DR.TIRES = {
     forged: { name: 'Forged Lightweight', price: 1800, k: 1.0, lvl: 2, desc: 'Forged: strong and about 4 lb lighter a corner than cast.',
       sizes: [[17, 8], [17, 9], [17, 10], [18, 8], [18, 9], [18, 10], [18, 11], [19, 9], [19, 10], [19, 11], [20, 9], [20, 10], [20, 11], [21, 12], [21, 13]] },
     drag: { name: 'Drag Wheel', price: 900, k: 0.87, desc: 'One-piece spun aluminum: light, with skinny front-runner sizes.',
-      sizes: [[15, 3.5], [17, 4], [18, 5], [15, 8], [15, 10], [15, 12], [17, 10]] },
+      sizes: [[15, 3.5], [17, 4], [18, 5], [15, 8], [15, 10], [15, 12], [17, 10], [18, 10]] },
     bead: { name: 'Beadlock Drag', price: 2200, k: 0.87, add: 5, bead: true, lvl: 3, desc: 'A ring bolts the tire\'s bead to the wheel: very low tire pressure without the tire spinning on the rim.',
-      sizes: [[15, 10], [15, 12], [15, 14], [15, 16], [16, 16], [17, 10], [17, 11]] }
+      sizes: [[15, 10], [15, 12], [15, 14], [15, 16], [16, 16], [17, 10], [17, 11], [18, 10]] }
   };
   DR.wheelLb = function (style, d, w) { var s = DR.WHEEL_STYLES[style]; return Math.round((s.k * (0.55 * d + 0.9 * w) + (s.add || 0)) * 10) / 10; };
 
@@ -247,16 +252,16 @@ DR.TIRES = {
     fox23: ['14x5.5', '14x5.5', '195/75R14', '195/75R14', 12.5, [14, 14], [15, 15]],
     camaro6: ['16x7.5', '16x7.5', '215/60R16', '215/60R16', 12.5, [15, 15], [15, 15]],
     camss: ['20x8', '20x9', '245/45R20', '275/40R20', 12.0, [18, 17], [15, 15]],
-    hachi: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.0, [13, 13], [15, 15]],
+    hachi: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.2, [13, 13], [15, 15]],
     supra: ['17x8', '17x9.5', '235/45R17', '255/40R17', 12.5, [17, 17], [15, 15]],
-    ronin: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.0, [13, 13], [15, 15]],
-    bolt: ['16x6', '16x6', '205/55R16', '205/55R16', 9.0, [15, 15], [15, 15]],
+    ronin: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.6, [13, 13], [15, 15]],
+    bolt: ['16x6', '16x6', '205/55R16', '205/55R16', 9.6, [15, 15], [15, 15]],
     pip: ['13x4.5', '13x4.5', '155/80R13', '155/80R13', 8.0, [12, 12], [15, 15]],
-    kaze: ['15x6', '15x6', '195/55R15', '195/55R15', 9.0, [15, 15], [15, 15]],
+    kaze: ['15x6', '15x6', '195/55R15', '195/55R15', 9.6, [15, 15], [15, 15]],
     volta: ['17x7', '17x7', '225/45R17', '225/45R17', 9.6, [16, 15], [15, 15]],
     cobaltss: ['18x7.5', '18x7.5', '225/40R18', '225/40R18', 9.6, [17, 15], [15, 15]],
     beetle: ['15x4.5', '15x4.5', '165R15', '165R15', 8.2, [15, 15], [15, 15]],
-    mira: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.0, [13, 13], [15, 15]],
+    mira: ['14x5.5', '14x5.5', '185/60R14', '185/60R14', 9.2, [13, 13], [15, 15]],
     silvia: ['16x6.5', '16x6.5', '205/55R16', '205/55R16', 10.2, [15, 15], [15, 15]],
     s2k: ['16x6.5', '16x7.5', '205/55R16', '225/50R16', 10.2, [16, 16], [15, 15]],
     rx7: ['16x8', '16x8', '225/50R16', '225/50R16', 10.2, [16, 16], [15, 15]],
