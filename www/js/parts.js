@@ -469,14 +469,14 @@
     opt('stock', 'Stock Springs', 0, { sk: 1, adjS: false, hg: 1 }),
     opt('sp1', 'Lowering Springs', 500, { sk: 1.25, adjS: false, low: 0.03, hg: 1.02 }, 'Drops the car 30 mm and stiffens it. Lower CG, less weight transfer, less travel.'),
     opt('sp2', 'Adjustable Coilovers', 1800, { sk: 1, adjS: true, ride: [-0.06, 0.03], rate: [0.6, 1.5], hg: 1.04 }, 'Set ride height and spring rate at each end. Good on a circuit too.'),
-    opt('sp3', 'Drag Coilovers', 2600, { sk: 0.9, adjS: true, ride: [-0.06, 0.07], rate: [0.35, 1.8], hg: 0.97 }, 'Wide ride-height and spring range built for launching. Too soft for a road course.')
+    opt('sp3', 'Drag Coilovers', 2600, { sk: 0.9, adjS: true, ride: [-0.06, 0.07], rate: [0.35, 1.8], hg: 0.97, descFwd: 'Wide ride-height and spring range built for launching: on a front-drive car, stiff at the back so it doesn\'t squat and softer up front. Too soft for a road course.' }, 'Wide ride-height and spring range built for launching. Too soft for a road course.')
   ]};
   // z: damping ratio. adjD: 1 = front rebound + rear bump adjustable, 2 = bump
   // and rebound at both ends. lim: front travel (extension) limiter.
   C.shocks = { name: 'Shocks', options: [
     opt('stock', 'Stock Shocks', 0, { z: 0.42, adjD: 0, hg: 1 }),
     opt('sh1', 'Sport Shocks', 700, { z: 0.50, adjD: 0, hg: 1.02 }, 'Firmer damping: the car takes a set in corners sooner.'),
-    opt('sh2', 'Adjustable Drag Shocks', 2500, { z: 0.45, adjD: 1, lim: true, hg: 0.98 }, 'Adjust front rebound and rear bump, plus a front travel limiter. Tuned to let the car squat, not to corner.'),
+    opt('sh2', 'Adjustable Drag Shocks', 2500, { z: 0.45, adjD: 1, lim: true, hg: 0.98, descFwd: 'Adjust front rebound and rear bump, plus a front travel limiter. On a front-drive car, set them firm to keep the nose down and the rear from squatting. Built for the launch, not for corners.' }, 'Adjust front rebound and rear bump, plus a front travel limiter. Tuned to let the car squat, not to corner.'),
     opt('sh3', 'Double-Adjustable Race Shocks', 5000, { z: 0.45, adjD: 2, lim: true, pro: true, hg: 1.03 }, 'Bump and rebound at both ends, plus a front travel limiter. Works on a circuit too.')
   ]};
   // anti-roll bars: no use at the strip; on a circuit they hold the body
@@ -838,6 +838,8 @@
       var FX = { stock: ['Stock Flexplate', null], fw1: ['Lightweight Flexplate', 'A lighter flexplate: the engine revs a little quicker. Small next to the torque converter, which is the big spinning mass.'], fw2: ['Billet Aluminum Flexplate', 'A billet flexplate: a touch quicker revving still; most of what spins is the converter.'] };
       list = list.map(function (o) { return FX[o.id] ? Object.assign({}, o, { name: FX[o.id][0], desc: FX[o.id][1] || o.desc }) : o; });
     }
+    // a front-drive car's own wording (drag suspension works the other way)
+    if (!inst.ai && list.some(function (o) { return o.descFwd; }) && DR.driveOf(inst) === 'FWD') list = list.map(function (o) { return o.descFwd ? Object.assign({}, o, { desc: o.descFwd }) : o; });
     // head studs on a diesel: its own numbers
     if (cat === 'headstud') {
       var de = DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine];

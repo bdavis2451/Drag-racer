@@ -147,6 +147,17 @@ moved to the shelf; FWD axles map to the same strength (chromoly -> Level
   pkgsmoke, c2, drv, tubest clean; slots per drivetrain and old-save
   migration checked (scr/cpui.js, circdiff.js, fsusp2.js).
 
+## Follow-up (Nov 15): drag springs & shocks on FWD
+Owner: "do drag shocks & drag springs work correctly for fwd? the
+description is a little off". They work (the body model is the same for
+every drive; the tuner searches by result, so it finds the FWD direction).
+The texts were rear-drive only. Measured on a 1,000 hp FWD Civic (sp3 +
+sh3): stiff rear springs -0.04 s, firm rear rebound -0.05, soft front
+springs -0.08, front rebound / rear bump / front limiter ~0. Fixed: FWD
+descriptions for Drag Coilovers and Adjustable Drag Shocks (`descFwd`), and
+FWD help lines on the tuning screen (`helpFwd`: front/rear springs, front
+rebound, rear bump, rear rebound, front limiter). Text only.
+
 ## Sources
 - Fender rolling/pulling: s2ki "how much clearance from fender rolling",
   SlashGear (AutoRestorer: ~3/8 in), GRM rolling vs pulling (paywalled

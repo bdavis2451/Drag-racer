@@ -2,6 +2,14 @@
 
 Short notes for testing, newest first.
 
+## Drag springs & shocks: front-drive wording
+
+- Drag Coilovers and Adjustable Drag Shocks worked on front-drive cars, but
+  their text (and the tuning help) only explained rear-drive cars. On a
+  FWD car they now say what helps there: stiff at the back so it doesn't
+  squat, softer front springs, firm rear rebound. (Measured: each worth a
+  few hundredths on a big FWD car.)
+
 ## Wheel wells on every car, front-drive suspension and axles
 
 - **Rolled & Pulled Fenders on every car**, front and rear (Suspension >
