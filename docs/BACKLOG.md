@@ -30,15 +30,6 @@ the top of each section.
 
 ## Waiting on a yes or no
 
-- **Tuner and knock + fuel limits** (`docs/features/fuel-knock-review.md`,
-  Nov 15 night). Tester's pro tuner on edge left 32.5 psi past a 28 psi
-  knock point: every aggression goes ~60% into the timing-pulled zone and
-  that zone is 1.5% engine risk per psi (7.5% per pass here), while
-  packages stop at knock - 1. Options A-D (recommended C: Safe at the knock
-  point, smaller zone risk, tuner states the risk it leaves). Fuels: E85 and
-  race gas match real data; methanol is too strict on high-compression and
-  old-head engines (454 on methanol 33 psi vs real 50-60). Options E-H.
-
 Owner's note (Nov 15): playing and sending bugs; open questions go here
 to answer later.
 
@@ -87,9 +78,15 @@ to answer later.
 - **Boost by rpm** (a taper setting): the knock model makes the midrange
   give up a little at high boost; real tunes taper boost from the midrange.
   Only boost by gear exists. Pinned for later (owner, Nov 14).
-- **Engine part wear** (turbo, internals): later, after a general rework of
-  how wear works in the game (owner, Nov 14). Until then hot exhaust from
-  pulled timing stays an engine risk.
+- **Engine part wear** (turbo, internals): wanted (owner, Nov 15): "Aluminum
+  rods stretch irl, things wear. I'd like to implement that, but well and
+  not in an annoying manner." Big-power engines get freshened on a schedule
+  (Pro Mod ~20 runs; aluminum rods ~8-10 runs in nitro, ~20 blown alcohol,
+  100+ in a mild bracket engine; GRP says they grow hot and don't really
+  stretch, fatigue is the limit). Real: wear by part, faster with power,
+  rpm and pulled timing; a freshen-up resets it. Needs the general wear
+  rework first (owner, Nov 14). Until then hot exhaust from pulled timing
+  stays a per-pass engine risk.
 - **Turbo diagram view** (Drag Racing: Streets style: the turbo system laid
   out as a flow diagram). Later (owner, Nov 12).
 - **More diesels** (Duramax, Power Stroke) with the next batch of cars
@@ -130,6 +127,13 @@ to answer later.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Tuner, knock risk, fuels, weather** (Nov 15,
+  `docs/features/fuel-knock-review.md`): air temperature no longer changes
+  the engine (grip only; heat soak between rounds stays); timing-pulled
+  zone risk 3% x depth^2; tuners Safe at the knock point / Balanced 1/3 /
+  On the edge 60%, no boost past the knock point that buys no power, notes
+  state the risk; methanol and old-head limits by option G. Shipped.
 
 - **Chassis parts review** (Nov 15, `docs/features/chassis-parts-review.md`):
   fenders front and rear on every car, FWD rear suspension (stiff rear,

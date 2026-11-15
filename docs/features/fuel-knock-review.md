@@ -1,7 +1,8 @@
 # Tuner vs knock, and boost limits on E85 / race gas / methanol
 
-Status: **Nov 15 (night): investigated and researched. No code. Options for
-the owner below.**
+Status: **Nov 15: owner picked C (if B's risk is realistic) and G, and asked
+to take air temperature out of engine performance. Plan approved with both
+questions answered. Built and shipped Nov 15.**
 
 Owner (Nov 15, 1 AM, screenshot): "I used a pro tuner, on edge tuning: 8%
 engine risk, 7% chassis risk. I don't think it saw that it was pulling
@@ -13,6 +14,127 @@ The tester's car: 5.7 LS1 (10.1:1), 8891 turbo, E85, 1,448 hp, Street tune
 at 32.5 psi (23 psi in 1st). Tune screen: knocks past 28 psi (25.5 at peak
 torque, 31 up top), power stops climbing at 36.5. Chassis risk 7% = power
 107% of what the roll cage takes (a separate, correct warning: tube chassis).
+
+## Decisions (owner, Nov 15 morning)
+- **Air temperature stops touching the engine.** "Having my engine risk
+  increase because it's night over day is a little too much." Air
+  temperature keeps changing track grip (track temperature), but no longer
+  power, the knock point or engine risk.
+- **Part 1: option C**, "as long as the B part is realistic. I want to keep
+  our risks real if people want to push peak power. There is a reason big
+  power cars are rebuilt so often."
+- **Part 2: option G** (E + F).
+- **Engine part wear** goes on the backlog (rods stretch, things wear), to
+  be done well and not annoyingly.
+
+## Plan (approved Nov 15)
+
+### 1. Air temperature out of engine performance
+- `physics.js`: `DR.airPower` gone (night no longer adds power, day no
+  longer takes it); `DR.knockDT` drops the air part, so the knock point and
+  where power stops are the same day or night. Track temperature (grip,
+  tire heat) unchanged.
+- `race.js rollFailure`: no hot-day knock risk. Race intro: no "hot charge
+  / cool air: knocks past ~X psi today" note (the nitrous note stays).
+- Texts: help (Conditions: "Night air is cooler and denser" goes), the
+  night test-and-tune line ("cooler air, a colder track" -> "a colder
+  track"), code comments.
+- Heat soak between rounds (the engine's own heat, not the weather): see
+  question 2.
+- Rivals: in a race their car no longer gains a little at night / loses a
+  little by day. Their listed times (no conditions) don't change: the rival
+  snapshot stays identical.
+
+### 2. Knock zone risk (the realistic B)
+Research (below): at the knock point, a knock-controlled tune is safe; the
+cost of pulling timing is heat, and it climbs fast as the timing gets very
+retarded (HPA: exhaust valves melt when timing falls toward single digits
+on boost; "the knock feedback doesn't have much ability to help" when the
+timing is already soft). So the risk is near zero just past the knock point
+and steep near where power stops. Proposed curve, by how far into the zone
+(z = 0 at the knock point, 1 where power stops): **3% x z^2** per pass.
+| Into the zone | Risk now | Proposed |
+|---|---|---|
+| 0 (knock point) | 0 | 0 |
+| 1/3 | 4% (here) | 0.3% |
+| 60% (tuner's edge) | 7.5% | 1.1% |
+| 100% (peak power) | 10% | 3% |
+| past it (detonating) | +8% per psi | unchanged |
+Sitting at peak power: about 1 pass in 33 breaks it. Pro Mod engines are
+freshened about every 20 runs to keep that from happening (forum reports;
+Cleetus: rods every ~20 runs on his Hemi), which is what engine wear will
+model later.
+
+### 3. Tuner by aggression (C)
+- `tuner.js limits()`: boost stops at knock point + f x zone - green-tuner
+  margin ((1 - skill) x 1.5): Safe f = 0, Balanced f = 1/3, On the edge f =
+  0.6. The fixed aggression psi margin no longer applies to knock (it still
+  does to the diesel head gasket).
+- Its note: "stopped at 28 psi: past it the tune pulls timing" (Safe), or
+  "ran 2 psi past the knock point (28 psi): timing pulled, about 1% engine
+  risk per pass" (Balanced / Edge). The wrong "wasn't buying power any
+  more" goes.
+- Packages unchanged (still knock - 1).
+
+### 4. Fuels (G)
+- `engKnock`: the head design penalty `kd` stays in pump-gas psi (not
+  multiplied by the fuel); compression uses the more generous of the
+  current straight line and effective compression (CR x boost
+  ratio^0.7 against the fuel's limit at 8.5:1). Pump gas and E85 at normal
+  compression stay where they are; methanol and E85 at 12:1+ get more room.
+- Re-check against the real numbers in the table above.
+- Rivals on alcohol and race gas with high compression or old heads gain
+  boost room (their times move: noted for the career rebalance). Packages
+  re-fit (they stop at knock - 1).
+
+### Saves
+Nothing stored changes. A saved tune keeps its boost; its risk shows the new
+numbers.
+
+### Questions answered (owner, Nov 15)
+1. Zone risk curve: **3% at peak power, rising with the square.**
+2. Heat soak between rounds: **keep it** (only the outside air leaves
+   engine performance; the race intro calls it "heat-soaked").
+
+### Added while building (owner OK'd, Nov 15)
+- **No gain, no boost past the knock point.** Testing showed a turbo out of
+  breath (LS1 package turbo from ~26 psi) still got pushed into the zone on
+  Balanced / On the edge: risk for no power. Asked; owner: yes. Past the
+  knock point a boost step has to add ~0.4% power per psi or the tuner
+  goes back ("No gain past the knock point: the turbo is out of breath,
+  more boost only adds heat").
+
+## Build notes (Nov 15)
+- `physics.js`: `DR.airPower` removed (Sim `airK` = 1, heat soak still
+  scales it); `DR.knockDT` heat soak only; `engKnock` (G: max of the
+  straight line and effective compression above 8.5:1, kd in psi on any
+  fuel); `riskOf` zone 3% x z^2 (z = (boost up top - knock) / (power stops -
+  knock)). Comments on night and carb jetting updated.
+- `race.js`: hot-day knock gone from `rollFailure` (heat soak stays); intro
+  note "heat-soaked: knocks past ~X psi this round" / nitrous note.
+- `tuner.js`: `TU.AGG[].kz` (0, 1/3, 0.6); `limits().knock` on boost up top
+  with the green-tuner margin only; the no-gain rule in the boost search;
+  `why()` names the aggression; `riskLine()` in the notes.
+- Texts: help Conditions (night), knock help (risk, tuner aggression),
+  carb help (no weather drift), factory carb desc, Tune screen boost help,
+  night test-and-tune line.
+- Tested:
+  - Rival snapshot: 126 times, 0 diffs (listed rival times use no
+    conditions; in a race their car loses the day/night power change too).
+  - Packages: 1,440, 0 diffs.
+  - Knock table, every engine x fuel x pistons: 263 of 552 changed, pump
+    gas none. E85 / race gas: +1 to +4 psi on old heads, -2 on the one
+    kd +2 engine (f6_38tt). Methanol up to +13.5 (454).
+  - Real-world table re-run (above, now): 454 11.25 meth 46.5 (real
+    50-60), 12.25 meth 39 (Bothwell 38), Hemi 11.25 meth 48.5 (Oksas 46),
+    2JZ E85 unchanged, LS1 E85 30.
+  - Tuner bench (`scr/kt1.js`), local and pro: pump LS1 Safe 14.5 /
+    Balanced 16 / Edge 16.5 (knock 15; 0 / 0.1 / 0.6%); 2JZ E85 41.5 / 45 /
+    48.5 (knock 42; 0 / 0.2 / 0.9%); LS1 E85 on the package turbo stops at
+    30 (no gain past it).
+  - Day vs night, NA Fox: 14.475 day, 14.512 night (cold track only).
+  - qolsmoke, c2, drv, tubest, pkgsmoke: no errors. Crawl mid: 0 problems
+    except the known Settings sound check line.
 
 ## Part 1: why the tuner left 32.5 psi
 
@@ -133,6 +255,14 @@ x2 on E85, x4 on methanol); cool charge up to +2 psi; -10% at peak torque,
   packages re-fit (they stop at knock - 1).
 
 ## Sources
+- Zone risk (Nov 15 morning): HPA forum "timing retard to combat knock"
+  (retarded timing = high EGT, melting exhaust valves near single-digit
+  timing), "knock limited engine: high boost low timing or vice versa"
+  (2-3 degrees back from the knock threshold; knock feedback can't help
+  much when timing is already soft); "083 understanding knock". Rebuild
+  intervals: SlashGear on Proline Hemis (Cleetus: rods every ~20 runs),
+  offshoreonly "racing engines: what breaks most often" (Pro Mod ~20 runs).
+  No published per-run failure rate found.
 - HPA "How much more power can you make on E85?" (Andre Simon): E85 ~105
   octane, "performs as well as specifically blended race fuels with motor
   octane ratings of 116+", 35-40% more fuel, latent heat, FA20 12.5:1 test.

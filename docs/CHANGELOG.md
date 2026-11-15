@@ -2,6 +2,36 @@
 
 Short notes for testing, newest first.
 
+## Day or night, same engine; tuners respect the knock point; alcohol boost limits
+
+- **The weather no longer changes the engine.** Day or night it makes the
+  same power, knocks at the same boost and carries the same engine risk.
+  The air and track temperature still change grip (a cold night track grips
+  less). Back-to-back race rounds still heat-soak the engine a little (the
+  race intro says "heat-soaked" when it costs you).
+- **Running past the knock point is less risky, and the risk grows the
+  deeper you go.** Just past it, the tune pulls timing and it's safe; the
+  risk climbs fast toward where power stops (3% a pass right there).
+  Detonating past that is as risky as before. Your LS1 at 32.5 psi on E85
+  drops from about 8% to well under 1%.
+- **Hired tuners:**
+  - Safe stops at the knock point (no risk).
+  - Balanced runs about a third of the way past it.
+  - On the edge runs about 60% of the way.
+  - None of them adds boost past the knock point that buys no power (a
+    turbo out of breath): they say so in the dyno notes.
+  - The tuner's notes end with the engine risk the tune leaves and why
+    ("Leaves it at 0.9% engine risk a pass: 7 psi past the knock point").
+- **Methanol (and E85 / race gas on older engines) takes more boost**,
+  matching real engines: a 454 on methanol knocks past ~46 psi (was 33),
+  12.25:1 methanol ~39 psi (was 21). Pump gas didn't change. Rivals and
+  packages didn't change.
+- Try:
+  - Your E85 car: check the risk on the Tune screen at your old boost.
+  - A tuner session at each aggression: read the last dyno notes and the
+    risk line in the tuner's notes.
+  - A night race: the intro shouldn't mention cool air or hot charge.
+
 ## Paying rent
 
 - Rent (and Ray's $400 once you're past class 2, and storage) comes out of

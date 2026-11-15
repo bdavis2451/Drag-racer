@@ -58,10 +58,13 @@
   var GBDEF = { show: function (S) { var d = def('gearBoost'); return d && d.show(S); } };
   // how hard to lean on it: knock margin, rpm under the valvetrain, power
   // under what the internals take
+  // (kz: how far into the timing-pulled zone they'll run boost: Safe stops
+  // at the knock point, Balanced a third of the way to where power stops,
+  // On the edge 60%)
   TU.AGG = {
-    safe: { name: 'Safe', psi: 2, rpm: 400, hp: 0.1, fuel: 0.06 },
-    bal: { name: 'Balanced', psi: 1, rpm: 200, hp: 0.04, fuel: 0.03 },
-    edge: { name: 'On the edge', psi: 0.3, rpm: 50, hp: 0, fuel: 0.008 }
+    safe: { name: 'Safe', psi: 2, rpm: 400, hp: 0.1, fuel: 0.06, kz: 0 },
+    bal: { name: 'Balanced', psi: 1, rpm: 200, hp: 0.04, fuel: 0.03, kz: 1 / 3 },
+    edge: { name: 'On the edge', psi: 0.3, rpm: 50, hp: 0, fuel: 0.008, kz: 0.6 }
   };
   var STOICH = { stock: 14.7, race: 14.7, e85: 9.8, meth: 6.4 };
   function def(k) { if (GB && GB[k] != null) return GBDEF; return DR.TUNE_DEFS.filter(function (x) { return x.key === k; })[0]; }
@@ -143,12 +146,14 @@
   // ---------------------------------------------------------------- the dyno
   // what the engine is asking for at this boost: { knock, lean, safe, spark, top }
   function limits(ss, S) {
-    var a = ss.agg, e = ss.who.eng / 100, margin = a.psi + (1 - e) * 1.5;
+    var a = ss.agg, e = ss.who.eng / 100;
     return {
-      // a good tuner runs into the knock point a little (timing pulled) but
-      // stops well short of where power stops climbing
-      // (with nitrous, the knock point while it sprays)
-      knock: S.fiType !== 'none' && !S.diesel && S.boostSet > S.knock - (S.nosKnock || 0) + S.knockSpan * 0.6 - margin,
+      // Safe stops at the knock point; pushing harder runs into the zone
+      // where the tune pulls timing (more power, more heat and engine
+      // risk), never all the way to where power stops; a greener tuner
+      // keeps more back. Counted on the boost it really sees up top (creep
+      // included), with nitrous the knock point while it sprays
+      knock: S.fiType !== 'none' && !S.diesel && (S.boostTop || S.boostSet) > S.knock - (S.nosKnock || 0) + S.knockSpan * (a.kz || 0) - (1 - e) * 1.5,
       // fuel: how close to the injectors'/pump's rating they'll run (how
       // hard you said to push, less for a greener tuner)
       // and never into running lean with the nitrous shot on top (a dry kit
@@ -168,9 +173,9 @@
     var what = both ? 'injectors and pump are' : S.fuelInj < S.fuelPump ? 'injectors are' : 'fuel pump is';
     return 'the ' + what + ' maxed out: they feed about ' + Math.round(Math.min(S.fuelInj, S.fuelPump) * S.fuelFF) + ' hp' + (S.fuelFF < 1 ? ' on ' + (S.fuelId === 'meth' ? 'methanol' : 'E85') : '') + '. Bigger ' + (both ? 'injectors and pump' : S.fuelInj < S.fuelPump ? 'injectors' : 'pump') + ' to go further';
   }
-  function why(l, S) {
+  function why(l, S, ss) {
     if (S && S.dsl) return l.head ? (S.headKit ? 'the head studs hold about ' + S.headPsi + ' psi' : 'the head gasket holds about ' + S.headPsi + ' psi; head studs hold more') : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : '';
-    return l.knock ? 'knock: it was pulling timing and the extra boost wasn\'t buying power any more' : l.lean ? (S ? fuelWhy(S) : 'the fuel system is maxed out') : l.spark ? 'the ignition started to misfire' : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : ''; }
+    return l.knock ? (S && ss && ss.agg.kz ? 'knock: that\'s as far past the knock point (' + DR.knockSafe(S) + ' psi) as ' + ss.agg.name + ' goes' : 'knock: past ' + (S ? DR.knockSafe(S) + ' psi ' : '') + 'the tune pulls timing') : l.lean ? (S ? fuelWhy(S) : 'the fuel system is maxed out') : l.spark ? 'the ignition started to misfire' : l.safe ? 'that\'s what the internals take' : l.top ? 'the turbo/wastegate is maxed' : ''; }
   // a pull's sheet: wheel power and torque, boost and air/fuel against rpm
   function sheet(S) {
     var dy = DR.dyno(S), lam = S.fiType !== 'none' ? 0.78 : 0.86, cap = S.fuelW / DR.HP, lean = S.fuelDemand > cap ? S.fuelDemand / cap : 1, st = STOICH[S.fuelId] || 14.7;
@@ -226,20 +231,24 @@
         var bad = dslF ? l.head : S.dsl ? l.safe || l.head : l.knock || l.lean || l.safe || l.spark, note;
         if (it.dir === 0) it.dir = bad ? -1 : 1;
         if (it.fine) step = 0.5;
-        if (it.dir > 0 && !bad && !l.top && it.n < 14) { note = 'Clean. Up ' + step + ' psi.'; it.ok = it.b; it.b += step; }
+        // past the knock point a step has to buy power (about 0.4% a psi):
+        // with the turbo out of breath more boost is only heat and risk
+        var noGain = !bad && it.dir > 0 && !S.dsl && it.okHp != null && (S.boostTop || S.boostSet) > DR.knockSafe(S) + 0.5 && S.peakHp < it.okHp * (1 + 0.004 * (S.boostSet - it.ok));
+        if (noGain) { setTune(ss, 'boost', it.ok); note = 'No gain past the knock point: ' + (S.flowW && S.peakHp >= S.flowW / DR.HP * 0.98 ? 'the turbo is out of breath, ' : '') + 'more boost only adds heat. Back to ' + fmt('boost', it.ok) + '.'; ss.items.shift(); }
+        else if (it.dir > 0 && !bad && !l.top && it.n < 14) { note = 'Clean. Up ' + step + ' psi.'; it.ok = it.b; it.okHp = S.peakHp; it.b += step; }
         else if (it.dir > 0) {
           // over the line: back to the last clean pull and stop there
           // a big step too far: come back and creep up half a psi at a time
-          if (bad && it.ok != null && it.b - it.ok > 0.5 && it.n < 14) { note = 'Too far (' + why(l, S) + '). Half a psi at a time from ' + fmt('boost', it.ok) + '.'; it.fine = true; it.b = it.ok + 0.5; return pull(ss, 'Boost ' + fmt('boost', S.boostSet), note, S); }
-          if (bad && it.ok != null) { setTune(ss, 'boost', it.ok); note = 'Too far (' + why(l, S) + '). Back to ' + fmt('boost', it.ok) + '.'; }
+          if (bad && it.ok != null && it.b - it.ok > 0.5 && it.n < 14) { note = 'Too far (' + why(l, S, ss) + '). Half a psi at a time from ' + fmt('boost', it.ok) + '.'; it.fine = true; it.b = it.ok + 0.5; return pull(ss, 'Boost ' + fmt('boost', S.boostSet), note, S); }
+          if (bad && it.ok != null) { setTune(ss, 'boost', it.ok); note = 'Too far (' + why(l, S, ss) + '). Back to ' + fmt('boost', it.ok) + '.'; }
           else note = l.top ? 'That\'s all the hardware has: ' + fmt('boost', S.boostSet) + '.' : 'Set.';
           ss.items.shift();
         }
         else if (bad && it.n < 14) {
-          note = 'Over the line (' + why(l, S) + '). Down ' + step + ' psi.'; it.b -= step;
+          note = 'Over the line (' + why(l, S, ss) + '). Down ' + step + ' psi.'; it.b -= step;
           // a head gasket's limit is known: straight down to it
           var creep = (S.boostTop || S.boostSet) - S.boostSet, hb = Math.floor((headMax(ss, S) - creep) * 2) / 2;
-          if (l.head && it.b > hb) { it.b = hb; note = 'Over the line (' + why(l, S) + '). Down to ' + fmt('boost', hb) + '.'; }
+          if (l.head && it.b > hb) { it.b = hb; note = 'Over the line (' + why(l, S, ss) + '). Down to ' + fmt('boost', hb) + '.'; }
         }
         else { note = 'Safe here.'; ss.items.shift(); }
         var bp = pull(ss, 'Boost ' + fmt('boost', S.boostSet), note, S);
@@ -255,7 +264,7 @@
         var cur = it.f;
         setTune(ss, 'dslFuel', cur); S = G.spec(inst); l = limits(ss, S);
         var tgt = egtTarget(ss), egt = Math.round(S.egtPk / 10) * 10, hot = S.egtPk > tgt, fnote;
-        if ((hot || l.safe) && cur > fdf.min()) { fnote = (hot ? 'Exhaust ' + egt + ' F: more fuel than the turbo has air for.' : 'Over the line (' + why(l, S) + ').') + ' Down 5%.'; it.why = hot ? 'egt' : 'safe'; it.f -= 5; }
+        if ((hot || l.safe) && cur > fdf.min()) { fnote = (hot ? 'Exhaust ' + egt + ' F: more fuel than the turbo has air for.' : 'Over the line (' + why(l, S, ss) + ').') + ' Down 5%.'; it.why = hot ? 'egt' : 'safe'; it.f -= 5; }
         else {
           fnote = hot || l.safe ? 'As far down as it goes.'
             : it.why === 'egt' ? 'Exhaust ' + egt + ' F. That\'s all the fuel the turbo has air for: a bigger turbo lets it use more.'
@@ -883,6 +892,15 @@
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('End the session', function () { close(); notes(ss); }, 'small'))]);
     setTimeout(function () { logEl.scrollTop = logEl.scrollHeight; }, 0);
   }
+  // what the tune it leaves risks: engine risk a pass, and why
+  function riskLine(ss) {
+    if (ss.broke || ss.inst.damage) return null;
+    var S = G.spec(ss.inst), r = S.risk.engine;
+    if (!(r >= 0.005)) return null;
+    var kp = DR.knockSafe(S), b = S.boostTop || S.boostSet, zone = S.fiType !== 'none' && !S.diesel && b > kp + 0.5;
+    return h('p', { class: 'warn' }, 'Leaves it at ' + (Math.round(r * 1000) / 10) + '% engine risk a pass' +
+      (zone ? ': ' + (Math.round((b - kp) * 2) / 2) + ' psi past the knock point (' + kp + ' psi), where the tune pulls timing and the exhaust runs hot' : '') + '.');
+  }
   function notes(ss) {
     var vd = TU.verdict(ss);
     if (!vd.keep) { ss.inst.tune = JSON.parse(JSON.stringify(vd.tune || ss.t0)); G.save(); }
@@ -903,6 +921,7 @@
       h('div', { class: 'tunerlog' }, logRows(ss)),
       h('p', {}, Object.keys(ch).length ? 'Set: ' + Object.keys(ch).map(function (k) { return label(k) + ' ' + fmt(k, ch[k]); }).join(' • ') : 'Nothing changed.'),
       ss.broke || ss.inst.damage ? h('p', { class: 'bad' }, 'The car is broken. It needs a repair.') : null,
+      riskLine(ss),
       vd.why ? h('p', { class: 'warn' }, vd.why) : null,
       ss.refunded ? h('p', { class: 'good' }, 'No gain, no pay: ' + DR.money(ss.refunded) + ' refunded.') : null,
       saved ? h('p', { class: 'acc' }, 'Saved as your "' + saved + '" setup (Tune > Setups): pick it before a race.') : null,

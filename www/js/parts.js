@@ -1063,7 +1063,7 @@
         return true;
       }).map(function (o) {
         if (o.id === 'stock') return Object.assign({}, o, fc, { id: 'stock', name: (fc.name || 'Factory Carburetor') + ' (Factory)', price: 0, lvl: 0, factory: true,
-          desc: 'What it came with: about ' + Math.round((fc.cfm || 0) * DR.CARB_HP) + ' hp of airflow.' + (fc.fb ? ' Its feedback circuit trims the mixture a little for the weather.' : '') });
+          desc: 'What it came with: about ' + Math.round((fc.cfm || 0) * DR.CARB_HP) + ' hp of airflow.' });
         var x = Object.assign({}, o, { lvl: lvlOf(o) });
         if (o.cfm && !o.efi) x.desc += ' Flows about ' + Math.round(o.cfm * DR.CARB_HP) + ' hp.';
         return x;

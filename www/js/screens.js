@@ -540,7 +540,7 @@
   function testView(inst) {
     var runs = [
       ['quarter', '1/4 Mile', 'Prepped strip, daytime.', { mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, night: false }, inst.best && inst.best.q],
-      ['quarter', '1/4 Mile Night', 'Prepped strip under the lights: cooler air, a colder track.', { mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, night: true }, null],
+      ['quarter', '1/4 Mile Night', 'Prepped strip under the lights: a colder track that grips less.', { mode: 'test', dist: DR.QUARTER, theme: 'strip', grip: 1, night: true }, null],
       ['eighth', '1/8 Mile', 'Half the track, all about the launch.', { mode: 'test', dist: DR.EIGHTH, theme: 'strip', grip: 1, night: false }, inst.best && inst.best.e],
       ['street', 'No-Prep 1/8', 'The old airfield at night: bare concrete, no traction compound.', { mode: 'test', dist: DR.EIGHTH, theme: 'street', grip: 0.92, surface: 'noprep', night: true }, null],
       ['street', 'Street 1/8', 'A closed-off road at night: dusty asphalt.', { mode: 'test', dist: DR.EIGHTH, theme: 'street', grip: 0.85, surface: 'street', night: true }, null]];
@@ -638,7 +638,7 @@
         inst.tune[def.key] != null ? function () { delete inst.tune[def.key]; DR.syncSetup(inst); G.save(); UI.refresh(); } : null);
       var ab = allSetupsBtn(inst, def.key, def.label), labSpan = row.querySelector('.lab span');
       if (ab && labSpan) labSpan.appendChild(ab);
-      row.appendChild(h('div', { class: 'help' }, (def.key === 'boost' && S.dsl ? 'On a diesel boost is air: more of it burns the fuel cleaner and cooler (and lets more fuel make power). The head gasket sets the limit: about ' + S.headPsi + ' psi.' : (S.drive === 'FWD' && def.helpFwd) || def.help) + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' && S.knock < 90 ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F). This engine (' + S.cr + ':1) knocks past about ' + S.knock + ' psi on this fuel (' + S.knockLo + ' at peak torque, ' + S.knockHi + ' up top). Past it the tune pulls timing: each psi adds less, power stops climbing at about ' + S.knockTop + ' psi, and further it detonates.' + (S.nosKnock ? ' With the nitrous spraying it knocks about ' + S.nosKnock + ' psi sooner (' + DR.knockSafe(S) + ' psi).' : '') : '')));
+      row.appendChild(h('div', { class: 'help' }, (def.key === 'boost' && S.dsl ? 'On a diesel boost is air: more of it burns the fuel cleaner and cooler (and lets more fuel make power). The head gasket sets the limit: about ' + S.headPsi + ' psi.' : (S.drive === 'FWD' && def.helpFwd) || def.help) + (def.key === 'psi' ? ' Ideal: ' + S.tire.optP + ' psi.' : '') + (def.key === 'boost' && S.knock < 90 ? ' Charge at full boost: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F). This engine (' + S.cr + ':1) knocks past about ' + S.knock + ' psi on this fuel (' + S.knockLo + ' at peak torque, ' + S.knockHi + ' up top). Past it the tune pulls timing: each psi adds less and the exhaust runs hotter (engine risk climbs to about 3% a pass where power stops climbing, at about ' + S.knockTop + ' psi), and further it detonates.' + (S.nosKnock ? ' With the nitrous spraying it knocks about ' + S.nosKnock + ' psi sooner (' + DR.knockSafe(S) + ' psi).' : '') : '')));
       // jets: how the plugs read (any data logger brings a wideband: the
       // exact air/fuel ratio)
       if (def.key === 'jets') {

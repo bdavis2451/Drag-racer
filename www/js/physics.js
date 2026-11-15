@@ -69,11 +69,16 @@
   DR.knockSafe = function (S) { return S.knock - (S.nosKnock || 0); };
   // An engine's knock point on a fuel (psi, 50 C charge): the fuel's rating
   // is for an 8.5:1 engine; each point of compression over that costs about
-  // 15% of it (3 psi on pump gas), and the combustion design (head, bore,
-  // direct injection: e.kd, psi on pump gas) adds or takes a little.
+  // 15% of it (3 psi on pump gas). High compression on a strong fuel gets the
+  // room effective compression gives it (CR x boost pressure ratio^0.7 held
+  // at what the fuel takes at 8.5:1): methanol at 12.5:1 still takes ~40
+  // psi, as real Pro Mods run. The combustion design (head, bore, direct
+  // injection: e.kd, psi) adds or takes a little, the same psi on any fuel
+  // (an old head's few psi don't grow into 16 on methanol).
   function engKnock(e, ref, crD) {
-    var cr = (e.cr || 9.5) + (crD || 0);
-    return ref * Math.max(0.35, 1 - 0.15 * (cr - 8.5)) + (e.kd || 0) * ref / 20;
+    var cr = (e.cr || 9.5) + (crD || 0), k = ref * Math.max(0.35, 1 - 0.15 * (cr - 8.5));
+    if (cr > 8.5) k = Math.max(k, 14.7 * (Math.pow(8.5 * Math.pow((14.7 + ref) / 14.7, 0.7) / cr, 1 / 0.7) - 1));
+    return k + (e.kd || 0);
   }
   // A factory boosted engine is built for its boost (lower compression,
   // timing to match): it gets the knock margin it needs to run factory boost
@@ -113,9 +118,9 @@
   }
   DR.dieselState = function (S, rpm, boost) { return S.dsl ? dieselState(S, rpm, boost) : null; };
   // Full-throttle torque (Nm) at rpm with a given boost (psi). No nitrous.
-  // (kdT: how much hotter the charge is than on a 25 C day, from the
-  // weather and heat soak: it moves the knock point only; the thinner air is
-  // the race's own correction. After a call, kLast holds how far past the
+  // (kdT: how much hotter the charge is from a heat-soaked engine between
+  // rounds: it moves the knock point only; the power it costs is the race's
+  // own correction. After a call, kLast holds how far past the
   // knock point it ran (psi) and that point's pulled zone.)
   var kLast = { x: 0, P: 1 };
   function knockDeg(x, P) { return x <= 0 ? 0 : x <= P ? 10 * x / P : 10 + 2 * (x - P); }
@@ -827,8 +832,9 @@
     // for the air the engine pulls. Breathing parts (heads, cam, headers,
     // a bigger carb's signal) lean it out, about 4 jet sizes from stock to
     // a full race build; boost through a carb wants it richer; a carb runs
-    // rich in hot, thin air and lean in cool, dense air (about one size
-    // between a hot day and a cool night). One size is about 2% fuel.
+    // rich in hot, thin air and lean in cool, dense air in real life, but
+    // the weather doesn't touch the engine in the game (owner, Nov 15).
+    // One size is about 2% fuel.
     S.jets = null;
     if (cb && efi !== 'tbi' && efi !== 'mpfi') {
       var need = 4 * B + (S.boostSet || 0) / 8 - (cOpt.jet0 || 0);
@@ -1260,7 +1266,11 @@
     var kWhy = (S.iat > 60 ? ' with a ' + Math.round(S.iat) + ' C charge' : ' on this fuel') + (nkR ? ' and the nitrous spraying (' + nkR + ' psi sooner)' : '');
     if (S.diesel || S.fiType === 'none') { /* no spark knock */ }
     else if (bTop > kTopR + 0.5) { r.engine += Math.min(0.7, (bTop - kTopR) * 0.08); r.notes.push('Detonating: past about ' + kTopR + ' psi' + kWhy + ' there\'s no timing left to pull. It loses power and hammers the pistons - less boost, better fuel or lower compression' + (nkR ? ', or a smaller shot' : '')); }
-    else if (bTop > kR + 0.5) { r.engine += Math.min(0.1, (bTop - kR) * 0.015); r.notes.push('Timing pulled: past ' + kR + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + kTopR + ' psi, and the exhaust runs hot'); }
+    // Timing pulled: knock control keeps it safe just past the knock point;
+    // the cost is heat, and it climbs fast as the timing gets very retarded
+    // (melted exhaust valves and pistons): 3% x (how far into the zone)^2,
+    // 3% a pass sitting where power stops (owner, Nov 15)
+    else if (bTop > kR + 0.5) { var kz = clamp((bTop - kR) / Math.max(1, kTopR - kR), 0, 1); r.engine += 0.03 * kz * kz; r.notes.push('Timing pulled: past ' + kR + ' psi' + kWhy + ' the tune retards the timing to stop knock. Each psi adds less, power stops climbing at about ' + kTopR + ' psi, and the exhaust runs hotter the closer it gets'); }
     if (S.fiType !== 'none' && bTop > S.headPsi + 0.5) { r.engine += Math.min(0.6, (bTop - S.headPsi) * 0.04); r.notes.push('The head gasket can\'t hold ' + bTop + ' psi: ' + (S.headKit ? 'the head lifts past about ' + S.headPsi + ' psi even on studs' + (S.headKit === 'hs1' ? ' (an O-ringed block holds more, Top End)' : '') : 'the factory head bolts stretch and the head lifts past about ' + S.headPsi + ' psi (head studs fix it, Top End)')); }
     if (S.untunedBoost && bTop > S.untunedBoost) { r.engine += Math.min(0.6, (bTop - S.untunedBoost) * 0.06); r.notes.push('The stock tune can\'t fuel or time ' + bTop + ' psi (about ' + S.untunedBoost + ' psi is its limit): it runs lean and knocks - get an ECU flash'); }
     if (S.fiType !== 'none' && !S.diesel && S.iat > 75) r.notes.push('Hot intake charge: ' + Math.round(S.iat) + ' C (' + Math.round(S.iat * 1.8 + 32) + ' F) at ' + S.boostSet + ' psi - ' + (S.icE ? 'a bigger intercooler' : 'an intercooler') + ', E85 or methanol would cool it');
@@ -1313,9 +1323,9 @@
   // The surface under the tires and the time of day. A prepped strip (rubber
   // and traction compound) is what drag tires are made for: a slick on bare
   // asphalt loses far more than a street tire does, which was built for it.
-  // Night: cooler, denser air (a little more power, a turbo's boost makes up
-  // most of the difference by day) and a colder track that grips less and
-  // pulls the heat out of the tires sooner.
+  // Night: a colder track that grips less and pulls the heat out of the
+  // tires sooner. (The air temperature doesn't change the engine: owner's
+  // call, Nov 15. Day or night it makes its dyno numbers.)
   DR.SURFACES = {
     prep:   { name: 'Prepped strip', k: { Street: 1, 'Drag Radial': 1, Slick: 1, Track: 1, 'Race Slick': 1, 'Radial Slick': 1, 'Front Runner': 1 } },
     noprep: { name: 'No-prep', k: { Street: 0.96, 'Drag Radial': 0.84, Slick: 0.76, Track: 0.92, 'Race Slick': 0.85, 'Radial Slick': 0.70, 'Front Runner': 0.96 } },
@@ -1333,18 +1343,14 @@
     var tk = 1 - 0.003 * Math.max(0, 35 - cond.trackT) - 0.002 * Math.max(0, cond.trackT - 55);
     return (k == null ? 1 : k) * tk;
   };
-  // engine output against the 25 C the dyno figures are for
-  // how much hotter the charge is than on the 25 C day the dyno figures are
-  // for (C): the air outside, plus a heat-soaked intake between rounds
-  DR.knockDT = function (cond, engHeat) { return (cond ? cond.air - DR.AMBIENT_C : 0) + 0.5 * clamp((engHeat || 0) - 8, 0, 20); };
-  // the knock point and where power stops on the day (psi)
+  // how much hotter the charge is than the dyno figures are for (C): a
+  // heat-soaked intake between rounds (the weather doesn't count)
+  DR.knockDT = function (cond, engHeat) { return 0.5 * clamp((engHeat || 0) - 8, 0, 20); };
+  // the knock point and where power stops this round (psi)
   DR.knockOnDay = function (S, cond, engHeat) {
     if (S.fiType === 'none' || S.diesel || S.knock == null) return null;
     var d = DR.knockDT(cond, engHeat), sh = Math.round((knockAt(S, S.iat) - knockAt(S, S.iat + d)) * 2) / 2;
     return { shift: sh, knock: Math.max(0, S.knock - sh), top: Math.max(0, S.knockTop - sh) };
-  };
-  DR.airPower = function (cond, S) {
-    return Math.pow((DR.AMBIENT_C + 273.15) / (cond.air + 273.15), S.fiType === 'turbo' ? 0.25 : 0.5);
   };
   // jets: how far the mixture is from right at an air temperature (jet
   // sizes; + rich), and what that costs (lean costs more than rich)
@@ -1371,14 +1377,14 @@
     this.cond = opts.cond || null;
     this.track = (opts.grip || 1.0) * (this.cond ? DR.surfaceGrip(this.cond, S.tire.kind) : 1);
     this.trackT = this.cond ? this.cond.trackT : 25;
-    this.airK = this.cond ? DR.airPower(this.cond, S) : 1;
+    this.airK = 1;
     // (jetting doesn't drift with the weather for now: it's set by the parts)
     // between rounds: an engine still heat-soaked from the last pass (C over
     // its normal running temperature; the ECU pulls timing past ~8 C) and a
     // nitrous bottle that has lost pressure as it emptied and cooled
     if (opts.engHeat) this.airK *= 1 - 0.003 * clamp(opts.engHeat - 8, 0, 20);
-    // the charge runs as much hotter as the air is (and a heat-soaked
-    // engine's intake warms it more): the knock point drops with it
+    // a heat-soaked engine's intake warms the charge: the knock point
+    // drops with it
     this.kdT = DR.knockDT(this.cond, opts.engHeat);
     this.knockDeg = 0;
     this.nosP = opts.nosP || 1;
