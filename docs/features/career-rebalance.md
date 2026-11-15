@@ -1,8 +1,8 @@
 # Career / rival rebalance
 
-Status: **next up (Nov 15). Nothing measured or changed yet.** Step 1 is a
-playtest by the tester plus a measurement run by Claude (no changes), then a
-written plan for the owner.
+Status: **folded into the career ladder rework (Nov 15,
+`career-ladder.md`).** The measurement run and rival/money pass below happen
+as part of it. Nothing measured or changed yet.
 
 ## What the owner has said so far
 - Nov 12 (turbo rework): "Max realism and playability. Reworking career

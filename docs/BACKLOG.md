@@ -5,14 +5,11 @@ the top of each section.
 
 ## Next up
 
-- **Career / rival rebalance** (`docs/features/career-rebalance.md`).
-  Rivals have drifted since the last balance pass: the turbo rework moved 70
-  of 126 rival times (stage 3 boss ~0.45 s quicker), the engine ceilings
-  19 (3.2 I6 rivals up to 0.32 s slower, 2JZ-GTE ~0.1 s quicker), the knock
-  model and clutch fix 11 more, while the player side kept improving
-  (wheels & tires, FWD, weight reduction, tuner v2). Agreed Nov 12; order
-  (Nov 15): tester playtest + Claude measurement run (no changes) first,
-  then a plan with questions for the owner.
+- **Career ladder rework** (`docs/features/career-ladder.md`, Nov 15):
+  owner's draft (5 sections x 4 events, 3 of 4 to move on, events of 3-5
+  races, King event with the ladder; themed events, restricted events;
+  circuit later). Audit and research done, thoughts and questions sent.
+  The career / rival rebalance (`career-rebalance.md`) folds into it.
 
 ## In progress
 
