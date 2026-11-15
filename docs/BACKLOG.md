@@ -3,50 +3,40 @@
 What's parked, what's waiting on a decision, and what was decided. Newest at
 the top of each section.
 
+## Next up
+
+- **Career / rival rebalance** (`docs/features/career-rebalance.md`).
+  Rivals have drifted since the last balance pass: the turbo rework moved 70
+  of 126 rival times (stage 3 boss ~0.45 s quicker), the engine ceilings
+  19 (3.2 I6 rivals up to 0.32 s slower, 2JZ-GTE ~0.1 s quicker), the knock
+  model and clutch fix 11 more, while the player side kept improving
+  (wheels & tires, FWD, weight reduction, tuner v2). Agreed Nov 12; order
+  (Nov 15): tester playtest + Claude measurement run (no changes) first,
+  then a plan with questions for the owner.
+
 ## In progress
 
-- **Weight reduction audit** (Nov 15, `docs/features/weight-reduction.md`):
-  shipped: stages rescaled to real weigh-ins, real cage weights, Pro Mod /
-  dragster can't take body parts, A/C no longer counted twice.
-- **FWD/AWD traction** (plan approved Nov 14, `docs/features/awd-fwd-traction.md`):
-  AWD tire-package fix shipped; FWD build shipped (front wheel wells, 26x10
-  slick, front race battery, front ballast, rear-biased weight cut, FWD
-  wheelie bars, slider clutch ranges, Extreme drive package keeps FWD).
-  A 1,500 hp FWD Civic: 10.3 -> 8.8 (real 7.8, 60 ft 1.35 vs our 1.70).
-  **Waiting on the owner:** the remaining gap is front grip (~1.25 g max);
-  options: let the wide front end take a 31x13 slick, a FWD slick
+- **FWD/AWD traction** (`docs/features/awd-fwd-traction.md`): AWD tire
+  packages and the FWD update shipped (1,500 hp FWD Civic 10.3 -> 8.8; real
+  7.8, 60 ft 1.35 vs our 1.70). Remaining gap is front grip (~1.25 g max).
+  **Owner is researching the front slick sizes 7-second FWD cars run**,
+  then picks: let the wide front end take a 31x13 slick, a FWD slick
   compound, or leave it. Follow-up: the tuner doesn't search the slider
-  clutch low enough (part of the tuner v2 plan).
-- **Wheels & tires rework** (plan approved Nov 14: 4 slots, 5 wheel styles,
-  20 tires incl. radial slicks, tubs + brake rule, Claude draws the wheels,
-  per-car limits researched, old saves keep over-size tires flagged until
-  tubbed; everything in one update). Shipped Nov 15 (owner OK'd the art).
-  Next: **FWD traction** (started Nov 14, see above).
-  Owner notes Nov 14: wheel width and diameter, a good wheel selection, tire
-  selection, chosen separately per axle (front labelled Front; the drive
-  axle isn't labelled, the game knows it), new wheel/tire assets and a path
-  for adding more. Research done Nov 14, options + 5 questions in
-  `docs/features/wheels-tires.md`,
-  `docs/features/awd-fwd-traction.md`.
-- **Career/rival balance after the engine ceilings too:** 19 rivals moved
-  (3.2 I6 rivals at 20 psi up to 0.32 s slower, 2JZ-GTE rivals ~0.1 s
-  quicker). Folded into the same rebalance.
-- **Career/rival balance after the turbo rework.** About half the turbo
-  rivals moved (stage 3 boss ~0.45 s quicker, a few others 0.3-0.4 s).
-  Agreed: rebalance after the turbo rework (owner, Nov 12).
+  clutch low enough (tuner work).
 
 ## Waiting on a yes or no
 
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
   spool). Records are ~3,000 / ~3,500. Option: a ~100 mm single or twin
-  8891s. Asked Nov 13.
+  8891s. Asked Nov 13. Best decided before the rebalance (it changes the
+  top of stages 5-6).
+
+## Parked ideas
 
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
   when it's running inside Facebook's browser (no sound there). Owner said
   not now (2026-11-10).
-
-## Parked ideas
 
 - **Wheels & tires later:** rollout / reaction time from the front tire's
   height, wheel offset and spacers, tire compounds, a 16 in drag wheel for
@@ -104,6 +94,20 @@ the top of each section.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Weight reduction audit** (Nov 15, `docs/features/weight-reduction.md`):
+  stages rescaled to real weigh-ins (Fox 90 / 219 / 387 / 490 lb), real
+  cage weights, Pro Mod / dragster can't take weight stages, cages or
+  battery moves, A/C no longer counted twice. Shipped.
+- **FWD update** (Nov 14): front wheel wells (rolled fenders, wide
+  one-piece front end), 26x10 slick, front race battery, front ballast,
+  weight reduction strips the back half on FWD, FWD wheelie bars, slider
+  clutch ranges, Extreme drive package keeps FWD cars FWD. Shipped.
+- **AWD tire packages** fit the same tire on both axles (Nov 14). Shipped.
+- **Wheels & tires rework** (plan approved Nov 14, `docs/features/wheels-tires.md`):
+  4 slots, 5 wheel styles, 20 tires incl. radial slicks, tubs + brake rule,
+  Claude-drawn wheels, per-car limits, old saves keep over-size tires
+  flagged until tubbed. Shipped Nov 15.
 
 - **Dyno work is always paid** (owner, Nov 14): "no gain, no pay" covers the
   track work only; a dyno-only booking costs what its quote says (no track
