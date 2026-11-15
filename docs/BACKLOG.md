@@ -16,6 +16,10 @@ the top of each section.
 
 ## In progress
 
+- **Wheel & tire sets for street / strip / circuit**
+  (`docs/features/wheel-sets.md`): research done Nov 15, options with the
+  owner. No code.
+
 - **FWD/AWD traction** (`docs/features/awd-fwd-traction.md`): AWD tire
   packages and the FWD update shipped (1,500 hp FWD Civic 10.3 -> 8.8; real
   7.8, 60 ft 1.35 vs our 1.70). Remaining gap is front grip (~1.25 g max).
