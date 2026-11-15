@@ -2,6 +2,18 @@
 
 Short notes for testing, newest first.
 
+## Paying rent
+
+- Rent (and Ray's $400 once you're past class 2, and storage) comes out of
+  your cash by itself on the 1st. If you're short that day it's owed, and
+  until now there was no way to pay it before the next 1st.
+- Now there's a **Pay** button for anything owed: Home screen under Bills,
+  the Bank, and the Move house window. The garage's Home tile turns red
+  ("Owed $1,540: tap to pay") while you owe.
+- The Home screen's Bills also says how it works: paid by itself on the 1st,
+  pay what's owed any time.
+- Try: be short on the 1st, check the Home tile in the garage, tap it, pay.
+
 ## The shop says when brakes block a wheel size
 
 - On cars with big factory brakes (the '18 Mustang GT needs an 18 in wheel

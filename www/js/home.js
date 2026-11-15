@@ -84,7 +84,7 @@
       var due = hm.rent + s.owed;
       if (hm.id === 'uncle' && DR.Phone) DR.Phone.send('ray', 'couchrent');
       if (G.canAfford(due)) { pay(s.owed ? (hm.id === 'uncle' ? 'Ray, for the bills, and your tab' : 'Rent and what you owed') : (hm.id === 'uncle' ? 'Ray, for the bills' : 'Rent'), due); s.owed = 0; s.missed = 0; }
-      else if (hm.id === 'uncle') { s.owed = due; news.push('🧾 Ray\'s ' + DR.money(hm.rent) + ' goes on your tab (' + DR.money(s.owed) + ' now). He\'s family; he\'ll wait.'); }
+      else if (hm.id === 'uncle') { s.owed = due; news.push('🧾 Ray\'s ' + DR.money(hm.rent) + ' goes on your tab (' + DR.money(s.owed) + ' now). He\'s family; he\'ll wait. Pay it off any time on the Home screen.'); }
       else {
         s.missed++;
         if (s.missed > DR.RENT_GRACE) {
@@ -93,7 +93,7 @@
           if (DR.Phone) DR.Phone.send('ray', 'evicted');
         } else {
           s.owed += Math.round(hm.rent * 1.1);   // and a 10% late fee
-          news.push('🧾 Rent unpaid: ' + DR.money(s.owed) + ' owed with the late fee. Pay it by the 1st or the landlord changes the locks.');
+          news.push('🧾 Rent unpaid: ' + DR.money(s.owed) + ' owed with the late fee. Pay it before the 1st (Home: Bills, or the Bank) or the landlord changes the locks.');
         }
       }
     }
@@ -118,11 +118,34 @@
             news.push('🧾 LIEN SALE: the storage company auctioned your ' + DR.CARS[car.carId].name + ' for ' + DR.money(val) + ' and kept the ' + DR.money(s.store) + ' you owed' + (back ? ' (+' + DR.money(back) + ' to you)' : '') + '.');
             s.store = 0; s.storeMissed = 0;
           }
-        } else news.push('🧾 Storage unpaid: ' + DR.money(s.store) + ' owed. Another month and they sell a car.');
+        } else news.push('🧾 Storage unpaid: ' + DR.money(s.store) + ' owed. Another month and they sell a car (pay it on the Home screen).');
       }
     }
     return news;
   });
+  // pay what you owe now instead of waiting for the 1st: 'rent' (or Ray's
+  // tab) or 'store'; returns '' or why not
+  G.payOwed = function (what) {
+    var s = st(), amt = what === 'store' ? s.store : s.owed, hm = G.home();
+    if (!(amt > 0)) return 'Nothing owed';
+    if (!G.canAfford(amt)) return 'You need ' + DR.money(amt);
+    G.pay(amt);
+    if (what === 'store') { s.store = 0; s.storeMissed = 0; } else { s.owed = 0; s.missed = 0; }
+    G.save();
+    return '';
+  };
+  // the pay buttons for what's owed (none if nothing is)
+  UI.owedButtons = function (after) {
+    var s = st(), hm = G.home(), out = [];
+    function row(label, amt, what) {
+      out.push(h('div', { class: 'row', style: { gap: '8px', alignItems: 'center' } },
+        h('span', { class: 'grow bad gsmall' }, label + ': ' + DR.money(amt)),
+        btn('Pay ' + DR.money(amt), function () { var w = G.payOwed(what); if (w) return UI.toast(w); if (DR.Audio && DR.Audio.cash) DR.Audio.cash(); UI.toast('Paid ' + DR.money(amt)); if (after) after(); UI.refresh(); }, 'small' + (G.canAfford(amt) ? ' go' : ' disabled'))));
+    }
+    if (s.owed > 0) row(hm.id === 'uncle' ? 'Ray\'s tab' : 'Rent owed (pay before the 1st or you\'re evicted)', s.owed, 'rent');
+    if (s.store > 0) row('Storage owed', s.store, 'store');
+    return out.length ? h('div', { class: 'col' }, out) : null;
+  };
   // the next 1st's bills: [[what, $]]
   G.billsPreview = function () {
     var s = st(), hm = G.home(), out = [];
@@ -154,7 +177,7 @@
     });
     close = UI.modal([h('div', { class: 'pix acc' }, 'HOME'),
       h('div', {}, 'You live where the cars live. Bays are the cars you can keep; rent' + (DR.Team && DR.Team.state().tuners.length ? ', your tuners\' salaries' : '') + ' and storage are due on the 1st of every month.'),
-      s.owed ? h('div', { class: 'bad' }, 'Rent owed: ' + DR.money(s.owed) + '. Still owed on the 1st and you\'re evicted.') : null,
+      UI.owedButtons(function () { close(); UI.homeModal(); }),
       G.storedCars() ? h('div', { class: 'warn' }, G.storedCars() + ' car' + (G.storedCars() > 1 ? 's' : '') + ' in storage: ' + DR.money(G.storedCars() * DR.STORAGE) + ' a month' + (s.store ? ', ' + DR.money(s.store) + ' owed' : '') + '. Move somewhere bigger or sell.') : null,
       h('div', { class: 'gsmall dim' }, 'Due on the 1st: ' + DR.money(G.weeklyBills()) + ' in bills.'),
       h('div', { class: 'col homelist' }, rows),
@@ -253,9 +276,11 @@
   UI.benchCard = benchCard;
   function billsCard() {
     var b = G.billsPreview(), tot = b.reduce(function (a, x) { return a + x[1]; }, 0), next = CAL.firstOfNextMonth(G.now());
-    if (!tot) return h('div', { class: 'gsmall dim' }, 'Nothing due on the 1st' + (G.couchRent && !G.couchRent() && G.home().id === 'uncle' ? ': Ray\'s couch is free till you\'ve beaten class 2.' : '.'));
-    return h('div', { class: 'col' }, h('div', { class: 'gsmall' }, 'Due ' + CAL.fmt(next, { noTime: true }) + ' (' + CAL.dur(next - G.now()) + '): ', h('b', { class: tot > G.state.money ? 'bad' : 'acc' }, DR.money(tot))),
-      b.map(function (x) { return h('div', { class: 'row jobrow' }, h('span', { class: 'grow dim' }, x[0]), h('span', {}, DR.money(x[1]))); }));
+    if (!tot) return h('div', { class: 'col' }, UI.owedButtons(), h('div', { class: 'gsmall dim' }, 'Nothing due on the 1st' + (G.couchRent && !G.couchRent() && G.home().id === 'uncle' ? ': Ray\'s couch is free till you\'ve beaten class 2.' : '.')));
+    return h('div', { class: 'col' }, UI.owedButtons(),
+      h('div', { class: 'gsmall' }, 'Due ' + CAL.fmt(next, { noTime: true }) + ' (' + CAL.dur(next - G.now()) + '): ', h('b', { class: tot > G.state.money ? 'bad' : 'acc' }, DR.money(tot))),
+      b.map(function (x) { return h('div', { class: 'row jobrow' }, h('span', { class: 'grow dim' }, x[0]), h('span', {}, DR.money(x[1]))); }),
+      h('div', { class: 'gsmall dim' }, 'Paid by itself from your cash on the 1st. Short that day and it\'s owed: pay it here any time.'));
   }
   UI.Home = function () {
     var hm = G.home(), cv = h('canvas', { class: 'roomcv', width: 320, height: 150 });
@@ -298,6 +323,7 @@
     var titleCars = G.state.cars.filter(function (c) { return !G.pledged(c.uid) && G.titleOffer(c) >= 200; });
     close = UI.modal([h('div', { class: 'pix acc' }, 'THE BANK'),
       h('div', { class: 'gsmall' }, 'Credit: ', h('b', { class: b.credit >= 680 ? 'good' : b.credit >= 620 ? 'acc' : 'bad' }, b.credit + ' (' + G.creditBand() + ')'), ' • on-time payments raise it, missed ones sink it'),
+      UI.owedButtons(function () { close(); UI.bankModal(); }),
       loans.length ? h('div', { class: 'col homelist' }, loans) : null,
       h('div', { class: 'plvl' }, 'BANK LOAN'),
       lim > 0 ? h('div', { class: 'col', style: { gap: '4px' } },

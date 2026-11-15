@@ -483,7 +483,7 @@
   // home at a glance, and the car's work in the bay
   function homeChip() {
     if (!G.home) return null;
-    return h('div', { class: 'gstatus ghome', onclick: function () { UI.show(UI.Home); } }, h('span', { class: 'acc' }, '⌂ Home'), h('span', {}, 'sleep • bills • bank'));
+    return h('div', { class: 'gstatus ghome', onclick: function () { UI.show(UI.Home); } }, h('span', { class: 'acc' }, '⌂ Home'), (function () { var hs = G.state.home || {}, ow = (hs.owed || 0) + (hs.store || 0); return ow > 0 ? h('span', { class: 'bad' }, (G.home && G.home().id === 'uncle' && !hs.store ? 'Ray\'s tab ' : 'Owed ') + DR.money(ow) + ': tap to pay') : h('span', {}, 'sleep • bills • bank'); })());
   }
   function CAL_dur(x) { return DR.Cal.dur(x); }
   // the car's garage work: do it yourself or the shop (work.js)
