@@ -72,6 +72,47 @@ E. **Spool in circuit races:** a spool costs cornering grip on the circuit
 F. Leave any of these as they are.
 Rivals unchanged in every option (rival builds keep their numbers).
 
+## Bench (built 1,000 / 1,500 hp FWD Civic, existing body model)
+| Idea | 1,000 hp | 1,500 hp |
+|---|---|---|
+| Stiff rear springs & shocks | -0.05 s | -0.06 s |
+| Rear lockout (solid links) | -0.20 s | -0.27 s |
+| Front traction bar (less wheel hop) | -0.08 s | -0.09 s |
+| Front limit straps (nose can't rise) | 0 | +0.03 (worse): dropped |
+
+## Also found (FWD, drivetrain group)
+- "Rear End & Axles" on FWD sells a built 9-inch and a fabricated pro rear
+  end: rear-drive parts. FWD cars break front halfshafts. Real FWD axle
+  upgrades (Driveshaft Shop): Level 2.9 ~475 hp, 3.9 ~600 hp, 5.9 ~850 hp,
+  Pro-Level 1,000+ whp.
+- "Driveshaft" is sold to FWD cars (a transverse FWD car has none).
+
+## Plan (proposed Nov 15)
+1. **Rear Wheel Wells** (renamed from Rear Wheel Tubs), every car: Factory;
+   Rolled & Pulled Rear Fenders $400, +1.2 in (same gain as the front);
+   Mini-Tubs and Full Tubs stay, driven rear only (RWD/AWD).
+2. **Front Wheel Wells**, every car: Factory; Rolled & Pulled Fenders $600,
+   +1.2 in; Wide One-Piece Front End stays for FWD-built cars.
+3. **FWD rear suspension** (replaces traction bars / ladder bars / 4-link on
+   FWD): Stiff Rear Springs & Shocks $600 (about -0.05 s on a built car);
+   Rear Lockout (solid links instead of rear shocks) $350 (about -0.2 s,
+   drag only: costs rear grip on the circuit). Packages: Sport stiff rear,
+   Race/Extreme lockout.
+4. **FWD front suspension:** Front Traction Bar $350 (stops wheel hop: less
+   tire shake, about -0.08 s on a big FWD car). FWD packages fit it instead
+   of the tubular K-member.
+5. **FWD axles:** on FWD the slot is "Axles (Halfshafts)": Factory; Level 2.9
+   $900 (about 1,100 Nm, ~475 hp); Level 5.9 $1,600 (2,000 Nm, ~850 hp);
+   Pro-Level $3,500 (9,000 Nm, 1,000+ whp), weight up front. The driveshaft
+   slot hides on FWD (back on an AWD/RWD conversion).
+6. **Flexplate on automatics:** a lighter flexplate does 30% of what a lighter
+   flywheel does on a manual; named Lightweight / Billet Flexplate on autos.
+7. **Diff on the circuit:** corner exit traction open 0.92, limited-slip
+   1.0, spool 0.97, and a spool's drive axle corners at 0.94 (pushes).
+Saves: FWD cars with rear-drive rear suspension or a driveshaft get them
+moved to the shelf; FWD axles map to the same strength (chromoly -> Level
+2.9, 9-inch -> 5.9, pro -> Pro-Level). Rivals unchanged.
+
 ## Sources
 - Fender rolling/pulling: s2ki "how much clearance from fender rolling",
   SlashGear (AutoRestorer: ~3/8 in), GRM rolling vs pulling (paywalled
@@ -80,5 +121,8 @@ Rivals unchanged in every option (rival builds keep their numbers).
   (spool); GRM welded diff for drags; Speedway Motors welded diff.
 - Flexplates: ls1tech lightweight flexplate threads, Dragzine flexplate
   articles (high-inertia plates), EngineLabs bracket flexplate.
+- Axles: Driveshaft Shop listings (realstreetperformance, vividracing,
+  weaponxmotorsports, hybrid-racing): Level 2.9 475 hp, 3.9 600 hp, 5.9
+  850 hp, Pro-Level 1,000+ whp.
 - FWD suspension: ls1tech FWD suspension discussion, DSMTuners FWD
   suspension / drag setup threads, Dragzine/QA1 front shock tuning (RWD).
