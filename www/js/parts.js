@@ -493,11 +493,11 @@
   C.chassis = { name: 'Chassis / Roll Cage', options: [
     opt('stock', 'Stock Unibody', 0, { stiff: 0.9, kg: 0, shellK: 1 }, 'The body twists on a hard launch.'),
     opt('cg1', 'Subframe Connectors', 400, { stiff: 0.95, kg: 7, shellK: 1.3 }, 'Ties the front and rear frame rails together: the shell takes 30% more power.'),
-    opt('cg2', '8-Point Roll Bar', 1500, { stiff: 0.98, kg: 18, shellK: 1.8, tech: 1 }, 'Stiffer chassis, 80% more power before it twists, and tech lets you run quicker than 11.50.'),
-    opt('cg3', '25.3 Chromoly Roll Cage', 4000, { stiff: 1, kg: 26, shellK: 3, tech: 2 }, 'A rigid chassis that takes 3x the power. Tech lets you run quicker than 10.00. Every bit of anti-squat goes to the tires.'),
+    opt('cg2', '8-Point Roll Bar', 1500, { stiff: 0.98, kg: 30, aiKg: 18, shellK: 1.8, tech: 1 }, 'Stiffer chassis, 80% more power before it twists, and tech lets you run quicker than 11.50.'),
+    opt('cg3', '25.3 Chromoly Roll Cage', 4000, { stiff: 1, kg: 42, aiKg: 26, shellK: 3, tech: 2 }, 'A rigid chassis that takes 3x the power. Tech lets you run quicker than 10.00. Every bit of anti-squat goes to the tires.'),
     // a tube chassis takes any power, and it's as light as the car gets
     // (no weight reduction on top: it is the weight reduction)
-    opt('ct', 'Tube Chassis', 35000, { tube: true, wr: 0.24, low: 0.03, stiff: 1, kg: 26, tech: 2 }, '-24% chassis weight and a lower CG, with a certified cage: it takes any power. Replaces the weight reduction stages.')
+    opt('ct', 'Tube Chassis', 35000, { tube: true, wr: 0.24, low: 0.03, stiff: 1, kg: 42, aiKg: 26, tech: 2 }, '-24% chassis weight and a lower CG, with a certified cage: it takes any power. Replaces the weight reduction stages.')
   ]};
   C.frontsusp = { name: 'Front Suspension', options: [
     opt('stock', 'Stock K-Member & Arms', 0, { fkg: 0 }),
@@ -557,10 +557,14 @@
   ]};
   C.weight = { name: 'Weight Reduction', options: [
     opt('stock', 'Stock', 0, { wr: 0 }),
-    opt('w0', 'Spare, Jack & A/C Delete', 250, { wr: 0.02 }, '-2% chassis weight.'),
-    opt('w1', 'Stage 1: Interior Strip', 1000, { wr: 0.05 }, '-5% chassis weight.'),
-    opt('w2', 'Stage 2: Lightweight Panels', 4000, { wr: 0.10 }, '-10% chassis weight.'),
-    opt('w3', 'Stage 3: Carbon Body & Lexan', 12000, { wr: 0.16 }, '-16% chassis weight.'),
+    // wr: share of the body & chassis (the car without its engine and
+    // driver) that comes out; each stage includes the ones before (real
+    // weigh-ins, docs/features/weight-reduction.md). aiWr: what rival
+    // builds were timed with.
+    opt('w0', 'Spare, Jack & A/C Delete', 250, { wr: 0.035, aiWr: 0.02 }, 'The spare, the jack and the whole A/C system out: -3.5% of the body and chassis weight (about 30 kg on a compact, 40 on a muscle car).'),
+    opt('w1', 'Stage 1: Interior Strip', 1000, { wr: 0.085, aiWr: 0.05 }, 'Plus the interior: rear seat, passenger seat, carpet, headliner, sound deadener and trim: -8.5% of the body and chassis weight (about 75-100 kg).'),
+    opt('w2', 'Stage 2: Lightweight Panels', 4000, { wr: 0.15, aiWr: 0.10 }, 'Plus a fiberglass hood, fenders, bumpers, hatch or decklid, and doors with Lexan door glass: -15% of the body and chassis weight (about 130-175 kg).'),
+    opt('w3', 'Stage 3: Carbon Body & Lexan', 12000, { wr: 0.19, aiWr: 0.16 }, 'Plus carbon panels, Lexan windows all round, the dash and heater box out: -19% of the body and chassis weight (about 165-220 kg).'),
     // (rival builds only: the tube chassis is a chassis part now)
     opt('w4', 'Stage 4: Tube Chassis', 35000, { wr: 0.24, low: 0.03, aiOnly: true }, '-24% chassis weight and a lower CG. A tube chassis with a certified cage: it takes any power.')
   ]};
@@ -587,7 +591,7 @@
     opt('stock', 'Stock Pulleys & Accessories', 0, { pk: 1, kg: 0 }),
     opt('pu1', 'Underdrive Pulleys', 250, { pk: 1.01, kg: 0 }, 'A smaller crank pulley slows the water pump, alternator and power steering pump: about 1% more power at the wheels.'),
     opt('pu2', 'Underdrive Pulleys + Electric Water Pump', 700, { lvl: 2, pk: 1.02, kg: -2 }, 'The water pump comes off the belt and runs on electricity: about 2% more power.'),
-    opt('pu3', 'Race Accessory Delete', 1400, { lvl: 3, pk: 1.03, kg: -14 }, 'A/C, power steering and the belt-driven alternator gone; electric water pump, race battery: about 3% more power and 14 kg lighter. Not a street car any more.')
+    opt('pu3', 'Race Accessory Delete', 1400, { lvl: 3, pk: 1.03, kg: -8, aiKg: -14 }, 'Power steering and the belt-driven alternator gone, electric water pump: about 3% more power and 8 kg lighter. Not a street car any more. (The A/C comes out with Weight Reduction, the battery in its own slot.)')
   ]};
   // Cooling: the radiator is sized for the factory engine. Make far more
   // power and it runs hot over a long circuit race, and the ECU pulls timing
@@ -1125,6 +1129,7 @@
     var o = DR.getOption('carb', inst);
     return { factory: e.carb, opt: o, efi: o.efi || '' };
   };
+  DR.RACE_CAR_NO = ['weight', 'chassis', 'battery'];
   DR.partApplies = function (cat, inst) {
     var nf = NOT_FOR[DR.engineKind(inst)];
     if (nf && nf[cat]) return false;
@@ -1133,6 +1138,9 @@
     // a carbureted engine has no injectors, throttle body or ECU until it's
     // converted to port injection (a multiport manifold)
     if ((cat === 'injectors' || cat === 'ecu' || cat === 'throttle') && !inst.ai && DR.ENGINES[inst.engine || DR.CARS[inst.carId].engine].carb && !DR.hasMpi(inst)) return false;
+    // a Pro Mod or a dragster is a tube-chassis race car already (players;
+    // rival builds list theirs)
+    if (!inst.ai && DR.RACE_CAR_NO.indexOf(cat) >= 0 && DR.CARS[inst.carId].shell === Infinity) return false;
     var c = C[cat];
     if (!c) return true;
     var tr = DR.TRANS[DR.partId('trans', inst)];

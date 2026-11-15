@@ -2,6 +2,25 @@
 
 Short notes for testing, newest first.
 
+## Weight reduction checked against real cars
+
+- **Weight Reduction stages now save what the real work saves** (they were
+  about half at the cheap end). A Fox Mustang: Spare/Jack/A-C 90 lb,
+  Interior Strip 219, Lightweight Panels 387, Carbon & Lexan 490 (was 55 /
+  139 / 276 / 441). A Civic: 66 / 161 / 284 / 360. The shop text says what
+  each stage takes out.
+- **Roll bar and cage weigh what real ones do:** 8-point bar 66 lb (was
+  40), 25.3 chromoly cage 93 lb (was 57).
+- **Race Accessory Delete:** -8 kg now; the A/C was being counted twice
+  (it comes out with Weight Reduction).
+- **Pro Mod and dragster:** they're already tube-chassis race cars at
+  class weight, so weight reduction, cages, tube chassis and battery moves
+  no longer show for them. Anything fitted is moved to your shelf to sell.
+- **Try:** a mid-build car with Stage 1 or 2: about 0.03-0.13 s quicker.
+  A very powerful rear-drive car that already spins can be a touch slower
+  stripped (less weight on the rear tires, as on a real car).
+- Rivals unchanged.
+
 ## Front-drive drag cars
 
 - **Front Wheel Wells** (Suspension, front-drive cars only): Rolled & Pulled

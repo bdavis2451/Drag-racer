@@ -37,6 +37,7 @@
     try { dieselV2(s); } catch (e) { /* keep what loaded */ }
     try { dieselV3(s); } catch (e) { /* keep what loaded */ }
     try { wheelsV1(s); } catch (e) { /* keep what loaded */ }
+    try { raceCarV1(s); } catch (e) { /* keep what loaded */ }
     // traction control used to come switched off: cars that have the ECU and
     // never turned it on get it on, once
     if (!s.tcV2) { (s.cars || []).forEach(function (c) { if ((c.parts || {}).ecu === 'ecu3' && !(c.tune && c.tune.tcSlip > 0)) { c.tune = c.tune || {}; c.tune.tcSlip = DR.TC_DEFAULT || 12; } }); s.tcV2 = true; }
@@ -299,6 +300,23 @@
       delete p.shifter;
     });
     s.vbV2 = true;
+  }
+  // Pro Mods and dragsters are tube-chassis race cars already: weight
+  // reduction, cages, a tube chassis and battery moves don't apply to them
+  // (Nov 15). Anything fitted goes back on the shelf, to sell or reuse.
+  function raceCarV1(s) {
+    if (s.raceCarV1) return;
+    (s.cars || []).forEach(function (c) {
+      if (!DR.CARS[c.carId] || DR.CARS[c.carId].shell !== Infinity) return;
+      var p = c.parts || {};
+      DR.RACE_CAR_NO.forEach(function (cat) {
+        if (!p[cat] || p[cat] === 'stock') return;
+        var o = DR.PART_CATS[cat] && DR.PART_CATS[cat].options.filter(function (x) { return x.id === p[cat]; })[0];
+        s.inv.push({ uid: s.uid++, cat: cat, id: p[cat], price: o ? o.price || 0 : 0 });
+        delete p[cat];
+      });
+    });
+    s.raceCarV1 = true;
   }
   function tubeV2(s) {
     if (s.tubeV2) return;

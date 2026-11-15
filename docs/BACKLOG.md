@@ -5,6 +5,9 @@ the top of each section.
 
 ## In progress
 
+- **Weight reduction audit** (Nov 15, `docs/features/weight-reduction.md`):
+  shipped: stages rescaled to real weigh-ins, real cage weights, Pro Mod /
+  dragster can't take body parts, A/C no longer counted twice.
 - **FWD/AWD traction** (plan approved Nov 14, `docs/features/awd-fwd-traction.md`):
   AWD tire-package fix shipped; FWD build shipped (front wheel wells, 26x10
   slick, front race battery, front ballast, rear-biased weight cut, FWD

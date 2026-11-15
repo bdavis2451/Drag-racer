@@ -755,12 +755,22 @@
 
     // ---- mass & geometry
     var share = car.ep === 'front' ? 0.9 : car.ep === 'mid' ? 0.15 : -0.2;
-    var chassis = (car.m - stockEng.w) * (1 - wt.wr);
-    // weight reduction comes off the chassis evenly, except on a front-drive
-    // build (players): it strips the back half (seats, glass, hatch, rear
-    // subframe), so only ~40% of what comes out is from the front
-    var fwdW = !ai && S.drive === 'FWD';
-    var chassisFront = fwdW ? car.m * car.f - stockEng.w * share - (car.m - stockEng.w) * wt.wr * 0.4 : (car.m * car.f - stockEng.w * share) * (1 - wt.wr);
+    // Weight reduction: a share of the body & chassis (the car without its
+    // engine and its ~80 kg driver) comes out, evenly front to rear, except
+    // on a front-drive build, which strips the back half (seats, glass,
+    // hatch, rear subframe): only ~40% of it from the front. Rival builds
+    // keep the figures their times were set with (the old stages, and the
+    // driver counted in).
+    var chassis, chassisFront;
+    if (ai) {
+      var wrAi = wt.aiWr != null ? wt.aiWr : wt.wr;
+      chassis = (car.m - stockEng.w) * (1 - wrAi);
+      chassisFront = (car.m * car.f - stockEng.w * share) * (1 - wrAi);
+    } else {
+      var body = car.m - stockEng.w - 80, bodyF = car.m * car.f - stockEng.w * share - 40, cut = body * (wt.wr || 0);
+      chassis = car.m - stockEng.w - cut;
+      chassisFront = car.m * car.f - stockEng.w * share - cut * (S.drive === 'FWD' ? 0.4 : bodyF / body);
+    }
     var fiW = (fiId !== 'none' && DR.FI[fiId].price) ? DR.FI[fiId].w : 0;
     // an AWD conversion's weight (kg front, middle, rear): a lengthways
     // one adds a transfer case and front diff up front; a transverse one a
@@ -779,8 +789,8 @@
     var axD = legacyWT ? (tire.m - stockTire.m) + wDm : wx.massD, axO = legacyWT ? ftires.fm : wx.massO;
     var fwdAx = !legacyWT && S.drive === 'FWD';
     var extraRear = (fwdAx ? axO : axD) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0) + (ai ? 0 : (tubsO.kg || 0)) - blkg * 0.3;
-    var extraFront = (fwdAx ? axD : axO) + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + (pul.kg || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5 + (ai ? 0 : (fwl.kg || 0)) + blkg * 1.3;
-    var extraMid = (awdAdd ? awdAdd[1] : 0) + chas.kg + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
+    var extraFront = (fwdAx ? axD : axO) + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + ((ai && pul.aiKg != null ? pul.aiKg : pul.kg) || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5 + (ai ? 0 : (fwl.kg || 0)) + blkg * 1.3;
+    var extraMid = (awdAdd ? awdAdd[1] : 0) + (ai && chas.aiKg != null ? chas.aiKg : chas.kg) + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
     S.f = clamp(front / S.m, 0.2, 0.72);
