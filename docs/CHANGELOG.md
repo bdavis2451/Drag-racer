@@ -2,6 +2,22 @@
 
 Short notes for testing, newest first.
 
+## The shop says when brakes block a wheel size
+
+- On cars with big factory brakes (the '18 Mustang GT needs an 18 in wheel
+  up front), smaller wheels don't show for that axle, and the shop didn't
+  say why. Now:
+  - the wheel list says the smallest wheel over your brakes and what
+    Lightweight Drag Brakes allow (Mustang front: 18 in, or 15 in with drag
+    brakes);
+  - in the tire list's other sizes, sizes your brakes block say "needs drag
+    brakes";
+  - a tire that can't go on any wheel over your brakes says so, and names
+    the fix.
+- Try: Mustang GT '18 with a 17 in tire up front. The warning should point
+  to Brakes; fit the Lightweight Drag Brakes and the 17 in front wheels
+  appear.
+
 ## Fix: tires unlocked on one axle but not the other
 
 - Track and road-race tires (circuit unlocks) and the drag tires showed as

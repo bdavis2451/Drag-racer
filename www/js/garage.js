@@ -529,7 +529,7 @@
     var by = {}, order = [];
     DR.partOptions(cat, inst).forEach(function (o) { if (!o.price || !o.style) return; if (!by[o.style]) { by[o.style] = []; order.push(o.style); } by[o.style].push(o); });
     var wrap = h('div', { class: 'col' },
-      h('div', { class: 'dim gsmall' }, 'Your ' + ax + ' tires: ' + (t.factory ? 'factory ' + t.size : t.name) + ' (a ' + t.rim + ' in wheel' + (t.factory ? '' : ', ' + t.wmin + '-' + t.wmax + ' in wide') + '). ✓ = they fit. Smallest wheel over your brakes: ' + DR.minWheel(inst, ax) + ' in.'));
+      h('div', { class: 'dim gsmall' }, 'Your ' + ax + ' tires: ' + (t.factory ? 'factory ' + t.size : t.name) + ' (a ' + t.rim + ' in wheel' + (t.factory ? '' : ', ' + t.wmin + '-' + t.wmax + ' in wide') + '). ✓ = they fit. Smallest wheel over your brakes: ' + DR.minWheel(inst, ax) + ' in' + (DR.partId('brakes', inst) !== 'br1' && DR.CAR_WT[inst.carId][6][ax === 'front' ? 0 : 1] < DR.minWheel(inst, ax) ? ' (Lightweight Drag Brakes: ' + DR.CAR_WT[inst.carId][6][ax === 'front' ? 0 : 1] + ' in).' : '.')));
     order.forEach(function (k) {
       var st = DR.WHEEL_STYLES[k], first = by[k][0], lvl = lvlOf(first), locked = !G.partUnlocked(cat, lvl, first.id);
       var chips = h('div', { class: 'wchips' }, by[k].map(function (o) {
@@ -555,7 +555,8 @@
       var wd = DR.wheelSpec(inst, cat === 'rtires' ? 'wheels' : 'fwheels').d;
       var fitsNow = opts.filter(function (o) { return o.price && o.rim === wd; }), others = opts.filter(function (o) { return o.price && o.rim !== wd; });
       others.sort(function (a, b) { return (a.rim - b.rim) || 0; });
-      others = others.map(function (o) { return Object.assign({}, o, { group: o.rim + ' in wheels: ' + o.group }); });
+      var tax = DR.axleOf(inst, cat);
+      others = others.map(function (o) { var bb = DR.brakeBlock(inst, tax, o.rim); return Object.assign({}, o, { group: o.rim + ' in wheels' + (bb === 'drag' ? ' (needs drag brakes)' : bb ? ' (too small for your brakes)' : '') + ': ' + o.group }); });
       var top = fitsNow.length ? cardsFor(fitsNow, true) : h('div', { class: 'dim gsmall' }, 'Nothing in the shop goes on ' + wd + ' in wheels: pick a size below (it comes with wheels to match).');
       var fold = h('details', { class: 'tirefold' }, h('summary', { class: 'pgroup' }, 'Other sizes (new wheels needed) ▸ ' + others.length), cardsFor(others, false));
       if (!fitsNow.length) fold.open = true;
@@ -707,7 +708,7 @@
         return DR.tireFits(t2, w2) && !(cat === 'wheels' && t2.kind === 'Front Runner');
       }).slice(0, 12);
       rows.push(h('div', { class: 'warnbox' }, isWheel ? 'Your ' + ax + ' tires (' + (t.factory ? t.size : t.name) + ') don\'t go on this wheel.' : 'Doesn\'t go on your ' + ax + ' wheels (' + wh.d + 'x' + wh.w + ').',
-        mainLocked ? '' : picks.length ? ' Pick ' + (isWheel ? 'tires' : 'wheels') + ' for it (bought and fitted together):' : ' Nothing you can buy yet fits it on this car.'));
+        mainLocked ? '' : picks.length ? ' Pick ' + (isWheel ? 'tires' : 'wheels') + ' for it (bought and fitted together):' : !isWheel && !t.factory && DR.brakeBlock(inst, ax, t.rim) ? ' And ' + DR.brakeText(inst, ax, t.rim) + '.' : ' Nothing you can buy yet fits it on this car.'));
       if (picks.length) rows.push(h('div', { class: 'wchips' }, picks.map(function (o) {
         var p1 = G.partPrice(cat, DR.getOption(cat, inst, id)), p2 = o.price ? G.partPrice(other, o) : 0;
         return h('button', { class: 'wchip fit', onclick: function () {

@@ -105,3 +105,13 @@ wheels and tires).
   approved rim widths, weight, price), downloaded Nov 15; tiresize.com ET
   Street R 315/55R17; Jegs 28x9 and 32x14 listings; Dragzine on new big
   ET Drag sizes.
+
+## Follow-up (Nov 15): brakes blocking a wheel size
+Owner: no 17 in front wheels on the '18 Mustang GT though a 17 in tire was
+on the front. Working as researched (S550 GT front needs 18 in over the
+factory brakes; drag brakes clear 15 in), but the shop never said why.
+Text only: `DR.brakeBlock` / `DR.brakeText` (parts.js) add the reason to
+the "tires don't fit" warning and the tire window; the wheel list header
+names the drag-brake size; folded tire sizes your brakes block are labelled
+"needs drag brakes" (or "too small for your brakes"). Rivals 0 diffs,
+packages 0 diffs, qolsmoke clean.

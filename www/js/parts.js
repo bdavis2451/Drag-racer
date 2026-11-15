@@ -884,6 +884,16 @@
     var m = Math.min(w[5][i], facOf(inst, axle).d);   // (the factory wheel always clears its own brakes)
     return b === 'br3' ? Math.max(m, 18) : b === 'br2' ? Math.max(m, 19) : m;
   };
+  // why no wheel of this diameter goes on an axle ('' when one does):
+  // 'drag' = drag brakes would clear it, 'small' = nothing clears it
+  DR.brakeBlock = function (inst, axle, d) {
+    if (!DR.CAR_WT[inst.carId] || d >= DR.minWheel(inst, axle)) return '';
+    return DR.partId('brakes', inst) !== 'br1' && DR.CAR_WT[inst.carId][6][axle === 'front' ? 0 : 1] <= d ? 'drag' : 'small';
+  };
+  DR.brakeText = function (inst, axle, d) {
+    var b = DR.brakeBlock(inst, axle, d);
+    return !b ? '' : 'no ' + d + ' in wheel clears your ' + axle + ' brakes (' + DR.minWheel(inst, axle) + ' in or bigger)' + (b === 'drag' ? ': Lightweight Drag Brakes (Brakes) clear it' : '');
+  };
   // the widest tire (section, in) an axle's wells take
   DR.wellLimit = function (inst, axle) {
     var w = DR.CAR_WT[inst.carId], fwd = DR.CARS[inst.carId].drive === 'FWD';
@@ -935,7 +945,7 @@
     [[axD, 'wheels', 'rtires', wD, tD], [axO, 'fwheels', 'ftires', wO, tO]].forEach(function (a) {
       var ax = a[0], wh = a[3], t = a[4], AX = ax === 'front' ? 'Front' : 'Rear';
       if (wh.d < DR.minWheel(inst, ax)) issues.push({ cat: a[1], text: AX + ' wheels (' + wh.d + ' in) don\'t clear the brakes: ' + DR.minWheel(inst, ax) + ' in or bigger' + (DR.partId('brakes', inst) !== 'br1' && DR.CAR_WT[inst.carId][6][ax === 'front' ? 0 : 1] < wh.d + 1 ? ', or drag brakes' : '') });
-      if (!DR.tireFits(t, wh)) issues.push({ cat: a[2], text: AX + ' tires don\'t fit the ' + AX.toLowerCase() + ' wheels (' + (t.factory ? t.size : t.name) + ' on ' + wh.d + 'x' + wh.w + ')' });
+      if (!DR.tireFits(t, wh)) issues.push({ cat: a[2], text: AX + ' tires don\'t fit the ' + AX.toLowerCase() + ' wheels (' + (t.factory ? t.size : t.name) + ' on ' + wh.d + 'x' + wh.w + ')' + (!t.factory && DR.brakeBlock(inst, ax, t.rim) ? ', and ' + DR.brakeText(inst, ax, t.rim) : '') });
       var fender = ax === 'front' && DR.partApplies('fwells', inst), tubOK = DR.partApplies('tubs', inst);
       if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' && tubOK ? 'tubs' : fender ? 'fwells' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' && tubOK ? (DR.driveOf(inst) === 'FWD' ? ': fender work fixes it (Suspension: Rear Wheel Wells)' : ': fender work or tubs fix it (Suspension: Rear Wheel Wells)') : fender ? ': fender work fixes it (Suspension: Front Wheel Wells)' : '') });
       if (a[1] === 'wheels' && t.kind === 'Front Runner') issues.push({ cat: 'rtires', text: 'Front runners can\'t drive the car' });
