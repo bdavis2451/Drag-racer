@@ -728,6 +728,8 @@
     cooling: { co2: 'circuit', co3: 'circuit' }, oiling: { o2: 'circuit' },
     fueltype: { meth: 'drag' }, safety: { sf2: 'drag' }, weight: { w4: 'drag' }, chassis: { ct: 'drag' }
   };
+  // a tire opens the same way on either axle (the front set is the same tire)
+  DR.PART_DISC.ftires = DR.PART_DISC.rtires;
   DR.partDisc = function (cat, id) { var t = DR.PART_DISC[cat]; return t ? t[id] || t['*'] || '' : ''; };
   DR.UNLOCK_NAMES = { engine: 'Engine', power: 'Power adder', drive: 'Drivetrain', susp: 'Suspension', tires: 'Wheel & tire', body: 'Weight' };
   DR.CAT_NAMES = { engine: 'Engine Swap', fi: 'Turbo / Supercharger', trans: 'Transmission', rtires: 'Drive Tires' };

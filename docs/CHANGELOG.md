@@ -2,6 +2,12 @@
 
 Short notes for testing, newest first.
 
+## Fix: tires unlocked on one axle but not the other
+
+- Track and road-race tires (circuit unlocks) and the drag tires showed as
+  open on the non-driven axle but locked on the drive axle. A tire now
+  unlocks the same on both axles.
+
 ## Drag springs & shocks: front-drive wording
 
 - Drag Coilovers and Adjustable Drag Shocks worked on front-drive cars, but

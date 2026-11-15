@@ -26,6 +26,29 @@ the top of each section.
 
 ## Waiting on a yes or no
 
+Owner's note (Nov 15): playing and sending bugs; open questions go here
+to answer later.
+
+- **FWD drag shocks:** Adjustable Drag Shocks adjust front rebound and rear
+  bump, which do almost nothing on a FWD car (rear rebound and spring rates
+  matter there). Make them adjust rear rebound on FWD cars instead?
+- **Front traction bar and K-member share the Front Suspension slot**, so a
+  FWD car can't have both. Split them (traction bar under Engine & Trans
+  Mounts, or a combined option)?
+- **Claude-app preview:** keep republishing it on every push (done since
+  Nov 15), or play only the Pages link?
+- **AWD tire wear:** only the drive tires wear and get charged for fresh
+  tires; an AWD car's front tires never wear. Add front wear and charge both
+  axles?
+- **Shelf tires are per axle:** a tire bought for the front sits on the
+  shelf as a front tire (can't go on another car's rear). Make shelf wheels
+  and tires fit either axle?
+- **Old FWD saves on a 275 drag radial** are flagged "can't race" until the
+  fenders are done, and the front end unlocks at Pro. Give those saves a
+  fitting tire swap instead?
+- **Tuner and the slider clutch:** the tuner doesn't try base pressure low
+  enough (15-20% is quicker on big turbo cars). Widen its search (tuner
+  work)?
 - **A bigger turbo for 3.0-3.8 L record builds.** 2JZ-GTE and VR38 stop at
   ~2,350 / ~2,450 hp (twin 7685s run out of flow; Pro Mod twins too big to
   spool). Records are ~3,000 / ~3,500. Option: a ~100 mm single or twin
