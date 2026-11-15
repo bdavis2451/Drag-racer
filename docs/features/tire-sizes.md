@@ -1,7 +1,11 @@
 # More tire sizes + tires by wheel diameter
 
-Status: **Nov 15: owner asked; research started, options below, waiting on
-the owner. No code.** Owner: "add more tire size selections and also hide
+Status: **Nov 15: direction picked; researching sizes for a plan. No code.**
+Owner's picks (Nov 15): the Tires slot shows tires for the fitted wheel's
+diameter first and folds the rest under "Other sizes (new wheels needed)"
+(buying one still brings a matching wheel); research all four groups:
+big-brake drag radials (17/18/20 in), more 15 in drag radials (255/60,
+295/65), small-tire slicks (26x8.5, 28x9, 29.5x10.5), and a 32x14 slick. Owner: "add more tire size selections and also hide
 tires that don't have the same diameter as the wheel".
 
 ## Today (by wheel diameter)
@@ -24,7 +28,55 @@ offered with a matching wheel (bought and fitted together).
   Lamborghini, Hellcat) have one drag radial each or none; the small-tire
   15 in slicks (28x9, 29.5x10.5) are the classic "small tire" class sizes.
 
+## Plan (proposed Nov 15, waiting on the owner)
+Real specs from Mickey Thompson's ET Street R / ET Street S/S / ET Drag
+pages (section width, approved rims, outside diameter, weight). Game
+prices on the game's scale (between the tires around them); grip on the
+game's scale by type and size.
+
+**Tires slot:** "Fits your wheels (15 in)" first; "Other sizes (new wheels
+needed)" folded underneath, by diameter; buying one still brings a
+matching wheel. On wheels nothing in the shop fits (a Civic's 14s), the top
+section says so.
+
+**New drag radials**
+| Tire | Fits | Section | Tall | Grip | Price | For |
+|---|---|---|---|---|---|---|
+| 255/60R15 | 15x7-9 | 10.3 in | 27.5 | 1.75 | $750 | between the 225 and 275; compacts |
+| 295/65R15 | 15x8-10.5 | 12.1 | 30.2 | 2.00 | $1,100 | tall 15 in, between 275 and 315 |
+| 315/35R17 | 17x10.5-12.5 | 12.4 | 25.9 | 2.00 | $1,250 | 17 in brake cars (Evo, STI, R34, Z) |
+| 315/40R18 | 18x10.5-12.5 | 12.6 | 28.3 | 2.05 | $1,400 | 18 in brake cars (GT-R, 911, Camaro SS) |
+| 305/35R20 | 20x10-12 | 11.8 | 28.9 | 1.95 | $1,600 | 20 in brake cars (Lambo, Hellcat): today none |
+
+**New slicks (all 15 in)**
+| Tire | Fits | Section | Tall | Grip | Price | For |
+|---|---|---|---|---|---|---|
+| 26x8.5 | 15x7-9 | 9.9 | 25.9 | 2.10 | $1,450 | FWD with rolled fenders; small cars |
+| 28x9 | 15x7.5-9.5 | 10.8 | 27.3 | 2.30 | $1,500 | classic small-tire class slick |
+| 29.5x10.5 | 15x9-12 | 13.1 | 29.9 | 2.55 | $1,900 | between the 28x10.5 and the 31x13 |
+| 32x14 | 15x13-15 | 17.2 | 31.8 | 3.00 | $3,200 | between the 31x13 and the 33x16.5 |
+
+**Fix (my error, Nov 14):** the 26x10 slick is really 11.6 in wide (I used
+10.6): it needs the wide front end on a compact, not rolled fenders. The
+26x8.5 becomes the rolled-fender tire; FWD Race tire package: fenders +
+26x8.5 (Extreme unchanged: front end + 28x10.5).
+
+**Wheels:** nothing new needed (every size above has a wheel in the shop:
+the 315/35R17 needs the 17x11 beadlock; 32x14 the 15x14 beadlock).
+
+**Packages:** tire packages pick from the bigger list (each tier's
+candidate list gets the new sizes in grip order), so big-brake cars get a
+real drag radial at Street/Sport.
+
+**Left out:** 13/14 in drag tires (a 24.5x9-13 slick exists; small cars
+move to 15s in real life), 19 in drag radials, more street/track sizes.
+
+**Saves and rivals:** nothing changes on load; rivals unchanged (legacy
+wheels and tires).
+
 ## Sources
-- mickeythompsontires.com: ET Street R, ET Drag pages; tiresize.com ET
+- mickeythompsontires.com: ET Street R, ET Street S/S, ET Street Radial Pro,
+  ET Drag pages (embedded size data: section width, outside diameter,
+  approved rim widths, weight, price), downloaded Nov 15; tiresize.com ET
   Street R 315/55R17; Jegs 28x9 and 32x14 listings; Dragzine on new big
   ET Drag sizes.
