@@ -2,6 +2,19 @@
 
 Short notes for testing, newest first.
 
+## Audit fixes (wheels & tires on old saves)
+
+- **Old saves that had "Matching Tires All Round"** had the rear tires and
+  wheels copied to the front even where they don't fit, which stopped the
+  car racing. Those come off to your shelf now and the car is back on its
+  factory front wheels and tires.
+- **A dragster with old front runners** couldn't race (the runners were
+  too wide for its front wells): same fix, the runners go to the shelf.
+- **Pro Mod and dragster** no longer offer rear wheel tubs (already tubbed).
+- The Claude-app preview of the game was out of date (Nov 5); it's
+  current now. Check: Upgrade > Wheels & Tires shows Front Wheels, Front
+  Tires, Rear Wheels, Rear Tires.
+
 ## Weight reduction checked against real cars
 
 - **Weight Reduction stages now save what the real work saves** (they were

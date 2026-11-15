@@ -1129,7 +1129,7 @@
     var o = DR.getOption('carb', inst);
     return { factory: e.carb, opt: o, efi: o.efi || '' };
   };
-  DR.RACE_CAR_NO = ['weight', 'chassis', 'battery'];
+  DR.RACE_CAR_NO = ['weight', 'chassis', 'battery', 'tubs'];
   DR.partApplies = function (cat, inst) {
     var nf = NOT_FOR[DR.engineKind(inst)];
     if (nf && nf[cat]) return false;

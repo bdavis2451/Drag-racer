@@ -37,6 +37,7 @@
     try { dieselV2(s); } catch (e) { /* keep what loaded */ }
     try { dieselV3(s); } catch (e) { /* keep what loaded */ }
     try { wheelsV1(s); } catch (e) { /* keep what loaded */ }
+    try { wheelsV2(s); } catch (e) { /* keep what loaded */ }
     try { raceCarV1(s); } catch (e) { /* keep what loaded */ }
     // traction control used to come switched off: cars that have the ECU and
     // never turned it on get it on, once
@@ -255,12 +256,44 @@
       } else if (oldF === 'ft2' && t && ROAD[t.kind] && p.wheels) {
         p.ftires = tid; p.fwheels = p.wheels;
       }
+      // (only if they fit there: the old parts had no sizes, so a car must
+      // not come out of this unable to race because of its other axle)
+      if (p.ftires && otherAxleBad(c)) { delete p.ftires; delete p.fwheels; }
     });
     (s.inv || []).forEach(function (it) {
       if (it.cat === 'wheels' && STY[it.id]) it.id = { wh1: 'street17x8', wh2: 'forged18x9', wh3: 'bead15x10' }[it.id];
       if (it.cat === 'ftires' && (it.id === 'ft1' || it.id === 'ft2')) it.id = it.id === 'ft1' ? 'fr_26' : 'st_225';
     });
     s.wheelsV1 = true;
+  }
+  // the axle that isn't driven has a wheel/tire problem (too wide for its
+  // wells, a wheel that doesn't clear the brakes...)
+  function otherAxleBad(c) {
+    var X = DR.wheelsTires(c);
+    if (!X) return false;
+    var AX = DR.axleOf(c, 'fwheels') === 'front' ? 'Front' : 'Rear';
+    return X.issues.some(function (i) { return i.text.indexOf(AX) === 0; });
+  }
+  // Saves converted before Nov 15: "Matching Tires All Round" copied the
+  // drive tires and wheels onto the other axle, and old front runners went
+  // on, even where they don't fit (a dragster's tiny front wells, a big
+  // track tire on a compact's front). Those come off to the shelf and the
+  // car goes back to its factory wheels and tires on that axle.
+  function wheelsV2(s) {
+    if (s.wheelsV2) return;
+    if (s.wheelsV1) (s.cars || []).forEach(function (c) {
+      var p = c.parts || {};
+      if (!DR.CAR_WT[c.carId] || !p.ftires) return;
+      var copied = p.ftires === p.rtires && p.fwheels === p.wheels, runner = /^fr_/.test(p.ftires);
+      if (!(copied || runner) || !otherAxleBad(c)) return;
+      s.inv = s.inv || [];
+      // (runners were bought; the copies came from the old matching-tires option)
+      var wst = runner && /^([a-z]+)/.exec(p.fwheels || '');
+      if (p.fwheels) s.inv.push({ uid: s.uid++, cat: 'fwheels', id: p.fwheels, price: wst && DR.WHEEL_STYLES[wst[1]] ? DR.WHEEL_STYLES[wst[1]].price : 0 });
+      s.inv.push({ uid: s.uid++, cat: 'ftires', id: p.ftires, price: runner && DR.TIRES[p.ftires] ? DR.TIRES[p.ftires].price : 0 });
+      delete p.ftires; delete p.fwheels;
+    });
+    s.wheelsV2 = true;
   }
   function dieselV3(s) {
     if (s.dieselV3) return;
