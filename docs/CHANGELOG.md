@@ -2,6 +2,31 @@
 
 Short notes for testing, newest first.
 
+## Wheel wells on every car, front-drive suspension and axles
+
+- **Rolled & Pulled Fenders on every car**, front and rear (Suspension >
+  Front / Rear Wheel Wells): about an inch more room for wider tires. Tubs
+  stay for rear-drive and AWD cars; the one-piece front end stays for
+  front-drive cars. A GT-R with fenders all round fits 315/40R18 radials.
+- **Front-drive cars get their own suspension parts:** Stiff Rear Springs &
+  Shocks and a Rear Lockout (the rear can't squat, the weight stays on the
+  front tires: about 0.2 s on a big FWD car; drag only, it hurts in
+  corners), and a Front Traction Bar (stops wheel hop). Traction bars,
+  ladder bars and 4-links no longer show on FWD cars (they did nothing).
+- **Front-drive axles:** the axle slot is Axles (Halfshafts) on FWD cars:
+  Level 2.9, Level 5.9 and Pro-Level axles. The driveshaft slot is gone on
+  FWD cars (they don't have one).
+- **Automatics:** a lighter flexplate does very little (the converter is
+  the big spinning mass), as on real cars.
+- **Circuit races:** the differential matters now: a limited-slip is
+  quickest, an open diff spins off the corners, a spool pushes.
+- **Your saves:** a FWD car with traction bars / ladder bars / a 4-link or
+  a driveshaft has them moved to your shelf; its axles become the matching
+  halfshaft level.
+- **Try:** a FWD car's Suspension and Drivetrain sections; fenders on any
+  car; a spool vs a limited-slip on the circuit.
+- Rivals unchanged.
+
 ## More tire sizes, tires sorted by your wheels
 
 - **Nine new real sizes:** drag radials 255/60R15, 295/65R15, 315/35R17,

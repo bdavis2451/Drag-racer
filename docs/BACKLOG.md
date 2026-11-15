@@ -95,6 +95,11 @@ the top of each section.
 
 ## Decided
 
+- **Chassis parts review** (Nov 15, `docs/features/chassis-parts-review.md`):
+  fenders front and rear on every car, FWD rear suspension (stiff rear,
+  lockout), FWD front traction bar, FWD halfshafts (no driveshaft),
+  flexplates on automatics, diff matters on the circuit. Shipped.
+
 - **More tire sizes** (Nov 15, `docs/features/tire-sizes.md`): 9 real MT
   sizes, tires listed by the fitted wheel's diameter with the rest folded,
   26x10 corrected to its real width. Shipped.

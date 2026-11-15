@@ -419,7 +419,7 @@
     opt('fw1', 'Lightweight Flywheel', 600, { fly: 0.8 }, 'Revs faster. Less stored energy for the launch.'),
     opt('fw2', 'Ultralight Aluminum Flywheel', 1200, { fly: 0.62 }, 'Very quick revving.')
   ]};
-  C.driveshaft = { name: 'Driveshaft', options: [
+  C.driveshaft = { name: 'Driveshaft', notFwd: true, options: [
     opt('stock', 'Stock Driveshaft', 0, { shaft: 1 }),
     opt('ds1', 'Aluminum Driveshaft', 700, { shaft: 0.85 }, 'Less rotating mass.'),
     opt('ds2', 'Carbon Fiber Driveshaft', 1600, { shaft: 0.72 }, 'Even less rotating mass.')
@@ -428,9 +428,14 @@
   // 0 = the factory parts, sized for the stock engine
   C.rearend = { name: 'Rear End & Axles', options: [
     opt('stock', 'Factory Axles', 0, { axle: 0, am: 0 }, 'Built for the factory engine. Big torque snaps axles.'),
-    opt('ra1', 'Chromoly Axles', 900, { axle: 1100, am: 0 }, 'Holds 1100 Nm of engine torque.'),
-    opt('ra2', 'Built 9-inch + 35-Spline Axles', 2600, { axle: 2000, am: 12 }, 'Holds 2000 Nm. Heavy but bulletproof.'),
-    opt('ra3', 'Fabricated Pro Rear End + 40-Spline', 6500, { lvl: 5, axle: 9000, am: 8 }, 'Holds 9000 Nm.')
+    opt('ra1', 'Chromoly Axles', 900, { axle: 1100, am: 0, onFwd: false }, 'Holds 1100 Nm of engine torque.'),
+    opt('ra2', 'Built 9-inch + 35-Spline Axles', 2600, { axle: 2000, am: 12, onFwd: false }, 'Holds 2000 Nm. Heavy but bulletproof.'),
+    opt('ra3', 'Fabricated Pro Rear End + 40-Spline', 6500, { lvl: 5, axle: 9000, am: 8, onFwd: false }, 'Holds 9000 Nm.'),
+    // front-drive: the front halfshafts are what breaks (Driveshaft Shop
+    // style levels, rated by power)
+    opt('fa1', 'Level 2.9 Performance Axles', 900, { axle: 1100, am: 0, onFwd: true }, 'Upgraded front halfshafts and CV joints, good for about 475 hp: holds 1100 Nm of engine torque.'),
+    opt('fa2', 'Level 5.9 Race Axles', 1600, { axle: 2000, am: 4, onFwd: true }, 'Race halfshafts with bigger CV joints, good for about 850 hp: holds 2000 Nm.'),
+    opt('fa3', 'Pro-Level Drag Axles', 3500, { lvl: 5, axle: 9000, am: 6, onFwd: true }, 'Drag-only halfshafts for 1,000+ hp front-drive cars: holds 9000 Nm.')
   ]};
   C.diff = { name: 'Differential', options: [
     opt('open', 'Open Differential', 0, { dgrip: 0.88 }, 'One-wheel peel: loses traction easily.'),
@@ -483,10 +488,14 @@
   ]};
   C.rearsusp = { name: 'Rear Suspension', options: [
     opt('stock', 'Stock Rear Suspension', 0, { as: 0.35, adjA: false }),
-    opt('rs0', 'Poly Bushings + Lower Arms', 300, { as: 0.45, adjA: false }, 'Less axle wrap: the rear plants a little harder.'),
-    opt('rs1', 'Traction Bars', 600, { as: 0.6, adjA: false }, 'Plants the rear tires harder.'),
-    opt('rs2', 'Adjustable Ladder Bars', 2500, { as: 0.75, adjA: true, asMin: 0.3, asMax: 1.3 }, 'Adjustable instant centre (anti-squat).'),
-    opt('rs3', 'Adjustable 4-Link', 5500, { as: 0.85, adjA: true, asMin: 0.2, asMax: 1.6, pro: true }, 'The ultimate drag suspension.')
+    opt('rs0', 'Poly Bushings + Lower Arms', 300, { as: 0.45, adjA: false, onFwd: false }, 'Less axle wrap: the rear plants a little harder.'),
+    opt('rs1', 'Traction Bars', 600, { as: 0.6, adjA: false, onFwd: false }, 'Plants the rear tires harder.'),
+    opt('rs2', 'Adjustable Ladder Bars', 2500, { as: 0.75, adjA: true, asMin: 0.3, asMax: 1.3, onFwd: false }, 'Adjustable instant centre (anti-squat).'),
+    opt('rs3', 'Adjustable 4-Link', 5500, { as: 0.85, adjA: true, asMin: 0.2, asMax: 1.6, pro: true, onFwd: false }, 'The ultimate drag suspension.'),
+    // front-drive: the rear isn't driven; what matters is that it doesn't
+    // squat, so the weight stays on the front tires
+    opt('rf1', 'Stiff Rear Springs & Shocks', 600, { as: 0.35, adjA: false, krK: 2.5, cbRK: 2, onFwd: true }, 'Stiffer rear springs and firm rear shocks: the rear squats less on the launch, so more weight stays on the front (drive) tires.'),
+    opt('rf2', 'Rear Lockout (Solid Links)', 350, { as: 0.35, adjA: false, krK: 20, cbRK: 6, crRK: 3, latR: 0.92, onFwd: true }, 'Solid links in place of the rear shocks: the rear can\'t squat at all and the nose stays down. Drag only: the rear lets go sooner in corners.')
   ]};
   // stiff: how much of the rear links' bite reaches the tires instead of
   // twisting the body; kg added
@@ -502,7 +511,10 @@
   C.frontsusp = { name: 'Front Suspension', options: [
     opt('stock', 'Stock K-Member & Arms', 0, { fkg: 0 }),
     opt('fs1', 'Tubular K-Member', 1200, { fkg: -12 }, '-12 kg off the nose.'),
-    opt('fs2', 'Tubular K-Member + Arms + Drag Struts', 2800, { fkg: -22 }, '-22 kg off the nose.')
+    opt('fs2', 'Tubular K-Member + Arms + Drag Struts', 2800, { fkg: -22 }, '-22 kg off the nose.'),
+    // front-drive: a bar from the subframe to the gearbox stops the engine
+    // rocking and the front tires hopping on the launch
+    opt('ff1', 'Front Traction Bar', 350, { fkg: 3, tbar: true, onFwd: true }, 'Ties the engine and gearbox to the subframe so they can\'t rock: stops the front tires hopping (less tire shake) on a front-drive launch.')
   ]};
   C.wheeliebar = { name: 'Wheelie Bars', options: [
     opt('stock', 'None', 0, { bar: 0 }),
@@ -543,17 +555,18 @@
   // 'wheels'); options are listed per car (sizes over its brakes)
   C.fwheels = { name: 'Wheels', options: [opt('stock', 'Factory Wheels', 0, {})] };
   // rear wheel tubs: room for wider rear tires
-  C.tubs = { name: 'Rear Wheel Tubs', notFwd: true, options: [
+  C.tubs = { name: 'Rear Wheel Wells', options: [
     opt('stock', 'Factory Wheel Wells', 0, { tubW: 0 }),
-    opt('tub1', 'Mini-Tubs', 2500, { tubW: 16.5, lvl: 3 }, 'The inner wheel wells cut out and widened about 2-3 inches each side: room for a 315 radial or a 31x13 slick.'),
-    opt('tub2', 'Full Tubs (Back-Half)', 6000, { tubW: 99, lvl: 4, kg: -10 }, 'The rear floor and wells rebuilt around a narrowed rear end: any slick fits. -10 kg.')
+    opt('rw1', 'Rolled & Pulled Rear Fenders', 400, { tubW: 0, wellR: 1.2, lvl: 2 }, 'The rear fender lips rolled and the fenders pulled out: about an inch more room for the rear tires.'),
+    opt('tub1', 'Mini-Tubs', 2500, { tubW: 16.5, lvl: 3, onFwd: false }, 'The inner wheel wells cut out and widened about 2-3 inches each side: room for a 315 radial or a 31x13 slick.'),
+    opt('tub2', 'Full Tubs (Back-Half)', 6000, { tubW: 99, lvl: 4, kg: -10, onFwd: false }, 'The rear floor and wells rebuilt around a narrowed rear end: any slick fits. -10 kg.')
   ]};
   // front wheel wells on a front-drive car: room for a wider drive tire
   // (wellF: inches over the factory wells; 99: rebuilt, room to 13 in)
-  C.fwells = { name: 'Front Wheel Wells', fwdCar: true, options: [
+  C.fwells = { name: 'Front Wheel Wells', options: [
     opt('stock', 'Factory Fenders', 0, { wellF: 0 }),
-    opt('fw1', 'Rolled & Pulled Fenders', 600, { wellF: 1.2, lvl: 3 }, 'The fender lips rolled and the fenders pulled out: about an inch more room, enough for a 26x10 slick on a compact.'),
-    opt('fw2', 'Wide One-Piece Front End', 6000, { wellF: 99, lvl: 4, kg: -8 }, 'A fibreglass one-piece front end (hood, fenders and bumper in one, flipped up for service) with the inner wells rebuilt: room for a 28x10.5 slick. -8 kg.')
+    opt('fw1', 'Rolled & Pulled Fenders', 600, { wellF: 1.2, lvl: 3 }, 'The fender lips rolled and the fenders pulled out: about an inch more room for the front tires (a 26x8.5 slick on a front-drive compact).'),
+    opt('fw2', 'Wide One-Piece Front End', 6000, { wellF: 99, lvl: 4, kg: -8, fwdCar: true }, 'A fibreglass one-piece front end (hood, fenders and bumper in one, flipped up for service) with the inner wells rebuilt: room for a 28x10.5 slick. -8 kg.')
   ]};
   C.weight = { name: 'Weight Reduction', options: [
     opt('stock', 'Stock', 0, { wr: 0 }),
@@ -803,9 +816,10 @@
     var list = listOptions(cat, inst).map(function (o) { if (o.lvl == null) o.lvl = lvlOf(o); return o; });
     // options only for (or never for) a front-drive car (what's fitted now
     // always stays listed)
-    if (list.some(function (o) { return o.onFwd != null; })) {
+    if (!inst.ai && list.some(function (o) { return o.onFwd != null || o.fwdCar; })) {
       var fwdNow = DR.driveOf(inst) === 'FWD', curO = inst.parts && inst.parts[cat];
-      list = list.filter(function (o) { return o.onFwd == null || o.onFwd === fwdNow || o.id === curO; });
+      var fwdCarNow = DR.CARS[inst.carId].drive === 'FWD' && DR.driveOf(inst) !== 'RWD';
+      list = list.filter(function (o) { return o.id === curO || ((o.onFwd == null || o.onFwd === fwdNow) && (!o.fwdCar || fwdCarNow)); });
     }
     // an engine built to rev (e.rx: a 4G63, an SR20) gets more from race
     // valve springs and oiling than the plain figure: say its real number
@@ -817,6 +831,12 @@
         n = Math.round(n / 50) * 50;
         return Object.assign({}, o, { desc: cat === 'valvetrain' ? o.desc.replace(/Valves float \d+ rpm later/, 'Valves float ' + n + ' rpm later') : o.desc.replace(/\+\d+ rpm/, '+' + n + ' rpm') });
       });
+    }
+    // an automatic has a flexplate, not a flywheel: a lighter one does far
+    // less (the converter is the big spinning mass)
+    if (cat === 'flywheel' && !inst.ai && DR.TRANS[DR.partId('trans', inst)].type === 'auto') {
+      var FX = { stock: ['Stock Flexplate', null], fw1: ['Lightweight Flexplate', 'A lighter flexplate: the engine revs a little quicker. Small next to the torque converter, which is the big spinning mass.'], fw2: ['Billet Aluminum Flexplate', 'A billet flexplate: a touch quicker revving still; most of what spins is the converter.'] };
+      list = list.map(function (o) { return FX[o.id] ? Object.assign({}, o, { name: FX[o.id][0], desc: FX[o.id][1] || o.desc }) : o; });
     }
     // head studs on a diesel: its own numbers
     if (cat === 'headstud') {
@@ -864,15 +884,16 @@
   DR.wellLimit = function (inst, axle) {
     var w = DR.CAR_WT[inst.carId], fwd = DR.CARS[inst.carId].drive === 'FWD';
     // (the undriven end: the factory tire plus about 50 mm, as on real cars)
+    // fender work: rolled & pulled fenders add about an inch; a front-drive
+    // car's rebuilt one-piece front end takes up to 13 in; tubs at the back
     if (axle === 'front') {
-      if (!fwd) return Math.round((facOf(inst, 'front').sec + 2) * 10) / 10;
-      // fender work (front-drive cars): rolled fenders add about an inch, a
-      // rebuilt one-piece front end takes up to 13 in
       var fw = DR.partApplies('fwells', inst) ? DR.getOption('fwells', inst).wellF || 0 : 0;
+      if (!fwd) return Math.round((facOf(inst, 'front').sec + 2 + Math.min(fw, 1.2)) * 10) / 10;
       return fw >= 99 ? Math.max(w[4], 13) : Math.round((w[4] + fw) * 10) / 10;
     }
-    var lim = fwd ? Math.round((facOf(inst, 'rear').sec + 2) * 10) / 10 : w[4];
-    return Math.max(lim, DR.partApplies('tubs', inst) ? DR.getOption('tubs', inst).tubW || 0 : 0);
+    var tb = DR.partApplies('tubs', inst) ? DR.getOption('tubs', inst) : {};
+    var lim = (fwd ? facOf(inst, 'rear').sec + 2 : w[4]) + (tb.wellR || 0);
+    return Math.max(Math.round(lim * 10) / 10, tb.tubW || 0);
   };
   // the tire on a slot -> its data (a factory tire: the car's own, at its
   // real size)
@@ -912,7 +933,7 @@
       if (wh.d < DR.minWheel(inst, ax)) issues.push({ cat: a[1], text: AX + ' wheels (' + wh.d + ' in) don\'t clear the brakes: ' + DR.minWheel(inst, ax) + ' in or bigger' + (DR.partId('brakes', inst) !== 'br1' && DR.CAR_WT[inst.carId][6][ax === 'front' ? 0 : 1] < wh.d + 1 ? ', or drag brakes' : '') });
       if (!DR.tireFits(t, wh)) issues.push({ cat: a[2], text: AX + ' tires don\'t fit the ' + AX.toLowerCase() + ' wheels (' + (t.factory ? t.size : t.name) + ' on ' + wh.d + 'x' + wh.w + ')' });
       var fender = ax === 'front' && DR.partApplies('fwells', inst), tubOK = DR.partApplies('tubs', inst);
-      if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' && tubOK ? 'tubs' : fender ? 'fwells' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' && tubOK ? ': tubs fix it (Suspension: Rear Wheel Tubs)' : fender ? ': fender work fixes it (Suspension: Front Wheel Wells)' : '') });
+      if (t.sec > DR.wellLimit(inst, ax) + 0.01) issues.push({ cat: ax === 'rear' && tubOK ? 'tubs' : fender ? 'fwells' : a[2], text: AX + ' tires too wide for the wheel wells (' + t.sec + ' in, room for ' + DR.wellLimit(inst, ax) + ')' + (ax === 'rear' && tubOK ? (DR.driveOf(inst) === 'FWD' ? ': fender work fixes it (Suspension: Rear Wheel Wells)' : ': fender work or tubs fix it (Suspension: Rear Wheel Wells)') : fender ? ': fender work fixes it (Suspension: Front Wheel Wells)' : '') });
       if (a[1] === 'wheels' && t.kind === 'Front Runner') issues.push({ cat: 'rtires', text: 'Front runners can\'t drive the car' });
     });
     return {
@@ -1130,7 +1151,7 @@
     var o = DR.getOption('carb', inst);
     return { factory: e.carb, opt: o, efi: o.efi || '' };
   };
-  DR.RACE_CAR_NO = ['weight', 'chassis', 'battery', 'tubs'];
+  DR.RACE_CAR_NO = ['weight', 'chassis', 'battery', 'tubs', 'fwells'];
   DR.partApplies = function (cat, inst) {
     var nf = NOT_FOR[DR.engineKind(inst)];
     if (nf && nf[cat]) return false;
@@ -1153,7 +1174,7 @@
     if (c.needsNos) return DR.partId('nitrous', inst) !== 'stock';
     if (c.notTurbo) return !!inst.ai || DR.FI[DR.partId('fi', inst)].type !== 'turbo';
     // front-drive cars: front wells and ballast instead of rear tubs
-    if (c.notFwd) return DR.driveOf(inst) !== 'FWD';
+    if (c.notFwd) return !!inst.ai || DR.driveOf(inst) !== 'FWD';
     if (c.fwdOnly) return DR.driveOf(inst) === 'FWD';
     if (c.fwdCar) return DR.CARS[inst.carId].drive === 'FWD' && DR.driveOf(inst) !== 'RWD';
     return true;
@@ -1174,6 +1195,8 @@
   var WT_NAME = { wheels: 'Wheels', fwheels: 'Wheels', rtires: 'Tires', ftires: 'Tires' };
   DR.catName = function (cat, inst) {
     if (inst && ROTARY[cat] && DR.engineKind(inst) === 'rotary') return ROTARY[cat].name;
+    // a front-drive car's axles are its front halfshafts
+    if (cat === 'rearend' && inst && inst.carId && DR.driveOf(inst) === 'FWD') return 'Axles (Halfshafts)';
     // wheels and tires go by the axle they're on (the drive axle isn't named)
     if (WT_NAME[cat] && inst && DR.CAR_WT && DR.CAR_WT[inst.carId]) return (DR.axleOf(inst, cat) === 'front' ? 'Front ' : 'Rear ') + WT_NAME[cat];
     return DR.CAT_NAMES[cat] || (C[cat] && C[cat].name) || cat;
@@ -1364,8 +1387,11 @@
     for (var i = min; i < opts.length; i++) if (opts[i].cap >= need) return opts[i].id;
     return opts[opts.length - 1].id;
   }; }
+  // front-drive cars get their own part in a slot (a FWD rear suspension,
+  // a front traction bar)
+  function fwdOr(f, r) { return function (inst) { return DR.driveOf(inst) === 'FWD' ? f : r; }; }
   function axleFor(min) { return function (inst) {
-    var S = DR.buildSpec(inst), need = S.risk.hit * 1.05, opts = C.rearend.options;
+    var S = DR.buildSpec(inst), need = S.risk.hit * 1.05, opts = DR.partOptions('rearend', inst);
     for (var i = min; i < opts.length; i++) if (opts[i].axle >= need) return opts[i].id;
     return opts[opts.length - 1].id;
   }; }
@@ -1410,10 +1436,10 @@
         // choice in the shop, owner Nov 14)
         ]],
     susp: [
-      [['springs', 'sp1'], ['rearsusp', 'rs0'], ['chassis', 'cg1']],
-      [['springs', 'sp1'], ['shocks', 'sh1'], ['rearsusp', 'rs1'], ['chassis', 'cg1']],
-      [['springs', 'sp2'], ['shocks', 'sh2'], ['rearsusp', 'rs2'], ['chassis', 'cg2'], ['frontsusp', 'fs1']],
-      [['springs', 'sp3'], ['shocks', 'sh3'], ['rearsusp', 'rs3'], ['chassis', 'cg3'], ['frontsusp', 'fs2'], ['wheeliebar', 'wb1']]],
+      [['springs', 'sp1'], ['rearsusp', fwdOr(null, 'rs0')], ['chassis', 'cg1']],
+      [['springs', 'sp1'], ['shocks', 'sh1'], ['rearsusp', fwdOr('rf1', 'rs1')], ['chassis', 'cg1']],
+      [['springs', 'sp2'], ['shocks', 'sh2'], ['rearsusp', fwdOr('rf2', 'rs2')], ['chassis', 'cg2'], ['frontsusp', fwdOr('ff1', 'fs1')]],
+      [['springs', 'sp3'], ['shocks', 'sh3'], ['rearsusp', fwdOr('rf2', 'rs3')], ['chassis', 'cg3'], ['frontsusp', fwdOr('ff1', 'fs2')], ['wheeliebar', 'wb1']]],
     tires: [
       [['rtires', 'dr_245']],
       [['rtires', 'dr_275'], ['wheels', 'wh1']],

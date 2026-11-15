@@ -87,7 +87,7 @@ Rivals unchanged in every option (rival builds keep their numbers).
   Pro-Level 1,000+ whp.
 - "Driveshaft" is sold to FWD cars (a transverse FWD car has none).
 
-## Plan (proposed Nov 15)
+## Plan (approved Nov 15)
 1. **Rear Wheel Wells** (renamed from Rear Wheel Tubs), every car: Factory;
    Rolled & Pulled Rear Fenders $400, +1.2 in (same gain as the front);
    Mini-Tubs and Full Tubs stay, driven rear only (RWD/AWD).
@@ -112,6 +112,40 @@ Rivals unchanged in every option (rival builds keep their numbers).
 Saves: FWD cars with rear-drive rear suspension or a driveshaft get them
 moved to the shelf; FWD axles map to the same strength (chromoly -> Level
 2.9, 9-inch -> 5.9, pro -> Pro-Level). Rivals unchanged.
+
+## Build notes (Nov 15)
+- parts.js: C.tubs renamed Rear Wheel Wells, on every car: rw1 Rolled &
+  Pulled Rear Fenders $400 (wellR 1.2); tub1/tub2 onFwd:false. C.fwells on
+  every car (not Pro Mod / rail): fw1 for all, fw2 `fwdCar` (option filter).
+  wellLimit adds fenders front (non-FWD: factory + 2 + 1.2) and rear.
+  rearsusp: rs0-rs3 onFwd:false, rf1 Stiff Rear Springs & Shocks $600
+  (krK 2.5, cbRK 2), rf2 Rear Lockout $350 (krK 20, cbRK 6, crRK 3, latR
+  0.92). frontsusp: ff1 Front Traction Bar $350 (tbar, +3 kg), fs1/fs2 stay.
+  rearend: ra1-ra3 onFwd:false, fa1 Level 2.9 $900 (1100 Nm), fa2 Level 5.9
+  $1,600 (2000 Nm), fa3 Pro-Level $3,500 (9000 Nm); slot named Axles
+  (Halfshafts) on FWD. driveshaft notFwd (rivals exempt). Flywheel options
+  renamed Flexplate on automatics. Option filter skips rival builds.
+  Packages: FWD susp Sport rf1, Race/Extreme rf2 + ff1; axleFor works on
+  the car's own option list.
+- physics.js (players): flexplate effect x0.3 on automatics; FWD rear
+  spring/damping multipliers; traction bar: tire shake x0.6 on FWD; FWD
+  axle weight goes on the front.
+- circuit.js (players): corner exit open 0.92 / LSD 1 / spool 0.97; a
+  spool's drive axle corners x0.94; FWD lockout rear grip x0.92.
+- game.js fwdPartsV1: FWD saves: rear-drive rear suspension and driveshaft
+  to the shelf, ra1/ra2/ra3 -> fa1/fa2/fa3.
+- ui.js help: wheel wells wording, FWD paragraph (rear, traction bar,
+  halfshafts).
+- Results: 1,500 hp FWD Civic bare 8.83 -> stiff rear 8.78, lockout 8.60,
+  traction bar 8.74, lockout + bar 8.52 (1,000 hp: 9.02 -> 8.73). Circuit
+  (pixel raceway): LSD best; open +0.1-0.3 s; spool +1.4-2.3 s; FWD lockout
+  +2.9 s. Flexplate on an automatic (Camaro SS): ~no change; flywheel on a
+  manual unchanged. GT-R fits 315/40R18 all round with front + rear fenders.
+- Tests: rivals 0 diffs; package snapshot: only FWD drive/susp packages
+  (halfshafts, no driveshaft, rf/ff parts) and the Camaro SS drive package
+  (gear pick moves with the flexplate); 1,860 builds clean; qolsmoke,
+  pkgsmoke, c2, drv, tubest clean; slots per drivetrain and old-save
+  migration checked (scr/cpui.js, circdiff.js, fsusp2.js).
 
 ## Sources
 - Fender rolling/pulling: s2ki "how much clearance from fender rolling",

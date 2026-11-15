@@ -77,6 +77,16 @@
     // driving off a corner: drive tires' straight-line grip on a circuit
     // (unprepped: about 72% of what they get on a prepped drag strip)
     var muX = Math.max(drive.lat, drive.mu * 0.72) * pressK;
+    // the differential (players): an open diff spins the inside wheel off
+    // the corners; a spool can't let the drive wheels turn at different
+    // speeds, so the car pushes; a front-drive car's rear lockout lets the
+    // rear go sooner. (Rival builds keep their figures.)
+    if (!S.ai) {
+      var dif = o('diff').id, rso = o('rearsusp');
+      muX *= { open: 0.92, lsd: 1, spool: 0.97 }[dif] || 1;
+      if (dif === 'spool') { if (S.drive !== 'RWD') muF *= 0.94; if (S.drive !== 'FWD') muR *= 0.94; }
+      if (S.drive === 'FWD' && rso.latR) muR *= rso.latR;
+    }
     // downforce: the car's own (a few cars have real aero) plus the part
     var claCar = car.cla || 0, claPart = aero.cla || 0;
     var cla = claCar + claPart;

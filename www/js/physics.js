@@ -674,7 +674,10 @@
     if (cb && (!efi || efi === 'mech') && S.nosFuel === 'inj') S.nosFuel = 'pump';   // no injectors: a plate under the carb sprays its own fuel
     S.fuelFF = e.diesel ? 1 : fuel.ff;
     S.prog = nosc.prog && nos.nos > 0;
-    S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * fly.fly * (crank.ie || 1);
+    // (an automatic's flexplate: a lighter one does ~30% of what a lighter
+    // flywheel does on a manual; rival builds keep their figures)
+    var flyK = !ai && tr.type === 'auto' ? 1 - (1 - fly.fly) * 0.3 : fly.fly;
+    S.Ie = (0.06 + 0.022 * e.disp + (e.diesel ? 0.25 : 0)) * flyK * (crank.ie || 1);
 
     // ---- drivetrain
     S.transId = trId; S.trType = tr.type; S.shiftTime = tr.shift * ((DR.shiftOpt(inst) || {}).shiftK || 1); S.trMaxTq = tr.maxTq;
@@ -732,6 +735,8 @@
       // wrinkles more (shake); a stretched tire on a wide wheel is steadier
       S.sideRel = wx.sideRel; S.stretch = wx.stretch;
       S.shakeTK = (1 + 0.25 * wx.sideRel) * (1.12 - 0.24 * wx.stretch);
+      // a front traction bar stops a front-drive car's front end hopping
+      if (S.drive === 'FWD' && fsus.tbar) S.shakeTK *= 0.6;
       S.hitK = 1 + 0.02 * wx.sideRel;
     }
     // AWD: the front axle drives too, on its own tires
@@ -788,8 +793,8 @@
     // axle's) against the factory ones, on the axle they sit on
     var axD = legacyWT ? (tire.m - stockTire.m) + wDm : wx.massD, axO = legacyWT ? ftires.fm : wx.massO;
     var fwdAx = !legacyWT && S.drive === 'FWD';
-    var extraRear = (fwdAx ? axO : axD) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0) + (ai ? 0 : (tubsO.kg || 0)) - blkg * 0.3;
-    var extraFront = (fwdAx ? axD : axO) + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + ((ai && pul.aiKg != null ? pul.aiKg : pul.kg) || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5 + (ai ? 0 : (fwl.kg || 0)) + blkg * 1.3;
+    var extraRear = (fwdAx ? axO : axD) + (bar.bar ? 12 : 0) + (aero.cla ? 8 : 0) + (nos.nos ? 18 : 0) + (fwdAx ? 0 : axle.am || 0) + brakes.bkg * 0.5 + batBack + (awdAdd ? awdAdd[2] : 0) + (gset.kg || 0) + (ai ? 0 : (tubsO.kg || 0)) - blkg * 0.3;
+    var extraFront = (fwdAx ? axD + (axle.am || 0) : axO) + (awdAdd ? awdAdd[0] : 0) + fiW * share + fsus.fkg + brakes.bkg * 0.5 - batFront + ((ai && pul.aiKg != null ? pul.aiKg : pul.kg) || 0) + (coolP.kg || 0) + (wmi.kg || 0) * 0.5 + (ai ? 0 : (fwl.kg || 0)) + blkg * 1.3;
     var extraMid = (awdAdd ? awdAdd[1] : 0) + (ai && chas.aiKg != null ? chas.aiKg : chas.kg) + (safe.kg || 0) + (wmi.kg || 0) * 0.5;
     S.m = chassis + e.w + fiW + extraRear + extraFront + extraMid;
     var front = chassisFront + e.w * share + extraFront + extraMid * 0.5;
@@ -891,7 +896,7 @@
     function rateMul(click) { return springs.adjS ? springs.rate[0] + (springs.rate[1] - springs.rate[0]) * (click - 1) / 9 : springs.sk; }
     var mF = S.m * S.f, mR = S.m * (1 - S.f), wF = 2 * Math.PI * 1.45, wR = 2 * Math.PI * 1.65;
     S.kf = mF * wF * wF * rateMul(T.springF);
-    S.kr = mR * wR * wR * rateMul(T.springR);
+    S.kr = mR * wR * wR * rateMul(T.springR) * (!ai && S.drive === 'FWD' ? rs.krK || 1 : 1);
     // damping: clicks 1..10 scale the shock's ratio 0.35x..1.9x; rebound is
     // naturally firmer than bump
     function zc(click, adj, base) { return adj ? shocks.z * base * (0.35 + 0.17 * (click - 1)) / 1.03 : shocks.z * base; }
@@ -900,6 +905,8 @@
     S.crF = 2 * zc(T.rebF, a1, 1.3) * Math.sqrt(S.kf * mF);
     S.cbR = 2 * zc(T.bumpR, a1, 0.75) * Math.sqrt(S.kr * mR);
     S.crR = 2 * zc(T.rebR, a2, 1.3) * Math.sqrt(S.kr * mR);
+    // a front-drive car's rear (players): stiff rear shocks or a lockout
+    if (!ai && S.drive === 'FWD') { S.cbR *= rs.cbRK || 1; S.crR *= rs.crRK || 1; }
     // travel: raising the car adds bump travel and takes away droop
     S.bumpF = Math.max(0.012, 0.075 + rideF); S.bumpR = Math.max(0.012, 0.085 + rideR);
     S.droopF = Math.max(0.01, 0.11 - rideF * 0.6); S.droopR = Math.max(0.01, 0.09 - rideR * 0.6);
