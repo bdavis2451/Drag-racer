@@ -61,6 +61,17 @@ to answer later.
 
 ## Parked ideas
 
+- **Audit heat soak between rounds, maybe rework it** (owner, Nov 15).
+  Today (`game.js G.roundHeat / G.afterRound`, `physics.js knockDT`, Sim
+  `airK`): each pass adds engine heat by power vs cooling and ET, 35% carries
+  to the next round; past ~8 C it costs up to ~6% power and warms the
+  charge up to +6 C (often capped to no knock change on cool alcohol
+  charges); `race.js rollFailure` adds detonation risk past where power
+  stops; the race intro shows water temperature and "heat-soaked". Check
+  it against real between-round temps and cool-down (ice on the intake,
+  fans, time between rounds), what the player can do about it, and whether
+  it's worth keeping as is.
+
 - **In-app browser tip.** A one-time note to open the game in Chrome/Safari
   when it's running inside Facebook's browser (no sound there). Owner said
   not now (2026-11-10).
