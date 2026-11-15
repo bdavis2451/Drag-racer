@@ -30,6 +30,15 @@ the top of each section.
 
 ## Waiting on a yes or no
 
+- **Tuner and knock + fuel limits** (`docs/features/fuel-knock-review.md`,
+  Nov 15 night). Tester's pro tuner on edge left 32.5 psi past a 28 psi
+  knock point: every aggression goes ~60% into the timing-pulled zone and
+  that zone is 1.5% engine risk per psi (7.5% per pass here), while
+  packages stop at knock - 1. Options A-D (recommended C: Safe at the knock
+  point, smaller zone risk, tuner states the risk it leaves). Fuels: E85 and
+  race gas match real data; methanol is too strict on high-compression and
+  old-head engines (454 on methanol 33 psi vs real 50-60). Options E-H.
+
 Owner's note (Nov 15): playing and sending bugs; open questions go here
 to answer later.
 
