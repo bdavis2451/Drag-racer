@@ -710,7 +710,8 @@
     trans: { pg2: 'drag', pg_pm: 'drag', a3_pm: 'drag', a3_400: 'drag', dog4: 'drag', cl5: 'drag', lenco5: 'drag', dct7: 'circuit', seq6: 'circuit', seq6_hd: 'circuit' },
     wheels: { wh3: 'drag' }, brakes: { br1: 'drag', br3: 'circuit', br2: 'circuit' },
     ftires: { ft1: 'drag', ft2: 'circuit' },
-    rtires: { dr_245: 'drag', dr_275: 'drag', dr_315: 'drag', ets_28: 'drag', sl_31: 'drag', sl_33: 'drag', sl_36: 'drag', tr_255: 'circuit', tr_315: 'circuit', rr_slk: 'circuit' },
+    rtires: { dr_245: 'drag', dr_275: 'drag', dr_315: 'drag', ets_28: 'drag', sl_31: 'drag', sl_33: 'drag', sl_36: 'drag',
+      dr_255: 'drag', dr_295: 'drag', dr_315b: 'drag', dr_315c: 'drag', dr_305t: 'drag', sl_265: 'drag', sl_28: 'drag', sl_295: 'drag', sl_32: 'drag', tr_255: 'circuit', tr_315: 'circuit', rr_slk: 'circuit' },
     cooling: { co2: 'circuit', co3: 'circuit' }, oiling: { o2: 'circuit' },
     fueltype: { meth: 'drag' }, safety: { sf2: 'drag' }, weight: { w4: 'drag' }, chassis: { ct: 'drag' }
   };
@@ -923,7 +924,7 @@
   function tireOptions(cat, inst) {
     var car = DR.CARS[inst.carId], drive = cat === 'rtires', list = [], cur = DR.partId(cat, inst);
     var f = DR.CAR_WT[inst.carId] ? facOf(inst, DR.axleOf(inst, cat)) : null;
-    list.push(drive ? { id: car.tire, name: 'Factory Tires' + (f ? ' ' + f.size : ''), price: 0, desc: tireDesc(car.tire), factory: true }
+    list.push(drive ? { id: car.tire, name: 'Factory Tires' + (f ? ' ' + f.size : ''), price: 0, desc: tireDesc(car.tire, f), factory: true }
       : { id: 'stock', name: 'Factory Tires' + (f ? ' ' + f.size : ''), price: 0, fm: 0, roll: 1, factory: true, desc: 'The car\'s own tires on its factory wheels.' });
     if (!drive && LEGACY_FT[cur]) C.ftires.options.forEach(function (o) { if (o.id === cur) list.push(o); });
     DR.TIRE_SHOP.forEach(function (t) {
@@ -1192,8 +1193,13 @@
       (x.adj ? '. Adjustable gear ratios.' : '.') + (x.mount === 'T' ? ' A transaxle, for a sideways engine.' : '') +
       (x.tcm ? ' Computer-shifted: it always shifts itself (no manual valve body exists for it); a transbrake works.' : '');
   }
-  function tireDesc(t) {
+  function tireDesc(t, fac) {
     var x = DR.TIRES[t];
+    // (a car's factory tires: its own size, e.g. 185/60R14)
+    if (fac) {
+      var mm = /(\d+)\/(\d+)[A-Z]*R(\d+)/.exec(fac.size || ''), od = mm ? +mm[3] + 2 * mm[1] * mm[2] / 100 / 25.4 : x.r * 2 / 0.0254;
+      x = Object.assign({}, x, { rim: fac.d, wmin: Math.max(4, fac.w - 1.5), wmax: fac.w + 1.5, r: od * 0.0254 / 2 });
+    }
     if (x.kind === 'Front Runner') return 'A skinny front runner: light, rolls easy, ' + (x.r * 2 / 0.0254).toFixed(1) + '" tall, for a ' + x.rim + ' in wheel ' + x.wmin + '-' + x.wmax + ' in wide. Almost no cornering or braking grip; not a drive tire.';
     return x.kind + '. Launch grip ' + x.mu.toFixed(2) + ', cornering grip ' + x.lat.toFixed(2) + ', best at ' + x.optP + ' psi & ' + x.topt + '°C. ' + (x.r * 2 / 0.0254).toFixed(1) + '" tall' +
       (x.rim ? ', fits a ' + x.rim + ' in wheel ' + x.wmin + '-' + x.wmax + ' in wide' : '') + '.' +
@@ -1525,8 +1531,12 @@
     // runners, mini-tubs if needed; Extreme: a 31x13 slick on beadlocks,
     // mini-tubs, drag brakes, front runners.
     function tiresPkg() {
-      var CAND = [['dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'], ['rsl_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'dr_245', 'dr_225'],
-        ['rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_275', 'dr_305', 'sl_26', 'sl_24', 'dr_225'], ['sl_31', 'rsl_28', 'ets_28', 'dr_315', 'dr_275s', 'dr_305', 'dr_275', 'sl_26', 'sl_24']][tier];
+      // (the bigger-brake sizes last: they only come in where nothing
+      // before them fits)
+      var CAND = [['dr_275s', 'dr_275', 'dr_305', 'dr_255', 'dr_245', 'dr_225', 'dr_315b', 'dr_315c', 'dr_305t'],
+        ['rsl_28', 'dr_315', 'dr_295', 'dr_275s', 'dr_275', 'dr_305', 'dr_255', 'dr_245', 'dr_225', 'dr_315c', 'dr_315b', 'dr_305t'],
+        ['rsl_28', 'ets_28', 'dr_315', 'dr_295', 'dr_275s', 'dr_275', 'dr_305', 'sl_265', 'sl_28', 'sl_26', 'sl_24', 'dr_225', 'dr_315c', 'dr_315b', 'dr_305t'],
+        ['sl_31', 'sl_295', 'rsl_28', 'ets_28', 'dr_315', 'dr_295', 'dr_275s', 'dr_305', 'dr_275', 'sl_26', 'sl_265', 'sl_28', 'sl_24', 'dr_315c', 'dr_315b', 'dr_305t']][tier];
       var axD = DR.axleOf(copy, 'wheels'), axO = axD === 'front' ? 'rear' : 'front';
       var curMu = DR.TIRES[DR.partId('rtires', copy)].mu, awd = DR.driveOf(copy) === 'AWD';
       function ok(cat, id) { var o = DR.getOption(cat, copy, id); return o && o.id === id && unl(cat, o) ? o : null; }
@@ -1537,6 +1547,8 @@
             .sort(function (a, b) { return Math.abs(a[1] - (t.wmin + t.wmax) / 2) - Math.abs(b[1] - (t.wmin + t.wmax) / 2); })[0];
           if (z && ok(wcat || 'wheels', styles[i] + z[0] + 'x' + z[1])) return styles[i] + z[0] + 'x' + z[1];
         }
+        // (a big-brake size the drag wheels don't come in: forged)
+        if (styles.indexOf('forged') < 0) return wheelFor(t, ['forged'], wcat);
         return null;
       }
       var plan = null;

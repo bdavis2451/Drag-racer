@@ -2,6 +2,26 @@
 
 Short notes for testing, newest first.
 
+## More tire sizes, tires sorted by your wheels
+
+- **Nine new real sizes:** drag radials 255/60R15, 295/65R15, 315/35R17,
+  315/40R18, 305/35R20; slicks 26x8.5, 28x9, 29.5x10.5, 32x14.
+- **The Tires slot shows what fits your wheels first** ("Fits your 15 in
+  wheels"); every other size is folded under "Other sizes (new wheels
+  needed)", by wheel size. Buying one of those still brings a matching
+  wheel.
+- **Fix:** the 26x10 slick is really 11.6 in wide: on a compact it needs
+  the Wide One-Piece Front End. The 26x8.5 is the slick for Rolled & Pulled
+  Fenders (the FWD Race tire package fits it). A car already on a 26x10
+  behind rolled fenders is flagged until it gets the front end or another
+  tire.
+- **Fix:** factory tires now say their real size (a Civic's 185/60R14 said
+  it fits a 15 in wheel).
+- Lamborghini and Viper finally get a drag radial in the tire packages
+  (305/35R20).
+- **Try:** a Civic's Tires slot (nothing fits its 14s: the other sizes open
+  by themselves), a Fox on 15s, a GT-R or Camaro SS (18 in brakes).
+
 ## Audit fixes (wheels & tires on old saves)
 
 - **Old saves that had "Matching Tires All Round"** had the rear tires and

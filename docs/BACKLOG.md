@@ -95,6 +95,13 @@ the top of each section.
 
 ## Decided
 
+- **More tire sizes** (Nov 15, `docs/features/tire-sizes.md`): 9 real MT
+  sizes, tires listed by the fitted wheel's diameter with the rest folded,
+  26x10 corrected to its real width. Shipped.
+- **Audit Nov 15** (`docs/features/audit-nov15.md`): stale app preview
+  republished; old-save matching tires and dragster runners fixed. Noted for
+  later: AWD front tires never wear; shelf tires are per axle.
+
 - **Weight reduction audit** (Nov 15, `docs/features/weight-reduction.md`):
   stages rescaled to real weigh-ins (Fox 90 / 219 / 387 / 490 lb), real
   cage weights, Pro Mod / dragster can't take weight stages, cages or

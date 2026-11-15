@@ -548,8 +548,23 @@
   function catalogGrid(inst, cat) {
     if ((cat === 'wheels' || cat === 'fwheels') && DR.CAR_WT[inst.carId]) return wheelGrid(inst, cat);
     var curId = DR.partId(cat, inst), tunedNow = G.spec(inst).tuned, bestG = cat === 'gears' && DR.bestGears ? DR.bestGears(inst, function (o) { return G.partUnlocked('gears', lvlOf(o), o.id); }) : null;
+    // tires: the ones that go on the wheel fitted now first; the other
+    // sizes (they come with a matching wheel) folded away, by diameter
+    var opts = DR.partOptions(cat, inst);
+    if ((cat === 'rtires' || cat === 'ftires') && DR.CAR_WT[inst.carId]) {
+      var wd = DR.wheelSpec(inst, cat === 'rtires' ? 'wheels' : 'fwheels').d;
+      var fitsNow = opts.filter(function (o) { return o.price && o.rim === wd; }), others = opts.filter(function (o) { return o.price && o.rim !== wd; });
+      others.sort(function (a, b) { return (a.rim - b.rim) || 0; });
+      others = others.map(function (o) { return Object.assign({}, o, { group: o.rim + ' in wheels: ' + o.group }); });
+      var top = fitsNow.length ? cardsFor(fitsNow, true) : h('div', { class: 'dim gsmall' }, 'Nothing in the shop goes on ' + wd + ' in wheels: pick a size below (it comes with wheels to match).');
+      var fold = h('details', { class: 'tirefold' }, h('summary', { class: 'pgroup' }, 'Other sizes (new wheels needed) ▸ ' + others.length), cardsFor(others, false));
+      if (!fitsNow.length) fold.open = true;
+      return h('div', {}, h('h3', { class: 'pgroup' }, 'Fits your ' + wd + ' in wheels'), top, others.length ? fold : null);
+    }
+    return cardsFor(opts, true);
+    function cardsFor(list, emptyNote) {
     var grid = h('div', { class: 'pgrid' }), wrap = null, lastGroup = null;
-    DR.partOptions(cat, inst).forEach(function (o) {
+    list.forEach(function (o) {
       if (!o.price) return;
       // turbos come in sections: single, twin, then the superchargers
       if (o.group && o.group !== lastGroup) {
@@ -569,9 +584,10 @@
           cat === 'gears' && !locked && o.id === bestG ? h('span', { class: 'tag g' }, 'BEST FOR YOUR CAR') : installed ? h('span', { class: 'tag g' }, 'ON CAR') : !locked && G.isNewPart(cat, lvl) ? h('span', { class: 'newdot' }, 'NEW') : o.fit && o.fit.block ? h('span', { class: 'tag' }, 'NEEDS RWD') : o.tune && o.tune !== true && !tunedNow ? h('span', { class: 'tag o' }, o.tune === 'soft' ? 'BEST TUNED' : 'NEEDS TUNE') : owned ? h('span', { class: 'tag b' }, 'OWNED ×' + owned) : null)));
     });
     if (wrap) { wrap.appendChild(grid); return wrap; }
-    if (!grid.children.length) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
+    if (!grid.children.length && emptyNote) grid.appendChild(h('div', { class: 'dim' }, 'Nothing for sale here.'));
     if (cat === 'gears' && bestG === 'stock') return h('div', {}, h('div', { class: 'good gsmall', style: { margin: '0 0 6px' } }, 'BEST FOR YOUR CAR: the factory gears run its quickest quarter right now.'), grid);
     return grid;
+    }
   }
 
   // ---------------------------------------------------------------- PACKAGES

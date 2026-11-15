@@ -1,6 +1,7 @@
 # More tire sizes + tires by wheel diameter
 
-Status: **Nov 15: direction picked; researching sizes for a plan. No code.**
+Status: **Nov 15: shipped (everything approved: all 9 tires, the list,
+the 26x10 correction).**
 Owner's picks (Nov 15): the Tires slot shows tires for the fitted wheel's
 diameter first and folds the rest under "Other sizes (new wheels needed)"
 (buying one still brings a matching wheel); research all four groups:
@@ -28,7 +29,7 @@ offered with a matching wheel (bought and fitted together).
   Lamborghini, Hellcat) have one drag radial each or none; the small-tire
   15 in slicks (28x9, 29.5x10.5) are the classic "small tire" class sizes.
 
-## Plan (proposed Nov 15, waiting on the owner)
+## Plan (approved Nov 15, all items)
 Real specs from Mickey Thompson's ET Street R / ET Street S/S / ET Drag
 pages (section width, approved rims, outside diameter, weight). Game
 prices on the game's scale (between the tires around them); grip on the
@@ -73,6 +74,30 @@ move to 15s in real life), 19 in drag radials, more street/track sizes.
 
 **Saves and rivals:** nothing changes on load; rivals unchanged (legacy
 wheels and tires).
+
+## Build notes (Nov 15)
+- data.js: dr_255, dr_295, dr_315b (315/35R17), dr_315c (315/40R18),
+  dr_305t (305/35R20), sl_265, sl_28, sl_295, sl_32; sl_26 corrected to
+  11.6 in (rims 8.5-10). TIRE_SHOP order by kind and size. parts.js
+  PART_DISC: the new ones open with drag wins (like their neighbours).
+- Packages: candidate lists per tier get the new sizes (big-brake radials
+  last); the wheel finder falls back to forged wheels for sizes the drag
+  wheels don't come in (20x10-11, 18x11). Package snapshot: FWD Race tires
+  now fenders + 26x8.5 on 15x8; Lamborghini and Viper get the 305/35R20
+  (they had nothing). Everything else unchanged.
+- garage.js catalogGrid: tires on a car with wheel data: "Fits your N in
+  wheels" section, then a folded "Other sizes (new wheels needed)" by
+  diameter (open by itself when nothing fits, e.g. a Civic's 14s).
+- Also fixed: a factory tire's text now gives its real size (wheel
+  diameter, widths, height from the size: a Civic's 185/60R14 said "fits a
+  15 in wheel").
+- Bench (694 hp Fox, launch tuned): 255 11.14, 275s 10.85, 295 10.73, 315
+  10.58; slicks 24.5 10.97, 26x8.5 10.60, 26x10 10.31, 28x9 10.33, ET 28
+  10.02, 29.5 10.06, 31 10.12, 32 10.15, 33 10.19 (the tallest are slower
+  at this power). AWD big-brake cars can't take the 315 radials on the
+  front (front wells = factory + 2 in): they stay on 275/305.
+- Tests: 1,860 builds clean (aud1), rivals 0 diffs, qolsmoke, pkgsmoke, c2
+  clean, screenshots scr/tireui.js.
 
 ## Sources
 - mickeythompsontires.com: ET Street R, ET Street S/S, ET Street Radial Pro,

@@ -218,7 +218,18 @@ DR.TIRES = {
     sl_24: { name: 'Drag Slick 24.5x8.0-15', kind: 'Slick', lat: 0.72, mu: 2.00, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.311, m: 15, topt: 70, cold: 0.22, price: 1400, lvl: 3, rim: 15, wmin: 7, wmax: 8.5, sec: 9.6 },
     // (the classic front-drive drag slick: it needs the fenders rolled
     // and pulled, or a wide front end, on a compact)
-    sl_26: { name: 'Drag Slick 26x10.0-15', kind: 'Slick', lat: 0.72, mu: 2.25, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.330, m: 19, topt: 70, cold: 0.23, price: 1500, lvl: 3, rim: 15, wmin: 8, wmax: 10, sec: 10.6 },
+    sl_26: { name: 'Drag Slick 26x10.0-15', kind: 'Slick', lat: 0.72, mu: 2.25, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.330, m: 20, topt: 70, cold: 0.23, price: 1500, lvl: 3, rim: 15, wmin: 8.5, wmax: 10, sec: 11.6 },
+    // more real sizes (Nov 15, Mickey Thompson ET Street R / S/S and ET
+    // Drag specs: section, outside diameter, approved rims, weight a pair)
+    dr_255: { name: 'Drag Radial 255/60R15', kind: 'Drag Radial', lat: 0.83, mu: 1.75, optP: 18, slip: 0.13, fall: 0.26, fk: 0.72, r: 0.349, m: 24, topt: 58, cold: 0.14, price: 750, rim: 15, wmin: 7, wmax: 9, sec: 10.3 },
+    dr_295: { name: 'Drag Radial 295/65R15', kind: 'Drag Radial', lat: 0.84, mu: 2.00, optP: 17, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.384, m: 31, topt: 60, cold: 0.16, price: 1100, lvl: 2, rim: 15, wmin: 8, wmax: 10.5, sec: 12.1 },
+    dr_315b: { name: 'Drag Radial 315/35R17', kind: 'Drag Radial', lat: 0.86, mu: 2.00, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.329, m: 27, topt: 60, cold: 0.15, price: 1250, lvl: 2, rim: 17, wmin: 10.5, wmax: 12.5, sec: 12.4 },
+    dr_315c: { name: 'Drag Radial 315/40R18', kind: 'Drag Radial', lat: 0.86, mu: 2.05, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.359, m: 29, topt: 60, cold: 0.15, price: 1400, lvl: 3, rim: 18, wmin: 10.5, wmax: 12.5, sec: 12.6 },
+    dr_305t: { name: 'Drag Radial 305/35R20', kind: 'Drag Radial', lat: 0.86, mu: 1.95, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.367, m: 31, topt: 60, cold: 0.15, price: 1600, lvl: 3, rim: 20, wmin: 10, wmax: 12, sec: 11.8 },
+    sl_265: { name: 'Drag Slick 26x8.5-15', kind: 'Slick', lat: 0.72, mu: 2.10, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.329, m: 17, topt: 70, cold: 0.22, price: 1450, lvl: 3, rim: 15, wmin: 7, wmax: 9, sec: 9.9 },
+    sl_28: { name: 'Drag Slick 28x9.0-15', kind: 'Slick', lat: 0.72, mu: 2.30, optP: 12, slip: 0.15, fall: 0.28, fk: 0.9, r: 0.347, m: 20, topt: 70, cold: 0.23, price: 1500, lvl: 3, rim: 15, wmin: 7.5, wmax: 9.5, sec: 10.8 },
+    sl_295: { name: 'Drag Slick 29.5x10.5-15', kind: 'Slick', lat: 0.71, mu: 2.55, optP: 11, slip: 0.16, fall: 0.29, fk: 0.95, r: 0.380, m: 23, topt: 72, cold: 0.25, price: 1900, lvl: 4, rim: 15, wmin: 9, wmax: 12, sec: 13.1 },
+    sl_32: { name: 'Drag Slick 32x14.0-15', kind: 'Slick', lat: 0.70, mu: 3.00, optP: 10, slip: 0.18, fall: 0.31, fk: 1.0, r: 0.404, m: 30, topt: 76, cold: 0.29, price: 3200, lvl: 4, rim: 15, wmin: 13, wmax: 15, sec: 17.2 },
     dr_305: { name: 'Drag Radial 305/45R18', kind: 'Drag Radial', lat: 0.85, mu: 1.95, optP: 18, slip: 0.13, fall: 0.26, fk: 0.7, r: 0.369, m: 29, topt: 60, cold: 0.15, price: 1250, lvl: 3, rim: 18, wmin: 9.5, wmax: 11.5, sec: 11.8 },
     fr_26: { name: 'Front Runner 26x4.0-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.331, m: 11, topt: 40, cold: 0.05, price: 500, rim: 15, wmin: 3.5, wmax: 4, sec: 6.2, roll: 0.75 },
     fr_26b: { name: 'Front Runner 26x4.0-17', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.337, m: 10, topt: 40, cold: 0.05, price: 550, rim: 17, wmin: 3.5, wmax: 4, sec: 5.4, roll: 0.75 },
@@ -226,7 +237,7 @@ DR.TIRES = {
     fr_18: { name: 'Front Runner 26x6.0R18', kind: 'Front Runner', lat: 0.66, mu: 1.0, optP: 32, slip: 0.12, fall: 0.3, fk: 1, r: 0.330, m: 14, topt: 40, cold: 0.05, price: 650, rim: 18, wmin: 4.5, wmax: 6, sec: 7.0, roll: 0.8 }
   };
   for (k in add) DR.TIRES[k] = add[k];
-  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_225', 'dr_245', 'dr_275s', 'dr_275', 'dr_305', 'dr_315', 'rsl_28', 'rsl_31', 'sl_24', 'sl_26', 'ets_28', 'sl_31', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
+  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_225', 'dr_245', 'dr_255', 'dr_275s', 'dr_275', 'dr_295', 'dr_305', 'dr_315', 'dr_315b', 'dr_315c', 'dr_305t', 'rsl_28', 'rsl_31', 'sl_24', 'sl_265', 'sl_26', 'sl_28', 'ets_28', 'sl_295', 'sl_31', 'sl_32', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
   // tire outside diameter (inches) from its rolling radius
   DR.tireOD = function (t) { return Math.round(t.r / 0.0127 * 10) / 10; };
 
