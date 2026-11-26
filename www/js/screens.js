@@ -458,7 +458,12 @@
           if (oev) return UI.confirm('You\'re still in the ' + DR.raceDayName(oev) + ' (' + DR.Ladder.stepLabel({ ev: oev }).split(':')[0] + '). Leave it for this one? Points for what you raced, no purse for the rounds you don\'t run.', function () { DR.Ladder.withdraw(oev); UI.refresh(); }, 'Leave it');
           // to the track (the clock jumps to the gates if it isn't on yet), in,
           // and to your pit
-          var enterIt = function () { UI.confirm(DR.raceDayName(ev) + ': ' + (ev.entry ? 'pay the ' + DR.money(ev.entry) + ' entry and ' : '') + 'go in? It\'s one entry a week.', function () { var w = DR.Ladder.enter(ev); if (w) return UI.toast(w); if (UI.Pit) UI.show(UI.Pit, ev); else DR.Ladder.go(ev); }, ev.entry ? 'Enter' : 'Go'); };
+          var enterIt = function () {
+            var goIn = function (pack) { var w = DR.Ladder.enter(ev, pack); if (w) return UI.toast(w); if (UI.Pit) UI.show(UI.Pit, ev); else DR.Ladder.go(ev); };
+            // the load-up: how the car gets there, what goes with it
+            if (UI.loadUp) return UI.loadUp(ev, goIn);
+            UI.confirm(DR.raceDayName(ev) + ': ' + (ev.entry ? 'pay the ' + DR.money(ev.entry) + ' entry and ' : '') + 'go in? It\'s one entry a week.', function () { goIn(null); }, ev.entry ? 'Enter' : 'Go');
+          };
           if (G.slotGate) G.slotGate(DR.evSlot(ev), DR.raceDayName(ev), enterIt); else enterIt();
         }, 'erace ' + ((lock && !run) || issue ? 'disabled' : 'red'))));
   }

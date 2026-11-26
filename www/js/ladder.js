@@ -415,9 +415,10 @@
     if (run.phase === 'qual') { cfg.qual = true; cfg.round = 0; }
     if (ev.type === 'noprep') cfg.noTimes = true;
     // only the first race of the day is the trip there (and the day your
-    // driver and the sponsor's stipend are paid for)
+    // driver and the sponsor's stipend are paid for); a trip paid at the
+    // entry (gear.js) shows on the first slip
     if (run.started) cfg.trip = { money: [], news: [], total: 0 };
-    else cfg.ladFirst = true;
+    else { cfg.ladFirst = true; if (run.trip) cfg.trip = run.trip; }
     return cfg;
   };
   DR.Ladder.go = function (ev) {
@@ -466,9 +467,19 @@
       PP.me = Math.max(0, PP.me - DR.OIL_PTS); run.oil = (run.oil || 0) + 1;
       out.money.push(['Oil-down cleanup', -fine]); out.notes.push(['bad', 'Oil down: a ' + DR.money(fine) + ' cleanup fine and ' + DR.OIL_PTS + ' standings points']);
     }
-    // broken in qualifying: no eliminations today, and an alternate takes
-    // your spot. Track credit for half the entry, or the 20 points you'd
-    // have had for racing: your pick (IRP, National Trail)
+    // broken in qualifying: fix it in the pit before round 1 (spares, tools
+    // and someone who can do the job) and race on; if it can't be fixed
+    // here, no eliminations today and an alternate takes your spot. Track
+    // credit for half the entry, or the 20 points you'd have had for
+    // racing: your pick (IRP, National Trail)
+    if (res.broke && run.phase === 'qual' && DR.Pit && DR.Pit.canFix(ev, run, G.car(), res.dmg)) {
+      run.started = true; run.brokeQ = true;
+      run.myQ.push(res.et < 90 ? res.et : 99); run.q++;
+      if (run.q >= DR.QUALS) seed(ev, run);
+      out.news.push('Broken in ' + (ev.type === 'bracket' ? 'time trials' : 'qualifying') + '. Fix it in the pit before ' + (run.phase === 'qual' ? 'the next session' : 'round 1 is called') + ', or no eliminations for you today.');
+      out.next = { label: run.phase === 'qual' ? (ev.type === 'bracket' ? 'Time trial ' : 'Qualifying ') + (run.q + 1) : 'Round 1', go: function () { DR.Ladder.go(ev); } };
+      G.save(); return out;
+    }
     if (res.broke && run.phase === 'qual') {
       run.myQ.push(99); run.phase = 'broke';
       out.news.push('Broken in ' + (ev.type === 'bracket' ? 'time trials' : 'qualifying') + ': no eliminations for you today. An alternate takes your spot.');
@@ -711,6 +722,12 @@
       if (run.phase === 'qual') {
         run.myQ.push(99); run.q++; out.push('Missed ' + nc.label.toLowerCase() + ': no time from it.');
         if (run.q >= DR.QUALS) seed(ev, run);
+      } else if (run.phase === 'elim' && run.brokeQ && !(run.myWins > 0) && G.car() && G.car().damage) {
+        // still broken from qualifying when round 1 closed: the broke rules
+        // (credit or points, an alternate in your place)
+        run.phase = 'broke';
+        out.push('Still broken when round 1 was called: no eliminations for you today. An alternate takes your spot.');
+        break;
       } else if (run.phase === 'elim') {
         var o = DR.Ladder.opponent(ev, run);
         out.push('Missed the call for ' + (/^Round/.test(nc.label) ? nc.label.toLowerCase() : 'the ' + nc.label.toLowerCase()) + ': ' + (o ? o.name + ' made a solo run' : 'the round went on without you') + '. You\'re out.');

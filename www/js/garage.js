@@ -457,7 +457,7 @@
       bbtn('Upgrade', 'g_shop', function () { UI.openSection('upgrade'); }, 'shop', G.newPartsCount() ? 'NEW' : spare || 0),
       bbtn('Style', 'g_body', function () { UI.openSection('style'); }, 'purple', G.newVisCount() ? 'NEW' : 0),
       bbtn('Dealer', 'g_dealer', function () { UI.show(UI.Dealer); }, '', G.freeCars && G.freeCars() ? 'FREE' : G.newCarCount() ? 'NEW' : 0),
-      bbtn('Team', 'g_shows', function () { UI.show(UI.TeamScreen); }, 'team', DR.Team ? (DR.Team.state().drivers.length + DR.Team.state().ddrivers.length + DR.Team.state().tuners.length) || 0 : 0),
+      bbtn('Team', 'g_shows', function () { UI.show(UI.TeamScreen); }, 'team', DR.Team ? (DR.Team.state().drivers.length + DR.Team.state().ddrivers.length + DR.Team.state().tuners.length + DR.Team.state().mechs.length) || 0 : 0),
       bbtn('Race', 'g_race', function () { if (inst.damage) return UI.toast('Repair your car first!'); UI.show(UI.RaceMenu); }, 'race'));
     var stars = DR.starRating(inst);
     var stat = function (k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v ' + (cls || '') }, v)); };

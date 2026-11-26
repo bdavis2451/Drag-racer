@@ -159,7 +159,8 @@
   // the work the parts take: wrapped around the garage's actions
   function hook(name, fn) { var o = G[name]; G[name] = function () { var r = o.apply(this, arguments); try { fn.apply(this, [r].concat([].slice.call(arguments))); } catch (e) { console.error(e); } return r; }; }
   hook('installPart', function (r, inst, uid) {
-    if (!r || !r.ok) return;
+    // (at a race day's pit the crew's work is on the clock there, not the bench)
+    if (!r || !r.ok || G.atPit) return;
     var it = (G.state.cars || []).indexOf(inst) >= 0 ? inst : null; if (!it) return;
     var m = /Installed (.*)/.exec(r.msg || ''), name = m ? m[1] : 'parts';
     var cat = lastCat;

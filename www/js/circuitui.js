@@ -650,7 +650,7 @@
     if (UI.circuitTestTrack) { if (UI.circuitTestTrack !== TRACK) { TRACK = UI.circuitTestTrack; play = null; probe = -1; } UI.circuitTestTrack = null; }
     var chips = h('div', { class: 'schips trktabs' },
       [['races', 'Races'], ['team', 'Team'], ['test', 'Test Lap']].map(function (t) {
-        var n = t[0] === 'races' ? TM().active().length : t[0] === 'team' ? TM().state().drivers.length + TM().state().ddrivers.length + TM().state().tuners.length : 0;
+        var n = t[0] === 'races' ? TM().active().length : t[0] === 'team' ? TM().state().drivers.length + TM().state().ddrivers.length + TM().state().tuners.length + TM().state().mechs.length : 0;
         return btn(t[1] + (n ? ' (' + n + ')' : ''), function () { UI.circuitTab = t[0]; if (t[0] !== 'races') UI.watchRace = null; UI.refresh(); }, 'chip' + (tab === t[0] ? ' on' : ''));
       }));
     var body;
@@ -710,32 +710,34 @@
   var SKILLS = [['brk', 'Braking'], ['cor', 'Cornering'], ['con', 'Consistency']];
   var SKILLS_DRAG = [['rt', 'Reaction'], ['lau', 'Launch'], ['con', 'Consistency']];
   var SKILLS_TUNER = [['eng', 'Engine'], ['chs', 'Chassis'], ['dat', 'Data']];
+  var SKILLS_MECH = [['wr', 'Wrenching']];
   // what a tuner's skill number means, in plain words (every tuner works
   // every setting: skill is how close they get)
   function tunerLine(k, v) {
+    if (k === 'wr') return 'Pit work: ' + (v >= 60 ? 'tires to transmissions, quick' : v >= 45 ? 'tires, axles and clutches' : 'tires, bottles and axles') + (v >= 80 ? ', very fast' : '');
     var lvl = v >= 80 ? 0 : v >= 65 ? 1 : v >= 50 ? 2 : 3;
     if (k === 'eng') return 'Boost, fuel, rev limit, shift points: ' + ['right to the limit', 'close to the limit', 'a safe step back', 'plays it very safe'][lvl];
     if (k === 'chs') return 'Launch & suspension settings: ' + ['spot on', 'close', 'in the ballpark', 'often a click or two off'][lvl];
     return 'Reading a bad pass: ' + ['rarely fooled', 'sometimes fooled', 'often fooled', 'easily fooled'][lvl];
   }
   function bars(d) {
-    return h('div', { class: 'skbars' }, (d.kind === 'drag' ? SKILLS_DRAG : d.kind === 'tuner' ? SKILLS_TUNER : SKILLS).map(function (k) {
+    return h('div', { class: 'skbars' }, (d.kind === 'drag' ? SKILLS_DRAG : d.kind === 'tuner' ? SKILLS_TUNER : d.kind === 'mech' ? SKILLS_MECH : SKILLS).map(function (k) {
       var v = Math.floor(d[k[0]]);
       var row = h('div', { class: 'skrow' }, h('span', { class: 'k' }, k[1]),
         h('span', { class: 'skbar' }, h('span', { class: 'pot', style: { width: d.pot + '%' } }), h('span', { class: 'val', style: { width: v + '%' } })),
         h('span', { class: 'v' }, String(v)));
-      return d.kind === 'tuner' ? h('div', null, row, h('div', { class: 'gsmall dim' }, tunerLine(k[0], v))) : row;
+      return d.kind === 'tuner' || d.kind === 'mech' ? h('div', null, row, h('div', { class: 'gsmall dim' }, tunerLine(k[0], v))) : row;
     }));
   }
   function starsEl(n) { var s = ''; for (var i = 1; i <= 5; i++) s += n >= i ? '★' : n >= i - 0.5 ? '⯪' : '☆'; return h('span', { class: 'acc dstars', title: 'Potential' }, s); }
   function driverCard(d, foot, status) {
     return h('div', { class: 'ecard dcard' },
       h('div', { class: 'drow' }, helmet(d.col, 28), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, d.name),
-        h('div', { class: 'gsmall dim' }, (d.kind === 'tuner' ? TM().ROLES[d.role] + ' • ' : d.kind === 'drag' ? 'Drag driver • ' : '') + 'Age ' + d.age + ' • potential ', starsEl(TM().stars(d)))),
+        h('div', { class: 'gsmall dim' }, (d.kind === 'tuner' ? TM().ROLES[d.role] + ' • ' : d.kind === 'drag' ? 'Drag driver • ' : d.kind === 'mech' ? 'Mechanic • ' : '') + 'Age ' + d.age + ' • potential ', starsEl(TM().stars(d)))),
         status || null),
       bars(d),
-      h('div', { class: 'gsmall dim' }, d.kind === 'tuner' ? (d.jobs ? d.jobs + ' jobs' : 'No jobs yet') : d.races ? d.races + ' races • ' + d.wins + ' wins' + (d.kind === 'drag' ? '' : ' • ' + d.podiums + ' podiums') : 'No races yet', ' • ',
-        h('span', { class: 'acc' }, (d.kind === 'tuner' && G.salary ? DR.money(G.salary(d)) + '/month' : DR.money(d.wage) + '/race'))),
+      h('div', { class: 'gsmall dim' }, d.kind === 'tuner' || d.kind === 'mech' ? (d.jobs ? d.jobs + ' jobs' : 'No jobs yet') : d.races ? d.races + ' races • ' + d.wins + ' wins' + (d.kind === 'drag' ? '' : ' • ' + d.podiums + ' podiums') : 'No races yet', ' • ',
+        h('span', { class: 'acc' }, (d.kind === 'tuner' && G.salary ? DR.money(G.salary(d)) + '/month' : d.kind === 'mech' ? DR.money(d.wage) + '/race day' : DR.money(d.wage) + '/race'))),
       foot ? h('div', { class: 'efoot' }, foot) : null);
   }
 
@@ -762,7 +764,7 @@
         h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, 'No ' + T.ROLES[role].toLowerCase()), h('div', { class: 'gsmall dim' }, role === 'drag' ? 'Tunes your drag cars: dyno and test passes.' : 'Sets up your circuit cars on test days.'),
           role === 'circuit' ? btn('Book a freelance test day', function () { DR.Tuner.openCircuit(G.car()); }, 'small') : null);
     }));
-    var boards = { circuit: s.board, drag: s.dboard, tuner: s.tboard };
+    var boards = { circuit: s.board, drag: s.dboard, tuner: s.tboard, mech: s.mboard };
     var board = h('div', { class: 'egrid dgrid' });
     boards[hireTab].forEach(function (d, i) {
       board.appendChild(driverCard(d, btn('Hire ' + DR.money(d.fee), function () {
@@ -779,10 +781,12 @@
       seats(s.ddrivers, T.DMAX, 'Empty seat', T.releaseStaff),
       head('TUNERS', 'One for each team, on a salary paid the 1st of the month. A staff tuner\'s sessions cost only the dyno time, fuel and wear.'),
       tunerSeats,
+      head('MECHANIC • ' + s.mechs.length + ' / ' + T.MMAX, 'Works your pit at drag race days: tire and bottle swaps, axles, clutches, transmissions (with the tools for it). Paid by the race day.'),
+      seats(s.mechs, T.MMAX, 'No mechanic', T.releaseStaff),
       h('div', { class: 'stagehead', style: { marginTop: '10px' } }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'HIRING BOARD'),
         h('div', { class: 'dim' }, 'Signing fee up front, then wages. New faces in ' + left + ' race' + (left === 1 ? '' : 's') + '.')),
         btn('Scout now ' + DR.money(T.SCOUT_COST), function () { if (!T.scout()) return UI.toast('Scouting costs ' + DR.money(T.SCOUT_COST)); UI.refresh(); }, 'small')),
-      h('div', { class: 'schips' }, [['circuit', 'Circuit drivers'], ['drag', 'Drag drivers'], ['tuner', 'Tuners']].map(function (t) {
+      h('div', { class: 'schips' }, [['circuit', 'Circuit drivers'], ['drag', 'Drag drivers'], ['tuner', 'Tuners'], ['mech', 'Mechanics']].map(function (t) {
         return btn(t[1], function () { hireTab = t[0]; UI.refresh(); }, 'chip' + (hireTab === t[0] ? ' on' : ''));
       })),
       board);

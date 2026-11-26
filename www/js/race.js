@@ -1058,7 +1058,7 @@
       var lad = null;
       if (cfg.lad && !testDrive) {
         // broken: you can't make the next call, so your day ends here
-        if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true, blown: !!damaged.engine }); } }
+        if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true, blown: !!damaged.engine, dmg: damaged }); } }
         else lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99 });
         if (lad) {
           lad.money.forEach(function (m) { money.push(m); moneyDelta += m[1]; });
@@ -1155,7 +1155,10 @@
         inst.damage = damaged;
         var what = damaged.engine ? 'Engine blown.' : damaged.axle ? 'Snapped an axle.' : damaged.chassis ? 'Cracked the chassis.' : 'Transmission broken.', fix = G.repairCost(inst);
         // auto-repair (Settings): the shop fixes it straight away when you can pay
-        if (settings.autoRepair && G.canAfford(fix)) { var arh = G.repairHours ? G.repairHours(inst) : 0; if (G.repair(inst)) { notes.push(['bad', what + ' Auto-repaired: ' + DR.money(fix) + (arh ? ', at the shop for ' + DR.Cal.dur(arh) : '')]); damaged = null; } }
+        // (not in the middle of a race day: the car's at the track, its pit
+        // is where it gets fixed)
+        if (lad && lad.next) notes.push(['bad', what + ' Fix it in the pit before the next call (spares, tools, crew), or at the shop after: ' + DR.money(fix) + '.']);
+        else if (settings.autoRepair && G.canAfford(fix)) { var arh = G.repairHours ? G.repairHours(inst) : 0; if (G.repair(inst)) { notes.push(['bad', what + ' Auto-repaired: ' + DR.money(fix) + (arh ? ', at the shop for ' + DR.Cal.dur(arh) : '')]); damaged = null; } }
         else notes.push(['bad', what + ' Repair: ' + DR.money(fix)]);
       }
       // the clock and the race day: the run's time, its points
@@ -1225,7 +1228,7 @@
           lad.choice ? h('div', { class: 'col' }, lad.choice.map(function (ch) { return btn(ch.label, function () { ch.go(); UI.show(UI.RaceMenu, 'career'); }, 'primary'); })) : null,
           !lad.choice && lad.next ? btn(UI.Pit ? 'To the pit • next: ' + lad.next.label : lad.next.label, function () { if (UI.Pit) UI.show(UI.Pit, ev); else lad.next.go(); }, 'primary') : null,
           !lad.choice && !lad.next ? btn('Back to Career', function () { UI.show(UI.RaceMenu, 'career'); }, damaged ? '' : 'primary') : null,
-          damaged ? (function () {
+          damaged && !(lad.next && !lad.choice) ? (function () {
             var fix = G.repairCost(inst), rh = G.repairHours ? G.repairHours(inst) : 0;
             if (!G.canAfford(fix)) return btn('Garage (repair ' + DR.money(fix) + ')', function () { UI.show(UI.Garage); }, 'primary');
             return btn('Repair at the shop ' + DR.money(fix) + (rh ? ' (' + DR.Cal.dur(rh) + ')' : ''), function () {
@@ -1235,7 +1238,7 @@
             }, 'primary');
           })() : null,
           h('div', { class: 'btngrid' },
-            !damaged && lad.next ? btn('Leave the event', function () { UI.confirm('Leave ' + DR.raceDayName(ev) + '? Your day ends here: points for what you raced, no purse for the rounds you don\'t run.', function () { DR.Ladder.withdraw(ev); UI.show(UI.RaceMenu, 'career'); }, 'Leave'); }) : null,
+            lad.next ? btn('Leave the event', function () { UI.confirm('Leave ' + DR.raceDayName(ev) + '? Your day ends here: points for what you raced, no purse for the rounds you don\'t run.', function () { DR.Ladder.withdraw(ev); UI.show(UI.RaceMenu, 'career'); }, 'Leave'); }) : null,
             damaged ? null : btn('Garage', function () { UI.show(UI.Garage); }),
             btn('Tune', function () { UI.show(UI.Tune); }))) : h('div', { class: 'col slipbtns' },
           !damaged && nextRound != null ? btn('Next Round', function () {
