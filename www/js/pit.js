@@ -83,6 +83,9 @@
         h('div', {}, open ? 'Called now: the lanes close at ' + hm(nc.close) + ' (' + dur(nc.close - now) + ')' : 'Called at ' + hm(nc.t) + ' (in ' + dur(nc.t - now) + '), the lanes close at ' + hm(nc.close)),
         opp && ev.type !== 'noprep' ? h('div', { class: 'gsmall dim' }, DR.CARS[opp.carId].name) : null);
     }
+    // a day without a schedule (entered before race days ran by the clock):
+    // straight to the next race
+    else if (run.phase !== 'broke' && run.phase !== 'done') head = h('div', { class: 'pitnext' }, h('div', { class: 'pix small acc' }, 'NEXT: ' + DR.Ladder.stepLabel({ ev: ev }).split(':')[0].toUpperCase() + (opp ? ' vs ' + opp.name.toUpperCase() : '')));
     function tune() { if (now + 1 / 6 > (nc ? nc.close : 1e9)) return UI.toast('No time for that before the call'); UI.timeNews(G.advance(1 / 6)); UI.show(UI.Tune); }
     var btns = h('div', { class: 'row pitbtns', style: { gap: '8px', flexWrap: 'wrap' } },
       run.phase !== 'broke' && nc ? btn(now >= nc.t ? 'To the lanes' : 'Wait for the call (' + dur(nc.t - now) + ')', function () {
@@ -91,6 +94,7 @@
         if (now < nc.t) return UI.refresh();
         DR.Ladder.go(ev);
       }, 'primary') : null,
+      run.phase !== 'broke' && !nc ? btn('To the lanes', function () { if (dmg) return UI.toast('The car\'s broken: it can\'t make the call'); DR.Ladder.go(ev); }, 'primary') : null,
       run.phase !== 'broke' && nc && now < nc.t ? btn('To the lanes now', function () { if (dmg) return UI.toast('The car\'s broken: it can\'t make the call'); UI.timeNews(G.advanceTo(nc.t)); DR.Ladder.go(ev); }) : null,
       run.phase !== 'broke' ? btn('Tune (10 min)', tune) : null,
       DR.Pit && DR.Pit.bigEvent(ev) && run.load && UI.vendorRow ? btn('Vendor row', function () { UI.vendorRow(ev, run); }) : null,
