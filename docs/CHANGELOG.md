@@ -2,6 +2,54 @@
 
 Short notes for testing, newest first.
 
+## The career ladder (drag, part 1 of 4)
+
+The drag career is rebuilt. **Old saves carry over** (classes you finished
+stay finished; in your current class each old race day you won counts as
+one event done), but if anything looks wrong, start a new career.
+
+- **Each class is now 5 sections of 4 events**, then the King event:
+  - **Heads-Up** (Saturday 8 AM-6 PM, prepped strip): 2 qualifying passes
+    seed a 16-car ladder (quickest vs slowest), then 4 rounds.
+  - **Bracket** (Sunday 8 AM-6 PM): 2 time trials, then 4 rounds on
+    dial-ins (break out and you lose).
+  - **No-Prep** (Saturday 6 PM-1 AM, 1/8 from a dig): a chip draw every
+    round, 4 rounds, no times shown: only who won.
+  - **Street list night** (Friday 10 PM-3 AM, 1/8): 4-7 callouts, one race
+    each; you can lose at most one.
+- **The three eliminations must be won outright: every round.** Win 3 of a
+  section's 4 events to open the next section.
+- **Every event runs again each week** at its time slot, for its money and
+  points. Purses pay by the round you reached (the winner most).
+- **The fields are set in advance:** about 20 named regulars per class,
+  each with their own car that gets quicker section by section. Some
+  events are restricted (Stock Motor, 275 Radial, Small Block...): everyone
+  in them runs to the rule.
+- **Standings** (new tab): 20 points for racing, +10 per round won, +1 for
+  the win, against the class's regulars. Beat the King while in the top 3
+  for a standings bonus.
+- **The King event** (2nd and 4th Saturday nights, 9 PM-midnight): the 5
+  ladder rivals one at a time, then the King. Your sponsor contract still
+  has to be done first. A loss ends that night; try again on the next one.
+- **Parts and cars unlock with the first win of each event** (the event
+  card says what it opens).
+- Gone: rep, the old callout ladder, side brackets and race-day scoring
+  (all folded into the ladder). Car clubs, wanderers, street spots, Grudge
+  Night, car shows, the promoter, pink slips and the short series stay.
+- Street events need no license.
+- Try:
+  - The Career screen: the Strip, King and Standings tabs, and the road of
+    sections.
+  - A whole Heads-Up day: check the qualifying slips, your seed, the
+    round names, and that the winner's money lands.
+  - A Bracket day (your dial-in on the slip) and a No-Prep night (no times
+    on the slip).
+  - A street list night: lose one and keep going, lose two and it's over.
+  - An old save: are your finished classes still done?
+- Look out for: a field or card with a missing car or name, an event that
+  won't open in its time slot, money that looks too high or too low, and
+  anything that still mentions rep.
+
 ## Day or night, same engine; tuners respect the knock point; alcohol boost limits
 
 - **The weather no longer changes the engine.** Day or night it makes the

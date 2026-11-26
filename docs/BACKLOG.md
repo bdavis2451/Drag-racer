@@ -10,16 +10,17 @@ the top of each section.
   street; rent or own spec cars; shortened endurance with pit stops and a
   driver swap; SCCA-style licenses). Research done, plan sent.
 - **Career ladder rework** (`docs/features/career-ladder.md`, Nov 15):
-  owner's draft (5 sections x 4 events, 3 of 4 to move on, events of 3-5
-  races, King event with the ladder; themed events, restricted events;
-  circuit later). Audit and research done. Nov 24-26: decisions made
-  (eliminations to be won outright, race cards lose at most one, timed race
-  days with a pit, real breakage rules, heat by the minute, a mechanic,
-  pit gear, cargo room, trailers and hitches replacing the $8,500 rig,
-  sponsors expanded, Bracket / No-Prep King ladders, IRP standings). A
-  five-build plan waits on the owner. Nothing that changes saves goes out
-  until the tester is warned. The career / rival rebalance
-  (`career-rebalance.md`) and the heat-soak audit fold into it.
+  five builds, plan approved Nov 26. **Build 1 (the ladder) shipped Nov
+  26:** 5 sections x 4 events per class (Heads-Up, Bracket, No-Prep,
+  Street list night), the King event with its ladder, weekly slots,
+  standings, generated rosters, unlocks by first wins, old saves mapped.
+  **Build 2 (race day and the pit) in progress** (local, ships after build
+  1 has been played): race days by the clock, the pit, heat by the minute,
+  breakage rules, a mechanic, pit gear, cargo room, trailers and hitches
+  replacing the $8,500 rig. Then build 3 (sponsors expanded) and build 4
+  (Bracket / No-Prep King ladders). Open: published trunk volumes are
+  missing for some cars (Miata, RX-7, 350Z, C5/C6, R34, the classics,
+  truck beds): estimates, to ask the owner.
 
 ## In progress
 
@@ -128,11 +129,11 @@ to answer later.
 - **Career ladder and the calendar.** How the ladder and the week's race
   days fit together (e.g. ladder races marked on calendar days, This Week
   flagging a ladder race you'd miss). Back burner (owner, 2026-11-10).
+  Nov 26: the ladder build 1 puts every event on a weekly slot and in the
+  week agenda; calendar-day marks are still open.
 - **Engine Simulator audio.** Real or simulated engine recordings, for when
   the game is sold. Open question: how to give access to the tools.
 - **Free-to-use engine recordings.** Researched, nothing integrated.
-- **Race-day scoring.** Win/dominate targets and reward picks are built but
-  switched off (`DR.RD_SCORING = false`).
 - **Ray's tab.** When you can't pay Ray on the 1st, his share goes on a tab
   that grows with no limit and no consequence; it's paid in full on any 1st
   you can cover it, or any time with the Pay button (Nov 15). Maybe: Ray takes a cut of race winnings once the tab gets
@@ -147,6 +148,10 @@ to answer later.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Career ladder build 1** (Nov 26, `docs/features/career-ladder.md`):
+  shipped. Race-day scoring (it was switched off), rep, the old callout
+  ladder and side brackets are removed, folded into the ladder.
 
 - **Tuner, knock risk, fuels, weather** (Nov 15,
   `docs/features/fuel-knock-review.md`): air temperature no longer changes
