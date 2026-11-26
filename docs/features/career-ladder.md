@@ -1,9 +1,8 @@
 # Career ladder rework (drag and circuit)
 
-Status: **Nov 26: build 1 (the drag ladder) shipped to the tester with
-the final rosters. Build 2 (race day and the pit) built on a local branch
-(2a and 2b, see Build 2 notes); it ships after build 1 has been played
-and the owner OKs it.**
+Status: **Nov 26: builds 1 (the drag ladder) and 2 (race day and the
+pit) shipped to the tester. Next: the build 2 follow-ups (the drag
+tuner's chassis and data skills at the pit), then build 3 (sponsors).**
 Builds 3 (sponsors) and 4 (Bracket / No-Prep Kings) follow, then the
 circuit ladder (`circuit-ladder.md`). Docs can be pushed any time. This
 replaces `career-rebalance.md`
@@ -512,8 +511,7 @@ nothing to the game was what I had meant."
   all six classes' first pass).
 - **Ship:** merged into the Pages branch Nov 26.
 
-### Build 2 notes (Claude, Nov 26; local branch `ladder-build2`, not pushed)
-Ships after build 1 has been played and the owner OKs it.
+### Build 2 notes (Claude, Nov 26; shipped Nov 26)
 - **2a (race day by the clock, `ladder.js` + `pit.js`):** `DR.DAYPLAN`
   schedules (gates, qualifying / time trials, rounds, call windows);
   `nextCall` / `checkCall` / `lateLock`; heat by the minute (`coolTau`,
@@ -575,11 +573,19 @@ Ships after build 1 has been played and the owner OKs it.
 - **Follow-ups (not wired yet):** the drag tuner's chassis skill (setup at
   the pit) and data skill (reading the slip) do nothing at the pit yet;
   the gear swap is the Tune screen as before.
-- **Choices made in the build, to confirm with the owner:** which events
-  are "big" (vendor row); the mechanic's signing fee (40% of a driver's);
-  bottles never run dry (as today: a spare restores full pressure); cargo
-  estimates where no figure was found (Charger, Nova, Bel Air, Willys;
-  beds from their dimensions; the open car trailer's deck room 30 cu ft).
+- **Choices made in the build, confirmed by the owner (Nov 26, all A):**
+  big events = the last section's Heads-Up and No-Prep (vendor row); the
+  mechanic's signing fee 40% of a driver's; bottles never run dry (a
+  spare restores full pressure); the cargo estimates (Charger 15, Nova 14,
+  Bel Air 15, Willys 8; beds from their dimensions; the open car
+  trailer's deck 30 cu ft). Owner: OK to push build 2 straight to the
+  tester ("you can also just push it to the main build").
+- **Recheck before shipping:** rival snapshot identical (every stock car,
+  every roster build, all 88 rival builds: same ET and trap on both
+  builds); a run entered under build 1 (no schedule, no load) goes
+  straight to the lanes from the pit; an old save without the new state
+  loads (pit, mechanics); odd cars (RX-7, Ram, rail, Willys, Beetle, Pro
+  Mod, Aventador, C1500): room, ways, tow ratings.
 
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.

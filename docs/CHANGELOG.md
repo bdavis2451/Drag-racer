@@ -2,6 +2,54 @@
 
 Short notes for testing, newest first.
 
+## Race days by the clock, your pit, gear and trailers (drag, part 2 of 4)
+
+- **A race day runs by the clock.** Enter an event and you're in your pit:
+  the day's schedule (Heads-Up: qualifying at 10 AM and 12:30, round 1 at
+  3 PM, then about every 45 minutes; Bracket and No-Prep have their own),
+  the next call to the lanes and when the lanes close. **Miss a call and
+  you're out** (in qualifying you just get no time from that pass). "Wait
+  for the call" moves the clock; "To the lanes now" goes early.
+- **The engine heats and cools by the minute.** About 40°F a pass, then
+  down while you wait: the hood up is slowest, electric fans and an
+  electric water pump faster, an engine chiller fastest. A hot engine
+  loses a little power (up to about a tenth) and knocks sooner.
+- **Breakage rules:** break in qualifying and can't fix it before round
+  1? Take half the entry as track credit or the 20 points, and an
+  alternate takes your spot. Blow an engine on the strip: a cleanup fine
+  and 10 points. On the street a breakage ends the night.
+- **New: Upgrade > Pit & Trailer** (the last tab): tools (Basic $350, Pro
+  $1,800, Roll Cab $5,000), an engine chiller, a canopy, spare tires on
+  their own wheels, axle shafts, spare nitrous bottles, and trailers. A
+  second clutch or transmission on your shelf is a spare.
+- **Load up when you enter:** pick how the car gets there (drive it, drive
+  it pulling a small trailer, a flatbed, or your truck towing a car
+  trailer) and what goes with it. It all has to fit: your trunk, the
+  truck's bed, the trailer.
+- **Pit work:** swap tires and bottles, replace an axle, a clutch or a
+  transmission, fit parts you brought. Better tools and a better crew are
+  faster. Engines and chassis are shop work.
+- **Hire a mechanic** (Team > Mechanics): paid by the race day, and you
+  can leave them home on cheap days.
+- **Trailer hitch** (Parts > Weight & Safety). Small trailers go behind any
+  car with a hitch; car trailers only behind a truck, within its tow
+  rating.
+- **The old $8,500 truck & trailer is gone**: if you had it, the money is
+  back in your account (Ray texts you).
+- The last section's Heads-Up and No-Prep have a **vendor row** (parts at
+  shop prices, nitrous refills).
+- Try:
+  - Enter an event: the load-up screen, then the pit. Wait for a call, run,
+    come back: the engine temperature and the next call.
+  - Buy pro tools and an axle shaft, then if you snap an axle, fix it in
+    the pit before the next call.
+  - A trailer and a hitch: the extra room at the load-up.
+  - Hire a mechanic and see the jobs go faster.
+- Look out for: a call you couldn't make for no reason, a job that takes
+  far too long or too short, the load-up not fitting on screen, money
+  charged twice for the trip, and anything still mentioning the old truck
+  & trailer.
+
 ## The career ladder (drag, part 1 of 4)
 
 The drag career is rebuilt. **Old saves carry over** (classes you finished

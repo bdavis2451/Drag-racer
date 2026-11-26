@@ -14,15 +14,12 @@ the top of each section.
   26:** 5 sections x 4 events per class (Heads-Up, Bracket, No-Prep,
   Street list night), the King event with its ladder, weekly slots,
   standings, generated rosters, unlocks by first wins, old saves mapped.
-  **Build 2 (race day and the pit) built** (local, ships after build 1 has
-  been played and the owner OKs): race days by the clock, the pit, heat by
-  the minute, breakage rules, a mechanic, pit gear, cargo room, trailers
-  and hitches replacing the $8,500 rig, a vendor row at big events.
-  Follow-ups: the drag tuner's chassis and data skills at the pit. Then
-  build 3 (sponsors expanded) and build 4 (Bracket / No-Prep King
-  ladders). Waiting on the owner: which events are "big" (vendor row), the
-  mechanic's signing fee, bottles never running dry, cargo estimates for
-  four classics (no published trunk figure).
+  **Build 2 (race day and the pit) shipped Nov 26:** race days by the
+  clock, the pit, heat by the minute, breakage rules, a mechanic, pit
+  gear, cargo room, trailers and hitches replacing the $8,500 rig, a
+  vendor row at big events. Follow-ups: the drag tuner's chassis and data
+  skills at the pit. Then build 3 (sponsors expanded) and build 4
+  (Bracket / No-Prep King ladders).
 
 ## In progress
 
