@@ -1,10 +1,12 @@
-# Career ladder rework (drag first, circuit later)
+# Career ladder rework (drag and circuit)
 
-Status: **Nov 26: decisions made (Nov 24 and 26), research done, the build
-plan below sent to the owner for approval. No code yet.** Nothing that
-changes saves is pushed until the owner has warned the tester. This
-replaces `career-rebalance.md` (the rival and money pass becomes part of
-this).
+Status: **Nov 26: plan approved (all questions answered, no items struck).
+Build 1 (the drag ladder) starting. The circuit ladder is now part of this
+work (owner: "now"): research and its plan come next.** Game changes are
+not pushed until the owner says the tester has been warned (the rework
+resets / remaps saves); then they go straight to the tester (no preview
+page). Docs can be pushed any time. This replaces `career-rebalance.md`
+(the rival and money pass becomes part of this).
 
 ## The owner's draft (Nov 15, drawing)
 - A horizontal spine per class: **5 sections, then the King race event**.
@@ -301,8 +303,8 @@ Five builds, each played before the next. Builds 1-2 change saves.
     bracket side races become Bracket events; rep, callouts and the class
     ladder become the King event; race-day scoring (off) is removed;
     sponsor races become contract goals on ladder events. Car clubs,
-    wanderers, street spots, Grudge Night, car shows, the promoter and pink
-    slips stay as side content.
+    wanderers, street spots, Grudge Night, car shows, the promoter, pink
+    slips and the short series stay as side content.
 11. Licenses at the strip as today; street events need none. Rivals don't
     break.
 
@@ -408,12 +410,25 @@ Five builds, each played before the next. Builds 1-2 change saves.
   from mid-class (#10) to top-class (#1) builds.
 
 ### Build 5: the circuit ladder
-The same shape for the circuit (timing: question below).
+The same shape for the circuit, done now rather than after the drag ladder
+is played (owner, Nov 26). Needs its own research and plan (classes,
+endurance, low power, one-make like Miata only: the owner's Nov 15 ideas;
+team drivers race at 4x).
 
 ### Left out
 FWD / AWD / truck events and the FWD class (parked), buybacks, weather
 station, generator, battery charger, transmission temperature (heat is the
 engine, intercooler and bottle), rivals breaking.
+
+### Answers to the plan questions (owner, Nov 26)
+1 A ladder first, then the pit. 2 A 16-car fields everywhere. 3 A
+standings shown per class, bracket points feed the Bracket King, a bonus
+for the top 3 when you finish the class. 4 **B keep short series** as side
+content (not retired). 5 A refund the $8,500 truck & trailer. 6 A oil-down:
+a cleanup fine and 10 standings points, a second one in an event sends you
+home. 7 **B the circuit ladder now.** 8 **B straight to the tester** (no
+preview page), once he's warned. "Feel free to update docs whenever, just
+nothing to the game was what I had meant."
 
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.
