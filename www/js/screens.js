@@ -261,7 +261,7 @@
     var on = G.slotOpen && G.slotOpen('grudge'), when = G.whenText ? G.whenText('grudge') : '';
     var head = h('div', { class: 'row grudgehead', style: { gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
       h('div', { class: 'grow' }, h('div', {}, h('span', { class: 'pix small acc' }, 'GRUDGE NIGHT '), h('span', { class: 'gsmall' + (on ? ' good' : ' dim') }, on ? 'on now at Pixel Dragway' : 'Wed 6–11 PM • next ' + when)),
-        h('div', { class: 'gsmall dim' }, 'Street beefs settled on the strip\'s eighth mile, no cops. Win the stake and +' + DR.GRUDGE_REP + ' class rep.')),
+        h('div', { class: 'gsmall dim' }, 'Street beefs settled on the strip\'s eighth mile, no cops. Win and the stake is yours.')),
       btn(grudgeOpen ? 'Hide' : 'Open', function () { grudgeOpen = !grudgeOpen; UI.refresh(); }, 'small'));
     if (!grudgeOpen) return h('div', { class: 'trkcard grudge' }, head);
     if (!grudgeOpps) grudgeOpps = G.streetOpponents(G.estimate(inst, DR.EIGHTH, 1).et, DR.EIGHTH, 1);
@@ -284,23 +284,23 @@
     return h('div', { class: 'cityzoom' }, btn('+', function () { ctl.zoomBy(1.5); }, 'small'), btn('−', function () { ctl.zoomBy(1 / 1.5); }, 'small'), btn('⤢', function () { ctl.reset(); }, 'small'));
   }
 
-  // The stage as a road (No Limits style): races in the order they open,
-  // two stacked where you can pick either, side races branching off above,
-  // and the boss at the end. Tap a stop to see it on the right.
+  // The class as a road (the owner's drawing): five sections of four
+  // events, two above the road and two below, then the King event. Tap a
+  // stop to see it on the right.
   var selEv = null;
-  var NODE_GLYPH = { quarter: '1/4', eighth: '1/8', street: 'ST', knockout: 'KO', sponsor: 'SPON', showcase: 'NP', show: 'SHOW', boss: 'KING', 'class': 'SIDE', bracket: 'BKT' };
+  var NODE_GLYPH = { headsup: 'HU', bracket: 'BKT', noprep: 'NP', street: 'ST', show: 'SHOW', boss: 'KING' };
   var careerTab = 'days', selCStage = null;
-  // the class page: its race days, its ladder, and the Kings
+  // the class page: its sections, its King event, its standings, and the Kings
   function careerView() {
     var c = G.careerState();
     pickStage(c); remember();
-    if (UI.careerSub) { careerTab = UI.careerSub; UI.careerSub = null; }
+    if (UI.careerSub) { careerTab = UI.careerSub === 'ladder' ? 'king' : UI.careerSub; UI.careerSub = null; }
     var tabs = h('div', { class: 'schips' },
       chip('Strip', careerTab === 'days', function () { careerTab = 'days'; UI.refresh(); }),
-      chip('Ladder', careerTab === 'ladder', function () { careerTab = 'ladder'; UI.refresh(); }),
+      chip('King', careerTab === 'king', function () { careerTab = 'king'; UI.refresh(); }),
+      chip('Standings', careerTab === 'stand', function () { careerTab = 'stand'; UI.refresh(); }),
       chip('Circuit', careerTab === 'circuit', function () { careerTab = 'circuit'; UI.refresh(); }),
-      chip('Kings', careerTab === 'kings', function () { careerTab = 'kings'; UI.refresh(); }),
-      h('span', { class: 'gsmall acc', style: { marginLeft: 'auto' } }, 'Class rep ' + G.rep(selStage)));
+      chip('Kings', careerTab === 'kings', function () { careerTab = 'kings'; UI.refresh(); }));
     // the class at a glance. The strip and the circuit are two ladders: a
     // King opens the next drag class, a Cup the next circuit class.
     var circ = careerTab === 'circuit' && UI.circuitCareerView && G.cstage, st = DR.STAGES[selStage], kingDone = G.eventWon(st.boss), status, chips;
@@ -309,7 +309,7 @@
       if (selCStage == null || selCStage > cs) selCStage = cs;
       chips = h('div', { class: 'schips' }, DR.CSTAGES.map(function (x, si) {
         var un = si <= cs, done = G.cupWon(si);
-        return chip((done ? '✔ ' : un ? '' : '🔒 ') + 'Circuit ' + (si + 1), si === selCStage, function () { if (!un) return UI.toast('Win the ' + G.cupName(si - 1) + ' first'); selCStage = si; UI.refresh(); }, un ? '' : 'nofit');
+        return chip((done ? '✔ ' : un ? '' : '🔒 ') + 'Circuit ' + (si + 1), si === selCStage, function () { if (!un) return UI.toast('Win the ' + G.cupName(si - 1) + ' first'); selCStage = si; UI.refresh(); });
       }));
       var cupDone = G.cupWon(selCStage);
       status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, G.cclassName(selCStage)), h('span', { class: 'gsmall' }, G.cupWins(selCStage) + '/4 race days'),
@@ -317,31 +317,45 @@
         h('span', { class: 'gsmall dim grow' }, cupDone ? 'class done' : 'the Cup opens the next circuit class'));
     } else {
       chips = careerTab === 'kings' ? null : stageChips();
-      status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, st.name), h('span', { class: 'gsmall' }, G.stageWins(selStage) + '/' + st.events.length + ' race days'),
+      status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, st.name), h('span', { class: 'gsmall' }, G.ladderLine(selStage)),
         h('span', { class: kingDone ? 'good' : 'dim' }, (kingDone ? '✔' : '✗') + ' King'),
         h('span', { class: 'gsmall dim grow' }, kingDone ? 'class done' : 'the King opens the next class'));
     }
-    var body = careerTab === 'ladder' ? ladderView(selStage) : careerTab === 'kings' ? kingsView() : circ ? UI.circuitCareerView(selCStage) : raceDaysView(c);
+    var body = careerTab === 'king' ? kingView(selStage) : careerTab === 'stand' ? standingsView(selStage) : careerTab === 'kings' ? kingsView() : circ ? UI.circuitCareerView(selCStage) : sectionsView(c);
     return h('div', {}, chips, careerTab === 'kings' ? null : status, tabs, body);
   }
-  // the ladder: #5 up to #1, then the King. Call out the rival above you
-  // once your rep in the class is high enough.
-  function ladderView(si) {
-    var st = DR.STAGES[si], pos = G.ladderPos(si), rows = [];
+  // the King event: #5 up to #1 on King nights (a win stays won, the night
+  // ends at your first loss), then the King for their car
+  function kingView(si) {
+    var st = DR.STAGES[si], pos = G.ladderPos(si), rows = [], open = G.curSec(si) >= DR.SECTIONS;
     var king = st.boss, kLock = G.eventLock(king), kWon = G.eventWon(king);
+    function race(ev, title) { DR.Race.raceDay(DR.Race.eventCfg(ev, 0), title); }
     rows.push(h('div', { class: 'lrow king' + (kWon ? ' won' : '') },
-      h('span', { class: 'lpos' }, '♛'), h('div', { class: 'grow' }, h('div', { class: 'acc' }, king.opps[0].name + ' — King'), h('div', { class: 'dim gsmall' }, DR.CARS[king.opps[0].carId].name + ' • races for the car')),
-      kWon ? h('span', { class: 'good' }, 'BEATEN') : kLock ? h('span', { class: 'dim gsmall' }, '🔒 ' + kLock) : btn('Race', function () { DR.Race.raceDay(DR.Race.eventCfg(king, 0), 'King of ' + st.name); }, 'small red')));
+      h('span', { class: 'lpos' }, '♛'), h('div', { class: 'grow' }, h('div', { class: 'acc' }, king.opps[0].name + ' — King'), h('div', { class: 'dim gsmall' }, DR.CARS[king.opps[0].carId].name + ' • races for their car')),
+      kWon ? h('span', { class: 'good' }, 'BEATEN') : kLock ? h('span', { class: 'dim gsmall' }, '🔒 ' + kLock) : btn('Race', function () { race(king, 'King of ' + st.name); }, 'small red')));
     G.ladder(si).slice().reverse().forEach(function (ev) {
-      var o = ev.opps[0], beaten = ev.rung < pos, lock = G.calloutLock(ev), est = G.estimate(G.oppInst(o), DR.QUARTER).et;
-      rows.push(h('div', { class: 'lrow' + (beaten ? ' won' : '') + (ev.rung === pos ? ' next' : '') },
-        h('span', { class: 'lpos' }, '#' + (5 - ev.rung)), h('div', { class: 'grow' }, h('div', {}, o.name), h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name + ' • posted ' + est.toFixed(2))),
+      var o = ev.opps[0], beaten = ev.rung < pos, lock = G.calloutLock(ev), et = DR.ROSTER[si][o.reg[1]].rung.et;
+      rows.push(h('div', { class: 'lrow' + (beaten ? ' won' : '') + (ev.rung === pos && open ? ' next' : '') },
+        h('span', { class: 'lpos' }, '#' + (5 - ev.rung)), h('div', { class: 'grow' }, h('div', {}, o.name), h('div', { class: 'dim gsmall' }, DR.CARS[o.carId].name + ' • runs about ' + et.toFixed(2) + ' (1/4)')),
         beaten ? h('span', { class: 'good gsmall' }, 'BEATEN ') : null,
-        lock && !beaten ? h('span', { class: 'dim gsmall' }, '🔒 ' + lock) : btn(beaten ? 'Rematch' : 'Call out', function () { DR.Race.raceDay(DR.Race.eventCfg(ev, 0), 'Callout: ' + o.name); }, 'small ' + (beaten ? '' : 'red'))));
-      if (ev.rung === pos) rows.push(h('div', { class: 'lrow you' }, h('span', { class: 'lpos' }, '▲'), h('div', { class: 'grow acc' }, 'You'), h('span', { class: 'dim gsmall' }, 'rep ' + G.rep(si) + ' / next callout ' + DR.LADDER_REP[pos])));
+        lock && !beaten ? h('span', { class: 'dim gsmall' }, '🔒 ' + lock) : btn(beaten ? 'Rematch' : 'Race', function () { race(ev, 'King night: ' + o.name); }, 'small' + (beaten ? '' : ' red'))));
+      if (ev.rung === pos && open) rows.push(h('div', { class: 'lrow you' }, h('span', { class: 'lpos' }, '▲'), h('div', { class: 'grow acc' }, 'You'), h('span', {}, '')));
     });
     if (pos >= 5 && !kWon) rows.splice(1, 0, h('div', { class: 'lrow you' }, h('span', { class: 'lpos' }, '▲'), h('div', { class: 'grow acc' }, 'You: #1'), h('span', {}, '')));
-    return h('div', { class: 'ladder' }, h('div', { class: 'dim gsmall' }, 'Race days earn rep. With enough, call out the rival above you: win and take their spot. Any callout can be run for pink slips.'), rows);
+    return h('div', { class: 'ladder' }, h('div', { class: 'dim gsmall' }, (open ? '' : 'Finish the five sections to open the King event. ') + 'On King nights (the 2nd and 4th Saturday, 9 PM) race up the ladder: each win stays won, and your night ends at your first loss. Beat #1 and the King races you for their car. Any of the five can be raced for pink slips if you have a second car.'), rows);
+  }
+  // the class standings: you and the regulars, IRP points
+  function standingsView(si) {
+    var rows = DR.Ladder.standings(si), me = 0;
+    rows.forEach(function (r, i) { if (r.me) me = i + 1; });
+    return h('div', { class: 'ladder' },
+      h('div', { class: 'dim gsmall' }, 'Points: ' + DR.PTS.race + ' for racing an event, +' + DR.PTS.round + ' a round (or callout) won, +' + DR.PTS.win + ' for the win. The top three when you beat the King get a bonus: ' + DR.STAND_BONUS.map(function (k) { return DR.money(DR.STAGES[si].base * k); }).join(' / ') + '.'),
+      h('div', { class: 'acc' }, 'You: #' + me + ' of ' + rows.length),
+      rows.map(function (r, i) {
+        return h('div', { class: 'lrow' + (r.me ? ' you' : '') }, h('span', { class: 'lpos' }, '#' + (i + 1)),
+          h('div', { class: 'grow' }, h('div', { class: r.me ? 'acc' : '' }, r.name), r.carId ? h('div', { class: 'dim gsmall' }, DR.CARS[r.carId].name) : null),
+          h('span', { class: 'gsmall' }, r.pts + ' pts'));
+      }));
   }
   function kingsView() {
     return h('div', { class: 'kings' }, Object.keys(DR.KINGS).map(function (d) {
@@ -349,40 +363,40 @@
       return h('div', { class: 'kcard' + (won ? ' won' : '') },
         h('div', { class: 'pix acc' }, K.name), h('div', { class: 'dim gsmall' }, K.blurb),
         K.ev ? h('div', { class: 'gsmall' }, K.ev.opps[K.ev.opps.length - 1].name + ' • ' + DR.CARS[K.ev.opps[K.ev.opps.length - 1].carId].name) : null,
-        d !== 'circuit' && d !== 'headsup' ? h('div', { class: 'gsmall' }, DR.DISC[d] + ' rep: ' + G.discRep(d) + ' / ' + DR.KING_REP) : null,
+        d === 'bracket' || d === 'street' ? h('div', { class: 'gsmall' }, (d === 'street' ? 'No-Prep' : 'Bracket') + ' events finished: ' + G.themeDone(d === 'street' ? 'noprep' : 'bracket') + ' / ' + DR.KING_EVENTS) : null,
         won ? h('div', { class: 'good' }, '♛ YOURS') : d === 'circuit' ? h('div', { class: 'dim gsmall' }, 'Not yet.') :
           lock ? h('div', { class: 'dim gsmall' }, '🔒 ' + lock) : btn('Race the King', function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }, 'small red'));
     }));
   }
-  function raceDaysView(c) {
+  function sectionsView(c) {
     G.checkContracts().forEach(function (m) { UI.toast(m); });
-    var st = DR.STAGES[selStage], wins = G.stageWins(selStage), next = nextEvent(st), arriving = !UI.refreshing;
+    var st = DR.STAGES[selStage], next = nextEvent(st), arriving = !UI.refreshing;
     if (arriving) selEv = null;
-    if (!selEv || selEv.stage !== selStage || !G.eventVisible(selEv)) selEv = next || st.boss;
-    var cols = [];
-    function col(n) { while (cols.length <= n) cols.push({ main: [], side: [] }); return cols[n]; }
-    st.events.slice().sort(function (a, b) { return a.needWins - b.needWins || a.idx - b.idx; }).forEach(function (ev) { col(ev.needWins).main.push(ev); });
-    var bossCol = col(Math.max(cols.length, st.boss.needWins)); bossCol.main.push(st.boss); bossCol.boss = true;
-    st.side.forEach(function (ev) { col(Math.min(ev.needWins, cols.length - 1)).side.push(ev); });
+    if (!selEv || selEv.stage !== selStage || (selEv.ladder && !G.eventVisible(selEv))) selEv = next || st.boss;
     function node(ev) {
-      var vis = G.eventVisible(ev), won = G.eventWon(ev), lock = vis && G.eventLock(ev);
-      var cls = 'rnode t-' + ev.type + (won ? ' won' : '') + (!vis ? ' hidden' : lock ? ' locked' : '') + (ev === next ? ' next' : '') + (ev === selEv ? ' sel' : '');
+      var vis = G.eventVisible(ev), won = G.eventWon(ev), lock = vis && G.eventLock(ev), run = ev.ladder && DR.Ladder.runFor(ev);
+      var cls = 'rnode t-' + (ev.cls ? 'class' : ev.type) + (won ? ' won' : '') + (!vis ? ' hidden' : lock && !run ? ' locked' : '') + (ev === next ? ' next' : '') + (ev === selEv ? ' sel' : '');
       var label = !vis ? '?' : ev.cls ? DR.CLASSES[ev.cls].name.split(' ')[0].toUpperCase() : NODE_GLYPH[ev.type] || ev.type;
-      return h('div', { class: cls, onclick: function () { if (!vis) return UI.toast('Win more races in this class to reveal this one'); selEv = ev; A.click(); UI.refresh(); } },
-        h('span', { class: 'rglyph' }, label), won ? h('span', { class: 'rmark good' }, '✔') : lock && vis ? h('span', { class: 'rmark' }, '🔒') : null);
+      return h('div', { class: cls, onclick: function () { if (!vis) return UI.toast(ev.ladder ? 'Finish ' + DR.SEC_NEED + ' events in section ' + ev.sec + ' first' : 'Not open yet'); selEv = ev; A.click(); UI.refresh(); } },
+        h('span', { class: 'rglyph' }, label), run ? h('span', { class: 'rmark' }, '▶') : won ? h('span', { class: 'rmark good' }, '✔') : lock && vis ? h('span', { class: 'rmark' }, '🔒') : null);
     }
-    var road = h('div', { class: 'road' }, cols.map(function (k, i) {
-      return h('div', { class: 'rcol' + (k.boss ? ' boss' : '') + (k.main.length > 1 ? ' fork' : '') },
-        h('div', { class: 'rside' }, k.side.map(function (ev) { return h('div', { class: 'rbranch' + (ev.type === 'show' ? ' show' : '') }, node(ev)); })),
-        h('div', { class: 'rmain' }, k.main.map(node)),
-        h('div', { class: 'rwins gsmall dim' }, k.boss ? 'KING' : 'WEEK ' + (i + 1)));
-    }));
+    var cols = [];
+    for (var s = 0; s < DR.SECTIONS; s++) {
+      var evs = st.events.filter(function (ev) { return ev.sec === s; }), open = G.secOpen(selStage, s), w = G.secWon(selStage, s), done = w >= DR.SEC_NEED;
+      cols.push(h('div', { class: 'secol' + (done ? ' done' : '') + (open ? '' : ' locked') },
+        h('div', { class: 'stop' }, evs.slice(0, 2).map(node)),
+        h('div', { class: 'slab' }, 'S' + (s + 1) + ' ' + (done ? '✔' : Math.min(w, DR.SEC_NEED) + '/' + DR.SEC_NEED)),
+        h('div', { class: 'sbot' }, evs.slice(2).map(node))));
+    }
+    cols.push(h('div', { class: 'secol king' }, h('div', { class: 'stop' }, st.side.filter(function (ev) { return ev.type === 'show'; }).map(node)), h('div', { class: 'slab' }, 'KING'), h('div', { class: 'sbot' }, node(st.boss))));
+    var road = h('div', { class: 'sroad' }, cols);
+    var won = G.stageWins(selStage), cur = G.curSec(selStage);
     var head = h('div', { class: 'rhead' },
-      h('div', { class: 'grow' }, h('span', { class: 'pix acc' }, st.name), ' ', h('span', { class: 'gsmall dim' }, wins + ' / ' + st.events.length + ' won'),
-        h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(wins / st.events.length * 100) + '%' } }))));
+      h('div', { class: 'grow' }, h('span', { class: 'pix acc' }, st.name), ' ', h('span', { class: 'gsmall dim' }, won + ' / ' + st.events.length + ' events'),
+        h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(Math.min(cur, DR.SECTIONS) / DR.SECTIONS * 100) + '%' } }))));
     var side = h('div', { class: 'rdetail' }, eventCard(selEv, selEv === next), sponsorCard(c));
-    setTimeout(function () { var el = road.querySelector('.rnode.sel'); if (el && arriving) road.scrollLeft = Math.max(0, el.offsetLeft - road.clientWidth / 2 + 28); }, 0);
-    return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, road, h('div', { class: 'gsmall dim rtip' }, 'Each week opens as you win race days. Side races (class shootouts, brackets, shows) sit above the road.')), side);
+    setTimeout(function () { var el = road.querySelector('.rnode.sel'); if (el && arriving) road.scrollLeft = Math.max(0, el.parentNode.parentNode.offsetLeft - road.clientWidth / 2 + 58); }, 0);
+    return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, road, h('div', { class: 'gsmall dim rtip' }, 'Finish ' + DR.SEC_NEED + ' of a section\'s 4 events to open the next. Heads-Up on Saturdays, No-Prep on Saturday nights, Brackets on Sundays, Street on Friday nights: each runs every week, one entry a week. After the five sections, the King event.')), side);
   }
   function sponsorCard(c) {
     var sp = c.sponsor[selStage];
@@ -407,7 +421,46 @@
       h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(G.eventReward(ev))), h('span', { class: 'dim gsmall' }, sh.entry ? 'Entry ' + DR.money(sh.entry) : 'Free entry'),
         btn('Enter', function () { if (lock || issue) return UI.toast(lock || issue); DR.enterShow(sh, ev); }, 'small ' + (lock || issue ? 'disabled' : 'go'))));
   }
+  // a ladder event: what it is, who's in it, the money, where you are in it
+  function ladderCard(ev, isNext) {
+    var th = DR.themeById(ev.type), lock = G.eventLock(ev), won = G.eventWon(ev), run = DR.Ladder.runFor(ev), c = G.careerState();
+    var issue = G.car() ? G.carIssue(G.car(), ev) : '';
+    var opps = ev.fmt === 'card' ? DR.eventCard(ev) : DR.eventField(ev), R = DR.ROSTER;
+    var etOf = function (o) { return R[o.reg[0]][o.reg[1]].et[o.sec]; };
+    var quick = opps.slice().sort(function (a, b) { return etOf(a) - etOf(b); })[0], show = run ? DR.Ladder.opponent(ev, run) || quick : quick;
+    var last = c.lastRun && c.lastRun.id === ev.id ? c.lastRun : null;
+    var lastText = !last ? '' : ev.fmt === 'card' ? 'Last time: ' + last.wins + ' of ' + last.n + (last.won ? ', done' : '') : last.won ? 'Last time: you won it' : 'Last time: out in ' + (['round 1', 'the quarterfinal', 'the semifinal', 'the final'][last.myWins || 0]);
+    var unl = G.nextUnlocks(ev);
+    var cls = 'ecard t-' + ev.type + (lock && !run ? ' locked' : '') + (won ? ' won' : '') + (isNext ? ' next' : '');
+    var money = ev.fmt === 'elim' ? 'Entry ' + DR.money(ev.entry) + ' • winner ' + DR.money(ev.cash) + ', runner-up ' + DR.money(Math.round(ev.cash * DR.ROUND_PAY[3] / 10) * 10) + ', semi ' + DR.money(Math.round(ev.cash * DR.ROUND_PAY[2] / 10) * 10)
+      : DR.money(Math.round(ev.cash * 1.25 / opps.length / 10) * 10) + ' a callout won • no entry';
+    return h('div', { class: cls },
+      h('div', { class: 'ecvwrap' }, oppCanvas(G.oppInst(show)), h('span', { class: 'etype' }, ev.cls ? DR.CLASSES[ev.cls].name.toUpperCase() : th.name.toUpperCase()), won ? h('span', { class: 'ewon' }, 'DONE') : null,
+        isNext ? h('span', { class: 'enext' }, 'NEXT UP') : null),
+      h('div', { class: 'pix small' }, DR.raceDayName(ev)),
+      h('div', { class: 'dim gsmall' }, DR.raceDayWhen(ev) + ' • ' + (DR.SURFACES[DR.evCond(ev).surface] || {}).name + ' • ' + (ev.dist > DR.EIGHTH + 1 ? '1/4' : '1/8') + ' mile'),
+      h('div', { class: 'gsmall' }, th.blurb),
+      ev.cls ? h('div', { class: 'gsmall acc' }, 'Class rule: ' + DR.CLASSES[ev.cls].rule) : null,
+      ev.fmt === 'elim' ? h('div', { class: 'dim gsmall' }, '16 cars: you and ' + opps.length + ' regulars' + (ev.type === 'noprep' ? '' : ' (the quickest, ' + quick.name + ', runs about ' + etOf(quick).toFixed(2) + ' on a prepped 1/4)'))
+        : h('div', { class: 'dim gsmall' }, 'Callouts: ' + opps.map(function (o) { return o.name; }).join(' → ')),
+      h('div', { class: 'gsmall' }, money),
+      run ? h('div', { class: 'acc gsmall' }, '▶ In it now: ' + DR.Ladder.stepLabel({ ev: ev }) + (ev.fmt === 'card' ? ' (' + run.wins + ' won)' : '')) : lastText ? h('div', { class: 'dim gsmall' }, lastText) : null,
+      unl.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + unl.map(DR.unlockText).join(' • ')) : null,
+      lock && !run ? h('div', { class: 'warn gsmall' }, '🔒 ' + lock) : null,
+      !lock && G.countsForContract(ev) ? h('div', { class: 'acc gsmall' }, '★ Winning it counts for your ' + DR.sponsorById(G.careerState().sponsor[ev.stage].id).name + ' contract') : null,
+      !lock && issue ? h('div', { class: 'warn gsmall' }, '⚠ ' + issue) : null,
+      h('div', { class: 'efoot' }, h('span', { class: 'price' }, DR.money(ev.cash)), G.car() ? h('span', { class: 'dim gsmall' }, '−' + DR.money(DR.runCost(G.spec(G.car())).total) + ' a pass') : null,
+        btn(run ? 'Continue' : ev.entry ? 'Enter ' + DR.money(ev.entry) : 'Race', function () {
+          if ((lock && !run) || issue) return UI.toast(lock || issue);
+          if (run) return DR.Ladder.go(ev);
+          // still in another event today: leave it first
+          var other = DR.Ladder.run(), oev = other && other.id !== ev.id && DR.Ladder.evById(other.id);
+          if (oev) return UI.confirm('You\'re still in the ' + DR.raceDayName(oev) + ' (' + DR.Ladder.stepLabel({ ev: oev }).split(':')[0] + '). Leave it for this one? Points for what you raced, no purse for the rounds you don\'t run.', function () { DR.Ladder.withdraw(oev); UI.refresh(); }, 'Leave it');
+          UI.confirm(DR.raceDayName(ev) + ': ' + (ev.entry ? 'pay the ' + DR.money(ev.entry) + ' entry and ' : '') + 'race it now? It\'s one entry a week.', function () { DR.Ladder.go(ev); }, ev.entry ? 'Enter' : 'Race');
+        }, 'erace ' + ((lock && !run) || issue ? 'disabled' : 'red'))));
+  }
   function eventCard(ev, isNext) {
+    if (ev.ladder) return ladderCard(ev, isNext);
     if (ev.type === 'show') return showCard(ev);
     var T = DR.EVENT_TYPES[ev.type], lock = G.eventLock(ev), won = G.eventWon(ev), o = ev.opps[0], oi = G.oppInst(o);
     var issue = G.car() ? G.carIssue(G.car(), ev) : '';

@@ -24,7 +24,7 @@
     firstrace: ['ray', function () { return 'Saw your slip. Don\'t look at the ET, look at the 60 foot. That\'s where races are won and where yours isn\'t yet.'; }],
     nitrous: ['ray', function () { return 'Lost one? Half that field is on the bottle. A 50-shot dry kit is $500 and the cheapest horsepower there is (Upgrade > Parts > Power Adders). Spray it once the car\'s hooked, not off the line, and mind your injectors.'; }],
     firstwin: ['ray', function () { return 'A win! Frame the slip. Then spend the money on tires, not a wing.'; }],
-    stage: ['track', function (n) { return 'Congratulations: you\'re moving up to ' + stageName(n) + '. New race days are on the board. The cars get quicker from here.'; }],
+    stage: ['track', function (n) { return 'Congratulations: you\'re moving up to ' + stageName(n) + '. A new ladder of events is on the board. The cars get quicker from here.'; }],
     stageRay: ['ray', function (n) { return n >= 4 ? 'People at the track ask me if I\'m your uncle now. Used to be the other way round. Proud of you.' : n >= 2 ? 'You\'re running with ' + stageName(n) + ' now. Keep the car together and let them break theirs.' : 'Next class up. Same advice: fix what broke, then add power.'; }],
     secondcar: ['ray', function () { return 'Two cars. Remember: two of everything breaks, two sets of tires, two insurance bills.'; }],
     broke: ['ray', function () { return 'Heard you\'re down to pocket change. Every racer\'s been there. Sell something off the shelf, run a cheap car, and don\'t bet what you don\'t have.'; }],

@@ -1076,15 +1076,19 @@
   // Street race: opponents near the player's estimated time at this spot.
   G.streetOpponents = function (playerET, dist, grip) {
     dist = dist || DR.EIGHTH; grip = grip || 0.85;
-    // every career rival is a possible street opponent (they cover the
-    // whole ladder, a step apart)
+    // every career regular's car, in each of its builds, is a possible
+    // street opponent (they cover the whole ladder, a step apart): the
+    // nearest dozen on their prepped quarter, scaled roughly to this
+    // distance and surface, then simulated properly
     var pool = [];
-    (DR.STAGES || []).forEach(function (st) { st.all.forEach(function (ev) { ev.opps.forEach(function (o) { pool.push(o); }); }); });
-    if (!pool.length) DR.RIVALS.forEach(function (band) { band.forEach(function (o) { pool.push(o); }); });
+    if (DR.ROSTER && DR.regOpp) DR.ROSTER.forEach(function (cls, ci) { cls.forEach(function (R, r) { for (var s = 0; s < 5; s++) pool.push({ o: DR.regOpp(ci, r, s), q: R.et[s] }); }); });
+    else DR.RIVALS.forEach(function (band) { band.forEach(function (o) { pool.push({ o: o, q: G.estimate(G.oppInst(o), DR.QUARTER).et }); }); });
+    var k = (dist < DR.QUARTER - 1 ? 0.645 : 1) * (grip < 1 ? 1 + (1 - grip) * 0.4 : 1);
+    pool.sort(function (a, b) { return Math.abs(a.q * k - playerET) - Math.abs(b.q * k - playerET); });
     var names = ['Spike', 'Rico', 'Jade', 'Duke', 'Sasha', 'Moose', 'Ziggy', 'Nova', 'Blaze', 'Cruz', 'Vega', 'Slim'];
-    var scored = pool.map(function (o) {
-      var est = G.estimate(G.oppInst(o), dist, grip);
-      return { o: o, et: est.et };
+    var scored = pool.slice(0, 12).map(function (x) {
+      var est = G.estimate(G.oppInst(x.o), dist, grip);
+      return { o: x.o, et: est.et };
     }).filter(function (x) { return x.et < 90; });
     scored.sort(function (a, b) { return Math.abs(a.et - playerET) - Math.abs(b.et - playerET); });
     var pick = scored.slice(0, 6);

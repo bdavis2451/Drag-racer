@@ -1080,3 +1080,24 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .wchip.fit { border-color: #2f8a4d; }
 .wchip.on { background: var(--accent, #ffb400); color: #111; border-color: var(--accent, #ffb400); }
 .pcard.wrow { display: block; }
+/* the career ladder: five sections (two events above the road, two below),
+   then the King */
+.sroad { position: relative; display: flex; overflow-x: auto; padding: 4px 4px 2px; scrollbar-width: thin; }
+.secol { flex: none; width: 118px; display: flex; flex-direction: column; align-items: center; position: relative; }
+.secol::after { content: ''; position: absolute; left: 0; right: 0; top: 52px; height: 34px; background: #23272e; box-shadow: inset 0 2px 0 #3a404a, inset 0 -2px 0 #3a404a; }
+.secol::before { content: ''; position: absolute; z-index: 1; left: 0; right: 0; top: 67px; height: 4px; background: repeating-linear-gradient(90deg, #ffcc00 0 10px, transparent 10px 20px); opacity: .6; }
+.secol:first-child::after, .secol:first-child::before { left: 50%; }
+.secol.king::after, .secol.king::before { right: 50%; }
+.secol .stop, .secol .sbot { display: flex; gap: 8px; position: relative; z-index: 2; height: 52px; }
+.secol .stop { align-items: flex-end; padding-bottom: 4px; }
+.secol .sbot { align-items: flex-start; padding-top: 4px; }
+.secol .slab { position: relative; z-index: 3; height: 34px; display: flex; align-items: center; font-family: 'Press Start 2P', monospace; font-size: 8px; color: #ffd84a; background: #23272e; padding: 0 6px; }
+.secol.done .slab { color: #9ef0b4; }
+.secol.locked .slab { color: #8a8f99; }
+.secol.king .slab { color: #ff8a7a; }
+.secol .rnode { width: 46px; }
+.rnode.t-headsup .rglyph, .rnode.t-noprep .rglyph, .rnode.t-street .rglyph, .rnode.t-bracket .rglyph { font-size: 8px; }
+.rnode.t-noprep { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #2fb3a8; }
+.rnode.t-street { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #ff6a00; }
+.rnode.t-bracket { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3a7bd2; }
+.rnode.t-noprep.won, .rnode.t-street.won, .rnode.t-bracket.won { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3ccf6e; }
