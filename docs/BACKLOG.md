@@ -8,8 +8,14 @@ the top of each section.
 - **Career ladder rework** (`docs/features/career-ladder.md`, Nov 15):
   owner's draft (5 sections x 4 events, 3 of 4 to move on, events of 3-5
   races, King event with the ladder; themed events, restricted events;
-  circuit later). Audit and research done, thoughts and questions sent.
-  The career / rival rebalance (`career-rebalance.md`) folds into it.
+  circuit later). Audit and research done. Nov 24-26: decisions made
+  (eliminations to be won outright, race cards lose at most one, timed race
+  days with a pit, real breakage rules, heat by the minute, a mechanic,
+  pit gear, cargo room, trailers and hitches replacing the $8,500 rig,
+  sponsors expanded, Bracket / No-Prep King ladders, IRP standings). A
+  five-build plan waits on the owner. Nothing that changes saves goes out
+  until the tester is warned. The career / rival rebalance
+  (`career-rebalance.md`) and the heat-soak audit fold into it.
 
 ## In progress
 
@@ -59,6 +65,8 @@ to answer later.
 ## Parked ideas
 
 - **Audit heat soak between rounds, maybe rework it** (owner, Nov 15).
+  Nov 26: folded into the career ladder, build 2 (heat by the minute,
+  real cooling gear, a hot engine worth up to ~0.05-0.10 s).
   Today (`game.js G.roundHeat / G.afterRound`, `physics.js knockDT`, Sim
   `airK`): each pass adds engine heat by power vs cooling and ET, 35% carries
   to the next round; past ~8 C it costs up to ~6% power and warms the

@@ -1,8 +1,10 @@
 # Career ladder rework (drag first, circuit later)
 
-Status: **Nov 15: owner's draft received; audit and research done; thoughts
-and questions sent to the owner. No code.** This replaces
-`career-rebalance.md` (the rival and money pass becomes part of this).
+Status: **Nov 26: decisions made (Nov 24 and 26), research done, the build
+plan below sent to the owner for approval. No code yet.** Nothing that
+changes saves is pushed until the owner has warned the tester. This
+replaces `career-rebalance.md` (the rival and money pass becomes part of
+this).
 
 ## The owner's draft (Nov 15, drawing)
 - A horizontal spine per class: **5 sections, then the King race event**.
@@ -199,8 +201,348 @@ and questions sent to the owner. No code.** This replaces
   restricted events and sponsors reworked. v3 = eliminations formats,
   points standings, buybacks. v4 = the circuit ladder.
 
-## Open questions (sent Nov 15)
-See the chat. Nothing decided.
+## Decisions (owner, Nov 24 and Nov 26)
+- **Event size and win rule:** race cards of 4-7 races, 75% rounded up to
+  finish (4->3, 5->4, 6->5, 7->6: always "lose at most one").
+  **Elimination events must be won outright: every round** (Nov 26).
+- **Section progress:** "3 of 4 events" (not points).
+- **Formats:** a mix. Heads-Up, Bracket and No-Prep are true eliminations;
+  Street is a race card (list night, one race per callout).
+- **Distance** is a property of each event (not separate 1/4 and 1/8
+  themes).
+- **Sections:** one event of each theme, at most one restricted event.
+- **Retries:** weekly, no buyback.
+- **FWD / AWD / truck** restricted events and a full FWD class: wanted,
+  parked until there are more cars.
+- **Licenses stay realistic:** street events need none, so a mostly-street
+  path can run unlicensed.
+- **King event:** the 5 ladder rivals one at a time (a win stays won), then
+  the King for their car. Rep retired.
+- **Race days (hole 7):** each event has a real time slot and schedule;
+  eliminations with the field set in advance, lane calls and run times
+  known; clicking the race day opens your pit (on-the-fly work, upgrades,
+  tuning); realistic sanctioned breakage rules; street breakage researched;
+  heat soak from the real time between your runs; pit gear sold in the
+  store; hired staff work on the car on race days.
+  - Q1 A: Heads-Up, Bracket, No-Prep eliminations; Street race card.
+  - Q2 A: real schedules (strip 8 AM-6 PM, no-prep 6 PM-1 AM, street
+    10 PM-3 AM); the clock moves only when you work or wait for your call.
+  - Q3 A: the real strip rules (credit or broke points, solo run for the
+    opponent, alternates, oil-down penalties, miss your call and you're
+    out).
+  - Q4 A: street: any breakage is a loss, no fixing on the street, tow home.
+  - Q5 A: a hot engine costs up to ~0.05-0.10 s, cooling wins it back.
+    "Keep it realistic."
+  - Q6 B: rivals don't break.
+  - Q7: all pit work: tune, tire pressure and tires, gear swap, cooling,
+    bottle refill, repairs with spares, installing parts you brought,
+    buying from a vendor at big events.
+  - Q8 pit gear: the existing electric fans and electric water pump must
+    work properly (engine-off cooling); intercooler ice is automatic;
+    engine chiller yes; no generator, no battery charger; tool kit levels
+    yes; no "spare kits", instead **every vehicle has room for spares**
+    (trucks more, truck + trailer more); spare tires on wheels and spare
+    nitrous bottles fit in that room; canopy yes; **no weather station**
+    ("I don't want weather to play too much of a factor... not tedious").
+  - Q8 trailers: **rework entirely.** Remove the $8,500 truck & trailer;
+    trailers to buy and a **trailer hitch option for every vehicle that can
+    take one**; only trucks tow car trailers; race cars can pull small
+    Drag Week style trailers.
+  - Q9 B: a hired mechanic role besides the staff tuner.
+  - Q10 A: no-prep shows win or lose only, no times (No Prep Kings rules).
+- **Sponsors (Q11 A):** keep them gating the King and expand: primary,
+  associates, product sponsors and contingency payouts. **No deadlines.**
+- **Bracket and No-Prep Kings (Q12 A):** opened by completing events of
+  their theme, each with its own ladder first: Bracket via standings and a
+  King of the Track shootout, No-Prep via a top-10 list with callouts.
+- **Standings points (Q13 A):** IRP style, 20 for racing, +10 per round
+  won, +1 for the event win; class standings.
+- **Overlaps (Q14):** "Let's go ahead and do the work now to put these in.
+  Do what we can for now, we can change it later."
+- **Old saves:** finished classes count as done, old race days won count
+  as events; a reset is acceptable. Don't push until the tester is warned.
+
+## Plan (proposed Nov 26, waiting on the owner)
+Five builds, each played before the next. Builds 1-2 change saves.
+
+### Build 1: the ladder
+1. **Per class: 5 sections x 4 events** (Heads-Up, Bracket, No-Prep,
+   Street), then the King event. 3 of 4 opens the next section.
+2. **Formats** (all fields set in advance, names and cars shown):
+   - Heads-Up (prepped strip): 2 qualifying passes seed a 16-car ladder
+     (quickest vs slowest), 4 rounds. Win them all.
+   - Bracket: 2 time trials, you set your dial-in, 16-car eliminations with
+     dial-ins and the breakout rule, 4 rounds. Win them all.
+   - No-Prep: 1/8 heads-up from a dig on an unprepped strip, chip-draw
+     pairings every round, 16 cars, 4 rounds, no times shown. Win them all.
+   - Street: a list night of 4-7 callouts, one race each, lose at most one.
+3. **Distance per event:** street and no-prep 1/8; heads-up and bracket
+   1/4 in classes 1-3, more 1/8 from class 4.
+4. **Restricted events:** the class race rules (Four-Banger, Stock Motor,
+   All Motor, Street Tire, 275 Radial, Heavyweight, Import, Small Block,
+   X275, Lightweight, Factory Hot Rod) become restricted versions of a
+   theme event, at most one per section.
+5. **King event:** 5 ladder rivals one at a time, then the King for their
+   car; needs the sponsor contract done (as today); 2nd and 4th Saturday
+   nights.
+6. **Calendar:** Street Friday 10 PM-3 AM, Heads-Up Saturday 8 AM-6 PM,
+   No-Prep Saturday 6 PM-1 AM, Bracket Sunday 8 AM-6 PM. One try per event
+   per week.
+7. **Standings:** 20 for racing, +10 per round or race won, +1 for the
+   event win, against the class's regulars (their results come from the
+   same fields).
+8. **Rosters and money:** about 20 named regulars per class, builds
+   stepping up by section, from the existing rival builder (all career
+   rival times change: planned). Unlocks spread over the sections. Purses
+   and entry fees set after a measurement run.
+9. **Old saves:** finished classes done; in the current class each old race
+   day won counts as one event done; rep and callout progress retired.
+10. **Folded in (hole 11):** class races become the restricted events;
+    bracket side races become Bracket events; rep, callouts and the class
+    ladder become the King event; race-day scoring (off) is removed;
+    sponsor races become contract goals on ladder events. Car clubs,
+    wanderers, street spots, Grudge Night, car shows, the promoter and pink
+    slips stay as side content.
+11. Licenses at the strip as today; street events need none. Rivals don't
+    break.
+
+### Build 2: race day and the pit
+1. **Timed race day:**
+   - Heads-Up: gates 8, qualifying 10:00 and 12:30, round 1 at 3 PM, then
+     about every 45 min (final ~5:15).
+   - Bracket: gates 8, time trials from 10, round 1 at 12:30; back to the
+     pits after rounds 1-2; then round robin (in the lanes within 15 min).
+   - No-Prep: gates 5 PM; drivers' meeting and chip draw before each
+     round; one 10-minute call; round 1 at 7 PM, about every 40 min.
+   - Street: 10 PM-3 AM, a callout every 20-30 min.
+2. **The pit:** countdown to your next call; engine temperature,
+   intercooler, bottle pressure, tires, damage; jobs that cost minutes;
+   "wait for the call". The clock only moves when you act.
+3. **Pit work (all):** tune, tire pressure, swap to spare tires, gear swap
+   (quick-change), cooling, swap to a spare bottle (refills at big
+   events), repairs with spares and tools, fitting parts you brought, a
+   vendor row at big events (shop prices). Job times from the garage hours
+   we already use (`calendar.js` HOURS), shortened by crew and tools. No
+   source gives at-track repair times, so the garage hours are the base.
+4. **Breakage:**
+   - Strip (Heads-Up, Bracket): broke before your first pass, entry
+     credit; broke before round 1, 50% credit or 20 broke points (your
+     pick), and an alternate takes your spot; paired and can't run, the
+     opponent gets a solo run; won't fire in 30 s or stage in 20 s, same;
+     miss your call, you're out; oil-down (an engine failure that dumps
+     oil): a cleanup fine and standings points, a second in one event and
+     you're sent home.
+   - No-Prep: as the strip, plus one 10-minute call (miss it,
+     disqualified) and a part landing in the other lane ahead of your
+     opponent is a loss.
+   - Street: any breakage is a loss and the bet; no repairs; tow home.
+5. **Heat by the minute** (replaces the fixed 25 min):
+   - engine coolant in degrees F: a pass adds about 40 F;
+   - cooling between rounds: hood up only (slow), the electric fans and
+     electric water pump (about 10-15 min back down on a hot day), the
+     engine chiller (about 55 F in under 10 min, ice automatic);
+   - best near 120 F at the start; hot costs up to about 0.05-0.10 s and
+     knocks sooner (today's model can cost up to 6% power: recalibrated);
+   - the ice tank intercooler is re-iced automatically; air-to-air
+     intercoolers heat soak on back-to-back rounds; bottle pressure as
+     today.
+6. **Crew:** your staff drag tuner works the pit (engine skill: repairs;
+   chassis: setup; data: reads the slip). A new hired **mechanic** on the
+   hiring board (wrenching skill: speed and which jobs), paid per race day
+   (about $150-300 by skill; real pit crew about $17/h, ~$200 a day).
+7. **Pit gear** (new shop section, Pit & Trailer):
+   - Tool kits: Basic hand tools, floor jack and stands $350 (tune, tires,
+     small bolt-ons); Pro tools (impact gun, torque wrenches, aluminum
+     jack, tool cart) $1,800 (axle, clutch, converter and gear swaps,
+     faster); Roll cab and air tools $5,000 (needs a trailer's room:
+     transmission swaps, fastest).
+   - Engine chiller (12-volt, ice automatic) $1,500.
+   - Canopy 10x20 $650: shade in day events (a small effect; no source
+     measures it).
+   - Spare tires on wheels (the tire and wheel prices) and a spare 10 lb
+     nitrous bottle $350 (+$50 fill).
+   - The existing electric fans (Radiator & Oil Cooler) and electric water
+     pump (Pulleys & Accessories) get their real job: engine-off cooling.
+8. **Room for spares:** each vehicle has room in cubic feet from its real
+   trunk or bed (looked up per car in the build; Pro race cars almost
+   none); trailers add theirs. Items take their real room (a tire on a
+   wheel ~4-8 cu ft, a 10 lb bottle ~0.5, tool cart ~10, roll cab ~30,
+   chiller ~8, canopy ~3, axle ~1, clutch ~1.5, converter ~2,
+   transmission ~6). You choose what goes on the race-day screen.
+9. **Trailers and hitches** (replace the $8,500 truck & trailer):
+   - **Hitch** (Upgrade > Body, where it bolts on): Class I-II receiver for
+     cars $250 (small trailers only, not on tube-chassis race cars);
+     Class III-IV for trucks $400 (car trailers, up to the truck's rating).
+   - **Trailers:** 4x8 open utility $1,200 (~400 lb, ~60 cu ft); 4x8
+     enclosed cargo $3,500 (850 lb, 142 cu ft: the Drag Week limit); 18 ft
+     open car trailer $4,500 (~1,900 lb, trucks only); 24 ft enclosed car
+     trailer, steel $16,000 (~4,200 lb) or aluminum $25,000 (~2,800 lb),
+     ~150 cu ft of cabinets plus the car, trucks only, shade to work in.
+   - **Towing:** your own truck in a bay, its hitch and tow rating
+     covering trailer + car + spares: C1500 about 7,000 lb, Lightning
+     5,000 lb, Ram 2500 Cummins about 16,000-17,500 lb. So the steel
+     enclosed trailer with a car needs the Ram; aluminum fits the C1500.
+     Gas per trip and no cop stops (as today); flatbed tows stay.
+
+### Build 3: sponsors
+- **Primary** per class (gates the King): signing, stipend, per-win,
+  goals on ladder events ("complete 2 Heads-Up events", "win a bracket
+  race", "run our product", "show the car"), free car when done.
+- **Associates:** 2 decal slots, pay per event plus contingency on a win
+  or runner-up with their product on the car; strong results bring a
+  primary offer next class.
+- **Product sponsors:** discounts on their part group in 3 tiers by
+  results.
+- **Contingency board:** per brand, win / runner-up money scaled to the
+  class (NHRA: $300 / $100 national, $100 / $50 divisional), plus quickest
+  60 ft of the day and a hard-luck award for a first-round loser.
+- No deadlines.
+
+### Build 4: Bracket and No-Prep Kings
+- **Bracket King:** bracket points from every class; the top 8 are invited
+  to the King of the Track shootout (last Sunday): eliminations with
+  dial-ins, win every round, then the Bracket King.
+- **No-Prep King:** after 3 no-prep events you can race #10 of a top-10
+  no-prep list; call out up to 2 spots above, one race each, on no-prep
+  nights; beat #1, then the No-Prep King (last Friday). List cars range
+  from mid-class (#10) to top-class (#1) builds.
+
+### Build 5: the circuit ladder
+The same shape for the circuit (timing: question below).
+
+### Left out
+FWD / AWD / truck events and the FWD class (parked), buybacks, weather
+station, generator, battery charger, transmission temperature (heat is the
+engine, intercooler and bottle), rivals breaking.
+
+### Questions sent with the plan (Nov 26)
+1. Build order: ladder first, then the pit (rec.), or the pit first.
+2. Fields: 16 cars (4 rounds) everywhere (rec.), or 32 (5 rounds) in
+   section 5.
+3. What standings pay: shown per class, bracket points feed the Bracket
+   King, a points-fund bonus for the top 3 when you finish the class (rec.);
+   or shown only.
+4. Short series: retire them (class standings replace them) (rec.), or
+   keep them as side content.
+5. Old saves with the $8,500 truck & trailer: refund it (rec.), or an open
+   car trailer plus the rest back.
+6. Oil-down: a cleanup fine and 10 standings points, a second one sends
+   you home (rec.); or a fine only.
+7. Circuit ladder: after the drag ladder has been played (rec.), or now.
+8. Builds 1-2 to the preview page first (huge rework), then the tester
+   once warned (rec.); or straight to the tester.
+
+## Research (Nov 24-26)
+### Race-day rules
+- **IRP 2024 bracket rules:** gates 8, time runs 10 (two on Saturday, one
+  on Sunday), eliminations straight after, track secure 6-7 PM. Broke
+  before round 1: track credit (only if broke before the water box on the
+  first time trial) or 20 "broke points", not both. A competition bye
+  (single) only once paired; 20-second clock if a car can't stage, then
+  the bye. "No class will wait for driver change or extra cool down."
+  After rounds 1-2 back to the pits; later, cool down in the lanes; miss
+  your round, eliminated. Staging accepts the conditions (overheating,
+  cold tires).
+- **WWT Raceway 2026:** buybacks race before the round 1 winners and get
+  points only for rounds won; 30 s to fire or a competition single; round
+  robin: in the lanes within 15 min of your class's last pair, "or we will
+  assume you are broke"; no reruns for missed calls; oil leaks needing
+  equipment or over 5 min of cleanup may get you sent home; diapers
+  required (NHRA 2025).
+- **National Trail 2025:** broke before a time run, entry credit; before
+  round 1, 50% credit (or points); you may switch cars after a breakage in
+  eliminations if the other car isn't racing; cool-down may be capped at
+  20 min per class; 11.50 and quicker: no antifreeze.
+- **NHRA 2025 rulebook:** an alternate replaces a qualifier who can't make
+  round 1 (Lucas Oil / Pro Mod: the first alternate races the slower
+  opponent); the qualifier keeps round-1 points and money; no alternates
+  in pro classes (the opponent gets a bye). The local "break rule" (an
+  eliminated car replaces a winner who can't continue) isn't used at
+  national events. Oildowns: penalized only when machines clean up (hand
+  cleanup, fuel and extinguisher fluid don't count); Top Fuel / Funny Car
+  lose 5, 10, then 15 points; Pro Stock $500 / $1,000 in eliminations plus
+  points. Pro turnarounds: 75 min was the norm, NHRA has run 50-55
+  (Competition Plus).
+- **No Prep Kings rules (4/9/2019 copy on Tumblr; the official sites are
+  bot-blocked or unreachable):** 1/8 heads-up from a dig; no times shown,
+  no slips; racemaster has the final say and preps the track; a drivers'
+  meeting and chip-draw pairings before every round; one drawn bye each
+  (competition byes don't count); red light loses; a part landing in the
+  other lane ahead of your opponent loses; **one 10-minute call to the
+  lanes**, miss it and you can be disqualified; diapers mandatory; Small
+  Tire (28x10.5, no bars), Street Car 7.0; the top 16 who race at least 7
+  events go to the finale.
+- **Street (no written rules exist):** Pinks: breaking down and not
+  finishing loses, leaking fluid at the line forfeits; after a
+  catastrophic breakage the winner often declined the car and raced a
+  rematch; glycol coolant spills cost two 90-min delays. Street Outlaws:
+  the top-10 List, callouts, race nights, round robins for #10, Cash Days
+  (32 cars, 2 days, $50k winner-take-all), cops on test hits (Wikipedia
+  episode list). Fan list rules: a week to get ready when called out.
+### Heat
+- Reher-Morrison Tech Talk #25: heat is the enemy; about 120 F coolant at
+  the start is ideal for sportsman engines; Pro Stock runs stone cold with
+  ~90 min between runs; keep the pump and fan running.
+- Dragzine 2017 (temperatures): a hot engine or transmission "can very
+  easily lose five hundredths to a full tenth"; trans about 150 F at the
+  water box; temps checked every 10 min.
+- Dragzine 2014 (Concato engine chiller): ice-water chiller, down to
+  40-55 F in under 10 min, a 20 lb bag of ice a session; an engine gains
+  about 40 F per pass; heat builds round on round.
+- Forum (forabodiesonly): a pump and fan take 10-15 min on a hot day.
+### Sponsors
+- NHRA contingency (since 1966): $300 win / $100 runner-up at national
+  events, $100 / $50 divisional; product installed, decals on both sides,
+  checked at tech, the maker pays.
+- Performance Racing 2023: certificates or cash; awards beyond winners
+  (quickest 60 ft, a hard-luck award to a first-round loser).
+- Speedmaster's sponsorship program: tiered discounts by exposure (entry:
+  decals and a mention), not cash, revocable.
+- Performance Racing 2023 on sponsor relationships: Antron Brown's Matco
+  Tools deal grew from associate to primary; sponsors want reach and
+  appearances. A team agreement (search summary): decals on both sides,
+  discounted products, attend the listed races.
+- Games: Underground 2 (one sponsor a stage, a set number of sponsor
+  races); Motorsport Manager (contract length, signing bonus, per-race pay,
+  placing bonuses).
+### Discipline Kings
+- NHRA Summit Racing Series: weekly bracket points at each track; each
+  track sends a team of its top points finishers to division E.T. Finals,
+  then the world final in Las Vegas (64 racers from 2026). Summit King of
+  the Track: a one-time event where winners race head to head with
+  dial-ins for the title.
+- No Prep Kings: the top 16 (7+ events) to the finale. Street Outlaws: the
+  top-10 List with callouts. NFS Most Wanted (2005): 15 Blacklist rivals,
+  each needing wins, milestones and a bounty first. ProStreet: a King per
+  discipline.
+### Trailers, hitches, tools, gear (prices)
+- Open car hauler 18 ft, 7,000 lb GVWR: $4,299-4,699 new, 1,750-2,119 lb
+  empty (Carry-On, Big Tex listings).
+- Enclosed 8.5x24 car trailer: $15,000-17,000 steel (Pace, Car Mate,
+  American Hauler; 4,100-4,350 lb empty), $25,000 aluminum (Nitro, Legend;
+  ~2,800 lb).
+- U-Haul 4x8 cargo trailer: 850 lb empty, 1,650 lb max load, 142 cu ft.
+  New 4x8 utility trailers ~$650-2,400; small enclosed $3,300-4,700.
+- Hot Rod Drag Week: race cars driven between tracks; spares and tools in
+  the car or a trailer it pulls (2015-17 rules: cargo up to a U-Haul 4x8).
+- Hitch classes (U-Haul): I 2,000 / 200 lb; II 3,500 / 350; III 7,500 /
+  750; IV 10,000 / 1,000; V 20,000 / 2,700. Installed $180-550 (U-Haul),
+  parts $150-400 plus $75-150 labor (This Old House).
+- Tow ratings: 1999-04 Lightning 5,000 lb; 2010-18 Ram 2500 Cummins crew
+  cab ~16,000-17,500 lb (Ram tow charts); 1988-98 C1500 5.7: no factory
+  figure found, third-party ranges vary (KBB lists 7,500-10,000 for 1995
+  1500s; forums call a 3.42 axle marginal at 5,000): ~7,000 used.
+- Tools: 408-piece starter set ~$200; Milwaukee / Snap-on tool-cart sets
+  ~$1,800-1,900; Icon 73" roll cab ~$3,000.
+- Engine chillers: 12 V ice units ~$400; "pro 110 V chillers upwards of 2
+  grand" (forum); Concato price not published.
+- Canopies: 10x20 commercial $170-680; E-Z UP 10x10 commercial $200.
+- 10 lb nitrous bottle: $250 (FAST), $305 (NX), $588 (NOS); refills about
+  $4-5/lb (old forum figures).
+- Pit crew pay: ~$17/h average (ZipRecruiter 2026); ~$200 a day crewing
+  (forum anecdote).
+- Not found: at-track repair times, a measured effect of shade on engine
+  temperature.
 
 ## Sources
 - IRP Brown's Oil E.T. Bracket Series rulebook 2024 (raceirp.com,
@@ -227,3 +569,27 @@ See the chat. Nothing decided.
 - GameSpot / GTPlanet: GT4 beginner series (FF/FR/4WD/MR Challenges).
 - Super Mario Wiki, TV Tropes, gamertagmythras: star doors.
 - GameAnalytics 2024/2025 benchmarks (session length).
+- Nov 24-26 (race days, heat, sponsors, Kings, trailers):
+  - Rulebooks (curl): IRP 2024 bracket series; WWT Raceway 2026; National
+    Trail Raceway 2025 general regulations; NHRA 2025 rulebook (Mission
+    Raceway mirror; the nhraracer.com 2026 link was a 404). IHRA rulebook
+    and nhrda were not needed / IHRA is bot-blocked.
+  - No Prep Kings rules 4/9/2019 (tumblr.com/noprepracing copy);
+    noprep.com and streetoutlawsnoprep.com not reachable.
+  - Wikipedia: Pinks (TV series), Street Outlaws, Need for Speed:
+    Underground 2.
+  - Reher-Morrison Tech Talk #25; Dragzine "Hot Topic" (2017) and Concato
+    chiller (2014) via the fetch tool (Dragzine blocks curl); Competition
+    Plus on 50-75 min turnarounds (search).
+  - NHRA: contingency "How it works" (2022), Summit Racing Series about
+    page, Summit King of the Track; Performance Racing Industry on
+    contingency (2023) and sponsor relationships (2023); Speedmaster
+    sponsorship program page.
+  - Trailers / hitches / gear: dealer listings (Carry-On, Big Tex, Pace,
+    Car Mate, American Hauler, Nitro, Legend), U-Haul 4x8 cargo trailer
+    and hitch guide, This Old House hitch cost, Ford-Trucks / f150hub
+    (Lightning 5,000 lb), Ram tow charts, KBB (C1500), tool and canopy
+    retailer listings, Summit / JEGS / American Muscle nitrous bottles,
+    ZipRecruiter pit crew pay.
+  - Games: TrueAchievements (NFS Most Wanted Blacklist, ProStreet Kings),
+    Motorsport Manager guides (Pocket Gamer, steamah).
