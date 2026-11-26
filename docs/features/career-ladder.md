@@ -587,6 +587,37 @@ nothing to the game was what I had meant."
   loads (pit, mechanics); odd cars (RX-7, Ram, rail, Willys, Beetle, Pro
   Mod, Aventador, C1500): room, ways, tow ratings.
 
+### Build 2 follow-up: the drag tuner at the pit (proposal, Nov 26)
+The plan's crew item: the staff drag tuner works the pit (engine skill:
+repairs, built; chassis: setup; data: reads the slip). Not built yet.
+- **Research:** between rounds crew chiefs change tire pressure, pull
+  timing at the hit, loosen the shocks on a bad track, go to a looser
+  converter or a smaller tire, and re-check the gear (NHRA, Medlen /
+  Antonelli on cool air; Dragzine "Tough Tracks", Mandella / Hanna);
+  "0.1 psi of tire pressure is worth one gram of clutch weight"; the
+  rubber softens past ~110°F track temperature. Bracket racers pick the
+  next dial from today's passes and the weather; a logbook beats memory
+  (Dragzine; Kestrel; JEGS logbook).
+- **What the game has:** the tuner's model already finds the best launch
+  and chassis settings for a surface by simulating passes (`tuner.js`
+  `score` / `call`), with a miss by chassis skill and a read by data skill;
+  today it runs at test & tune only (Strip or Street). Each ladder event
+  has its own surface and temperature (prepped strip by day, no-prep and
+  street at night).
+- **Proposal (smallest version):**
+  1. Chassis: a pit job "Set it up for this track" (about 20 minutes): the
+     tuner sets the tire pressure and the launch (2-step, launch throttle,
+     boost in 1st and 2nd, traction control), and a good chassis tuner the
+     shocks too, for today's surface and temperature, from what they see
+     (no test passes). How close: their chassis skill, as at test & tune.
+  2. Data: after each pass, the tuner's read in the pit (it spun / shook /
+     was clean, the 60-foot against your best today, what the hot engine
+     cost) and at Brackets a suggested dial-in for the next round from
+     today's passes (closer with a better data skill).
+- **Left out:** converter and gear changes (parts and the Tune screen, as
+  now); weather beyond the event's day / night (owner: weather not a big
+  factor).
+
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.
 2. Fields: 16 cars (4 rounds) everywhere (rec.), or 32 (5 rounds) in
