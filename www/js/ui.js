@@ -255,7 +255,7 @@
     }));
     var rem = {}; rem['sec_' + section] = active; UI.remember(rem);
     return h('div', { class: 'top sectop' },
-      btn('◀', function () { if (onLeave) onLeave(); UI.show(UI.Garage); }, 'back'),
+      btn('◀', function () { if (onLeave) onLeave(); if (UI.pitReturn && UI.pitReturn()) return; UI.show(UI.Garage); }, 'back'),
       h('h1', { class: 'sectitle' }, section === 'upgrade' ? 'UPGRADE' : 'STYLE'), tabs,
       clockBtn(), DR.Phone ? DR.Phone.button() : null, musicBtn(), h('div', { class: 'money', id: 'money' }, DR.money(G.state.money)));
   };

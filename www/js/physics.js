@@ -1382,7 +1382,9 @@
     // between rounds: an engine still heat-soaked from the last pass (C over
     // its normal running temperature; the ECU pulls timing past ~8 C) and a
     // nitrous bottle that has lost pressure as it emptied and cooled
-    if (opts.engHeat) this.airK *= 1 - 0.003 * clamp(opts.engHeat - 8, 0, 20);
+    // a hot engine (heat soak between rounds): up to ~2.5% (a hot engine and
+    // trans "can very easily lose five hundredths to a full tenth": Dragzine)
+    if (opts.engHeat) this.airK *= 1 - 0.00125 * clamp(opts.engHeat - 8, 0, 20);
     // a heat-soaked engine's intake warms the charge: the knock point
     // drops with it
     this.kdT = DR.knockDT(this.cond, opts.engHeat);

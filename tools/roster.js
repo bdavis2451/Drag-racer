@@ -8,7 +8,9 @@
 // psi by psi), only as far as each section asks: so they upgrade over the
 // season, like real racers.
 //
-//   node tools/roster.js            all classes (one process per class)
+//   node tools/roster.js            all classes (one process per class;
+//                                   ROSTER_CACHE=dir keeps each regular as
+//                                   it's done, so a stopped run resumes)
 //   node tools/roster.js --class 2  one class, printed as JSON (internal)
 const path = require('path'), fs = require('fs'), cp = require('child_process');
 const W = path.join(__dirname, '..', 'www', 'js');
@@ -130,8 +132,13 @@ function buildClass(ci) {
     }
     return { o: cur, e: e };
   }
+  // a cache of the regulars done so far (ROSTER_CACHE=dir): a run that's
+  // stopped picks up where it was
+  const cacheFile = process.env.ROSTER_CACHE ? path.join(process.env.ROSTER_CACHE, 'class' + ci + '.jsonl') : null;
+  const cached = cacheFile && fs.existsSync(cacheFile) ? fs.readFileSync(cacheFile, 'utf8').split('\n').filter(Boolean).map(function (l) { return JSON.parse(l); }) : [];
   const regs = [];
   for (let r = 0; r < N_REG; r++) {
+    if (r < cached.length) { regs.push(cached[r]); used[cached[r].carId] = (used[cached[r].carId] || 0) + 1; continue; }
     const k = 1 + T.spread * r / (N_REG - 1);
     const t4 = T.sec[4] * k, rung = r < 5 ? T.rungs[4 - r] : null;
     const tpl = template(rung != null ? Math.min(rung, t4) : t4, T.sec[0] * k);
@@ -145,6 +152,7 @@ function buildClass(ci) {
     if (rung != null) { const d = upTo(cur, tpl, rung); rb = { engine: d.o.engine, parts: d.o.parts, tune: d.o.tune, et: +d.e.toFixed(2) }; }
     const sk = SKILL[ci];
     regs.push({ carId: tpl.carId, skill: +(sk[0] + (sk[1] - sk[0]) * (1 - r / (N_REG - 1))).toFixed(2), b: builds, et: et, rung: rb });
+    if (cacheFile) fs.appendFileSync(cacheFile, JSON.stringify(regs[regs.length - 1]) + '\n');
     process.stderr.write('class ' + (ci + 1) + ' regular ' + (r + 1) + ': ' + tpl.carId + ' ' + et.join(' ') + (rb ? ' rung ' + rb.et : '') + ' (targets ' + T.sec.map(function (x) { return (x * k).toFixed(2); }).join(' ') + ')\n');
   }
   return regs;

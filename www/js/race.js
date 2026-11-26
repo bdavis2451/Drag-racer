@@ -1058,7 +1058,7 @@
       var lad = null;
       if (cfg.lad && !testDrive) {
         // broken: you can't make the next call, so your day ends here
-        if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true }); } }
+        if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true, blown: !!damaged.engine }); } }
         else lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99 });
         if (lad) {
           lad.money.forEach(function (m) { money.push(m); moneyDelta += m[1]; });
@@ -1220,9 +1220,11 @@
         tuned ? h('div', { class: 'col slipbtns' },
           !damaged ? btn('Next pass', function () { DR.Tuner.resume(); }, 'primary') : null,
           btn('End the session', function () { DR.Tuner.end(); }, damaged ? 'primary' : '')) : lad ? h('div', { class: 'col slipbtns' },
-          // a ladder event: on to the next race of the day, or back
-          !damaged && lad.next ? btn(lad.next.label, function () { lad.next.go(); }, 'primary') : null,
-          !lad.next || damaged ? btn('Back to Career', function () { UI.show(UI.RaceMenu, 'career'); }, damaged ? '' : 'primary') : null,
+          // a ladder event: back to the pit for the next call, the way out of
+          // a broken day (credit or points), or back to the career
+          lad.choice ? h('div', { class: 'col' }, lad.choice.map(function (ch) { return btn(ch.label, function () { ch.go(); UI.show(UI.RaceMenu, 'career'); }, 'primary'); })) : null,
+          !lad.choice && lad.next ? btn(UI.Pit ? 'To the pit • next: ' + lad.next.label : lad.next.label, function () { if (UI.Pit) UI.show(UI.Pit, ev); else lad.next.go(); }, 'primary') : null,
+          !lad.choice && !lad.next ? btn('Back to Career', function () { UI.show(UI.RaceMenu, 'career'); }, damaged ? '' : 'primary') : null,
           damaged ? (function () {
             var fix = G.repairCost(inst), rh = G.repairHours ? G.repairHours(inst) : 0;
             if (!G.canAfford(fix)) return btn('Garage (repair ' + DR.money(fix) + ')', function () { UI.show(UI.Garage); }, 'primary');

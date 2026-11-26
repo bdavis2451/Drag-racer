@@ -908,11 +908,14 @@
   // pressure every time it's sprayed and only partly recovers.
   var heat = null;
   G.roundHeat = function (inst, cfg) {
+    // a ladder event's day: the engine's temperature by the clock (ladder.js)
+    if (cfg.lad && DR.Ladder && DR.Ladder.heatFor) return (heat = DR.Ladder.heatFor(inst, cfg));
     if (!(cfg.mode === 'career' && cfg.ev && cfg.round > 0 && heat && heat.ev === cfg.ev && heat.uid === inst.uid)) heat = { ev: cfg.ev, uid: inst.uid, eng: 0, nosP: 1 };
     return heat;
   };
   G.afterRound = function (inst, S, sim) {
     if (!heat || heat.uid !== inst.uid) return;
+    if (heat.lad) return DR.Ladder.heatAfter(heat, inst, S, sim);
     var load = (S.peakHp + S.nosHp) / Math.max(1, S.coolHp);
     var eng = heat.eng + 16 * Math.max(0.3, Math.min(2.2, load)) * Math.min(sim.et || 10, 15) / 10;
     heat.eng = eng * 0.35;
