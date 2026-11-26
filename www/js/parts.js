@@ -582,6 +582,16 @@
     opt('w4', 'Stage 4: Tube Chassis', 35000, { wr: 0.24, low: 0.03, aiOnly: true }, '-24% chassis weight and a lower CG. A tube chassis with a certified cage: it takes any power.')
   ]};
   // bat: kg moved from the nose to the trunk; bkgW: kg saved
+  // A trailer hitch: a receiver bolted to the frame. A car's (Class II:
+  // 3,500 lb, 350 lb on the tongue) pulls a small trailer, Drag Week style
+  // (tires, tools, spares); a truck's (Class IV: 10,000 lb) a car trailer,
+  // up to what the truck itself is rated to tow. U-Haul's hitch classes;
+  // installed $180-550 (U-Haul, This Old House).
+  C.hitch = { name: 'Trailer Hitch', options: [
+    opt('stock', 'No Hitch', 0, {}),
+    opt('hc2', 'Class II Receiver Hitch', 250, { lvl: 1, kg: 10, hitch: 3500, truck: false }, 'Pulls a small trailer (a 4x8 utility or cargo trailer) for tires, tools and spares: up to 3,500 lb.'),
+    opt('hc4', 'Class IV Receiver Hitch', 400, { lvl: 1, kg: 18, hitch: 10000, truck: true }, 'Pulls a car trailer, up to what the truck is rated to tow.')
+  ]};
   C.battery = { name: 'Battery', options: [
     opt('stock', 'Stock Battery (Engine Bay)', 0, { bat: 0, batkg: 0 }),
     opt('bt1', 'Trunk Battery Relocation', 250, { bat: 20, batkg: 3, onFwd: false }, 'Moves the 20 kg battery to the back of the car, over the drive wheels (+3 kg of cable and box).'),
@@ -705,7 +715,7 @@
     { id: 'drive',  name: 'Drivetrain',    icon: 'trans',   cats: ['trans', 'clutch', 'converter', 'transbrake', 'shifter', 'valvebody', 'flywheel', 'driveshaft', 'diff', 'gears', 'rearend', 'mounts', 'layout'] },
     { id: 'susp',   name: 'Suspension',    icon: 'springs', cats: ['springs', 'shocks', 'sway', 'rearsusp', 'frontsusp', 'chassis', 'tubs', 'fwells', 'wheeliebar', 'aero'] },
     { id: 'tires',  name: 'Wheels & Tires',icon: 'rtires',  cats: ['wheels', 'rtires', 'fwheels', 'ftires', 'brakes'] },
-    { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'ballast', 'safety'] }
+    { id: 'body',   name: 'Weight & Safety', icon: 'weight', cats: ['weight', 'battery', 'ballast', 'safety', 'hitch'] }
   ];
   // Which side of the career opens a part (anything not listed is shared:
   // either discipline opens it). Drag racing opens the launch and straight-
@@ -823,6 +833,8 @@
       var fwdCarNow = DR.CARS[inst.carId].drive === 'FWD' && DR.driveOf(inst) !== 'RWD';
       list = list.filter(function (o) { return o.id === curO || ((o.onFwd == null || o.onFwd === fwdNow) && (!o.fwdCar || fwdCarNow)); });
     }
+    // a hitch: the car's or the truck's kind
+    if (cat === 'hitch') { var isTruck = DR.CARS[inst.carId].cat === 'Truck', curH = inst.parts && inst.parts.hitch; list = list.filter(function (o) { return o.id === curH || o.truck == null || o.truck === isTruck; }); }
     // an engine built to rev (e.rx: a 4G63, an SR20) gets more from race
     // valve springs and oiling than the plain figure: say its real number
     if (cat === 'valvetrain' || cat === 'oiling') {
@@ -1165,7 +1177,7 @@
     var o = DR.getOption('carb', inst);
     return { factory: e.carb, opt: o, efi: o.efi || '' };
   };
-  DR.RACE_CAR_NO = ['weight', 'chassis', 'battery', 'tubs', 'fwells'];
+  DR.RACE_CAR_NO = ['weight', 'chassis', 'battery', 'tubs', 'fwells', 'hitch'];
   DR.partApplies = function (cat, inst) {
     var nf = NOT_FOR[DR.engineKind(inst)];
     if (nf && nf[cat]) return false;

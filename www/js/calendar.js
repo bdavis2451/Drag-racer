@@ -94,7 +94,7 @@
     fi: 14, tmanifold: 6, downpipe: 3, theat: 2, ic: 6, wastegate: 3, bov: 1, wmi: 4, launch: 1, nitrous: 6, nosctrl: 1, nosheat: 1,
     trans: 10, clutch: 7, converter: 8, transbrake: 4, shifter: 2, valvebody: 5, flywheel: 7, driveshaft: 2, diff: 6, gears: 6, rearend: 12, mounts: 4, layout: 60,
     springs: 4, shocks: 3, sway: 2, rearsusp: 6, frontsusp: 8, chassis: 30, wheeliebar: 4, aero: 3,
-    rtires: 1, wheels: 1, ftires: 1, brakes: 4, weight: 8, battery: 2, safety: 4
+    rtires: 1, wheels: 1, ftires: 1, brakes: 4, weight: 8, battery: 2, safety: 4, hitch: 1.5
   };
   DR.jobHours = function (cat, inst, id) {
     if (cat === 'engine') { var f = inst && id ? DR.swapFit(inst, id) : null, e = id && DR.ENGINES[id]; return 24 + (e ? 6 * (e.size || 1) : 0) + (f && f.install > 3000 ? 16 : 0); }
