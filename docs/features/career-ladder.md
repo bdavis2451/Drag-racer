@@ -1,8 +1,9 @@
 # Career ladder rework (drag and circuit)
 
 Status: **Nov 26: build 1 (the drag ladder) shipped to the tester with
-the final rosters. Build 2 (race day and the pit) in progress on a local
-branch; it ships after build 1 has been played and the owner OKs it.**
+the final rosters. Build 2 (race day and the pit) built on a local branch
+(2a and 2b, see Build 2 notes); it ships after build 1 has been played
+and the owner OKs it.**
 Builds 3 (sponsors) and 4 (Bracket / No-Prep Kings) follow, then the
 circuit ladder (`circuit-ladder.md`). Docs can be pushed any time. This
 replaces `career-rebalance.md`
@@ -510,6 +511,75 @@ nothing to the game was what I had meant."
   errors), old-save mapping and King nights, money unchanged (~$1.36M for
   all six classes' first pass).
 - **Ship:** merged into the Pages branch Nov 26.
+
+### Build 2 notes (Claude, Nov 26; local branch `ladder-build2`, not pushed)
+Ships after build 1 has been played and the owner OKs it.
+- **2a (race day by the clock, `ladder.js` + `pit.js`):** `DR.DAYPLAN`
+  schedules (gates, qualifying / time trials, rounds, call windows);
+  `nextCall` / `checkCall` / `lateLock`; heat by the minute (`coolTau`,
+  `heatNow`, `heatAfter`; physics heat-soak coefficient 0.00125, at most
+  ~2.5%); oil-down fine and 10 points; broke-before-round-1 credit or
+  points and an alternate; street breakage ends the night; the pit screen
+  (schedule, next call, engine temperature, bottle, wear, damage).
+- **2b (gear, `gear.js` new):**
+  - Upgrade > **Pit & Trailer** tab (last tab): tools in three levels
+    (Basic $350, Pro $1,800, Roll Cab & Air Tools $5,000), engine chiller
+    $1,500, canopy $650, spare drive tires on their own wheels (the tire +
+    wheel prices, for the car you're on; any set that fits can go on),
+    axle shafts (the repair bill's shaft price: 25% of the rear end or
+    $250), 10 lb nitrous bottles $350 + $50 fill, trailers (4x8 open
+    $1,200, 4x8 enclosed $3,500, 18 ft open $4,500, 24 ft enclosed steel
+    $16,000 / aluminum $25,000). Sell back: half (trailers 60%).
+  - **Room:** the car's trunk or bed (`DR.CARGO`, cu ft), a tow truck's
+    bed, the trailer's room. Items by real size (a tire on a wheel by its
+    diameter and width; tools 4 / 10 / 30; chiller 8; canopy 3; bottle 0.5;
+    axle 1; clutch 1.5; transmission 6...).
+  - **Load-up at entry** (replaces the entry confirm): the way there
+    (drive; drive pulling a small trailer if the car has a hitch; flatbed;
+    a truck of yours with a Class IV hitch and a car trailer, if trailer +
+    car + load is within its tow rating: `DR.TOW` C1500 7,000, Lightning
+    5,000, Ram 16,000) and the load (auto-packed: tools, chiller, a tire
+    set, spares, canopy; editable). The trip (flatbed, gas, a ticket) and
+    the mechanic's day are paid at entry; the first slip shows them.
+  - **Pit work** (`DR.Pit.jobs`): tire-set swap, bottle swap, axle shaft
+    (pro tools, crew 30+), clutch from a spare on the shelf (pro tools,
+    45+), transmission from a spare (roll cab, 60+; the broken box goes to
+    the shop for its rebuild bill), fitting parts you brought (by their
+    garage hours: up to 2 h basic tools, 7 h pro + crew 40, 10 h roll cab
+    + crew 60; engine internals, chassis, rear end, turbo kits not at the
+    track). Time = garage hours x tools (0.6 / 0.45 / 0.35) x crew (1.5 -
+    best wrench / 100, x0.85 with three pairs of hands). Crew: you (25),
+    the drag tuner (engine x 0.8), the mechanic (wrenching).
+  - **Mechanic** (Team > Mechanics board, one seat): wrenching skill,
+    grows with jobs; paid by the race day ($150 + 1.5 x skill: $190-280);
+    optional per event (a checkbox at the load-up).
+  - **A breakage in qualifying** that the load can fix stays in the day:
+    fix it before round 1 and race on; still broken when round 1 closes,
+    the broke rules. A breakage while still in the eliminations (won the
+    round): fix it before the next call. Auto-repair (Settings) waits
+    until the day is over.
+  - **Big events** (the last section's Heads-Up and No-Prep): a vendor row
+    in the pit (parts you can fit at the track, shop prices; nitrous
+    refills). Used bottles are otherwise refilled before your next event.
+  - **The old $8,500 truck & trailer** is refunded to old saves (a text
+    from Ray); `legal.js`'s rig code removed, the haul lives in `gear.js`.
+  - Help text: race days by the clock, the pit, what you bring.
+- **Tested (browser):** load-up and entry, room and ways (car, small
+  trailer, flatbed, Lightning over its rating, Ram fine), pit axle job
+  (1.35 h with pro tools and a 75 mechanic), a transmission broken in
+  qualifying fixed in the pit (phase stays qualifying, rebuild charged),
+  tire-set swap (wear moves with the set), bottle swap and refill at the
+  next entry, the vendor row, the shop tab, the team screen, rig refund;
+  the build 1 / 2a tests (ltest, web2-5) still pass. iPhone-size
+  screenshots checked (the load-up's buttons stay in view).
+- **Follow-ups (not wired yet):** the drag tuner's chassis skill (setup at
+  the pit) and data skill (reading the slip) do nothing at the pit yet;
+  the gear swap is the Tune screen as before.
+- **Choices made in the build, to confirm with the owner:** which events
+  are "big" (vendor row); the mechanic's signing fee (40% of a driver's);
+  bottles never run dry (as today: a spare restores full pressure); cargo
+  estimates where no figure was found (Charger, Nova, Bel Air, Willys;
+  beds from their dimensions; the open car trailer's deck room 30 cu ft).
 
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.
