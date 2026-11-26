@@ -5,6 +5,10 @@ the top of each section.
 
 ## Next up
 
+- **Circuit ladder** (`docs/features/circuit-ladder.md`, Nov 26): a fresh
+  circuit career in the drag ladder's shape (Sprint, Spec, Endurance, Night
+  street; rent or own spec cars; shortened endurance with pit stops and a
+  driver swap; SCCA-style licenses). Research done, plan sent.
 - **Career ladder rework** (`docs/features/career-ladder.md`, Nov 15):
   owner's draft (5 sections x 4 events, 3 of 4 to move on, events of 3-5
   races, King event with the ladder; themed events, restricted events;
