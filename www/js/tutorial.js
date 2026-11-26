@@ -13,8 +13,8 @@
   var GAR = { fn: function () { return UI.Garage; } };
   function race(tab) { return { fn: function () { return UI.RaceMenu; }, arg: tab }; }
   T.STEPS = [
-    { at: GAR, title: 'WELCOME TO THE STRIP', text: 'You start with one tired car, a little money and your uncle\'s couch. Each class has race days to win and a King to beat; win the class and the next one opens. This tour takes a couple of minutes. Skip it any time.' },
-    { at: GAR, sel: '.gstatus.gcareer', title: 'YOUR CAREER', text: 'Where you are and what\'s next. Tap it any time for the race days, the ladder of rivals and the King.' },
+    { at: GAR, title: 'WELCOME TO THE STRIP', text: 'You start with one tired car, a little money and your uncle\'s couch. Each class has five sections of events to work through and a King to beat; win the class and the next one opens. This tour takes a couple of minutes. Skip it any time.' },
+    { at: GAR, sel: '.gstatus.gcareer', title: 'YOUR CAREER', text: 'Where you are and what\'s next. Tap it any time for the sections, the King event and the standings.' },
     { at: GAR, sel: '.gbb.shop', title: 'UPGRADE', text: 'Buy parts and fit them. Each job takes time: do it yourself (free, the clock moves while you wrench) or pay the shop (they keep the car till it\'s done). Tuning and the dyno live here too. Start with tires: power you can\'t put down is wasted.' },
     { at: GAR, sel: '.gstatus.ghome', title: 'HOME', text: 'Sleep, your garage work, and the money. Ray\'s couch is free while you find your feet; bills come out on the 1st. The bank lends, if you must.' },
     { at: GAR, sel: '.gbb.team', title: 'TEAM', text: 'You drive the drag races. The circuit is your team\'s career: you start with Danny, Ray\'s nephew, a rookie who races your circuit days on Sundays. Hire better drivers, and a tuner, here.' },
@@ -22,7 +22,7 @@
     { at: GAR, sel: '.gbb.race', title: 'RACE', text: 'Where the racing is. Let\'s look inside.' },
     { at: race('week'), sel: '.srail-i.rt-week', title: 'THIS WEEK', text: 'Your career\'s week, day and night: weeknights are for the street, weekends for the strip and the circuit. The clock only moves when you do something: race, wrench, sleep, or Go, which jumps ahead (it tells you what that skips first).' },
     { at: race('week'), sel: '.nextup', title: 'NEXT UP', text: 'The next thing you can race. Go takes you there: if it isn\'t on yet, the clock jumps ahead to when it is (and the bills don\'t wait).' },
-    { at: race('career'), sel: '.srail-i.rt-career', title: 'CAREER', text: 'Two ladders. The strip: your class\'s race days, the rivals\' ladder and the King; beat him and the next class opens. The Circuit tab is your team\'s own ladder: win its Cup for the next circuit class.' },
+    { at: race('career'), sel: '.srail-i.rt-career', title: 'CAREER', text: 'Two ladders. The strip: your class\'s sections of events, the King event and the standings; beat the King and the next class opens. The Circuit tab is your team\'s own ladder: win its Cup for the next circuit class.' },
     { at: race('career'), sel: '.srail-i.rt-map', title: 'STREET & EVENTS', text: 'Street is the underground: spots to race for cash on weeknights, the odd local legend, and Wednesday\'s Grudge Night at the strip. Events are the open circuit races, clubs, short series and car shows.' },
     { at: race('practice'), sel: '.srail-i.rt-practice', title: 'PRACTICE', text: 'Test & tune, any day the strip\'s open: solo passes with nothing on the line, and where the license tests are. Your best times are kept.' },
     { at: race('practice'), sel: '.ecard.t-test .btn', title: 'YOUR FIRST PASS', text: 'Run a quarter mile and look at the slip: the 60-foot tells you how it launched, the ET what it all adds up to. Then you\'ll know what to fix first. The ? on the garage explains everything in detail.' }

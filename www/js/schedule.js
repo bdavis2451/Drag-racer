@@ -22,10 +22,13 @@
   // windows: { wd: [weekdays], from: hour, to: hour (past 24 = after midnight),
   // nth: [nth weekday of the month], last: true (the last one) }
   DR.SLOTS = {
-    fri:    { name: 'Friday street night', where: 'Street & no-prep', win: [{ wd: [5], from: 21, to: 26 }] },
-    sat:    { name: 'Saturday at the strip', where: 'Pixel Dragway', win: [{ wd: [6], from: 12, to: 18 }] },
-    satn:   { name: 'Saturday night under the lights', where: 'Pixel Dragway', win: [{ wd: [6], from: 19, to: 23.5 }] },
-    sun:    { name: 'Sunday bracket day', where: 'Pixel Dragway', win: [{ wd: [0], from: 10, to: 16 }] },
+    // the career's four kinds of event, each on its night (real race days:
+    // the strip's gates open at 8, no-prep runs into the night, the street
+    // after ten)
+    fri:    { name: 'Friday street night', where: 'the street', win: [{ wd: [5], from: 22, to: 27 }] },
+    sat:    { name: 'Saturday heads-up day', where: 'Pixel Dragway', win: [{ wd: [6], from: 8, to: 18 }] },
+    satn:   { name: 'Saturday no-prep night', where: 'Pixel Dragway', win: [{ wd: [6], from: 18, to: 25 }] },
+    sun:    { name: 'Sunday bracket day', where: 'Pixel Dragway', win: [{ wd: [0], from: 8, to: 18 }] },
     side:   { name: 'Sunday class races', where: 'Pixel Dragway', win: [{ wd: [0], from: 12, to: 17 }] },
     show:   { name: 'Sunday night car show', where: 'the show', win: [{ wd: [0], from: 17, to: 22 }] },
     meet:   { name: 'Friday night car meet', where: 'the grocery store lot', win: [{ wd: [5], from: 19, to: 23 }] },
@@ -72,8 +75,8 @@
     if (!ev) return null;
     if (ev.king === 'bracket') return 'kingb';
     if (ev.king === 'street') return 'kingst';
-    if (ev.type === 'boss') return 'king';
-    if (ev.type === 'callout') return 'night';
+    if (ev.ladder) return DR.themeById(ev.type).slot;
+    if (ev.type === 'boss' || ev.type === 'callout') return 'king';
     if (ev.type === 'bracket') return 'sun';
     if (ev.type === 'class') return 'side';
     if (ev.type === 'show') return DR.showSlot(DR.showById(ev.show));
@@ -173,108 +176,19 @@
   G.afterRun = function (cfg, r) {
     if (cfg.inst) return { news: [] };   // a dealer test drive
     var hours = cfg.mode === 'street' ? 1 : cfg.mode === 'test' ? 0.25 : 0.5, out = { news: [] };
-    if (DR.RD_SCORING && cfg.mode === 'career' && cfg.ev && !cfg.ev.hosted && !cfg.ev.special && !r.testDrive) out = scoreRun(cfg, r);
-    // a grudge settled at the strip: class rep for the win
-    if (cfg.grudge && r.win) { var c = G.careerState(); c.rep = c.rep || {}; c.rep[c.stage] = (c.rep[c.stage] || 0) + DR.GRUDGE_REP; out.news.push('Grudge settled: +' + DR.GRUDGE_REP + ' class rep'); }
     var news = G.advance(hours);
     out.news = out.news.concat(news);
     return out;
   };
-  DR.GRUDGE_REP = 4;
 
-  // ---------------------------------------------------------------- race days (scored)
-  // the stage's races in a slot: one race day (the Saturday strip day, the
-  // Friday street night, ...). Kings, callouts, shows and side races aren't.
-  var SCORED = { sat: 1, satn: 1, fri: 1, sun: 1 };
+  // a class's ladder events in a slot (the Saturday heads-up day, the
+  // Friday street night, ...)
+  var THEME_SLOTS = ['fri', 'sat', 'satn', 'sun'];
   DR.raceDayEvents = function (si, slot) {
-    var st = DR.STAGES[si];
-    return st.all.filter(function (ev) { return ev.type !== 'boss' && ev.type !== 'callout' && !ev.king && ev.type !== 'show' && ev.type !== 'class' && DR.evSlot(ev) === slot && G.eventVisible(ev); });
+    return DR.STAGES[si].events.filter(function (ev) { return DR.evSlot(ev) === slot && G.eventVisible(ev); });
   };
-  DR.RD_WIN = 80; DR.RD_DOM = 115;   // a race's share of the targets
-  // Race-day scoring (win/dominate targets, the reward pick) is switched off
-  // for now: the code stays, ready to come back.
-  DR.RD_SCORING = false;
-  function dayKey(si, slot, w) { return si + ':' + slot + ':' + w.start; }
-  function rd() { var s = G.state; if (!s.rd) s.rd = { cur: null, best: {} }; return s.rd; }
-  // the open race day for a run, started on the first run of the window
-  function session(ev) {
-    var slot = DR.evSlot(ev); if (!SCORED[slot]) return null;
-    var w = G.slotWindow(slot); if (!w || !w.open) return null;
-    var R = rd(), key = dayKey(ev.stage, slot, w);
-    if (R.cur && R.cur.key !== key) closeDay(R.cur);
-    if (!R.cur) {
-      var evs = DR.raceDayEvents(ev.stage, slot).filter(function (x) { return !G.eventLock(x); });
-      R.cur = { key: key, si: ev.stage, slot: slot, end: w.end, ids: evs.map(function (x) { return x.id; }), n: Math.max(1, evs.length), best: {}, att: {}, purse: evs.reduce(function (a, x) { return a + G.eventReward(x); }, 0) };
-    }
-    if (R.cur.ids.indexOf(ev.id) < 0) { R.cur.ids.push(ev.id); R.cur.n++; R.cur.purse += G.eventReward(ev); }
-    return R.cur;
-  }
-  G.raceDayNow = function () { if (!DR.RD_SCORING) return null; var R = rd(); return R.cur && R.cur.end > G.now() ? R.cur : null; };
-  G.dayScore = function (d) { return Object.keys(d.best).reduce(function (a, k) { return a + d.best[k]; }, 0); };
-  G.dayTargets = function (d) { return { win: DR.RD_WIN * d.n, dom: DR.RD_DOM * d.n }; };
-  // a run's points: the win (100), the light (up to 25), the margin (up to
-  // 25); a loss scores for how close it was; a red light scores nothing.
-  // A knockout scores 40 a round won, the final as a win.
-  function runPoints(r) {
-    if (r.red) return 0;
-    if (r.win === false) return Math.max(0, Math.round(55 - (r.deficit || 1) * 110));
-    var p = r.final ? 100 : 40;
-    if (r.rt != null && r.rt >= 0) p += r.rt <= 0.02 ? 25 : r.rt <= 0.05 ? 15 : r.rt <= 0.1 ? 5 : 0;
-    if (r.margin != null) p += Math.min(25, Math.round(r.margin * 50));
-    return p;
-  }
-  function scoreRun(cfg, r) {
-    var d = session(cfg.ev), out = { news: [] };
-    if (!d) return out;
-    var id = cfg.ev.id, pts = runPoints(r);
-    d.att[id] = (cfg.round > 0 ? d.att[id] || 0 : 0) + pts;
-    var ended = r.win === false || r.final || !DR.multiRound(cfg.ev);
-    if (ended) { d.best[id] = Math.max(d.best[id] || 0, d.att[id]); d.att[id] = 0; }
-    var sc = G.dayScore(d), tg = G.dayTargets(d);
-    out.score = { pts: pts, total: sc, win: tg.win, dom: tg.dom };
-    out.news.push('Race day: +' + pts + ' • ' + sc + ' pts (win ' + tg.win + ', dominate ' + tg.dom + ')');
-    G.save();
-    return out;
-  }
-  // the day ends (its window closes, or you call it a day): the bonus, the pick
-  var REWARDS = [
-    { id: 'cash', name: 'Bonus purse', blurb: function (d) { return DR.money(Math.max(200, Math.round(d.purse * 0.25 / 50) * 50)) + ' from the promoter.'; },
-      give: function (d) { var v = Math.max(200, Math.round(d.purse * 0.25 / 50) * 50); G.earn(v); return 'Bonus purse: +' + DR.money(v); } },
-    { id: 'service', name: 'Fresh rubber', blurb: function () { return 'New drive tires and a clutch on the house (still an hour or six of work to fit them).'; },
-      give: function () { var inst = G.car(), cats = G.WEAR_CATS.filter(function (c) { return c !== 'clutch' || DR.partApplies('clutch', inst); }), m = G.state.money; G.state.money += 1e7; G.service(inst, cats); G.state.money = m; return 'Fresh tires' + (cats.length > 1 ? ' and clutch' : '') + ' on the house'; } },
-    { id: 'rep', name: 'Street cred', blurb: function () { return '+15 rep in this class: callouts sooner.'; },
-      give: function (d) { var c = G.careerState(); c.rep = c.rep || {}; c.rep[d.si] = (c.rep[d.si] || 0) + 15; return '+15 class rep'; } },
-    { id: 'labor', name: 'Shop credit', blurb: function (d) { return DR.money(Math.max(300, Math.round(d.purse * 0.3 / 50) * 50)) + ' of shop labour (rush jobs).'; },
-      give: function (d) { var v = Math.max(300, Math.round(d.purse * 0.3 / 50) * 50); G.state.shopCredit = (G.state.shopCredit || 0) + v; return 'Shop credit: ' + DR.money(v); } },
-    { id: 'coupon', name: 'Parts coupon', blurb: function () { return '20% off your next part (a sponsor rep slips you a coupon).'; },
-      give: function () { G.state.coupon = 0.2; return '20% off your next part'; } }
-  ];
-  function closeDay(d) {
-    var R = rd(); if (R.cur === d) R.cur = null;
-    if (!DR.RD_SCORING) { G.save(); return; }
-    var sc = G.dayScore(d), tg = G.dayTargets(d), name = DR.STAGES[d.si].name + ' • ' + DR.slotName(d.slot);
-    var rec = R.best[d.si + ':' + d.slot] || 0, isRec = sc > rec;
-    if (isRec) R.best[d.si + ':' + d.slot] = sc;
-    G.save();
-    if (!sc) return;
-    var lines = [name + ': ' + sc + ' points' + (isRec && rec ? ' (a new record)' : '')];
-    if (sc >= tg.win) { var bonus = Math.round(d.purse * 0.15 / 50) * 50; if (bonus) { G.earn(bonus); lines.push('WIN score beaten: +' + DR.money(bonus)); } }
-    var pick = sc >= tg.dom;
-    setTimeout(function () { dayModal(d, sc, tg, lines, pick); }, 400);
-  }
-  G.closeRaceDay = function () { var d = G.raceDayNow() || rd().cur; if (d) closeDay(d); };
-  // the window passing closes the day
-  G.onTick(function () { var R = rd(); if (R.cur && G.now() >= R.cur.end) closeDay(R.cur); return []; });
-  function dayModal(d, sc, tg, lines, pick) {
-    var close, picks = REWARDS.slice().sort(function () { return Math.random() - 0.5; }).slice(0, 3);
-    var bar = h('div', { class: 'rdbar' }, h('b', { style: { width: Math.min(100, sc / tg.dom * 100) + '%' } }), h('i', { class: 'wmark', style: { left: (tg.win / tg.dom * 100) + '%' } }));
-    close = UI.modal([h('div', { class: 'pix acc' }, 'RACE DAY RESULT'), lines.map(function (l) { return h('div', {}, l); }), bar,
-      h('div', { class: 'gsmall dim' }, 'Win ' + tg.win + ' • Dominate ' + tg.dom),
-      pick ? h('div', { class: 'pix good', style: { marginTop: '6px' } }, 'DOMINATED! Pick a reward') : h('div', { class: 'dim gsmall' }, sc >= tg.win ? 'Dominate it next time for a reward.' : 'Beat the win score for a bonus on the purses.'),
-      pick ? h('div', { class: 'rdpicks' }, picks.map(function (rw) { return h('div', { class: 'rdpick', onclick: function () { var msg = rw.give(d); G.save(); A.cash && A.cash(); close(); UI.toast(msg); UI.refresh(); } }, h('div', { class: 'acc' }, rw.name), h('div', { class: 'gsmall' }, rw.blurb(d))); })) :
-        h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('OK', function () { close(); }, 'primary'))]);
-  }
-  // the coupon and the shop credit spend themselves
+  // the coupon and the shop credit spend themselves (saves from when race
+  // days gave them out)
   if (G.partPrice) { var pp0 = G.partPrice; G.partPrice = function (cat, opt) { var p = pp0.apply(this, arguments); return G.state.coupon ? Math.round(p * (1 - G.state.coupon) / 10) * 10 : p; }; }
   var buy0 = G.buyPart; G.buyPart = function () { var r = buy0.apply(this, arguments); if (r && G.state.coupon) { G.state.coupon = 0; G.save(); } return r; };
   if (G.rushQuote) { var rq0 = G.rushQuote; G.rushQuote = function (uid) { var q = rq0(uid), cr = G.state.shopCredit || 0; q.credit = Math.min(cr, q.cost); q.cost -= q.credit; return q; }; var rush0 = G.rush; G.rush = function (uid) { var q = G.rushQuote(uid), w = rush0(uid); if (!w && q.credit) { G.state.shopCredit -= q.credit; G.earn(q.credit); G.save(); } return w; }; }
@@ -306,7 +220,7 @@
   // races, Saturday holds every class's Saturday races. The event's page
   // lists them all; enter as many as your car fits, one after another.
   var FAM = { sun: 'sun', side: 'sun', sat: 'sat', satn: 'satn', fri: 'fri' };
-  DR.EVENT_DAYS = { sun: 'Sunday at Pixel Dragway', sat: 'Saturday at the strip', satn: 'Saturday night under the lights', fri: 'Friday street night' };
+  DR.EVENT_DAYS = { sun: 'Sunday bracket day', sat: 'Saturday heads-up day', satn: 'Saturday no-prep night', fri: 'Friday street night' };
   function eventDays(out, d0) {
     var groups = {}, rest = [];
     out.forEach(function (e) {
@@ -328,40 +242,35 @@
     var out = [], c = G.careerState();
     // career: the career's own (it shows on This Week); why: can't-enter check
     function add(slot, kind, label, go, sub, career, why) { var w = windowOn(slot, d0); if (w) out.push({ t: w.start, end: w.end, slot: slot, kind: kind, label: label, sub: sub || '', go: go, career: !!career, why: why || null }); }
-    // the drag career: race days for every stage open, with their races
+    // the drag career: each open class's events still to finish (or that a
+    // win would still count for the contract), on their nights
+    var nowW = {};
+    THEME_SLOTS.forEach(function (slot) { var w = G.slotWindow(slot); nowW[slot] = w ? w.start : null; });
     for (var si = 0; si <= c.stage && si < DR.STAGES.length; si++) {
-      Object.keys(SCORED).forEach(function (slot) {
-        // still to win, or won before the sponsor was signed and a win now
-        // counts for the contract (so a contract can always be finished)
-        var evs = DR.raceDayEvents(si, slot), open = evs.filter(function (ev) { return !G.eventLock(ev); }), todo = open.filter(function (ev) { return !G.eventWon(ev) || G.countsForContract(ev); });
+      THEME_SLOTS.forEach(function (slot) {
+        // a later week: what you raced this week runs again then
+        var w = windowOn(slot, d0), later = w && nowW[slot] != null && w.start > nowW[slot];
+        var evs = DR.raceDayEvents(si, slot), open = evs.filter(function (ev) { return !G.eventLock(ev, { anyWeek: later }); }), todo = open.filter(function (ev) { return !G.eventWon(ev) || G.countsForContract(ev); });
         if (!todo.length) return;
         var n0 = out.length;
-        add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, 'vs ' + todo.map(function (ev) { return ev.opps[ev.opps.length - 1].name; }).join(', '), true, function () { return carWhy(todo); });
-        if (out.length > n0) { out[n0].evs = open; out[n0].short = DR.STAGES[si].name; }
+        add(slot, 'drag', DR.STAGES[si].name + ': ' + DR.slotName(slot), function () { UI.show(UI.RaceMenu, 'career'); }, todo.map(function (ev) { return DR.raceDayName(ev); }).join(', '), true, function () { return carWhy(todo); });
+        if (out.length > n0) { out[n0].evs = todo; out[n0].short = DR.STAGES[si].name; }
       });
       var st = DR.STAGES[si];
-      if (!G.eventWon(st.boss)) (function (st, si) {
-        var kLock = G.eventLock(st.boss), pos = G.ladderPos ? G.ladderPos(si) : 5;
-        function toLadder() { UI.careerSub = 'ladder'; UI.show(UI.RaceMenu, 'career'); }
-        // the next callout on the ladder, once you have the rep for it
-        var co = pos < 5 && G.ladder ? G.ladder(si)[pos] : null;
-        if (co && !G.calloutLock(co)) add('night', 'drag', 'Ladder callout #' + (5 - pos) + ': ' + co.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(co, 0), 'Callout: ' + co.opps[0].name); }, 'Win to take their spot', true, function () { return carWhy([co]); });
-        if (!kLock) return add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, function () { DR.Race.raceDay(DR.Race.eventCfg(st.boss, 0), 'King of ' + st.name); }, '', true, function () { return carWhy([st.boss]); });
-        // locked: shown (with why and a fix) once the class's race days are all won, so you're never left with nothing to do
-        var left = Object.keys(SCORED).some(function (slot) { return DR.raceDayEvents(si, slot).some(function (ev) { return !G.eventLock(ev) && !G.eventWon(ev); }); });
-        if (!left) add('king', 'king', 'King of ' + st.name + ': ' + st.boss.opps[0].name, toLadder, '', true, function () {
-          return { msg: kLock, fix: /ladder/i.test(kLock) ? ['Ladder', toLadder] : ['Career', function () { UI.show(UI.RaceMenu, 'career'); }] };
+      // the King event, on King nights, once the sections are done
+      if (!G.eventWon(st.boss) && G.curSec && G.curSec(si) >= DR.SECTIONS) (function (st, si) {
+        var pos = G.ladderPos(si), next = pos < 5 ? G.ladder(si)[pos] : st.boss, lk = G.eventLock(next);
+        function toKing() { UI.careerSub = 'king'; UI.show(UI.RaceMenu, 'career'); }
+        add('king', 'king', 'King night: ' + (pos < 5 ? '#' + (5 - pos) + ' ' + next.opps[0].name : 'the King of ' + st.name + ', ' + st.boss.opps[0].name), toKing, pos < 5 ? 'Beat them to move up' : 'For their car', true, function () {
+          return lk ? { msg: lk, fix: /contract|sponsor/i.test(lk) ? ['Career', function () { UI.show(UI.RaceMenu, 'career'); }] : ['King', toKing] } : carWhy([next]);
         });
       })(st, si);
-      st.side.forEach(function (ev) { if ((ev.type === 'class' || ev.type === 'show') && G.eventVisible(ev) && !G.eventLock(ev) && !G.eventWon(ev)) add(DR.evSlot(ev), ev.type === 'show' ? 'show' : 'drag', ev.type === 'show' ? DR.showGoal(ev) : DR.CLASSES[ev.cls].name + ' class race', function () {
-        // straight to it: the show itself, or the class race (if the car can run it)
+      // the car show goals
+      st.side.forEach(function (ev) { if (ev.type === 'show' && G.eventVisible(ev) && !G.eventLock(ev) && !G.eventWon(ev)) add(DR.evSlot(ev), 'show', DR.showGoal(ev), function () {
         var issue = G.car() ? G.carIssue(G.car(), ev) : 'No car';
         if (issue) { UI.toast(issue); return UI.show(UI.RaceMenu, 'career'); }
-        if (ev.type === 'show') DR.enterShow(DR.showById(ev.show), ev); else DR.Race.raceDay(DR.Race.eventCfg(ev, 0));
-      }, '', true, function () { return carWhy([ev]); });
-        var last = out[out.length - 1];
-        if (ev.type === 'class' && last && last.label === DR.CLASSES[ev.cls].name + ' class race' && !last.evs) { last.evs = [ev]; last.short = DR.CLASSES[ev.cls].name + ' class'; }
-      });
+        DR.enterShow(DR.showById(ev.show), ev);
+      }, '', true, function () { return carWhy([ev]); }); });
     }
     if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }, '', true, function () { return carWhy([K.ev]); }); });
     // the circuit career's race days, the Night Series, an invitation
@@ -408,13 +317,11 @@
           h('div', { class: 'grow' }, h('div', {}, e.label), h('div', { class: 'gsmall dim' }, (e.end > e.t ? CAL.hourText(Math.floor(e.t % 24)) + '–' + CAL.hourText(Math.floor(e.end % 24)) : '') + (e.sub ? ' • ' + e.sub : ''))),
           past ? null : why ? h('div', { class: 'row', style: { gap: '4px', alignItems: 'center' } }, h('span', { class: 'gsmall warn' }, '⚠ ' + why.msg), btn(why.fix[0], why.fix[1], 'small')) : on ? btn('Go', function () { e.go(); }, 'small go') : btn(e.t > now ? 'Go (' + CAL.dur(e.t - now) + ')' : 'Go', function () { if (e.t > now) return UI.goThere(e.t, e.label, e.go); e.go(); }, 'small'));
       }) : h('div', { class: 'dim' }, 'Nothing on. Wrench, rest, or race the street at night (Race > Street).'),
-      h('div', { class: 'gsmall dim', style: { marginTop: '6px' } }, 'Street spots and callouts: Mon, Tue, Thu and Fri nights, 9 PM–3 AM. Grudge Night: Wednesdays, 6–11 PM. The dyno shop: Mon–Sat, 8–6.'));
+      h('div', { class: 'gsmall dim', style: { marginTop: '6px' } }, 'Street spots: Mon, Tue, Thu and Fri nights, 9 PM–3 AM. Grudge Night: Wednesdays, 6–11 PM. King nights: the 2nd and 4th Saturday, 9 PM. The dyno shop: Mon–Sat, 8–6.'));
     var nav = h('div', { class: 'row calnav' }, btn('◀', function () { calMonth--; UI.refresh(); }, 'small'), h('div', { class: 'pix acc grow', style: { textAlign: 'center' } }, CAL.MONL[m] + ' ' + y), btn('▶', function () { calMonth++; UI.refresh(); }, 'small'));
     var legend = h('div', { class: 'gsmall callegend' }, [['drag', 'Drag race day'], ['king', 'King'], ['grudge', 'Grudge Night'], ['circuit', 'Circuit'], ['show', 'Show'], ['test', 'Test & tune'], ['host', 'Your event'], ['wander', 'Wanderer'], ['club', 'Club'], ['bill', 'Bills']].map(function (x) { return h('span', {}, h('i', { class: 'caldot', style: { background: KCOL[x[0]] } }), x[1]); }));
-    var cur = G.raceDayNow();
     return h('div', { class: 'screen' }, UI.top('CALENDAR', function () { UI.show(UI.Home); }),
       h('div', { class: 'content' },
-        cur ? h('div', { class: 'baybanner' }, h('span', { class: 'acc' }, 'RACE DAY ON'), h('span', { class: 'grow gsmall' }, DR.STAGES[cur.si].name + ' • ' + G.dayScore(cur) + ' pts (win ' + G.dayTargets(cur).win + ', dominate ' + G.dayTargets(cur).dom + ')'), btn('Call it a day', function () { G.closeRaceDay(); UI.refresh(); }, 'small')) : null,
         h('div', { class: 'calwrap' }, h('div', { class: 'calleft' }, nav, grid, legend), list)));
   };
 })();

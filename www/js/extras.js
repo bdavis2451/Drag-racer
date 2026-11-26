@@ -168,7 +168,7 @@
   // two per stage, from the stage's class rules
   X.seriesFor = function (si) {
     var st = DR.STAGES[si], out = [];
-    (st.side || []).filter(function (ev) { return ev.type === 'class'; }).slice(0, 2).forEach(function (ev, k) { out.push({ id: 'S' + si + '.' + k, cls: ev.cls, name: DR.CLASSES[ev.cls].name + ' Series', stage: si }); });
+    (st.restrict || []).slice(0, 2).forEach(function (cls, k) { out.push({ id: 'S' + si + '.' + k, cls: cls, name: DR.CLASSES[cls].name + ' Series', stage: si }); });
     return out;
   };
   X.seriesFee = function () { return Math.round(stageBase() * 0.5 / 10) * 10; };

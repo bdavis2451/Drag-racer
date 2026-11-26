@@ -433,27 +433,34 @@
     G.state.cars.push(inst); G.state.active = inst.uid; G.save();
     return inst;
   };
+  // what a win counts as for a contract: 'sponsor' (a strip event: Heads-Up,
+  // Bracket or No-Prep on the ladder), 'street', or nothing
+  G.contractKind = function (ev) {
+    if (!ev) return null;
+    if (ev.ladder) return ev.type === 'street' ? 'street' : 'sponsor';
+    return ev.type === 'sponsor' || ev.type === 'street' ? ev.type : null;
+  };
   // which races the contract has counted (saves from before: the first wins
   // of their kind in the stage, as many as were counted)
   G.contractIds = function (sp) {
     if (sp.ids) return sp.ids;
     sp.ids = {};
     var si = +Object.keys(C().sponsor).filter(function (k) { return C().sponsor[k] === sp; })[0], st = DR.STAGES[si], n = { sponsor: sp.spon || 0, street: sp.street || 0 };
-    if (st) st.all.forEach(function (ev) { if ((ev.type === 'sponsor' || ev.type === 'street') && C().won[ev.id] && n[ev.type] > 0) { sp.ids[ev.id] = 1; n[ev.type]--; } });
+    if (st) (st.oldEvents || st.all).forEach(function (ev) { var k = G.contractKind(ev); if (k && C().won[ev.id] && n[k] > 0) { sp.ids[ev.id] = 1; n[k]--; } });
     return sp.ids;
   };
   // would winning this race count for the stage's contract?
   G.countsForContract = function (ev) {
-    var sp = C().sponsor[ev.stage];
-    if (!sp || sp.paid || (ev.type !== 'sponsor' && ev.type !== 'street') || G.contractIds(sp)[ev.id]) return false;
-    return ev.type === 'sponsor' ? sp.spon < (sp.contract.spon || 0) : sp.street < (sp.contract.street || 0);
+    var sp = C().sponsor[ev.stage], k = G.contractKind(ev);
+    if (!sp || sp.paid || !k || G.contractIds(sp)[ev.id]) return false;
+    return k === 'sponsor' ? sp.spon < (sp.contract.spon || 0) : sp.street < (sp.contract.street || 0);
   };
   G.contractProgress = function (si) {
     var sp = C().sponsor[si];
     if (!sp) return { done: false, lines: [] };
     var k = sp.contract, lines = [], done = true;
-    if (k.spon) { lines.push(['Sponsor races won', Math.min(sp.spon, k.spon) + '/' + k.spon, sp.spon >= k.spon]); done = done && sp.spon >= k.spon; }
-    if (k.street) { lines.push(['Street races won', Math.min(sp.street, k.street) + '/' + k.street, sp.street >= k.street]); done = done && sp.street >= k.street; }
+    if (k.spon) { lines.push(['Strip events won', Math.min(sp.spon, k.spon) + '/' + k.spon, sp.spon >= k.spon]); done = done && sp.spon >= k.spon; }
+    if (k.street) { lines.push(['Street list nights won', Math.min(sp.street, k.street) + '/' + k.street, sp.street >= k.street]); done = done && sp.street >= k.street; }
     if (k.stars) { var best = C().bestStars; lines.push(['Visual rating', DR.starText(Math.min(best, k.stars)) + ' / ' + DR.starText(k.stars), best >= k.stars]); done = done && best >= k.stars; }
     return { done: done, lines: lines };
   };
@@ -594,11 +601,12 @@
     }
     // the contract counts each sponsor / street race once, won while signed
     // (a race won before signing, or without the product, counts on a rerun)
-    var prodOk = ev.type !== 'sponsor' || !G.sponsorProductOk || G.sponsorProductOk(ev.stage, G.car());
-    if (sp && (ev.type === 'sponsor' || ev.type === 'street') && !G.contractIds(sp)[ev.id] && !prodOk) out.noProd = true;
-    else if (sp && (ev.type === 'sponsor' || ev.type === 'street') && !G.contractIds(sp)[ev.id]) {
+    var kind = G.contractKind(ev);
+    var prodOk = kind !== 'sponsor' || !G.sponsorProductOk || G.sponsorProductOk(ev.stage, G.car());
+    if (sp && kind && !G.contractIds(sp)[ev.id] && !prodOk) out.noProd = true;
+    else if (sp && kind && !G.contractIds(sp)[ev.id]) {
       sp.ids[ev.id] = 1;
-      if (ev.type === 'sponsor') sp.spon++; else sp.street++;
+      if (kind === 'sponsor') sp.spon++; else sp.street++;
       out.counted = true;
     }
     out.contractLine = contractLine(ev, sp, out, prodOk);
@@ -617,29 +625,29 @@
   // A line for the timeslip: did this win count for a contract, and if not, why
   // ('' when no unfinished contract cares about it)
   function contractLine(ev, sp, out, prodOk) {
-    var c = C(), K = { sponsor: ['spon', 'sponsor races'], street: ['street', 'street races'] };
+    var c = C(), K = { sponsor: ['spon', 'strip events'], street: ['street', 'street list nights'] }, kind = G.contractKind(ev);
     function tally(x, t) { return K[t][1] + ' ' + Math.min(x[K[t][0]], x.contract[K[t][0]]) + '/' + x.contract[K[t][0]]; }
-    var counts = ev.type === 'sponsor' || ev.type === 'street';
-    if (counts && sp && !sp.paid && sp.contract[K[ev.type][0]]) {
+    var counts = !!kind;
+    if (counts && sp && !sp.paid && sp.contract[K[kind][0]]) {
       var nm = DR.sponsorById(sp.id).name;
-      if (out.counted) return 'Counted for ' + nm + ': ' + tally(sp, ev.type) + '.';
+      if (out.counted) return 'Counted for ' + nm + ': ' + tally(sp, kind) + '.';
       if (out.noProd) { var pk = DR.SPONSOR_PERKS && DR.SPONSOR_PERKS[sp.id]; return 'Didn\'t count for ' + nm + ': they want ' + (pk && pk.prod ? pk.prod[0] : 'their product') + ' on the car.'; }
-      if (G.contractIds(sp)[ev.id]) return 'Didn\'t count for ' + nm + ': this race already counted (' + tally(sp, ev.type) + ').';
-      return 'Didn\'t count for ' + nm + ': the ' + K[ev.type][1] + ' are already done (' + tally(sp, ev.type) + ').';
+      if (G.contractIds(sp)[ev.id]) return 'Didn\'t count for ' + nm + ': this event already counted (' + tally(sp, kind) + ').';
+      return 'Didn\'t count for ' + nm + ': the ' + K[kind][1] + ' are already done (' + tally(sp, kind) + ').';
     }
     // a race of another class, while this class's contract still wants one
     var cur = c.sponsor[c.stage];
     if (cur && !cur.paid && ev.stage !== c.stage) {
-      var want = counts && cur.contract[K[ev.type][0]] && cur[K[ev.type][0]] < cur.contract[K[ev.type][0]];
-      if (want) return 'Didn\'t count for ' + DR.sponsorById(cur.id).name + ': it\'s a Class ' + (ev.stage + 1) + ' race, your contract is Class ' + (c.stage + 1) + '.';
+      var want = counts && cur.contract[K[kind][0]] && cur[K[kind][0]] < cur.contract[K[kind][0]];
+      if (want) return 'Didn\'t count for ' + DR.sponsorById(cur.id).name + ': it\'s a Class ' + (ev.stage + 1) + ' event, your contract is Class ' + (c.stage + 1) + '.';
       return '';
     }
     // a race of the contract's class that isn't the kind it counts
     if (sp && !sp.paid && !counts && ev.type !== 'boss') {
       var need = [];
-      if (sp.spon < (sp.contract.spon || 0)) need.push('sponsor');
-      if (sp.street < (sp.contract.street || 0)) need.push('street');
-      if (need.length) return 'Didn\'t count for ' + DR.sponsorById(sp.id).name + ': only ' + need.join(' and ') + ' races count.';
+      if (sp.spon < (sp.contract.spon || 0)) need.push('strip events');
+      if (sp.street < (sp.contract.street || 0)) need.push('street list nights');
+      if (need.length) return 'Didn\'t count for ' + DR.sponsorById(sp.id).name + ': only ' + need.join(' and ') + ' count.';
     }
     return '';
   }

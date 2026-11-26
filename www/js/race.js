@@ -40,6 +40,8 @@
     // A career event (round: knockout round, 0-based). Some strip events
     // run under the lights (the same ones every time).
     careerEvent: function (ev, round) {
+      // a ladder event: its run (enter, qualify, the rounds)
+      if (ev.ladder) return DR.Ladder.go(ev);
       var l = !(round > 0) && G.eventLock(ev); if (l) return UI.toast(l);
       // a bracket race needs a dial-in: through the race day
       if (ev.type === 'bracket') return DR.Race.raceDay(DR.Race.eventCfg(ev, round));
@@ -95,20 +97,20 @@
     },
     raceDay: function (cfg, title) {
       // every way in goes through the event's lock (a sponsor race needs the sponsor, ...)
-      var lk = cfg.mode === 'career' && cfg.ev && !(cfg.round > 0) && G.eventLock(cfg.ev);
+      var lk = cfg.mode === 'career' && cfg.ev && !(cfg.round > 0) && !cfg.lad && G.eventLock(cfg.ev);
       if (lk) return UI.toast(lk);
       var inst = G.car(), S = G.spec(inst), cond = cfg.cond || (cfg.cond = DR.Race.cond(cfg)), close;
-      var opps = cfg.mode === 'career' ? cfg.ev.opps : [cfg.opp];
+      var opps = cfg.lad ? (cfg.opp ? [cfg.opp] : []) : cfg.mode === 'career' ? cfg.ev.opps : [cfg.opp];
       var dist = cfg.dist > DR.EIGHTH + 1 ? 'quarter' : 'eighth';
       var entries = opps.map(function (o, i) {
         var oi = G.oppInst(o), est = G.estimate(oi, cfg.dist, (cfg.grip || 1) / (DR.Race.SURF_BASE[cond.surface] || 1), cond);
         return h('div', { class: 'rdrow' }, h('span', { class: 'acc' }, (opps.length > 1 ? 'R' + (i + 1) + ' ' : '') + o.name), h('span', { class: 'dim' }, DR.CARS[o.carId].name),
-          h('span', {}, 'posted ' + est.et.toFixed(2) + ' @ ' + Math.round(est.trap) + ' mph'));
+          h('span', {}, cfg.noTimes ? 'no times at a no-prep' : 'posted ' + est.et.toFixed(2) + ' @ ' + Math.round(est.trap) + ' mph'));
       });
       var ws = G.wearList(inst), tech = S.noRun || S.noRunFit ? DR.noRunText(S) : cfg.mode === 'career' ? G.techIssue(inst, cfg.ev) : '';
       // bracket: your dial-in (your call: the logbook has your passes), and
       // the other car's, a hair slower than what it runs
-      var ev = cfg.ev, isBk = ev && ev.type === 'bracket', dialIn = null, pinkCb = null;
+      var ev = cfg.ev, isBk = ev && ev.type === 'bracket' && !cfg.qual && (!cfg.lad || !!cfg.opp), dialIn = null, pinkCb = null;
       if (isBk) {
         var key = dist === 'quarter' ? 'q' : 'e', lastP = (inst.log || []).filter(function (x) { return x.dist === key && !x.out && !x.lift && x.sp[key === 'q' ? '1/4' : '1/8']; })[0];
         // a suggestion a little under your last time (rounded down, never up:
@@ -139,16 +141,17 @@
       }
       var techLine = cfg.theme !== 'strip' ? 'No tech on the street' : tech ? tech : 'Passed' + (S.tech ? ' (' + ['', 'roll bar', 'roll cage'][Math.min(2, S.tech)] + ')' : '');
       close = UI.modal([h('div', { class: 'pix acc' }, 'RACE DAY'),
-        h('div', { class: 'pix' }, title || (cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name : 'Street race')),
+        h('div', { class: 'pix' }, title || (cfg.lad ? DR.raceDayName(cfg.ev) : cfg.mode === 'career' ? DR.EVENT_TYPES[cfg.ev.type].name : 'Street race')),
+        cfg.lad ? h('div', { class: 'acc' }, DR.Ladder.stepLabel(cfg)) : null,
         h('div', { class: 'dim' }, (dist === 'quarter' ? '1/4 mile' : '1/8 mile') + ' • ' + DR.condLabel(cond)),
-        h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'ENTRY LIST'), entries,
+        h('div', { class: 'plvl', style: { marginTop: '6px' } }, cfg.lad ? 'IN THE OTHER LANE' : 'ENTRY LIST'), cfg.lad && !opps.length ? h('div', { class: 'dim' }, 'Nobody: a bye. Make a clean pass to go through.') : entries,
         isBk ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'YOUR DIAL-IN'), dialIn) : null,
         isBk ? dialNote : null,
         canPink ? h('label', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, pinkCb, h('span', { class: 'bad' }, 'Race for pink slips: win their car, or lose yours')) : null,
         ev && ev.type === 'callout' && !canPink ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'Pink slips need a second car in your garage.') : null,
         ev && (ev.type === 'boss' || ev.king) ? h('div', { class: 'acc', style: { marginTop: '4px' } }, 'The King races for their car.') : null,
         seat ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px' } }, h('span', { class: 'plvl' }, 'DRIVER'), seat) : null,
-        DR.Legal && !(cfg.round > 0) ? DR.Legal.haulPicker(inst) : null,
+        DR.Legal && !(cfg.round > 0) && !(cfg.lad && cfg.trip) ? DR.Legal.haulPicker(inst) : null,
         DR.sideBetRow ? DR.sideBetRow(cfg) : null,
         youOnly && drivers.length ? h('div', { class: 'dim gsmall', style: { marginTop: '4px' } }, 'You drive this one yourself.') : null,
         h('div', { class: 'plvl', style: { marginTop: '6px' } }, 'TECH'), h('div', { class: tech ? 'bad' : '' }, techLine),
@@ -164,7 +167,7 @@
               if (!(d > 3 && d < 30)) return UI.toast('Put a dial-in on the window first');
               // they dial off their own time trial, a little under it so they
               // don't break out (a bigger cushion the less consistent they are)
-              var o = opps[cfg.round || 0], sk = o.skill || 0.5, oi = G.oppInst(o);
+              var o = cfg.lad ? opps[0] : opps[cfg.round || 0], sk = o.skill || 0.5, oi = G.oppInst(o);
               var tt = Math.min(DR.Race.trial(oi, sk, cfg, cond), DR.Race.trial(oi, sk, cfg, cond));
               // from class 3 they drive the stripe, so they dial honest (a
               // small cushion) and lift if they run quick
@@ -1050,7 +1053,24 @@
       if (win === false && !testDrive && cfg.cond && cfg.cond.surface !== 'prep' && (you.sim.wspin || 0) > 0.4 && DR.Phone) DR.Phone.send('tuner', 'streettune');
       var damaged = you.sim.blown ? { engine: true } : you.sim.broke ? (you.sim.brokeWhat === 'axle' ? { axle: true } : you.sim.brokeWhat === 'chassis' ? { chassis: true } : { trans: true }) : null;
       var ev = cfg.ev, nextRound = null, evBack = them && ev && UI.eventReturn && UI.eventReturn.ids.indexOf(ev.id) >= 0 && G.now() < UI.eventReturn.end ? UI.eventReturn : null;
-      if (cfg.mode === 'career' && win) {
+      // a ladder event: the run goes on (qualifying, the next round, the
+      // next callout) or ends (the purse by round reached, the standings)
+      var lad = null;
+      if (cfg.lad && !testDrive) {
+        // broken: you can't make the next call, so your day ends here
+        if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true }); } }
+        else lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99 });
+        if (lad) {
+          lad.money.forEach(function (m) { money.push(m); moneyDelta += m[1]; });
+          news = news.concat(lad.news); notes = notes.concat(lad.notes); unlocks = lad.unlocks || [];
+          // style pays on the purse (as on every career win)
+          var lpurse = lad.money.reduce(function (a, m) { return a + Math.max(0, m[1]); }, 0), lsty = lad.done && lpurse ? G.styleBonus(lpurse) : 0;
+          if (lsty) { moneyDelta += lsty; money.push(['Style ' + DR.starText(DR.starRating(inst)), lsty]); }
+        }
+      }
+      // a King night ends at your first loss
+      if (cfg.mode === 'career' && win === false && ev && (ev.type === 'callout' || (ev.type === 'boss' && !ev.king)) && G.kingNightLost) G.kingNightLost(ev.stage);
+      if (cfg.mode === 'career' && win && !cfg.lad) {
         if (DR.multiRound(ev) && cfg.round < ev.opps.length - 1) {
           nextRound = cfg.round + 1;
           news.push('Round ' + (cfg.round + 1) + ' of ' + ev.opps.length + ' won! Next: ' + ev.opps[nextRound].name);
@@ -1072,16 +1092,16 @@
           if (style) { moneyDelta += style; money.push(['Style ' + DR.starText(DR.starRating(inst)), style]); }
         }
       }
-      if (cfg.mode === 'career' && win === false && DR.multiRound(ev) && !ev.hosted && !ev.special) news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
+      if (cfg.mode === 'career' && win === false && !cfg.lad && DR.multiRound(ev) && !ev.hosted && !ev.special) news.push('Knocked out in round ' + (cfg.round + 1) + '. Back to round 1.');
       if (cfg.mode === 'street') { moneyDelta = win ? cfg.bet : -cfg.bet; money.push([win ? 'Bet won' : 'Bet lost', moneyDelta]); }
       // your driver: their wage for the race day, and they learn from every pass
       if (drv && !testDrive) {
-        if (!(cfg.round > 0) && !cfg.tuner) { moneyDelta -= drv.wage; money.push([drv.name + ' (driver)', -drv.wage]); }
+        if (!(cfg.round > 0) && !cfg.tuner && (!cfg.lad || cfg.ladFirst)) { moneyDelta -= drv.wage; money.push([drv.name + ' (driver)', -drv.wage]); }
         var grew = DR.Team.learnDrag(drv, !!win);
         news.push('Driven by ' + drv.name + (Object.keys(grew).length ? ' (getting better)' : ''));
       }
       // the sponsor's stipend: paid for every race day you turn up to
-      var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) ? G.careerState().sponsor[ev.stage] : null;
+      var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) && (!cfg.lad || cfg.ladFirst) ? G.careerState().sponsor[ev.stage] : null;
       if (spn && spn.stipend && !testDrive) { moneyDelta += spn.stipend; money.push([DR.sponsorById(spn.id).name + ' stipend', spn.stipend]); }
       if (moneyDelta) G.earn(moneyDelta);
       // the trip there (paid on the way: shown here)
@@ -1108,6 +1128,9 @@
       if (them && me.total < Infinity && them.total < Infinity && !me.red && !them.red) margin = (win ? 'Won' : 'Lost') + ' by ' + Math.abs(them.total - me.total).toFixed(3) + 's';
       else if (them && win && them.total === Infinity && !them.red) margin = opp.label + (opp.sim.crashed ? ' crashed' : opp.sim.blown ? ' blew up' : opp.sim.broke ? ' broke' : ' did not finish');
       if (bk && them) margin = bkNote || (me.total < Infinity && them.total < Infinity && !me.red && !them.red ? (win ? 'Won' : 'Lost') + ' by ' + Math.abs(them.pkg - me.pkg).toFixed(3) + ' at the stripe' : margin);
+      // no-prep: no times, so no margin either; qualifying: only the time counts
+      if (cfg.noTimes && margin && /by /.test(margin)) margin = (win ? 'Won' : 'Lost') + ' (no times at a no-prep)';
+      if (cfg.qual) margin = null;
       // pink slips: a King always races for their car; a callout for pinks
       // puts both cars on the line
       var pinkWon = null, pinkLost = false;
@@ -1154,28 +1177,30 @@
       }
       G.save();
 
-      var head = them ? (win ? 'YOU WIN!' : 'YOU LOSE') : (you.sim.finished ? 'RUN COMPLETE' : 'DNF');
+      var head = cfg.qual ? (you.sim.finished && !you.sim.crashed ? (ev.type === 'bracket' ? 'TIME TRIAL DONE' : 'QUALIFYING PASS') : 'NO TIME') : them ? (win ? 'YOU WIN!' : 'YOU LOSE') : (you.sim.finished ? 'RUN COMPLETE' : 'DNF');
       var tbl = h('table');
       tbl.appendChild(h('tr', {}, h('th', {}, ''), h('th', {}, 'YOU'), them ? h('th', {}, opp.label) : null));
       function row(label, f) { tbl.appendChild(h('tr', {}, h('td', {}, label), h('td', {}, f(me)), them ? h('td', {}, f(them)) : null)); }
       if (bk) row('Dial-in', function (x) { return (x === me ? bk.dial[0] : bk.dial[1]).toFixed(2); });
-      row('Reaction', function (x) { return x.red ? 'RED' : x.rt == null ? '-' : x.rt.toFixed(3); });
-      DR.SPLITS.forEach(function (sp) {
+      // a no-prep shows no times: who got there first
+      if (cfg.noTimes && them) row('Result', function (x) { return x.red ? 'RED LIGHT' : x.total === Infinity ? 'DNF' : (x === me) === !!win ? 'FIRST' : 'SECOND'; });
+      if (!(cfg.noTimes && them)) row('Reaction', function (x) { return x.red ? 'RED' : x.rt == null ? '-' : x.rt.toFixed(3); });
+      if (!(cfg.noTimes && them)) DR.SPLITS.forEach(function (sp) {
         if (sp[1] > cfg.dist + 0.01) return;
         row(sp[0] + (sp[0] === '1/8' || sp[0] === '1/4' ? ' ET' : ''), function (x) { var s = x.sim.splits[sp[0]]; return s ? s.t.toFixed(3) : '-'; });
         if (sp[0] === '1/8' || sp[0] === '1/4') row(sp[0] + ' speed', function (x) { var s = x.sim.splits[sp[0]]; return s ? UI.speed(s.mph) : '-'; });
       });
-      row('RT + ET', function (x) { return x.sim.crashed ? 'CRASHED' : x.sim.blown ? 'BLOWN' : x.sim.broke ? 'BROKE' : x.red ? 'RED LIGHT' : x.total < Infinity ? x.total.toFixed(3) : 'DNF'; });
+      if (!(cfg.noTimes && them)) row('RT + ET', function (x) { return x.sim.crashed ? 'CRASHED' : x.sim.blown ? 'BLOWN' : x.sim.broke ? 'BROKE' : x.red ? 'RED LIGHT' : x.total < Infinity ? x.total.toFixed(3) : 'DNF'; });
 
       var back = cfg.back === 'tune' ? UI.Tune : null;
       var slip = h('div', { class: 'slip' }, h('div', { class: 'panel row' },
         h('div', { class: 'grow paper' },
           h('div', { class: 'phead' }, h('div', { class: 'ptrack' }, cfg.theme === 'street' ? 'BACKSTREET 1/8' : 'PIXEL DRAGWAY'),
-            h('div', {}, (cfg.dist > DR.EIGHTH + 1 ? '1/4 MILE' : '1/8 MILE') + ' • ' + (them ? 'ELIMINATOR' : 'TEST & TUNE') + ' • RUN #' + (G.state.stats.races || 1)),
+            h('div', {}, (cfg.dist > DR.EIGHTH + 1 ? '1/4 MILE' : '1/8 MILE') + ' • ' + (cfg.qual ? (ev.type === 'bracket' ? 'TIME TRIAL' : 'QUALIFYING') : them ? (cfg.lad && ev.fmt === 'card' ? 'LIST NIGHT' : 'ELIMINATOR') : cfg.lad ? 'BYE RUN' : 'TEST & TUNE') + ' • RUN #' + (G.state.stats.races || 1)),
             cfg.cond ? h('div', {}, DR.condLabel(cfg.cond).toUpperCase()) : null),
           tbl,
           h('div', { class: 'pfoot2' }, '* THANKS FOR RACING *'),
-          win != null ? h('div', { class: 'stamp ' + (win ? 'w' : 'l') }, win ? 'WIN' : 'LOSS') : null),
+          win != null && !cfg.qual ? h('div', { class: 'stamp ' + (win ? 'w' : 'l') }, win ? 'WIN' : 'LOSS') : null),
         h('div', { class: 'col slipside', style: { width: '38%', minWidth: '210px' } },
         h('div', { class: 'pix big ' + (win === false ? 'bad' : 'good'), style: { textAlign: 'center' } }, head),
         margin ? h('div', { class: 'margin' }, margin) : null,
@@ -1194,7 +1219,23 @@
         carGone ? h('div', { class: 'col slipbtns' }, btn('Garage', function () { UI.show(UI.Garage); }, 'primary')) :
         tuned ? h('div', { class: 'col slipbtns' },
           !damaged ? btn('Next pass', function () { DR.Tuner.resume(); }, 'primary') : null,
-          btn('End the session', function () { DR.Tuner.end(); }, damaged ? 'primary' : '')) : h('div', { class: 'col slipbtns' },
+          btn('End the session', function () { DR.Tuner.end(); }, damaged ? 'primary' : '')) : lad ? h('div', { class: 'col slipbtns' },
+          // a ladder event: on to the next race of the day, or back
+          !damaged && lad.next ? btn(lad.next.label, function () { lad.next.go(); }, 'primary') : null,
+          !lad.next || damaged ? btn('Back to Career', function () { UI.show(UI.RaceMenu, 'career'); }, damaged ? '' : 'primary') : null,
+          damaged ? (function () {
+            var fix = G.repairCost(inst), rh = G.repairHours ? G.repairHours(inst) : 0;
+            if (!G.canAfford(fix)) return btn('Garage (repair ' + DR.money(fix) + ')', function () { UI.show(UI.Garage); }, 'primary');
+            return btn('Repair at the shop ' + DR.money(fix) + (rh ? ' (' + DR.Cal.dur(rh) + ')' : ''), function () {
+              if (!G.repair(inst)) return UI.toast('Not enough money');
+              A.cash(); UI.show(UI.Garage);
+              if (rh) UI.toast('The ' + DR.CARS[inst.carId].name + ' is at the shop till ' + DR.Cal.fmt(G.now() + rh));
+            }, 'primary');
+          })() : null,
+          h('div', { class: 'btngrid' },
+            !damaged && lad.next ? btn('Leave the event', function () { UI.confirm('Leave ' + DR.raceDayName(ev) + '? Your day ends here: points for what you raced, no purse for the rounds you don\'t run.', function () { DR.Ladder.withdraw(ev); UI.show(UI.RaceMenu, 'career'); }, 'Leave'); }) : null,
+            damaged ? null : btn('Garage', function () { UI.show(UI.Garage); }),
+            btn('Tune', function () { UI.show(UI.Tune); }))) : h('div', { class: 'col slipbtns' },
           !damaged && nextRound != null ? btn('Next Round', function () {
             var nc = DR.Race.eventCfg(ev, nextRound); nc.driver = cfg.driver;
             if (bk) DR.Race.raceDay(nc); else DR.Race.start(nc);

@@ -1,17 +1,17 @@
 // ===========================================================================
-// SEASON — the career as a racing season, on top of career.js.
-//  * Race days (ProStreet): each class's events are race days with a day,
-//    a surface and the time of day. Finishing race days opens more.
-//  * Rep: winning race days earns rep in the class and in its discipline
-//    (heads-up, bracket, no-prep & street).
-//  * The ladder (Most Wanted's Blacklist): the class's five quickest named
-//    rivals. Enough rep lets you call out the one above you; beat them and
-//    take their spot. Callouts can be run for pink slips, both ways, by
-//    choice. Beat #1 and the class King will race you, for their car.
+// SEASON — the career as a racing season, on top of career.js (the ladder
+// itself, its sections and events, is ladder.js).
+//  * Race days: each event has a day, a surface and the time of day.
+//  * The King ladder (Most Wanted's Blacklist): the class's five quickest
+//    regulars, raced in order once the sections are done (ladder.js sets
+//    them up); beat them and take their spot. They can be raced for pink
+//    slips, both ways, by choice. Beat #1 and the class King will race you,
+//    for their car.
 //  * Bracket racing: pick a dial-in, the slower dial leaves first, and the
 //    first to the stripe without running quicker than their dial wins.
-//  * Kings: one per discipline, each racing for their car once your rep in
-//    the discipline is high enough; the heads-up King is the last class's.
+//  * Kings: one per discipline, each racing for their car once you've
+//    finished enough events of their kind; the heads-up King is the last
+//    class's.
 // ===========================================================================
 (function () {
   var DR = globalThis.DR, G = DR.Game;
@@ -23,13 +23,6 @@
   DR.EVENT_TYPES.kingstreet = { name: 'No-Prep King', dist: function () { return DR.EIGHTH; }, theme: 'street', grip: 0.92 };
 
   // ---------------------------------------------------------------- race days
-  DR.DISC = { headsup: 'Heads-Up', bracket: 'Bracket', street: 'No-Prep & Street', circuit: 'Circuit' };
-  DR.evDisc = function (ev) {
-    if (ev.type === 'street' || ev.type === 'showcase' || ev.type === 'kingstreet') return 'street';
-    if (ev.type === 'bracket') return 'bracket';
-    if (ev.type === 'show') return null;
-    return 'headsup';
-  };
   function hash(s) { var x = 0; for (var i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) % 997; return x; }
   // the surface and time of day of an event: street nights, no-prep nights,
   // bracket Sundays, and some strip events under the lights
@@ -50,47 +43,6 @@
     return 'Week ' + wk + ' • ' + (ev.type === 'bracket' ? 'Sunday' : c.night ? 'Friday night' : 'Saturday');
   };
 
-  // ---------------------------------------------------------------- rep
-  var REP = { quarter: 10, eighth: 10, street: 10, knockout: 20, sponsor: 12, showcase: 14, class: 8, bracket: 12, show: 6, boss: 30, callout: 0 };
-  DR.LADDER_REP = [15, 30, 45, 60, 75];
-  DR.KING_REP = 60;
-  G.rep = function (si) { return (C().rep || {})[si] || 0; };
-  G.discRep = function (d) { return (C().drep || {})[d] || 0; };
-  function addRep(ev, first) {
-    var c = C(), n = first ? (REP[ev.type] != null ? REP[ev.type] : 8) : ev.type === 'callout' ? 0 : 3, d = DR.evDisc(ev);
-    if (!n) return 0;
-    c.rep = c.rep || {}; c.drep = c.drep || {};
-    if (ev.stage != null) c.rep[ev.stage] = (c.rep[ev.stage] || 0) + n;
-    if (d) c.drep[d] = (c.drep[d] || 0) + n;
-    return n;
-  }
-
-  // ---------------------------------------------------------------- brackets
-  // Two bracket races a class (side races): a three-round bracket against
-  // the class's regulars. The handicap start makes any car a contender.
-  function pickOpps(st, idx) { return idx.map(function (i) { var ev = st.events[Math.min(i, st.events.length - 1)]; return Object.assign({}, ev.opps[ev.opps.length - 1]); }); }
-  DR.STAGES.forEach(function (st, si) {
-    var b1 = { type: 'bracket', opps: pickOpps(st, [0, 2, 4]), cash: Math.round(st.base * 1.6), unlocks: [], needWins: 1, stars: 0, side: true };
-    var b2 = { type: 'bracket', opps: pickOpps(st, [5, 7, 9]), cash: Math.round(st.base * 3), unlocks: [], needWins: 4, stars: 0, side: true };
-    [b1, b2].forEach(function (ev, k) { ev.id = si + '.b' + k; ev.stage = si; ev.idx = 'b' + k; st.side.push(ev); st.all.splice(st.all.length - 1, 0, ev); });
-  });
-
-  // ---------------------------------------------------------------- ladders
-  // The class's five quickest regulars, #5 up to #1: the opponents of its
-  // last main events (later in the season = quicker), one rung each.
-  DR.STAGES.forEach(function (st, si) {
-    var seen = {}, rungs = [];
-    st.events.slice().sort(function (a, b) { return b.needWins - a.needWins || (b.idx - a.idx); }).forEach(function (ev) {
-      var o = ev.opps[ev.opps.length - 1];
-      if (rungs.length < 5 && !seen[o.name]) { seen[o.name] = 1; rungs.push({ o: o, cash: ev.cash }); }
-    });
-    rungs.reverse();   // #5 first
-    st.ladder = rungs.map(function (r, k) {
-      var ev = { type: 'callout', opps: [Object.assign({}, r.o, { skill: Math.min(0.98, (r.o.skill || 0.5) + 0.05) })], cash: Math.round(r.cash * 1.3), unlocks: [], needWins: 0, stars: 0, rung: k, side: true };
-      ev.id = si + '.L' + k; ev.stage = si; ev.idx = 'L' + k;
-      return ev;
-    });
-  });
   // the rungs in order of the times the rivals run (slowest is #5), worked
   // out the first time a ladder is looked at
   G.ladder = function (si) {
@@ -115,13 +67,13 @@
     if (si > C().stage) return 'Beat the King of ' + DR.STAGES[si - 1].name + ' first';
     if (ev.rung < pos) return '';                         // already beaten: a rematch
     if (ev.rung > pos) return 'Beat #' + (5 - pos) + ' first';
-    var need = DR.LADDER_REP[ev.rung], have = G.rep(si);
-    return have < need ? 'Needs ' + need + ' rep in this class (you have ' + have + ')' : '';
+    return '';
   };
 
   // ---------------------------------------------------------------- Kings
   // One per discipline, each racing for their car. The heads-up King is the
-  // last class's King; the others open with rep in their discipline.
+  // last class's King; the others open once you've finished enough events of
+  // their kind (Bracket, No-Prep) across the classes.
   var last = DR.STAGES[DR.STAGES.length - 1];
   function kingOpp(src, over) { return Object.assign({}, src, over); }
   DR.KINGS = {
@@ -136,12 +88,15 @@
         opps: [kingOpp(DR.STAGES[5].events[9].opps[0], { name: 'Asphalt Annie', skill: 0.95, color: '#ff2bd6' })] } },
     circuit: { name: 'Circuit King', blurb: 'Your team\'s drivers against the best: win the Supercar Trophy Night Series (Race > Events).', circuit: true }
   };
+  DR.KING_EVENTS = 6;
+  // events of a kind finished, every class
+  G.themeDone = function (type) { var c = C(), n = 0; DR.STAGES.forEach(function (st) { st.events.forEach(function (ev) { if (ev.type === type && c.won[ev.id]) n++; }); }); return n; };
   G.kingLock = function (d) {
     var K = DR.KINGS[d];
     if (d === 'headsup') return G.eventLock(K.ev);
     if (d === 'circuit') return '';
-    var need = DR.KING_REP, have = G.discRep(d);
-    return have < need ? 'Needs ' + need + ' ' + DR.DISC[d] + ' rep (you have ' + have + ')' : '';
+    var need = DR.KING_EVENTS, have = G.themeDone(d === 'street' ? 'noprep' : d);
+    return have < need ? 'Finish ' + need + ' ' + (d === 'street' ? 'No-Prep' : 'Bracket') + ' events (you have ' + have + ')' : '';
   };
   G.kingWon = function (d) {
     if (d === 'headsup') return G.eventWon(DR.KINGS.headsup.ev);
@@ -307,21 +262,11 @@
       c.won[ev.id] = true; c.kings = c.kings || {}; c.kings[ev.king] = true;
       out.banner = 'You are the ' + DR.KINGS[ev.king].name + '!';
     }
-    var rep = addRep(ev, first);
-    if (rep) out.rep = rep;
     if (ev.type === 'callout' && ev.rung === G.ladderPos(ev.stage)) { c.ladder[ev.stage] = ev.rung + 1; out.banner = 'You took #' + (5 - ev.rung) + ' on the ' + DR.STAGES[ev.stage].name + ' ladder'; }
     G.save();
     return out;
   };
-  // older saves: rep for the races already won, ladders for the classes done
-  G.syncSeason = function () {
-    var c = C();
-    if (!c.rep) {
-      c.rep = {}; c.drep = {};
-      DR.STAGES.forEach(function (st) { st.all.forEach(function (ev) { if (c.won[ev.id]) addRep(ev, true); }); });
-    }
-    DR.STAGES.forEach(function (st, si) { G.ladderPos(si); });
-  };
+  // older saves: the King ladders of the classes already done are climbed
   var sync0 = G.syncUnlocks;
-  G.syncUnlocks = function () { sync0(); G.syncSeason(); };
+  G.syncUnlocks = function () { sync0(); DR.STAGES.forEach(function (st, si) { G.ladderPos(si); }); };
 })();

@@ -441,7 +441,7 @@
     var c = G.careerState(), st = DR.STAGES[c.stage], sp = c.sponsor[c.stage];
     var status = h('div', { class: 'gstatus gcareer', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
       h('span', { class: 'acc' }, 'Class ' + (c.stage + 1) + ': ' + st.name),
-      h('span', {}, G.stageWins(c.stage) + '/' + st.events.length + ' wins'),
+      h('span', {}, G.ladderLine(c.stage)),
       G.cupWins && G.cstage ? h('span', { class: '' }, 'Circuit ' + (G.cstage() + 1) + ': ' + G.cupWins(G.cstage()) + '/4') : null,
       h('span', { class: sp ? '' : 'warn' }, sp ? DR.sponsorById(sp.id).name : 'No sponsor yet'));
     // the race team at a glance: how many cars are out racing
