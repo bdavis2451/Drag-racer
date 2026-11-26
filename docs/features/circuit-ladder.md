@@ -1,9 +1,9 @@
 # Circuit ladder (fresh)
 
-Status: **Nov 26: research done, the owner's first answers in, the plan
-below sent for approval. No code.** Built after (or beside) the drag
-ladder (`career-ladder.md`); replaces the circuit career (`ccareer.js`, the
-Night Series and the Circuit King as they are now).
+Status: **Nov 26: plan approved (questions answered). Built after all four
+drag ladder builds (owner's order). No code yet.** Replaces the circuit
+career (`ccareer.js`, the Night Series and the Circuit King as they are
+now).
 
 ## Decisions (owner, Nov 26)
 - **Themes:** Sprint, Spec, Endurance, Night street circuits.
@@ -103,6 +103,16 @@ Night Series and the Circuit King as they are now).
 5. License gating (class 1 novice, class 2+ full; or by section).
 6. Old saves (start over at class 1; or map).
 7. Build order (before or after drag builds 2-4).
+
+## Answers to the plan questions (owner, Nov 26)
+1 A: class 6's spec event is the Super Trofeo World Final, the Lamborghini
+for now ("we can change it later. I plan to add at least 15 more cars,
+probably 30"). 2 **B: finishing an event takes a win**, like the drag
+eliminations. 3 A: two of your drivers must share an endurance car. 4 A:
+rental prices about real, scaled per class (~$3,400 a weekend in class 1).
+5 A: a novice permit races class 1, the full license from class 2. 6 A:
+the circuit career starts over at class 1 (cars, parts, drivers, money
+kept). 7 **B: all the drag builds (1-4) first**, then the circuit.
 
 ## Sources
 - scca.com: "I want to road race" (steps), Race Experience article,
