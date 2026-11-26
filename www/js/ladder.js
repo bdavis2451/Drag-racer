@@ -223,6 +223,7 @@
       if (!G.secOpen(ev.stage, ev.sec)) return 'Finish ' + DR.SEC_NEED + ' events in section ' + ev.sec + ' first';
       var run = c.run;
       if (G.enteredThisWeek(ev) && !(opt && opt.anyWeek) && !(run && run.id === ev.id)) return 'You raced it this week: it runs again next ' + DR.slotName(DR.evSlot(ev)).replace(/ .*/, '');
+      if (!(run && run.id === ev.id) && !(opt && opt.anyWeek) && DR.Ladder.lateLock) { var late = DR.Ladder.lateLock(ev); if (late) return late; }
       return '';
     }
     if (ev && ev.type === 'callout') return G.calloutLock(ev);
@@ -322,11 +323,18 @@
     var c = C(), why = G.eventLock(ev); if (why) return why;
     if (DR.Ladder.runFor(ev)) return '';
     var other = DR.Ladder.run(); if (other && other.id !== ev.id) return 'You\'re still in another event: finish it or leave it first';
-    if (ev.entry && !G.canAfford(ev.entry)) return 'The entry is ' + DR.money(ev.entry);
-    if (ev.entry) G.pay(ev.entry);
+    // track credit (from a day you broke before round 1) comes off the entry
+    var credit = Math.min(c.credit || 0, ev.entry || 0), due = (ev.entry || 0) - credit;
+    if (due && !G.canAfford(due)) return 'The entry is ' + DR.money(due);
+    if (credit) c.credit -= credit;
+    if (due) G.pay(due);
     var w = windowFor(ev);
     c.entered = c.entered || {}; if (w) c.entered[ev.id] = w.start;
     var run = { id: ev.id, until: w ? w.end : null, paid: ev.entry || 0, earned: 0, rounds: 0, log: [] };
+    // the day by the clock (the window's day; the gates open at the slot's start)
+    if (w) run.day0 = w.start - plan(ev).gates;
+    // driven there: the engine arrives warm; towed: at the air temperature
+    run.drove = !(DR.Legal && DR.Legal.haulFor && DR.Legal.haulFor(G.car()) !== 'drive');
     if (ev.fmt === 'card') { card(ev); run.phase = 'card'; run.i = 0; run.wins = 0; run.losses = 0; run.n = ev.opps.length; }
     else {
       field(ev);
@@ -407,9 +415,10 @@
     if (run.phase === 'qual') { cfg.qual = true; cfg.round = 0; }
     if (ev.type === 'noprep') cfg.noTimes = true;
     // only the first race of the day is the trip there (and the day your
-    // driver and the sponsor's stipend are paid for)
+    // driver and the sponsor's stipend are paid for); a trip paid at the
+    // entry (gear.js) shows on the first slip
     if (run.started) cfg.trip = { money: [], news: [], total: 0 };
-    else cfg.ladFirst = true;
+    else { cfg.ladFirst = true; if (run.trip) cfg.trip = run.trip; }
     return cfg;
   };
   DR.Ladder.go = function (ev) {
@@ -449,13 +458,40 @@
     if (!run) return out;
     // a bye: a solo pass, and any pass down the track (no red light) wins
     if (!cfg.opp && run.phase === 'elim') res.win = !res.red && res.et < 90 && !res.broke;
-    // broken: the day's over (the next call can't be made). In qualifying
-    // that's no eliminations; on the street a loss, and tow it home.
-    if (res.broke && run.phase === 'qual') {
-      run.myQ.push(99); out.news.push('Broken in ' + (ev.type === 'bracket' ? 'time trials' : 'qualifying') + ': no eliminations for you today.');
-      DR.Ladder.withdraw(ev); out.done = true; return out;
+    // an engine that let go on a strip or no-prep track: oil down, a cleanup
+    // fine and standings points (NHRA's oildown policy; a track sends you
+    // home for a second)
+    if (res.blown && ev.type !== 'street') {
+      var fine = Math.max(50, Math.round(DR.STAGES[ev.stage].base * 0.25 / 10) * 10), cc = C(); cc.pts = cc.pts || {};
+      var PP = cc.pts[ev.stage] = cc.pts[ev.stage] || { me: 0, r: {} };
+      PP.me = Math.max(0, PP.me - DR.OIL_PTS); run.oil = (run.oil || 0) + 1;
+      out.money.push(['Oil-down cleanup', -fine]); out.notes.push(['bad', 'Oil down: a ' + DR.money(fine) + ' cleanup fine and ' + DR.OIL_PTS + ' standings points']);
     }
-    if (res.broke) res.win = false;
+    // broken in qualifying: fix it in the pit before round 1 (spares, tools
+    // and someone who can do the job) and race on; if it can't be fixed
+    // here, no eliminations today and an alternate takes your spot. Track
+    // credit for half the entry, or the 20 points you'd have had for
+    // racing: your pick (IRP, National Trail)
+    if (res.broke && run.phase === 'qual' && DR.Pit && DR.Pit.canFix(ev, run, G.car(), res.dmg)) {
+      run.started = true; run.brokeQ = true;
+      run.myQ.push(res.et < 90 ? res.et : 99); run.q++;
+      if (run.q >= DR.QUALS) seed(ev, run);
+      out.news.push('Broken in ' + (ev.type === 'bracket' ? 'time trials' : 'qualifying') + '. Fix it in the pit before ' + (run.phase === 'qual' ? 'the next session' : 'round 1 is called') + ', or no eliminations for you today.');
+      out.next = { label: run.phase === 'qual' ? (ev.type === 'bracket' ? 'Time trial ' : 'Qualifying ') + (run.q + 1) : 'Round 1', go: function () { DR.Ladder.go(ev); } };
+      G.save(); return out;
+    }
+    if (res.broke && run.phase === 'qual') {
+      run.myQ.push(99); run.phase = 'broke';
+      out.news.push('Broken in ' + (ev.type === 'bracket' ? 'time trials' : 'qualifying') + ': no eliminations for you today. An alternate takes your spot.');
+      out.choice = DR.Ladder.brokeChoices(ev);
+      out.done = true; G.save(); return out;
+    }
+    // the street: break, and the night's over (no fixing it on the street)
+    if (res.broke && run.phase === 'card') {
+      var o3 = ev.opps[run.i]; run.losses++; run.log.push([o3.name, false]); run.i = run.n;
+      out.news.push('Broken: the night\'s over. Tow it home.');
+      return cardEnd(ev, run, out);
+    }
     run.started = true;
     if (run.phase === 'qual') {
       run.myQ.push(res.et); run.q++;
@@ -480,11 +516,7 @@
         out.next = { label: 'Next callout: ' + ev.opps[run.i].name, go: function () { DR.Ladder.go(ev); } };
         G.save(); return out;
       }
-      var c = C(), si = ev.stage; c.pts = c.pts || {}; var P = c.pts[si] = c.pts[si] || { me: 0, r: {} };
-      var ok = run.wins >= need;
-      run.pts = DR.PTS.race + DR.PTS.round * run.wins + (ok ? DR.PTS.win : 0); P.me += run.pts;
-      run.log.forEach(function (x) { if (!x[1]) P.r[x[0]] = (P.r[x[0]] || 0) + DR.PTS.round; });
-      return endRun(ev, run, ok, out);
+      return cardEnd(ev, run, out);
     }
     // eliminations
     var rWas = DR.Ladder.roundName(run);
@@ -501,6 +533,15 @@
     out.news.push('Out in the ' + rWas.toLowerCase() + '.');
     return endRun(ev, run, false, out);
   };
+  // a list night's end: the points (you, and the callouts who beat you),
+  // done if you lost no more than one in four
+  function cardEnd(ev, run, out) {
+    var c = C(), si = ev.stage, need = Math.ceil(run.n * 0.75); c.pts = c.pts || {}; var P = c.pts[si] = c.pts[si] || { me: 0, r: {} };
+    var ok = run.wins >= need;
+    run.pts = DR.PTS.race + DR.PTS.round * run.wins + (ok ? DR.PTS.win : 0); P.me += run.pts;
+    run.log.forEach(function (x) { if (!x[1]) P.r[x[0]] = (P.r[x[0]] || 0) + DR.PTS.round; });
+    return endRun(ev, run, ok, out);
+  }
   function endRun(ev, run, won, out) {
     var c = C();
     if (ev.fmt === 'elim') {
@@ -524,6 +565,31 @@
     out.done = true;
     G.save();
     return out;
+  };
+  DR.OIL_PTS = 10;
+  // broken before round 1: the two ways out
+  DR.Ladder.brokeChoices = function (ev) {
+    var run = DR.Ladder.runFor(ev), credit = run ? Math.round((run.paid || 0) * 0.5 / 10) * 10 : 0;
+    return [{ label: 'Take ' + DR.money(credit) + ' track credit', go: function () { DR.Ladder.brokeOut(ev, 'credit'); } },
+      { label: 'Take the ' + DR.PTS.race + ' broke points', go: function () { DR.Ladder.brokeOut(ev, 'points'); } }];
+  };
+  // the field races on without you (an alternate in your place) for the
+  // standings; you take the credit (off your next entry) or the points
+  DR.Ladder.brokeOut = function (ev, pick) {
+    var run = DR.Ladder.runFor(ev), c = C(); if (!run) return;
+    var credit = Math.round((run.paid || 0) * 0.5 / 10) * 10;
+    if (pick === 'credit') c.credit = (c.credit || 0) + credit;
+    else { c.pts = c.pts || {}; var P = c.pts[ev.stage] = c.pts[ev.stage] || { me: 0, r: {} }; P.me += DR.PTS.race; }
+    // the alternate: a regular of the class who wasn't in the field
+    var R = DR.ROSTER[ev.stage], inF = {}; ev.opps.forEach(function (o) { if (o.reg && o.reg[0] === ev.stage) inF[o.reg[1]] = 1; });
+    var alt = R.map(function (x, i) { return i; }).filter(function (i) { return !inF[i]; })[0];
+    var opps = ev.opps.slice(); if (alt != null) opps.push(DR.regOpp(ev.stage, alt, ev.sec));
+    var sim = { pairs: null, rounds: 0, history: [] }, cond = condOf(ev), rnd = Math.random, ent = opps.map(function (o, i) { return i; });
+    var ev2 = Object.assign({}, ev, { opps: opps });
+    if (ev.type === 'headsup') { var t = ent.map(function (i) { return [i, passOf(opps[i], ev, cond, rnd)]; }).sort(function (a, b) { return a[1] - b[1]; }); sim.pairs = []; for (var k = 0; k < 16 && k + 1 < 16; k += 2) sim.pairs.push([t[LADDER16[k] - 1] ? t[LADDER16[k] - 1][0] : null, t[LADDER16[k + 1] - 1] ? t[LADDER16[k + 1] - 1][0] : null]); sim.ladder = true; }
+    else drawRound(ev2, sim, ent);
+    finishWithout(ev2, sim); award(ev2, sim);
+    run.phase = 'done'; run.won = false; run.pick = pick; c.lastRun = run; c.run = null; G.save();
   };
   // leave a run before the end (the day's over for you): points for what
   // you raced, no payout for the rounds not run
@@ -611,5 +677,126 @@
       var given = c.packs[si] || [];
       for (var s = 0; s < DR.SECTIONS; s++) for (var p = 0; p < Math.min(2, given[s] || 0); p++) st.packs[s][p].forEach(G.applyUnlock);
     });
+  };
+
+  // ---------------------------------------------------------------- the day, by the clock
+  // A race day runs like a real one: the gates open, the sessions run at
+  // their times (Heads-Up qualifying, Bracket time trials), then the rounds,
+  // each called to the lanes at its time. Be in the lanes before the call
+  // closes or you're out: your opponent gets a solo run (IRP, WWT Raceway,
+  // National Trail rules; No Prep Kings' one 10-minute call). Hours of the
+  // window's day.
+  DR.DAYPLAN = {
+    headsup: { gates: 8, qual: [10, 12.5], rounds: [15, 15.75, 16.5, 17.25], call: 0.25 },
+    bracket: { gates: 8, qual: [10, 11], rounds: [12.5, 13.5, 14.25, 14.75], call: 0.25 },
+    noprep: { gates: 18, qual: [], rounds: [19, 19 + 40 / 60, 20 + 20 / 60, 21], call: 10 / 60 },
+    street: { gates: 22, first: 22.5, every: 25 / 60, call: 0.25 }
+  };
+  function plan(ev) { return DR.DAYPLAN[ev.type]; }
+  // the next session of the run: { t: called, close: lanes close, label }
+  DR.Ladder.nextCall = function (ev, run) {
+    if (!run || run.day0 == null) return null;
+    var P = plan(ev), t;
+    if (run.phase === 'qual') t = P.qual[run.q];
+    else if (run.phase === 'elim') t = P.rounds[run.myWins || 0];
+    else if (run.phase === 'card') t = P.first + run.i * P.every;
+    if (t == null) return null;
+    return { t: run.day0 + t, close: run.day0 + t + P.call, label: run.phase === 'qual' ? (ev.type === 'bracket' ? 'Time trial ' : 'Qualifying ') + (run.q + 1) : run.phase === 'card' ? 'Callout ' + (run.i + 1) : DR.Ladder.roundName(run) };
+  };
+  // the first session's call has closed: too late to enter today
+  DR.Ladder.lateLock = function (ev) {
+    if (DR.SCHED_OFF || !G.slotWindow) return '';
+    var w = G.slotWindow(DR.evSlot(ev)); if (!w || !w.open) return '';
+    var P = plan(ev), d0 = w.start - P.gates, first = P.qual && P.qual.length ? P.qual[0] : P.rounds ? P.rounds[0] : P.first;
+    return G.now() > d0 + first + P.call ? 'Entries closed: the first ' + (ev.type === 'headsup' ? 'qualifying session' : ev.type === 'bracket' ? 'time trial' : ev.type === 'street' ? 'callout' : 'round') + ' was at ' + DR.Cal.hourText(Math.floor(first % 24), Math.round((first % 1) * 60)) : '';
+  };
+  // a missed call: the session went without you. Qualifying: no time from
+  // it; a round: your opponent's solo run, and you're out; a callout: a loss.
+  // Returns the news, or '' if nothing was missed.
+  DR.Ladder.checkCall = function (ev) {
+    var run = DR.Ladder.runFor(ev), out = [];
+    if (!run || DR.SCHED_OFF || !G.now) return '';
+    for (var guard = 0; guard < 12; guard++) {
+      var nc = DR.Ladder.nextCall(ev, run);
+      if (!nc || G.now() <= nc.close) break;
+      if (run.phase === 'qual') {
+        run.myQ.push(99); run.q++; out.push('Missed ' + nc.label.toLowerCase() + ': no time from it.');
+        if (run.q >= DR.QUALS) seed(ev, run);
+      } else if (run.phase === 'elim' && run.brokeQ && !(run.myWins > 0) && G.car() && G.car().damage) {
+        // still broken from qualifying when round 1 closed: the broke rules
+        // (credit or points, an alternate in your place)
+        run.phase = 'broke';
+        out.push('Still broken when round 1 was called: no eliminations for you today. An alternate takes your spot.');
+        break;
+      } else if (run.phase === 'elim') {
+        var o = DR.Ladder.opponent(ev, run);
+        out.push('Missed the call for ' + (/^Round/.test(nc.label) ? nc.label.toLowerCase() : 'the ' + nc.label.toLowerCase()) + ': ' + (o ? o.name + ' made a solo run' : 'the round went on without you') + '. You\'re out.');
+        var res = { money: [], news: [], notes: [], unlocks: [] };
+        advance(ev, run, false); finishWithout(ev, run); endRun(ev, run, false, res);
+        break;
+      } else if (run.phase === 'card') {
+        var o2 = ev.opps[run.i];
+        run.losses++; run.log.push([o2.name, false]); run.i++;
+        out.push('Missed the callout with ' + o2.name + ': a loss.');
+        var need = Math.ceil(run.n * 0.75);
+        if (run.i >= run.n || run.losses > run.n - need) { cardEnd(ev, run, { money: [], news: [], notes: [], unlocks: [] }); break; }
+      }
+    }
+    G.save();
+    return out.join(' ');
+  };
+
+  // ---------------------------------------------------------------- heat through the day
+  // The engine's coolant temperature (deg F): about 40 F a pass (more for a
+  // big-power car on a long pass: Concato's chiller test), down between
+  // passes as fast as the car's cooling lets it: hood up only ~45 min to
+  // shed most of it; an electric water pump or electric fans ~25; both ~12
+  // (racers: 10-15 min on a hot day); an ice-water engine chiller to ~55 F
+  // in under 10 (Concato). Best near 120 F at the start (Reher-Morrison);
+  // hot costs up to ~2.5% power (a tenth or so: Dragzine) and knocks sooner.
+  function F(c) { return c * 9 / 5 + 32; }
+  DR.Ladder.coolTau = function (inst) {
+    var pump = ['pu2', 'pu3'].indexOf(DR.partId('pulleys', inst)) >= 0, fans = DR.partId('cooling', inst) !== 'stock';
+    if (G.hasGear && G.hasGear('chiller')) return { tau: 0.05, floor: 50, how: 'the engine chiller' };
+    if (pump && fans) return { tau: 0.2, how: 'the electric fans and water pump' };
+    if (pump || fans) return { tau: 0.42, how: pump ? 'the electric water pump' : 'the electric fans' };
+    return { tau: 0.75, how: 'the hood up' };
+  };
+  // the run's heat brought up to now (cooling since the last pass)
+  function heatNow(ev, run, inst) {
+    var cond = condOf(ev), amb = F(cond.air), h = run.heat;
+    if (!h) h = run.heat = { T: run.drove ? 180 : amb, at: G.now ? G.now() : 0, nosP: 1, uid: inst.uid };
+    var now = G.now ? G.now() : h.at, dt = Math.max(0, now - h.at);
+    if (dt > 0) {
+      var c = DR.Ladder.coolTau(inst), shade = !cond.night && G.hasGear && G.hasGear('canopy') ? 8 : 0;
+      var floor = c.floor != null ? c.floor : amb - shade;
+      h.T = floor + (h.T - floor) * Math.exp(-dt / c.tau);
+      // the nitrous bottle back up to pressure: minutes with a heater, slowly without
+      var heater = DR.getOption('nosheat', inst).nosk >= 1;
+      h.nosP = 1 - (1 - h.nosP) * Math.exp(-dt / (heater ? 0.07 : 1));
+      h.at = now;
+    }
+    return h;
+  }
+  DR.Ladder.engTemp = function (ev, inst) { var run = DR.Ladder.runFor(ev); return run ? heatNow(ev, run, inst).T : null; };
+  // for the race: the heat as the physics wants it (engHeat units: 8 none,
+  // 28 the most), an ice-tank intercooler halving what it does to the charge
+  DR.Ladder.heatFor = function (inst, cfg) {
+    var ev = cfg.ev, run = DR.Ladder.runFor(ev);
+    if (!run) return { eng: 0, nosP: 1, uid: inst.uid };
+    var h = heatNow(ev, run, inst), u = 20 * Math.max(0, Math.min(1, (h.T - 140) / 90));
+    if (DR.partId('ic', inst) === 'ic3') u *= 0.5;
+    return { lad: true, ev: ev, uid: inst.uid, eng: u > 0 ? 8 + u : 0, nosP: h.nosP, h: h };
+  };
+  DR.Ladder.heatAfter = function (hh, inst, S, sim) {
+    var h = hh.h; if (!h) return;
+    var load = (S.peakHp + S.nosHp) / Math.max(1, S.coolHp);
+    h.T += 40 * Math.max(0.6, Math.min(1.8, load)) * Math.max(0.5, Math.min(sim.et || 10, 15) / 10);
+    h.at = G.now ? G.now() : h.at;
+    if (S.nosHp && sim.nosT > 0.5) {
+      var heater = DR.getOption('nosheat', inst).nosk >= 1;
+      h.nosP = Math.max(0.7, h.nosP - (heater ? 0.015 : 0.07) * Math.min(1.5, sim.nosT / 5));
+    }
+    G.save();
   };
 })();

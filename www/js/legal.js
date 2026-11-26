@@ -4,7 +4,7 @@
 // driven to the track or the street spot. The more illegal it is, the more
 // likely a cop pulls it over on the way, and every violation they notice
 // is a ticket. Tow it instead (a flatbed each trip, or your own truck and
-// trailer) and nobody looks twice. No breakdowns on the way: it gets there.
+// trailer: gear.js) and nobody looks twice. No breakdowns on the way: it gets there.
 // Fines are about what they run in the US: a modified exhaust ~$195
 // (California's bail schedule), underglow $25-300, dark tint ~$250.
 // ===========================================================================
@@ -12,8 +12,7 @@
   var DR = globalThis.DR, G = DR.Game, UI = DR.UI, h = UI.h;
   var L = DR.Legal = {};
   L.FLATBED = 150;          // a flatbed tow there and back
-  L.RIG = 8500;             // a used 3/4-ton pickup and an open car trailer
-  L.RIG_TRIP = 40;          // the truck's gas, a trip
+  L.RIG = 8500;             // the old truck & trailer (gone: refunded to old saves, gear.js)
 
   // what a cop can write you up for: { name, fine, notice (chance they spot
   // it at a stop), pts (how much it draws attention) }
@@ -45,22 +44,14 @@
     var it = items(inst), pts = it.reduce(function (a, x) { return a + x.pts; }, 0);
     return { items: it, pts: pts, stop: Math.min(0.55, pts * 0.06), why: L.undrivable(inst) };
   };
-  L.hasRig = function () { return !!G.state.rig; };
-  L.buyRig = function () { if (L.hasRig()) return ''; if (!G.canAfford(L.RIG)) return 'A truck and trailer cost ' + DR.money(L.RIG); G.pay(L.RIG); G.state.rig = true; G.save(); return ''; };
-  // how this car gets there by default: driven if it can be, else towed
-  L.haulFor = function (inst) {
-    var hv = inst.haul || 'drive';
-    if (hv === 'rig' && !L.hasRig()) hv = 'flatbed';
-    if (hv === 'drive' && L.undrivable(inst)) hv = L.hasRig() ? 'rig' : 'flatbed';
-    return hv;
-  };
+  // the haul (drive, flatbed, your truck and a car trailer), L.hasRig and
+  // the race-day picker: gear.js
   // The trip: pay the tow, or roll the dice on the road. Night street racing
   // draws more attention. Returns { money, news, total } for the slip.
   L.trip = function (inst, night) {
     var hv = L.haulFor(inst), out = { money: [], news: [], total: 0, how: hv };
     function pay(label, amt) { G.pay(amt); out.money.push([label, -amt]); out.total -= amt; }
     if (hv === 'flatbed') { pay('Flatbed tow', L.FLATBED); if (DR.Phone && !L.hasRig()) DR.Phone.send('ray', 'rig'); return out; }
-    if (hv === 'rig') { pay('Truck & trailer (gas)', L.RIG_TRIP); return out; }
     var c = L.check(inst), chance = c.stop * (night ? 1.3 : 1);
     if (!c.pts || Math.random() >= chance) return out;
     var seen = c.items.filter(function (x) { return Math.random() < x.notice; });
@@ -69,7 +60,7 @@
     // a ticket gets paid, even into the red
     G.pay(fine); out.total -= fine;
     seen.forEach(function (x) { out.money.push(['Ticket: ' + x.name, -x.fine]); });
-    out.news.push('PULLED OVER on the way: ' + seen.length + ' ticket' + (seen.length > 1 ? 's' : '') + ', ' + DR.money(fine) + '.' + (L.hasRig() ? ' Your truck & trailer would have avoided it.' : ' A truck & trailer (' + DR.money(L.RIG) + ') avoids this: nobody stops a car on a trailer.'));
+    out.news.push('PULLED OVER on the way: ' + seen.length + ' ticket' + (seen.length > 1 ? 's' : '') + ', ' + DR.money(fine) + '.' + (L.hasRig() ? ' Your truck & trailer would have avoided it.' : ' A trailer avoids this (Upgrade > Pit & Trailer): nobody stops a car on a trailer.'));
     G.state.stats.tickets = (G.state.stats.tickets || 0) + 1; G.state.lastTicket = G.now ? G.now() : 0;
     if (DR.Phone) { DR.Phone.send('ray', 'ticket', { fine: fine }); if (!L.hasRig()) DR.Phone.send('ray', 'rig'); }
     G.save();
@@ -84,25 +75,5 @@
     return origStart.apply(this, arguments);
   };
 
-  // the race day line: how the car's getting there
-  L.haulPicker = function (inst) {
-    var why = L.undrivable(inst), c = L.check(inst), cur = L.haulFor(inst);
-    var sel = h('select', { class: 'tinput', style: { maxWidth: '260px' } });
-    var opts = [['drive', why ? 'Drive it (can\'t: ' + why.split(':')[0] + ')' : 'Drive it' + (c.pts ? ' (' + Math.round(c.stop * 100) + '% chance of a stop)' : ' (street legal)')],
-      ['flatbed', 'Flatbed tow (' + DR.money(L.FLATBED) + ')']];
-    if (L.hasRig()) opts.push(['rig', 'Your truck & trailer (' + DR.money(L.RIG_TRIP) + ' gas)']);
-    opts.forEach(function (o) { var e = h('option', { value: o[0] }, o[1]); if (o[0] === 'drive' && why) e.disabled = true; sel.appendChild(e); });
-    sel.value = cur;
-    sel.addEventListener('change', function () { inst.haul = sel.value; G.save(); });
-    // no rig yet: buy one right here, where the choice is made
-    var buy = L.hasRig() ? null : UI.btn('Buy truck & trailer ' + DR.money(L.RIG), function () {
-      UI.confirm('Buy a used 3/4-ton pickup and an open car trailer for ' + DR.money(L.RIG) + '? Tow any car to a race for ' + DR.money(L.RIG_TRIP) + ' of gas: no tow bill, no cop stops.', function () {
-        var w = L.buyRig(); if (w) return UI.toast(w);
-        inst.haul = 'rig'; G.save(); UI.toast('Truck & trailer bought: it\'s hitched up');
-        var row = buy.parentNode; if (row && row.parentNode) row.parentNode.replaceChild(L.haulPicker(inst), row);
-      }, 'Buy');
-    }, 'small' + (G.canAfford(L.RIG) ? '' : ' disabled'));
-    return h('div', { class: 'row', style: { gap: '8px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' } }, h('span', { class: 'plvl' }, 'GETTING THERE'), sel, buy,
-      c.items.length && !why ? h('span', { class: 'dim gsmall', title: c.items.map(function (x) { return x.name + ' ' + DR.money(x.fine); }).join('\n') }, c.items.length + ' thing' + (c.items.length > 1 ? 's' : '') + ' a cop could write up') : null);
-  };
+  // the race day line (L.haulPicker): gear.js
 })();

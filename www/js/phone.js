@@ -41,7 +41,8 @@
     nephew: ['ray', function () { return 'My nephew Danny\'s been bugging me to race. He\'s green, but he\'s on your team now: he\'ll drive your circuit races (Race > Career > Circuit) while you run the strip. Pays by the race. Hire better drivers when you can.'; }],
     bailout: ['ray', function () { return 'Saw your bank balance. Put ' + DR.money(DR.BAILOUT) + ' in it. Once, kid. Next time you\'re in the red it\'s the bank, or selling something: a car, the parts on the shelf. That\'s how the rest of us did it.'; }],
     evicted: ['ray', function () { return 'Landlord called me, kid. Couch is made up. Pay your rent first next time, then buy parts.'; }, true],
-    rig: ['ray', function () { return 'Get yourself a truck and trailer, kid. A used 3/4-ton and an open trailer runs ' + DR.money(DR.Legal ? DR.Legal.RIG : 8500) + ': buy it on the race-day "Getting there" line, or at Home. Cheaper than a tow every week, and nobody writes up a car on a trailer.'; }],
+    rig: ['ray', function () { return 'Get yourself a trailer, kid. A truck in your garage with a hitch and an open car trailer (Upgrade > Pit & Trailer, about ' + DR.money(4500) + ') tows it for the gas. Cheaper than a flatbed every week, and nobody writes up a car on a trailer.'; }],
+    rigback: ['ray', function () { return 'I sold that old truck and trailer of yours and put the ' + DR.money(G.state.rigRefund || 8500) + ' back in your account. Trailers are sold on their own now (Upgrade > Pit & Trailer): a small one behind any car with a hitch, a car trailer behind a truck of yours.'; }],
     ticket: ['ray', function (d) { return (d && d.fine >= 600 ? 'A ' + DR.money(d.fine) + ' stop? ' : 'Another ticket. ') + 'That\'s what trailers are for.'; }, true]
   };
   // Reactions to what just happened come straight away; the rest of the
@@ -127,7 +128,7 @@
     if (c.kings && Object.keys(c.kings).length) hit('king');
     if (s.started && s.money < 150 && s.stats.races >= 3) hit('broke');
     var t = s.team;
-    if (t && ((t.drivers || []).filter(function (d) { return !d.nephew; }).length + (t.ddrivers || []).length + (t.tuners || []).length)) hit('hire');
+    if (t && ((t.drivers || []).filter(function (d) { return !d.nephew; }).length + (t.ddrivers || []).length + (t.tuners || []).length + (t.mechs || []).length)) hit('hire');
     if (t && (t.history || []).some(function (x) { return x.pos === 1; })) hit('circuitwin');
     return out;
   }

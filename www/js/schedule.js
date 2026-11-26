@@ -175,7 +175,9 @@
   // road); a street race an hour (finding them, the cops).
   G.afterRun = function (cfg, r) {
     if (cfg.inst) return { news: [] };   // a dealer test drive
-    var hours = cfg.mode === 'street' ? 1 : cfg.mode === 'test' ? 0.25 : 0.5, out = { news: [] };
+    // (a ladder event's day runs by its schedule: the pass and the return
+    // road, then the pit till the next call)
+    var hours = cfg.lad ? 0.1 : cfg.mode === 'street' ? 1 : cfg.mode === 'test' ? 0.25 : 0.5, out = { news: [] };
     var news = G.advance(hours);
     out.news = out.news.concat(news);
     return out;

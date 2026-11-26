@@ -18,6 +18,7 @@
   T.MAX = 3;                // circuit drivers
   T.DMAX = 2;               // drag drivers
   T.ROLES = { drag: 'Drag tuner', circuit: 'Circuit tuner' };   // one staff tuner each
+  T.MMAX = 1;               // a mechanic for race days
   T.SPEED = 4;              // race clock vs real time
   T.TRACK = 'pixel';        // the reference track: classes go by the ideal lap here
   // where the team races: the purpose-built circuit and three night street
@@ -53,10 +54,11 @@
     if (!s) s = G.state.team = { drivers: [], board: null, races: [], history: [], done: 0, boardAt: 0, wins: {}, nid: 1 };
     s.drivers = s.drivers || []; s.races = s.races || []; s.history = s.history || []; s.wins = s.wins || {};
     // the drag side and the staff tuners (saves from before them start empty)
-    s.ddrivers = s.ddrivers || []; s.tuners = s.tuners || [];
+    s.ddrivers = s.ddrivers || []; s.tuners = s.tuners || []; s.mechs = s.mechs || [];
     if (!s.board) { s.board = makeBoard(); s.boardAt = s.done || 0; }
     if (!s.dboard) s.dboard = makeDragBoard();
     if (!s.tboard) s.tboard = makeTunerBoard();
+    if (!s.mboard) s.mboard = makeMechBoard();
     return s;
   }
   T.state = st;
@@ -82,9 +84,9 @@
     d.fee = T.hireFee(d); d.wage = T.wage(d);
     return d;
   }
-  T.avg = function (d) { return d.kind === 'drag' ? (d.rt + d.lau + d.con) / 3 : d.kind === 'tuner' ? (d.eng + d.chs + d.dat) / 3 : (d.brk + d.cor + d.con) / 3; };
+  T.avg = function (d) { return d.kind === 'mech' ? d.wr : d.kind === 'drag' ? (d.rt + d.lau + d.con) / 3 : d.kind === 'tuner' ? (d.eng + d.chs + d.dat) / 3 : (d.brk + d.cor + d.con) / 3; };
   T.hireFee = function (d) { var a = T.avg(d); return Math.round((a * a * 2 + d.pot * 12) / 50) * 50; };
-  T.wage = function (d) { var a = T.avg(d); return Math.round((40 + a * a * 0.06) * (d.kind === 'tuner' ? 1.6 : 1) / 10) * 10; };
+  T.wage = function (d) { var a = T.avg(d); if (d.kind === 'mech') return Math.round((150 + a * 1.5) / 10) * 10; return Math.round((40 + a * a * 0.06) * (d.kind === 'tuner' ? 1.6 : 1) / 10) * 10; };
   T.stars = function (d) { return Math.round(d.pot / 20 * 2) / 2; };   // potential, 0.5-5
   function makeBoard() {
     var qs = [rnd(18, 32), rnd(22, 38), rnd(28, 44), rnd(40, 58), rnd(45, 65), Math.random() < 0.35 ? rnd(72, 88) : rnd(58, 75)];
@@ -93,7 +95,7 @@
   T.scout = function () {
     if (!G.canAfford(T.SCOUT_COST)) return false;
     G.pay(T.SCOUT_COST);
-    var s = st(); s.board = makeBoard(); s.dboard = makeDragBoard(); s.tboard = makeTunerBoard(); s.boardAt = s.done; G.save();
+    var s = st(); s.board = makeBoard(); s.dboard = makeDragBoard(); s.tboard = makeTunerBoard(); s.mboard = makeMechBoard(); s.boardAt = s.done; G.save();
     return true;
   };
   // ---------------------------------------------------------------- drag drivers
@@ -125,29 +127,50 @@
     return d;
   }
   function makeTunerBoard() { return [makeTuner(rnd(22, 40), 'drag'), makeTuner(rnd(40, 62), 'drag'), makeTuner(rnd(22, 40), 'circuit'), makeTuner(Math.random() < 0.35 ? rnd(68, 86) : rnd(45, 66), Math.random() < 0.5 ? 'drag' : 'circuit')]; }
+  // ---------------------------------------------------------------- mechanics
+  // A mechanic for race days: wrenching decides how fast the pit work goes
+  // and which jobs they take on (clutches from about 45, transmissions from
+  // 60). Paid by the race day: about $150-300 (a pit crew's day: ~$17/h).
+  function makeMech(q) {
+    var age = Math.round(clamp(rnd(20, 44) + (q - 40) * 0.25 + rnd(-2, 6), 19, 62));
+    var d = { kind: 'mech', name: pick(FIRST) + ' ' + pick(LAST), age: age, wr: sk(q), col: pick(COLORS), jobs: 0 };
+    d.pot = potFor(d.wr, age - 4);
+    d.fee = Math.round(T.hireFee(d) * 0.4 / 50) * 50; d.wage = T.wage(d);
+    return d;
+  }
+  function makeMechBoard() { return [makeMech(rnd(25, 42)), makeMech(rnd(45, 62)), makeMech(Math.random() < 0.35 ? rnd(70, 88) : rnd(55, 72))]; }
+  T.mechanic = function () { return st().mechs[0] || null; };
+  T.mechWage = function (d) { return d.wage; };
+  T.learnMech = function (d) {
+    var ageK = d.age < 30 ? 1.2 : d.age < 45 ? 1 : 0.5;
+    d.wr = Math.min(d.pot, d.wr + Math.max(0, d.pot - d.wr) * rnd(0.02, 0.04) * ageK);
+    d.jobs = (d.jobs || 0) + 1; d.wage = T.wage(d); G.save();
+  };
   T.dragDrivers = function () { return st().ddrivers; };
   T.tuner = function (role) { return st().tuners.filter(function (x) { return x.role === role; })[0] || null; };
   // hire from a board: 'circuit' (drivers), 'drag' or 'tuner'
   T.hireFrom = function (which, i) {
-    var s = st(), board = which === 'drag' ? s.dboard : which === 'tuner' ? s.tboard : s.board, d = board[i];
+    var s = st(), board = which === 'drag' ? s.dboard : which === 'tuner' ? s.tboard : which === 'mech' ? s.mboard : s.board, d = board[i];
     if (!d) return 'Gone';
     if (which === 'circuit') return T.hire(i);
     if (which === 'drag' && s.ddrivers.length >= T.DMAX) return 'Your drag team is full (' + T.DMAX + ' drivers). Release one first.';
+    if (which === 'mech' && s.mechs.length >= T.MMAX) return 'You have a mechanic. Release them first.';
     if (which === 'tuner' && T.tuner(d.role)) return 'You already have a ' + T.ROLES[d.role].toLowerCase() + '. Release them first.';
     if (!G.canAfford(d.fee)) return 'Signing ' + d.name + ' costs ' + DR.money(d.fee);
     G.pay(d.fee);
-    d.id = (which === 'drag' ? 'g' : 't') + (s.nid++); d.hired = Date.now();
-    (which === 'drag' ? s.ddrivers : s.tuners).push(d); board.splice(i, 1); G.save();
+    d.id = (which === 'drag' ? 'g' : which === 'mech' ? 'm' : 't') + (s.nid++); d.hired = Date.now();
+    (which === 'drag' ? s.ddrivers : which === 'mech' ? s.mechs : s.tuners).push(d); board.splice(i, 1); G.save();
     return '';
   };
   T.releaseStaff = function (id) {
     var s = st();
     s.ddrivers = s.ddrivers.filter(function (d) { return d.id !== id; });
     s.tuners = s.tuners.filter(function (d) { return d.id !== id; });
+    s.mechs = s.mechs.filter(function (d) { return d.id !== id; });
     G.save();
     return '';
   };
-  T.staff = function (id) { var s = st(); return s.ddrivers.concat(s.tuners).filter(function (d) { return d.id === id; })[0] || null; };
+  T.staff = function (id) { var s = st(); return s.ddrivers.concat(s.tuners, s.mechs).filter(function (d) { return d.id === id; })[0] || null; };
   // a drag driver learns from every pass, more from the ones that matter
   T.learnDrag = function (d, won) {
     var ageK = d.age < 25 ? 1.3 : d.age < 31 ? 1 : d.age < 37 ? 0.6 : 0.3, out = {};
@@ -445,7 +468,7 @@
       if (pos === 1 && !r.ev) s.wins[cls.id] = (s.wins[cls.id] || 0) + 1;
       s.done++;
       T.rollInvite();
-      if (s.done - s.boardAt >= T.REFRESH_EVERY) { s.board = makeBoard(); s.dboard = makeDragBoard(); s.tboard = makeTunerBoard(); s.boardAt = s.done; }
+      if (s.done - s.boardAt >= T.REFRESH_EVERY) { s.board = makeBoard(); s.dboard = makeDragBoard(); s.tboard = makeTunerBoard(); s.mboard = makeMechBoard(); s.boardAt = s.done; }
       s.history.unshift({ cls: cls.id, track: r.track || T.TRACK, pos: pos, team: r.teams || undefined, ev: r.ev, note: cr ? cr.note : undefined, prize: prize, drv: d ? d.name : '?', car: car ? car.carId : you.car, at: Date.now(), best: you.best, grew: grew, unl: unl });
       s.history = s.history.slice(0, 20);
       var sm = r.series != null ? seriesRound(r) : null;

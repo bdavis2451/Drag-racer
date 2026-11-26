@@ -1101,3 +1101,22 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .rnode.t-street { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #ff6a00; }
 .rnode.t-bracket { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3a7bd2; }
 .rnode.t-noprep.won, .rnode.t-street.won, .rnode.t-bracket.won { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3ccf6e; }
+/* the pit at a ladder event */
+.pit { display: flex; flex-direction: column; gap: 8px; }
+.pitnext { background: rgba(255,216,74,.08); border-left: 3px solid #ffd84a; padding: 6px 10px; }
+.pitcols { display: flex; gap: 12px; align-items: flex-start; }
+.pitcar { flex: 0 0 300px; background: rgba(255,255,255,.04); padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
+.pitsched { display: flex; flex-direction: column; gap: 2px; }
+.pitrow { display: flex; gap: 10px; align-items: center; padding: 3px 8px; background: rgba(255,255,255,.03); }
+.pitrow.next { outline: 2px solid #ffd84a; }
+.pitrow.done { opacity: .7; }
+@media (max-width: 700px) { .pitcols { flex-direction: column; } .pitcar { flex: none; width: auto; } }
+/* pit gear: the load-up and the pit's work (career ladder build 2) */
+.roombar { height: 8px; background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px #000; margin-top: 3px; }
+.roombar span { display: block; height: 100%; background: #4cd964; }
+.loadfoot { position: sticky; bottom: -10px; background: var(--panel); padding: 6px 0 2px; box-shadow: 0 -6px 8px -6px rgba(0,0,0,.6); }
+.loadrow { padding: 2px 0; cursor: pointer; }
+.loadrow.dim { cursor: default; }
+.pitwork { background: rgba(255,255,255,.04); padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
+.pitjob { padding: 2px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.pitcard.on { box-shadow: 0 0 0 2px var(--accent); }
