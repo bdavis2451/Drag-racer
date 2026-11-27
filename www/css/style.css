@@ -1120,3 +1120,6 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .pitwork { background: rgba(255,255,255,.04); padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
 .pitjob { padding: 2px 0; border-top: 1px solid rgba(255,255,255,.06); }
 .pitcard.on { box-shadow: 0 0 0 2px var(--accent); }
+/* the discipline Kings' ladders (build 4) */
+.kextra { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 6px; }
+.kextra .lrow { padding: 2px 4px; }

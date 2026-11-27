@@ -78,12 +78,12 @@
   function kingOpp(src, over) { return Object.assign({}, src, over); }
   DR.KINGS = {
     headsup: { name: 'Heads-Up King', ev: last.boss, blurb: 'The last class\'s King, at the top of the ladder.' },
-    bracket: { name: 'Bracket King', blurb: 'Nobody cuts a better light or runs closer to their number.',
+    bracket: { name: 'Bracket King', blurb: 'Nobody cuts a better light or runs closer to their number. Get invited to the King of the Track (the last Sunday), win three rounds, then race them.',
       ev: { type: 'bracket', id: 'K.bracket', idx: 'Kb', king: 'bracket', needWins: 0, stars: 0, unlocks: [], cash: 40000,
         opps: [kingOpp(DR.STAGES[2].events[9].opps[0], { name: 'Dead-On Dolores', skill: 0.97, color: '#e8c547' }),
           kingOpp(DR.STAGES[3].events[6].opps[0], { name: 'Point-Oh-One Pete', skill: 0.97, color: '#3a7bd2' }),
           kingOpp(DR.STAGES[4].events[1].opps[0], { name: 'The Bracket King', skill: 0.99, color: '#ffd700' })] } },
-    street: { name: 'No-Prep King', blurb: 'Bare asphalt, no traction compound, and the meanest car in the city.',
+    street: { name: 'No-Prep King', blurb: 'Bare asphalt, no traction compound, and the meanest car in the city. Climb the no-prep list to #1 first.',
       ev: { type: 'kingstreet', id: 'K.street', idx: 'Ks', king: 'street', needWins: 0, stars: 0, unlocks: [], cash: 120000,
         opps: [kingOpp(DR.STAGES[5].events[9].opps[0], { name: 'Asphalt Annie', skill: 0.95, color: '#ff2bd6' })] } },
     circuit: { name: 'Circuit King', blurb: 'Your team\'s drivers against the best: win the Supercar Trophy Night Series (Race > Events).', circuit: true }

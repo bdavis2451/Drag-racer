@@ -1209,7 +1209,7 @@
       var slip = h('div', { class: 'slip' }, h('div', { class: 'panel row' },
         h('div', { class: 'grow paper' },
           h('div', { class: 'phead' }, h('div', { class: 'ptrack' }, cfg.theme === 'street' ? 'BACKSTREET 1/8' : 'PIXEL DRAGWAY'),
-            h('div', {}, (cfg.dist > DR.EIGHTH + 1 ? '1/4 MILE' : '1/8 MILE') + ' • ' + (cfg.qual ? (ev.type === 'bracket' ? 'TIME TRIAL' : 'QUALIFYING') : them ? (cfg.lad && ev.fmt === 'card' ? 'LIST NIGHT' : 'ELIMINATOR') : cfg.lad ? 'BYE RUN' : 'TEST & TUNE') + ' • RUN #' + (G.state.stats.races || 1)),
+            h('div', {}, (cfg.dist > DR.EIGHTH + 1 ? '1/4 MILE' : '1/8 MILE') + ' • ' + (cfg.qual ? (ev.type === 'bracket' ? 'TIME TRIAL' : 'QUALIFYING') : them ? (cfg.lad && ev.fmt === 'card' ? 'LIST NIGHT' : ev && ev.type === 'npcall' ? 'CALLOUT' : ev && ev.king === 'bracket' ? 'KING OF THE TRACK' : 'ELIMINATOR') : cfg.lad ? 'BYE RUN' : 'TEST & TUNE') + ' • RUN #' + (G.state.stats.races || 1)),
             cfg.cond ? h('div', {}, DR.condLabel(cfg.cond).toUpperCase()) : null),
           tbl,
           h('div', { class: 'pfoot2' }, '* THANKS FOR RACING *'),
