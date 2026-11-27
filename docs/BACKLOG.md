@@ -17,9 +17,13 @@ the top of each section.
   **Build 2 (race day and the pit) shipped Nov 26:** race days by the
   clock, the pit, heat by the minute, breakage rules, a mechanic, pit
   gear, cargo room, trailers and hitches replacing the $8,500 rig, a
-  vendor row at big events. Follow-ups: the drag tuner's chassis and data
-  skills at the pit. Then build 3 (sponsors expanded) and build 4
-  (Bracket / No-Prep King ladders).
+  vendor row at big events. **The drag tuner at the pit shipped Nov 27**
+  (set it up for this track, a read of every pass, the bracket dial).
+  **Build 3 (sponsors) shipped Nov 27:** ladder contracts, associates,
+  decals and contingency, track awards; its detailed rules and amounts
+  wait on the owner's OK (questions sent Nov 27). **Build 4 (Bracket /
+  No-Prep King ladders): designed, built locally, not pushed: waiting on
+  the owner's approval of the design.** Then the circuit ladder.
 
 ## In progress
 
@@ -151,6 +155,11 @@ to answer later.
 - **Career ladder build 1** (Nov 26, `docs/features/career-ladder.md`):
   shipped. Race-day scoring (it was switched off), rep, the old callout
   ladder and side brackets are removed, folded into the ladder.
+
+- **Career ladder build 2** (Nov 26-27): shipped, with the owner's answers
+  (vendor row at the last section's Heads-Up and No-Prep; the mechanic's
+  signing fee 40% of a driver's; bottles never run dry; the cargo
+  estimates) and the drag tuner at the pit (1 A, 2 A).
 
 - **Tuner, knock risk, fuels, weather** (Nov 15,
   `docs/features/fuel-knock-review.md`): air temperature no longer changes

@@ -1,10 +1,13 @@
 # Career ladder rework (drag and circuit)
 
-Status: **Nov 26: builds 1 (the drag ladder) and 2 (race day and the
-pit) shipped to the tester. Next: the build 2 follow-ups (the drag
-tuner's chassis and data skills at the pit), then build 3 (sponsors).**
-Builds 3 (sponsors) and 4 (Bracket / No-Prep Kings) follow, then the
-circuit ladder (`circuit-ladder.md`). Docs can be pushed any time. This
+Status: **Nov 27: builds 1 (the ladder), 2 (race day and the pit), the
+build 2 follow-up (the drag tuner at the pit) and 3 (sponsors) shipped
+to the tester. Build 3's detailed rules and amounts were decided while
+building, not approved item by item: they're listed as questions for the
+owner (Build 3 notes). Build 4 (Bracket / No-Prep Kings): designed and
+built on a local branch (`ladder-build4`), NOT pushed: its design waits
+on the owner's approval (questions sent Nov 27). Then the circuit ladder
+(`circuit-ladder.md`).** Docs can be pushed any time. This
 replaces `career-rebalance.md`
 (the rival and money pass becomes part of this).
 
@@ -675,7 +678,7 @@ base (class 1 $300 ... class 6 $30,000).
 - **Saves:** nothing to convert (signed primaries keep their contracts).
 - **Rivals:** unchanged.
 
-### Build 3 notes (Claude, Nov 27)
+### Build 3 notes (Claude, Nov 27; shipped Nov 27)
 - **Code:** `www/js/sponsors.js` (new): the v2 contracts (`G.sponsorOffers`
   / `G.countsForContract` / `G.contractProgress` / `G.winEvent` wrappers:
   progress read from the events the contract counted, `sp.ids`, by kind;
@@ -696,8 +699,19 @@ base (class 1 $300 ... class 6 $30,000).
   (hard luck), a looks contract with a car show, an old-style contract,
   the tiers, an associate's primary offer next class; the Sponsors tab and
   the picker at iPhone size; the regression suite; the rival snapshot.
+- **Decided while building, not approved item by item (owner flagged the
+  process, Nov 27): to confirm or change:** the amounts (associates 4%
+  a race day, 10% win / 4% runner-up; contingency 5% / 2%; track awards
+  5%; tiers 5/10/15% at 0/5/12 wins); one decal brand per part group and
+  none that rivals the class sponsor's parts; an associate offers a
+  primary deal after 3 event wins (25% better); the hard-luck award (lost
+  round 1 by under 0.02 s or broke, else 1 in 8); the three contract
+  shapes. Questions sent Nov 27.
 
-### Build 4 design (Claude, Nov 27; owner: continue on to the next step)
+### Build 4 design (Claude, Nov 27; proposal: waiting on the owner's approval)
+Built on `ladder-build4` (local, not pushed) before approval: that broke
+the process (design first, approval, then build). It ships only once the
+owner has answered the questions below.
 From the plan (Build 4) and Q12 A ("opened by completing events of their
 theme, each with its own ladder first").
 - **Bracket King: the King of the Track.**
