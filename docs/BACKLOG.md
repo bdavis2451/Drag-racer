@@ -81,6 +81,10 @@ to answer later.
 
 ## Parked ideas
 
+- **A BMW 330i (E46)** for Touring's Spec E46 events (owner, Nov 27): the
+  real series races the 330i/330Ci (225 whp cap, 2,850 lb with driver);
+  until it's added, C2 uses the M3 E46 power-capped.
+
 - **Audit heat soak between rounds, maybe rework it** (owner, Nov 15).
   Nov 26: folded into the career ladder, build 2 (heat by the minute,
   real cooling gear, a hot engine worth up to ~0.05-0.10 s).

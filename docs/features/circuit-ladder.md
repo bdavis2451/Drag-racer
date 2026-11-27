@@ -223,6 +223,67 @@ before building, all answered with the recommended option:
   Night Series and the Circuit King fold in (class 5's Championship as the
   way to the Circuit King); open races / team races then revisited.
 
+## C2 research and draft plan (Nov 27: research done, 4 of 5 questions answered, no code)
+**Research (2026 rules):**
+- **Licenses** (SCCA 2026 GCR, Appendix C 2.7-2.8, downloaded from
+  scca.com): a Novice Permit needs one drivers' school (at least 3 hours
+  in-car, a satisfactory rating, signed off as ready to race); then 3
+  Regional race weekends within the permit's 2 years give the Full
+  Competition License (one track day or time trial may count as one).
+  Licensing chairs may waive the school or the weekends for drivers with
+  prior racing experience; NASA, IMSA, FIA and other licenses count as
+  equivalent. A drivers' school weekend: $495 (2025, Roebling Road).
+- **Spec Miata** (SCCA 2026 GCR 9.1.7, Nov 2026 edition): only the listed
+  changes; the MAZDASPEED spec suspension kit (Bilstein/Penske shocks,
+  springs, Eibach anti-roll bars); stock engine (air filter element free,
+  cone filter on 1.6s, exhaust past the front downpipe free); brake pads
+  and fluid free; wheels 15 in, min 13 lb, one-piece; the official Hoosier
+  tire; body stock (chin spoiler allowed); weight with driver by year:
+  2,275 lb (1990-93), 2,400 (1994-97, 1999-2000), 2,450 (2001-05) (SVRA
+  sheet citing the GCR); a cage per GCR 9.4.
+- **Spec E46** (NASA 2026 rules v1.1, Nov 17 2025): the **330i/330Ci**, not
+  the M3; output max 225 whp (Epic spec ECU tune); MCS 1-way shocks,
+  Hyperco springs, anti-roll bars free; BimmerWorld spec exhaust; 17x9
+  wheels min 16.2 lb; Hoosier RCES 245/40-17; min 2,850 lb with driver;
+  6-point cage.
+- **Corvette Cup** (NASA; the rules PDF is members-only, 403): C5
+  (1997-2004) and C6, near-stock power, Penske shocks, no aero, no Bosch
+  motorsport ABS, Continental ExtremeContact Force 315/30-18 square at
+  $370 each; a car built for $40,000 or less (nasaspeed.news, Dec 2024 and
+  Dec 2025).
+- **Porsche Carrera Cup / Super Trofeo:** factory-built race cars (911 Cup;
+  Huracan Super Trofeo EVO2 $333,000 in 2025, 51gt3.com). A Cup weekend
+  costs a team about $28,000-36,000, up to $45,000-50,000 for a
+  competitive one (Rennlist, an older team thread); arrive-and-drive from a
+  few thousand for an entry-level weekend to over $100,000 for a GT3
+  season (ACI Motorsports).
+
+**Draft plan:**
+1. Spec events go live (the Spec stop of each section): everyone in the
+   class's series car. The field: the class's regulars in the same car.
+2. Rent (a fee per event: the car, prep, tires, fuel; damage charged) or
+   your own car built to the series spec: the model, a stock engine (the
+   series' free bits allowed), the series suspension, wheels and tire, a
+   cage, not under the series weight. The shop and entry card show a
+   "spec legal" check and what's missing.
+3. Licenses per circuit driver: the drivers' school ($495, a weekend away)
+   gives a novice permit (class 1); 3 race weekends on it, the full license
+   (class 2 up).
+4. The section rule with Spec live (3 events running).
+**Owner's answers (Nov 27):** 1 rental scaled to the event (about 1.5x
+the Spec event's win: class 1 ~$450-800, class 6 ~$45,000-80,000); 2
+damage: about 1 in 5 of your driver's mistakes bends a rented car, 25% of
+the rental each; 3 Touring uses the M3 E46 power-capped to Spec E46-like
+rules **and a note to add a 330i later** (BACKLOG); 4 Danny starts with a
+novice permit, hires averaging 50+ skill come licensed, rookies need the
+$495 school, old saves' drivers with 3+ circuit races get the full
+license. Still to ask: the section rule with three events running.
+**Questions sent:** the rental price against the C1 purses (as
+approved: $3,400 in class 1 vs a $300 win, ~$340,000 in class 6 if scaled
+like the purses); damage on a rental (the race has no contact); the
+Touring car (the real Spec E46 is the 330i); who already has a license
+(Danny, experienced hires, old saves); the section rule with three events.
+
 ## Detailed design (approved Nov 27)
 The plan above is approved (answers 1-7). This is the item-by-item
 version to approve before building, split into three builds, smallest
@@ -290,3 +351,12 @@ first.
   thethirdturn / Hagerty: SCCA Corvette Challenge; racing.porsche.com and
   IMSA: Porsche Carrera Cup North America; Lamborghini / speedcafe: Super
   Trofeo.
+- C2 (Nov 27): SCCA 2026 GCR, Nov 2026 edition (scca.com
+  /wp-content/uploads/2026/11/NOV-26.pdf): Appendix C 2.7-2.8 licensing,
+  9.1.7 Spec Miata; SVRA Spec Miata sheet (2025, weights); Harris Hill
+  H2R Challenge Miata rules (a club's OEM-based Miata class, for
+  comparison); NASA 2026 Spec E46 rules v1.1 (nasa-assets); nasaspeed.news
+  Corvette Cup articles (Dec 2024, Dec 2025; the rules PDF is
+  members-only); 51gt3.com 2025 Super Trofeo NA overview; Rennlist "IMSA
+  GT3 Cup vs GT4" thread; ACI Motorsports arrive-and-drive costs; IMSA
+  2025 Carrera Cup NA entry fee schedule.
