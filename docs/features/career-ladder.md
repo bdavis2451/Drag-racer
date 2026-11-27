@@ -675,6 +675,57 @@ base (class 1 $300 ... class 6 $30,000).
 - **Saves:** nothing to convert (signed primaries keep their contracts).
 - **Rivals:** unchanged.
 
+### Build 3 notes (Claude, Nov 27)
+- **Code:** `www/js/sponsors.js` (new): the v2 contracts (`G.sponsorOffers`
+  / `G.countsForContract` / `G.contractProgress` / `G.winEvent` wrappers:
+  progress read from the events the contract counted, `sp.ids`, by kind;
+  car shows in `sp.shows`), associates (`c.assoc`, `c.assocOffer`),
+  decals (`c.decals` by group, `c.dwins` wins with the product on), the
+  discount and fuel wrappers, `SP.dayPay` (race.js, with the stipend),
+  `G.ladderAwards` (ladder.js `endRun`: contingency, associates' bonuses,
+  the quickest 60 ft against the field's estimated launches, the
+  hard-luck award), the Sponsors tab (`UI.sponsorsView`). `game.js`
+  `G.estimate` keeps the 60-foot (ETs unchanged); `carshow.js` counts a
+  show; `screens.js` the tab and the picker's contract text; help text.
+- **Money (estimate):** a class's first pass with two associates and
+  three decals adds about 7x the class base (associates ~4.6x, contingency
+  ~2.3x, awards ~0.5x) to the ~31x the purses pay: about +20%.
+- **Tested:** the browser run of offers, signing, associates, decals and
+  their blocks, a Heads-Up win (contingency, associates, the 60-ft award,
+  the "Counted for" line), a Bracket runner-up, a round-1 loss by 0.01
+  (hard luck), a looks contract with a car show, an old-style contract,
+  the tiers, an associate's primary offer next class; the Sponsors tab and
+  the picker at iPhone size; the regression suite; the rival snapshot.
+
+### Build 4 design (Claude, Nov 27; owner: continue on to the next step)
+From the plan (Build 4) and Q12 A ("opened by completing events of their
+theme, each with its own ladder first").
+- **Bracket King: the King of the Track.**
+  - Bracket points: every Bracket event (any class) puts its IRP points on
+    a bracket points list, yours and the field's regulars' (from the
+    field's results). Shown on the Kings tab.
+  - The invitation: 6 Bracket events finished (as now) and the top 8 of
+    the bracket points list.
+  - The shootout, on the last Sunday (noon-5 PM, the existing Bracket King
+    slot): you and the 7 regulars highest on the list, in their top builds;
+    three rounds on dial-ins, one race each, a loss ends your day (try
+    again next month). Win all three and the Bracket King races you, the
+    same day, for the title and the purse (as now).
+- **No-Prep King: the list.**
+  - After 3 No-Prep events finished, a top-10 no-prep list opens: #10 and
+    #9 class 3's quickest regulars, #8-#6 class 4's, #5-#3 class 5's, #2
+    and #1 class 6's, in their King-ladder builds.
+  - On no-prep nights (Saturday 6 PM-1 AM) you call out #10 (off the list)
+    or anyone up to 2 spots above you: one race a night, 1/8 from a dig, no
+    times. Win and you take their spot.
+  - Beat #1 and the No-Prep King races you on the last Friday night (the
+    existing slot), for the title and the purse.
+- **Where:** the Kings tab: the bracket points list and the King of the
+  Track's next date and rounds; the no-prep list with the callouts.
+- **Saves:** a King already beaten stays beaten; bracket points start
+  empty; the list starts with you off it.
+- **Rivals:** unchanged.
+
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.
 2. Fields: 16 cars (4 rounds) everywhere (rec.), or 32 (5 rounds) in

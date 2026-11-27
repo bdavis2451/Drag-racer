@@ -2,6 +2,40 @@
 
 Short notes for testing, newest first.
 
+## Sponsors (drag, part 3 of 4)
+
+- **A new Sponsors tab** on the Career screen: your class sponsor, your
+  associates, decals & contingency, and the track awards.
+- **Class sponsor contracts now name ladder events** (for new signings;
+  a contract you already signed keeps its terms):
+  - the big check: win 2 Heads-Up events and 1 Bracket event;
+  - the looks: win 2 strip events, reach the star rating, and show the
+    car at a car show;
+  - the street: win 1 No-Prep event and 2 street list nights.
+  Still one per class, still needed before the King, no deadlines.
+- **Associates: two decal slots** for brands of your class or earlier.
+  Each pays every race day, plus a bonus when you win an event or finish
+  runner-up (with their product on the car if they sell parts). Win 3
+  events in a class with one on the car and it offers to be your class
+  sponsor next class, on better terms (marked ★).
+- **Decals & contingency:** parts brands (tires, turbos, intakes, race
+  fuel...) pay when you win or finish runner-up with their product on the
+  car and their decals on. Decals are free, one brand per kind of part,
+  never a rival of your class sponsor's parts. Their parts discount grows
+  with your wins: 5%, 10% after 5, 15% after 12.
+- **Track awards** at Heads-Up and Bracket events: the quickest 60-foot of
+  the day, and a hard-luck award for a first-round loser.
+- All of it shows on the slip.
+- Try:
+  - Sign a class sponsor and read the contract. Win a Heads-Up and check
+    the slip's "Counted for..." line.
+  - Sign two associates and put on a tire brand's decals with drag tires
+    on the car. Win, and check the slip's money lines.
+  - Lose round 1 by a hair at a Bracket: the hard-luck award.
+- Look out for: money that feels too generous (tell me and I'll tune it),
+  a contract that won't count a win it should, decals you can't put on
+  for no clear reason.
+
 ## Your drag tuner works the pit
 
 - With a drag tuner on staff (Team), the pit has a new job: **Set it up
