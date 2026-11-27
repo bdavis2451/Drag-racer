@@ -250,8 +250,8 @@
   };
   T.awayText = function (uid) {
     var r = T.raceFor(uid); if (!r) return '';
-    var i = carsOf(r).indexOf(uid), d = T.driver(drvsOf(r)[Math.max(0, i)]), c = T.classById(r.cls);
-    return (d ? d.name : 'Your driver') + ' is racing it in the ' + c.name + ' at ' + DR.TRACKS[r.track || T.TRACK].name + ': back in ' + fmtLeft(T.left(r)) + '.';
+    var i = carsOf(r).indexOf(uid), d = T.driver(drvsOf(r)[Math.max(0, i)]), c = T.classById(r.cls), ev = r.ev && G.cupEvent ? G.cupEvent(r.ev) : null;
+    return (d ? d.name : 'Your driver') + ' is racing it in the ' + (ev ? ev.name : c.name) + ' at ' + DR.TRACKS[r.track || T.TRACK].name + ': back in ' + fmtLeft(T.left(r)) + '.';
   };
   function fmtLeft(s) { s = Math.ceil(s); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   T.fmtLeft = fmtLeft;
@@ -270,21 +270,31 @@
     for (k in inst.ctune.set) c.tune[k] = inst.ctune.set[k];
     return c;
   };
+  // The car's rating (its ideal lap) and the field's pace go by the car on
+  // fresh tires and clutch, so neither moves with wear (the race itself
+  // runs on the car's real tires)
+  T.freshCar = function (inst) {
+    var c = T.circuitCar(inst);
+    if (!c || !c.wear || !Object.keys(c.wear).length) return c;
+    if (c === inst) { c = {}; for (var k in inst) c[k] = inst[k]; }
+    c.wear = {};
+    return c;
+  };
   T.idealLap = function (inst, tid) {
-    tid = tid || T.TRACK; inst = T.circuitCar(inst);
+    tid = tid || T.TRACK; inst = T.freshCar(inst);
     var k = tid + sig(inst);
     if (!paceCache[k]) paceCache[k] = { ideal: DR.lapSim(inst, DR.TRACKS[tid]).time };
     return paceCache[k].ideal;
   };
   function sensitivity(inst, ideal, tid) {
-    inst = T.circuitCar(inst);
+    inst = T.freshCar(inst);
     var tr = DR.TRACKS[tid], S = DR.buildSpec(inst);
     return { lat: (DR.lapSim(inst, tr, S, { lat: 0.95 }).time / ideal - 1) / 0.05, brk: (DR.lapSim(inst, tr, S, { brk: 0.9 }).time / ideal - 1) / 0.1 };
   }
-  // ev: a career race (no class floor: the field is set by the stage)
+  // ev: a circuit ladder event (ccareer.js) has its class's floor too
   T.eligible = function (inst, cls, ev) {
     if (DR.CARS[inst.carId].cat === 'Pro') return 'Dragsters and Pro Mods don\'t turn: they can\'t race a circuit';
-    if (ev) return '';
+    if (ev && !ev.cl) return '';
     if (cls.floor && T.idealLap(inst) < cls.floor) return 'Too quick for this class: its ideal lap is ' + fmtLap(T.idealLap(inst)) + ', the class allows ' + fmtLap(cls.floor) + ' or slower';
     return '';
   };

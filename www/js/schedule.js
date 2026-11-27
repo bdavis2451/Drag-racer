@@ -39,6 +39,7 @@
     cup:    { name: 'Sunday circuit race day', where: 'the circuits', win: [{ wd: [0], from: 10, to: 18 }] },
     circ:   { name: 'circuit open races', where: 'the circuits', win: [{ wd: [0], from: 10, to: 18 }, { wd: [4], from: 18, to: 23 }] },
     series: { name: 'Night Series rounds', where: 'the street circuits', win: [{ wd: [6], from: 20, to: 24 }] },
+    cnight: { name: 'Saturday night street circuit race', where: 'the street circuits', win: [{ wd: [6], from: 20, to: 24 }] },
     testday:{ name: 'Monday to Thursday, 9 AM to 5 PM', where: 'Pixel Raceway', win: [{ wd: [1, 2, 3, 4], from: 9, to: 17 }] },
     king:   { name: 'King race (2nd & 4th Saturday night)', where: 'Pixel Dragway', win: [{ wd: [6], from: 21, to: 24, nth: [2, 4] }] },
     kingb:  { name: 'Bracket King (last Sunday)', where: 'Pixel Dragway', win: [{ wd: [0], from: 12, to: 17, last: true }] },
@@ -149,12 +150,13 @@
     wrap(DR.Tuner, 'openCircuit', function (go) { return gate('testday', 'A circuit test day', function () { var r = go(); return r; }); });
   }
   if (UI.Dyno) { var dyno0 = UI.Dyno; UI.Dyno = function () { if (!DR.SCHED_OFF && !G.slotOpen('dyno')) { var w = G.slotWindow('dyno'), self = this, args = arguments; setTimeout(function () { gate('dyno', 'The dyno shop', function () { UI.show(UI.Dyno); }); }, 30); return h('div', { class: 'screen' }, UI.sectionTop('upgrade', 'dyno'), h('div', { class: 'content' }, h('div', { class: 'awaybox' }, h('div', { class: 'pix acc' }, 'The dyno shop is closed'), h('div', {}, 'Open Monday to Saturday, 8 AM to 6 PM. Next: ' + CAL.fmt(w.start) + '.')))); } return dyno0.apply(this, arguments); }; }
-  // the Race Team: career and team races on Sunday, open races Sunday and
-  // Thursday night, Night Series rounds on Saturday night
+  // the Race Team: the circuit ladder's Sprints and Championships and team
+  // races on Sunday, its Night races and the Night Series on Saturday night,
+  // open races Sunday and Thursday night
   if (DR.Team) {
     var enter0 = DR.Team.enter;
     DR.Team.enter = function (clsId, uid, drvId, tid, opts) {
-      var slot = opts && opts.ev ? 'cup' : opts && opts.series != null ? 'series' : opts && opts.mate ? 'cup' : 'circ';
+      var slot = opts && opts.ev ? (DR.CL ? DR.CL.slotFor(opts.ev) : 'cup') : opts && opts.series != null ? 'series' : opts && opts.mate ? 'cup' : 'circ';
       if (!DR.SCHED_OFF && !G.slotOpen(slot)) return { msg: 'Not on now: ' + DR.slotName(slot) + ' (next ' + G.whenText(slot) + '). Use the Calendar to go there.', slot: slot };
       var res = enter0.apply(this, arguments);
       // the race takes its time on the calendar: done when the clock passes it
@@ -278,14 +280,26 @@
     // the no-prep list: a callout on no-prep nights (kings.js)
     if (DR.KingLadders && !G.kingWon('street')) { var KL = DR.KingLadders, npS = KL.npState(), npT = npS.me ? npS.me - 1 : 10, npEv = npT >= 1 && G.themeDone('noprep') >= KL.NP_OPEN ? KL.npEvent(npT) : null;
       if (npEv) add('satn', 'king', 'No-prep list: call out #' + npT + ' ' + npEv.opps[0].name, function () { UI.careerSub = 'kings'; UI.show(UI.RaceMenu, 'career'); }, '', true, function () { return carWhy([npEv]); }); }
-    // the circuit career's race days, the Night Series, an invitation
-    if (DR.CSTAGES) { var cs = DR.CSTAGES[Math.min(G.cstage ? G.cstage() : c.stage, DR.CSTAGES.length - 1)], todoC = cs.all.filter(function (ev) { return !c.cwon[ev.id] && !G.cupLock(ev); }); if (todoC.length) add('cup', 'circuit', G.cclassName(cs.cup.stage) + ' race day', function () { UI.careerSub = 'circuit'; UI.show(UI.RaceMenu, 'career'); }, todoC.map(function (ev) { return ev.name; }).join(', ') + ' (your team)', true, function () {
-      var T = DR.Team, s = T && T.state();
-      if (!s || !s.drivers.length) return { msg: 'Your team needs a circuit driver', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
-      if (s.drivers.every(function (d) { return T.driverBusy(d.id); })) return { msg: 'Your drivers are all racing', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
-      if (!G.state.cars.some(function (x) { return !x.damage && !T.carAway(x.uid) && !(G.carBusy && G.carBusy(x)); })) return { msg: 'No car free to send', fix: ['Garage', function () { UI.show(UI.Garage); }] };
-      return null;
-    }); }
+    // the circuit ladder's events in your class still to win, on their
+    // days (Sprints and the Championship on Sunday, Night races on Saturday
+    // night), the Night Series, an invitation
+    if (DR.CSTAGES && DR.CL) {
+      var csi = G.cstage(), ccls = DR.Team.classById(DR.CSTAGES[csi].cls.id);
+      ['cup', 'cnight'].forEach(function (slot) {
+        var w = windowOn(slot, d0), cur = G.slotWindow(slot), later = w && cur && w.start > cur.start;
+        var todoC = DR.CSTAGES[csi].all.filter(function (ev) { return DR.CL.slotFor(ev) === slot && !G.cevWon(ev) && !G.cupLock(ev, { anyWeek: later }); });
+        if (!todoC.length) return;
+        add(slot, 'circuit', G.cclassName(csi) + (slot === 'cnight' ? ': Saturday night race' : ': Sunday race day'), function () { UI.careerSub = 'circuit'; UI.show(UI.RaceMenu, 'career'); }, todoC.map(function (ev) { return ev.name; }).join(', ') + ' (your team)', true, function () {
+          var T = DR.Team, s = T && T.state();
+          if (!s || !s.drivers.length) return { msg: 'Your team needs a circuit driver', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
+          if (s.drivers.every(function (d) { return T.driverBusy(d.id); })) return { msg: 'Your drivers are all racing', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
+          var free = G.state.cars.filter(function (x) { return !x.damage && !T.carAway(x.uid) && !(G.carBusy && G.carBusy(x)); });
+          if (!free.length) return { msg: 'No car free to send', fix: ['Garage', function () { UI.show(UI.Garage); }] };
+          if (!free.some(function (x) { return !T.eligible(x, ccls, todoC[0]); })) return { msg: 'No free car fits ' + ccls.name + (ccls.floor ? ' (an ideal lap of ' + T.fmtLap(ccls.floor) + ' or slower)' : ''), fix: ['Garage', function () { UI.show(UI.Garage); }] };
+          return null;
+        });
+      });
+    }
     if (DR.Team) {
       var se = DR.Team.series && DR.Team.series(); if (se && !se.done) add('series', 'circuit', 'Night Series round ' + (se.round + 1), function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });
       var iv = DR.Team.invite && DR.Team.invite(); if (iv) add('cup', 'circuit', 'Team race invitation (' + iv.team + ')', function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });

@@ -8,7 +8,15 @@ the top of each section.
 - **Circuit ladder** (`docs/features/circuit-ladder.md`, Nov 26): a fresh
   circuit career in the drag ladder's shape (Sprint, Spec, Endurance, Night
   street; rent or own spec cars; shortened endurance with pit stops and a
-  driver swap; SCCA-style licenses). Research done, plan sent.
+  driver swap; SCCA-style licenses). Detailed design approved (all A, Nov
+  27). **Build C1 shipped Nov 27:** six classes with their spec series,
+  class limits, five sections of Sprint and Night street events (Spec and
+  Endurance shown as coming), the Championship, twelve named regulars a
+  class, top-5 purses, unlocks by first wins, the circuit career restarted
+  at class 1 for old saves; also the tire-wear fix for ratings and field
+  pace (owner's yes). **Next: C2 (spec cars: rent or own; drivers'
+  school and licenses) once C1 has been played**, then C3 (endurance with
+  pit stops and driver swaps; the Night Series and Circuit King fold in).
 - **Career ladder rework** (`docs/features/career-ladder.md`, Nov 15):
   five builds, plan approved Nov 26. **Build 1 (the ladder) shipped Nov
   26:** 5 sections x 4 events per class (Heads-Up, Bracket, No-Prep,
@@ -23,8 +31,8 @@ the top of each section.
   decals and contingency, track awards; its rules and amounts confirmed by
   the owner Nov 27. **Build 4 (Bracket / No-Prep King ladders) shipped Nov
   27:** bracket points and the King of the Track, the no-prep top-10 list
-  and its callouts. **Next: the circuit ladder: its detailed design sent
-  to the owner Nov 27 (three builds, C1-C3), no code until approved.**
+  and its callouts. The drag ladder builds are done; the circuit ladder
+  is next (above).
 
 ## In progress
 
@@ -72,6 +80,10 @@ to answer later.
   top of stages 5-6).
 
 ## Parked ideas
+
+- **A BMW 330i (E46)** for Touring's Spec E46 events (owner, Nov 27): the
+  real series races the 330i/330Ci (225 whp cap, 2,850 lb with driver);
+  until it's added, C2 uses the M3 E46 power-capped.
 
 - **Audit heat soak between rounds, maybe rework it** (owner, Nov 15).
   Nov 26: folded into the career ladder, build 2 (heat by the minute,
@@ -152,6 +164,15 @@ to answer later.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Circuit ladder C1** (Nov 27, `docs/features/circuit-ladder.md`): the
+  detailed design (all A) and the build's own questions (sections open on
+  both the Sprint and the Night race until Spec and Endurance arrive; 10
+  cars; the middle purse level; Sprints on Sundays, Night races on
+  Saturday nights, once a week each) and the tire-wear fix for a car's
+  rating and the field's pace (yes). Class limits and the field's pace
+  steps were set in the build (numbers in the feature file), to adjust
+  after play.
 
 - **Career ladder build 1** (Nov 26, `docs/features/career-ladder.md`):
   shipped. Race-day scoring (it was switched off), rep, the old callout

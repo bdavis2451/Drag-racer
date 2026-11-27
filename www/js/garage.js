@@ -442,7 +442,7 @@
     var status = h('div', { class: 'gstatus gcareer', onclick: function () { UI.show(UI.RaceMenu, 'career'); } },
       h('span', { class: 'acc' }, 'Class ' + (c.stage + 1) + ': ' + st.name),
       h('span', {}, G.ladderLine(c.stage)),
-      G.cupWins && G.cstage ? h('span', { class: '' }, 'Circuit ' + (G.cstage() + 1) + ': ' + G.cupWins(G.cstage()) + '/4') : null,
+      G.csec && G.cstage ? h('span', { class: '' }, 'Circuit ' + (G.cstage() + 1) + ': ' + (G.csec(G.cstage()) >= DR.CL.SECTIONS ? 'Championship' : 'section ' + (G.csec(G.cstage()) + 1))) : null,
       h('span', { class: sp ? '' : 'warn' }, sp ? DR.sponsorById(sp.id).name : 'No sponsor yet'));
     // the race team at a glance: how many cars are out racing
     var live = DR.Team ? DR.Team.active().length : 0;
