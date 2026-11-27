@@ -1,8 +1,8 @@
 # Circuit ladder (fresh)
 
-Status: **Nov 27: plan approved (Nov 26); the detailed design (below)
-sent to the owner for item-by-item approval. No code until approved.
-Built after the four drag ladder builds (owner's order).** Replaces the circuit
+Status: **Nov 27: plan approved (Nov 26); the detailed design approved
+item by item (all A, Nov 27). Building C1 now (branch `circuit-c1`); C2
+and C3 after C1 has been played.** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -115,7 +115,72 @@ rental prices about real, scaled per class (~$3,400 a weekend in class 1).
 the circuit career starts over at class 1 (cars, parts, drivers, money
 kept). 7 **B: all the drag builds (1-4) first**, then the circuit.
 
-## Detailed design (proposal, Nov 27: waiting on the owner, no code)
+## Answers to the detailed design (owner, Nov 27: "A for all 6")
+1 A: three builds, C1 (classes, sections, sprint and night street events,
+rivals, purses, unlocks), C2 (spec cars and licenses), C3 (endurance with
+pit stops and driver swaps). 2 A: purses to the top 5 (100 / 60 / 40 / 25
+/ 15%); finishing an event still needs the win. 3 A: spec car rental about
+$3,400 a weekend in class 1, scaled per class (prep, tires, fuel in;
+damage charged). 4 A: drivers' school $495 for a weekend. 5 A: endurance
+stop about 60 s with the driver change, +30 s for new tires. 6 A: the
+Night Series and the Circuit King stay until C3, then fold in.
+
+## C1 questions that came up while designing (owner, Nov 27)
+The build turned up four things the approved design didn't settle; asked
+before building, all answered with the recommended option:
+1. **Section rule in C1:** Spec and Endurance can't run until C2/C3, so in
+   C1 a section opens when its Sprint **and** its Night street event are
+   won. Once C2/C3 add the others it becomes 3 of 4; a section already
+   open stays open.
+2. **Field: 10 cars** (you and 9 of the class's 12 regulars).
+3. **Purses, the middle level:** the win pays the class base x 1.0 / 1.2 /
+   1.4 / 1.6 / 1.8 by section (class 1: $300-540, class 6: $30,000-54,000),
+   the Championship x 5 (class 1: $1,500); P2-P5 60 / 40 / 25 / 15% of it;
+   the entry 10% of the win, plus the driver's wage.
+4. **Schedule:** Sprint on Sunday race days (10 AM-6 PM), Night street on
+   Saturday nights (8 PM-midnight), the Championship on a Sunday once the
+   five sections are done; each event once a week (like the drag ladder).
+
+## C1 build design (as built)
+- **Where:** `ccareer.js` rewritten (the old race days replaced);
+  `team.js` (career classes, the floor, the regulars' field, event names);
+  `circuitui.js` (the road view and the entry card); `screens.js`
+  (Career > Circuit: class chips, status line); `schedule.js` (the Night
+  street slot, the agenda, the slot per event); `garage.js`, `phone.js`,
+  `home.js`, `ui.js` help.
+- **Classes** (`T.CCLASSES`): Club (Spec Miata), Touring (Spec E46), Sport
+  (Corvette Cup), GT (Porsche Carrera Cup), GT Pro (Super Trofeo),
+  Unlimited (World Final). Floors, an ideal lap at Pixel Raceway, this or
+  slower: 1:44, 1:38, 1:34, 1:29, 1:25, none (today's open classes: 1:45,
+  1:37, 1:31, 1:25, none). Laps 5 / 6 / 6 / 8 / 10 / 12 at Pixel Raceway,
+  scaled per track; the Championship +2.
+- **Events:** per class, 5 sections of Sprint (Pixel Raceway), Spec
+  (coming, C2), Endurance (coming, C3), Night street (Bayview Airfield,
+  Route 99, Canyon Run, Downtown, the Airfield again), then the
+  Championship (Pixel Raceway). Ids `C<class>.<section><S|P|E|N>`,
+  `C<class>.CH`; state in `c.cl` {cls, best, won, open, packs, entered}.
+- **Regulars:** 12 a class, the same every game (seeded): a name, team,
+  colour, their own car (a pool per class, the spec car most common),
+  skills from the class's band, a pace offset. Their pace: the floor plus
+  a gap by section (5, 3.75, 2.5, 1.5, 0.75 s; Championship 0.3) plus
+  their offset; skill steps up by section. Each class's top regular is
+  the old named rival (Maddie "Apex" Cole ... Erik "The Professor" Lund).
+  A race picks 9 of them (seeded per event); the Championship takes the
+  9 quickest, the named rival leading.
+- **Unlocks (as now, spread over the sections):** the old race day i of
+  stage si -> class si's section i (first win in the section), the old Cup
+  -> the Championship; cars as before (M3 Touring S2, S2000 Touring
+  Championship, RX-7 Sport S2, Z06 GT S1, GT-R GT Championship, 911 GT Pro
+  S3).
+- **Old saves:** the circuit career starts at class 1; everything the old
+  race days opened stays open (their unlocks are given again on load,
+  never taken away); couch rent goes by the furthest circuit class ever
+  reached (old or new), so nothing changes there; an old race day still
+  running when the update lands finishes as an open race.
+- **Kept until C3:** open races, team races and invitations, the Night
+  Series and the Circuit King (T.CLASSES D/C/B/A/O).
+
+## Detailed design (approved Nov 27)
 The plan above is approved (answers 1-7). This is the item-by-item
 version to approve before building, split into three builds, smallest
 first.
