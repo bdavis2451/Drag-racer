@@ -2,12 +2,10 @@
 
 Status: **Nov 27: builds 1 (the ladder), 2 (race day and the pit), the
 build 2 follow-up (the drag tuner at the pit) and 3 (sponsors) shipped
-to the tester. Build 3's detailed rules and amounts were decided while
-building, not approved item by item: they're listed as questions for the
-owner (Build 3 notes). Build 4 (Bracket / No-Prep Kings): designed and
-built on a local branch (`ladder-build4`), NOT pushed: its design waits
-on the owner's approval (questions sent Nov 27). Then the circuit ladder
-(`circuit-ladder.md`).** Docs can be pushed any time. This
+to the tester; build 3's choices confirmed by the owner. Build 4
+(Bracket / No-Prep Kings) approved; being rechecked before it ships.
+Then the circuit ladder (`circuit-ladder.md`): its detailed design goes
+to the owner for item-by-item approval before any code.** Docs can be pushed any time. This
 replaces `career-rebalance.md`
 (the rival and money pass becomes part of this).
 
@@ -706,12 +704,17 @@ base (class 1 $300 ... class 6 $30,000).
   none that rivals the class sponsor's parts; an associate offers a
   primary deal after 3 event wins (25% better); the hard-luck award (lost
   round 1 by under 0.02 s or broke, else 1 in 8); the three contract
-  shapes. Questions sent Nov 27.
+  shapes. Questions sent Nov 27. **Owner (Nov 27): all kept (1-4 A).**
 
-### Build 4 design (Claude, Nov 27; proposal: waiting on the owner's approval)
-Built on `ladder-build4` (local, not pushed) before approval: that broke
-the process (design first, approval, then build). It ships only once the
-owner has answered the questions below.
+### Build 4 design (Claude, Nov 27; approved by the owner Nov 27)
+Built on `ladder-build4` before approval (that broke the process: design
+first, approval, then build); the owner then approved it as designed
+(5-11 A): the invitation (6 Bracket events and the top 8), the King of
+the Track field (three of the list's top 7 drawn at random, top builds),
+the no-prep list (classes 3-6, King-ladder builds), one callout a no-prep
+night (#10 first, then up to 2 spots above), callout money (60% of the
+racer's class base), a loss to a King locks you out till the next King
+day, the agenda lines.
 From the plan (Build 4) and Q12 A ("opened by completing events of their
 theme, each with its own ladder first").
 - **Bracket King: the King of the Track.**

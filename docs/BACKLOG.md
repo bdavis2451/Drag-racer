@@ -20,10 +20,10 @@ the top of each section.
   vendor row at big events. **The drag tuner at the pit shipped Nov 27**
   (set it up for this track, a read of every pass, the bracket dial).
   **Build 3 (sponsors) shipped Nov 27:** ladder contracts, associates,
-  decals and contingency, track awards; its detailed rules and amounts
-  wait on the owner's OK (questions sent Nov 27). **Build 4 (Bracket /
-  No-Prep King ladders): designed, built locally, not pushed: waiting on
-  the owner's approval of the design.** Then the circuit ladder.
+  decals and contingency, track awards; its rules and amounts confirmed by
+  the owner Nov 27. **Build 4 (Bracket / No-Prep King ladders): approved
+  Nov 27, being rechecked before it ships.** Then the circuit ladder
+  (design to the owner first, item by item).
 
 ## In progress
 
