@@ -274,7 +274,10 @@
         DR.enterShow(DR.showById(ev.show), ev);
       }, '', true, function () { return carWhy([ev]); }); });
     }
-    if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), K.name); }, '', true, function () { return carWhy([K.ev]); }); });
+    if (DR.KINGS) ['bracket', 'street'].forEach(function (k) { var K = DR.KINGS[k]; if (K.ev && !G.kingWon(k) && !G.kingLock(k)) add(DR.evSlot(K.ev), 'king', k === 'bracket' ? 'King of the Track' : K.name, function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), k === 'bracket' ? 'King of the Track' : K.name); }, '', true, function () { return carWhy([K.ev]); }); });
+    // the no-prep list: a callout on no-prep nights (kings.js)
+    if (DR.KingLadders && !G.kingWon('street')) { var KL = DR.KingLadders, npS = KL.npState(), npT = npS.me ? npS.me - 1 : 10, npEv = npT >= 1 && G.themeDone('noprep') >= KL.NP_OPEN ? KL.npEvent(npT) : null;
+      if (npEv) add('satn', 'king', 'No-prep list: call out #' + npT + ' ' + npEv.opps[0].name, function () { UI.careerSub = 'kings'; UI.show(UI.RaceMenu, 'career'); }, '', true, function () { return carWhy([npEv]); }); }
     // the circuit career's race days, the Night Series, an invitation
     if (DR.CSTAGES) { var cs = DR.CSTAGES[Math.min(G.cstage ? G.cstage() : c.stage, DR.CSTAGES.length - 1)], todoC = cs.all.filter(function (ev) { return !c.cwon[ev.id] && !G.cupLock(ev); }); if (todoC.length) add('cup', 'circuit', G.cclassName(cs.cup.stage) + ' race day', function () { UI.careerSub = 'circuit'; UI.show(UI.RaceMenu, 'career'); }, todoC.map(function (ev) { return ev.name; }).join(', ') + ' (your team)', true, function () {
       var T = DR.Team, s = T && T.state();

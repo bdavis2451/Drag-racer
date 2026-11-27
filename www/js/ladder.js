@@ -445,11 +445,14 @@
       else if (run.champ != null) inNext[run.champ] = 1;
       pairs.forEach(function (p) { [p[0], p[1]].forEach(function (e) { if (e != null && inNext[e]) wins[e]++; }); });
     });
+    var given = { me: 0, regs: [] };
     Object.keys(wins).forEach(function (e) {
       var pts = DR.PTS.race + DR.PTS.round * wins[e] + (String(run.champ) === e ? DR.PTS.win : 0);
-      if (e === 'me') { P.me += pts; run.pts = pts; }
-      else { var o = ev.opps[+e]; P.r[o.name] = (P.r[o.name] || 0) + pts; }
+      if (e === 'me') { P.me += pts; run.pts = pts; given.me = pts; }
+      else { var o = ev.opps[+e]; P.r[o.name] = (P.r[o.name] || 0) + pts; given.regs.push([o, pts]); }
     });
+    // (the bracket points list: kings.js)
+    if (G.onAward) G.onAward(ev, given);
   }
   // After a race of the run: what the slip says and what comes next.
   // res: { win, red, et } (et: your elapsed time, 99 if no finish).
@@ -583,7 +586,7 @@
     var run = DR.Ladder.runFor(ev), c = C(); if (!run) return;
     var credit = Math.round((run.paid || 0) * 0.5 / 10) * 10;
     if (pick === 'credit') c.credit = (c.credit || 0) + credit;
-    else { c.pts = c.pts || {}; var P = c.pts[ev.stage] = c.pts[ev.stage] || { me: 0, r: {} }; P.me += DR.PTS.race; }
+    else { c.pts = c.pts || {}; var P = c.pts[ev.stage] = c.pts[ev.stage] || { me: 0, r: {} }; P.me += DR.PTS.race; if (G.onAward) G.onAward(ev, { me: DR.PTS.race, regs: [] }); }
     // the alternate: a regular of the class who wasn't in the field
     var R = DR.ROSTER[ev.stage], inF = {}; ev.opps.forEach(function (o) { if (o.reg && o.reg[0] === ev.stage) inF[o.reg[1]] = 1; });
     var alt = R.map(function (x, i) { return i; }).filter(function (i) { return !inF[i]; })[0];
