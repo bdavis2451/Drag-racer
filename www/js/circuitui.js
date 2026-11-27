@@ -761,7 +761,7 @@
       var tu = T.tuner(role);
       var work = role === 'circuit' ? btn('Test day', function () { DR.Tuner.openCircuit(G.car()); }, 'small go') : btn('Tune', function () { UI.show(UI.Tune); setTimeout(function () { DR.Tuner.open(G.car()); }, 60); }, 'small go');
       return tu ? driverCard(tu, h('div', { class: 'row', style: { gap: '6px' } }, work, btn('Release', function () { UI.confirm('Release ' + tu.name + '?', function () { T.releaseStaff(tu.id); UI.refresh(); }, 'Release'); }, 'small red')), h('span', { class: 'etype good' }, 'ON STAFF')) :
-        h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, 'No ' + T.ROLES[role].toLowerCase()), h('div', { class: 'gsmall dim' }, role === 'drag' ? 'Tunes your drag cars: dyno and test passes.' : 'Sets up your circuit cars on test days.'),
+        h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, 'No ' + T.ROLES[role].toLowerCase()), h('div', { class: 'gsmall dim' }, role === 'drag' ? 'Tunes your drag cars (dyno and test passes) and works your pit on race days.' : 'Sets up your circuit cars on test days.'),
           role === 'circuit' ? btn('Book a freelance test day', function () { DR.Tuner.openCircuit(G.car()); }, 'small') : null);
     }));
     var boards = { circuit: s.board, drag: s.dboard, tuner: s.tboard, mech: s.mboard };

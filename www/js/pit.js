@@ -64,6 +64,9 @@
       run.load ? h('div', { class: 'gsmall dim' }, 'Brought: ' + DR.Pit.loadLine(run.load)) : null);
     // the work: what the crew can do here, with what you brought
     var crew = DR.Pit ? DR.Pit.crew() : null, jobs = DR.Pit && run.phase !== 'broke' ? DR.Pit.jobs(ev, run, inst) : [];
+    // your tuner's read of the last pass
+    var lastP = (run.passes || []).slice(-1)[0], read = lastP && lastP.read ? h('div', { class: 'pitwork' }, h('div', { class: 'plvl' }, (lastP.read.who + '\'S READ OF THE LAST PASS').toUpperCase()),
+      lastP.read.lines.map(function (l) { return h('div', { class: 'gsmall' }, l); })) : null;
     var work = crew && run.load ? h('div', { class: 'pitwork' },
       h('div', { class: 'plvl' }, 'PIT WORK'),
       h('div', { class: 'gsmall dim' }, 'Crew: ' + crew.names.join(', ') + ' • ' + (run.load.tools ? DR.Pit.TOOLS[run.load.tools].name : 'no tools')),
@@ -102,6 +105,6 @@
     return h('div', { class: 'screen' }, UI.top('PIT', back),
       h('div', { class: 'content pit' },
         h('div', { class: 'pix acc' }, DR.raceDayName(ev)), h('div', { class: 'gsmall dim' }, DR.Cal.fmt(now) + ' • ' + DR.STAGES[ev.stage].name + ' • section ' + (ev.sec + 1)),
-        head, h('div', { class: 'pitcols' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'THE DAY'), sched), carBox), work, btns));
+        head, h('div', { class: 'pitcols' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'THE DAY'), sched), carBox), read, work, btns));
   };
 })();
