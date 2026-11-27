@@ -299,6 +299,7 @@
       chip('Strip', careerTab === 'days', function () { careerTab = 'days'; UI.refresh(); }),
       chip('King', careerTab === 'king', function () { careerTab = 'king'; UI.refresh(); }),
       chip('Standings', careerTab === 'stand', function () { careerTab = 'stand'; UI.refresh(); }),
+      UI.sponsorsView ? chip('Sponsors', careerTab === 'spons', function () { careerTab = 'spons'; UI.refresh(); }) : null,
       chip('Circuit', careerTab === 'circuit', function () { careerTab = 'circuit'; UI.refresh(); }),
       chip('Kings', careerTab === 'kings', function () { careerTab = 'kings'; UI.refresh(); }));
     // the class at a glance. The strip and the circuit are two ladders: a
@@ -321,7 +322,7 @@
         h('span', { class: kingDone ? 'good' : 'dim' }, (kingDone ? '✔' : '✗') + ' King'),
         h('span', { class: 'gsmall dim grow' }, kingDone ? 'class done' : 'the King opens the next class'));
     }
-    var body = careerTab === 'king' ? kingView(selStage) : careerTab === 'stand' ? standingsView(selStage) : careerTab === 'kings' ? kingsView() : circ ? UI.circuitCareerView(selCStage) : sectionsView(c);
+    var body = careerTab === 'king' ? kingView(selStage) : careerTab === 'stand' ? standingsView(selStage) : careerTab === 'spons' && UI.sponsorsView ? UI.sponsorsView(selStage) : careerTab === 'kings' ? kingsView() : circ ? UI.circuitCareerView(selCStage) : sectionsView(c);
     return h('div', {}, chips, careerTab === 'kings' ? null : status, tabs, body);
   }
   // the King event: #5 up to #1 on King nights (a win stays won, the night
@@ -518,15 +519,16 @@
     return h('div', { class: 'screen' }, UI.top('RACE DAY', back, h('span', { class: 'topcar' }, bestText(G.car()))),
       h('div', { class: 'evdaybody' }, body));
   };
+  UI.sponsorPicker = function (si) { sponsorPicker(si); };
   function sponsorPicker(si) {
     var offers = G.sponsorOffers(si), close;
     var rows = offers.map(function (o) {
-      var k = o.contract, req = ['Win ' + k.spon + ' sponsor races'];
-      if (k.street) req.push('win ' + k.street + ' street races');
-      if (k.stars) req.push('reach a ' + (Math.round(k.stars * 100) / 100) + '-star visual rating');
-      if (o.prod) req[0] += ' with ' + o.prod + ' on the car';
+      var k = o.contract, req = [DR.Sponsor ? DR.Sponsor.contractText(k, o.prod).replace(/^w/, 'W') : 'Win ' + k.spon + ' sponsor races'];
+      if (!DR.Sponsor && k.street) req.push('win ' + k.street + ' street races');
+      if (!DR.Sponsor && k.stars) req.push('reach a ' + (Math.round(k.stars * 100) / 100) + '-star visual rating');
+      if (!DR.Sponsor && o.prod) req[0] += ' with ' + o.prod + ' on the car';
       return h('div', { class: 'spcard', style: { borderLeftColor: o.col } },
-        h('div', { class: 'pix', style: { color: o.col } }, o.name), h('div', { class: 'dim' }, o.pitch),
+        h('div', { class: 'pix', style: { color: o.col } }, o.name + (o.assoc ? ' ★' : '')), h('div', { class: 'dim' }, o.pitch),
         h('div', { class: 'gsmall' }, 'Contract: ' + req.join(', ') + '.'),
         h('div', { class: 'good gsmall' }, 'Signing ' + DR.money(o.sign) + ' • ' + DR.money(o.stipend) + ' every race day • ' + DR.money(o.perWin) + ' per win • ' + DR.money(o.bonus) + ' and a free car when fulfilled'),
         o.disc || o.fuelDisc ? h('div', { class: 'acc gsmall' }, o.disc ? Math.round(o.disc.pct * 100) + '% off ' + (DR.UNLOCK_NAMES[o.disc.grp] || o.disc.grp).toLowerCase() + ' parts while signed' : Math.round(o.fuelDisc * 100) + '% off race fuel while signed') : null,

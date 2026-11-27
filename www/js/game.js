@@ -1072,7 +1072,7 @@
     var key = JSON.stringify([inst.carId, inst.engine, inst.parts, inst.tune, dist, grip || 1, !!inst.ai, cond || 0]);
     if (etCache[key]) return etCache[key];
     var r = DR.simulate(DR.buildSpec(inst), { dist: dist || DR.QUARTER, grip: grip || 1, cond: cond });
-    etCache[key] = { et: r.et, trap: r.trap };
+    etCache[key] = { et: r.et, trap: r.trap, sixty: r.splits && r.splits['60ft'] ? r.splits['60ft'].t : null };
     return etCache[key];
   };
 
