@@ -312,6 +312,42 @@
     return '';
   };
 
+  // ---------------------------------------------------------------- your tuner's read
+  // After each pass your staff drag tuner reads it (their data skill): what
+  // it did (spun, shook, clean), the 60-foot against your best today, what
+  // the hot engine cost, and at a bracket race the dial for the next round
+  // from today's passes (closer the better they read data).
+  function gauss() { var u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  P.heatCost = function (et, eng) { var p = 0.00125 * Math.max(0, Math.min(20, (eng || 0) - 8)); return et < 90 ? et * p / 3 : 0; };
+  P.readPass = function (ev, run, pass) {
+    var tu = DR.Team && DR.Team.tuner ? DR.Team.tuner('drag') : null; if (!tu) return;
+    var d = tu.dat, first = tu.name.split(' ')[0], L = [], clean = pass.et < 90 && !pass.red;
+    if (pass.et >= 90) L.push('No time from that one.');
+    else if (pass.shake > 0.35) L.push('It shook the tires' + (pass.spin > 0.15 ? ' and spun' : '') + ': it needs calming down at the hit.');
+    else if (pass.spin > 0.15) L.push('It spun off the line: too much at the hit for this track.');
+    else L.push('Clean pass, it hooked.');
+    if (d >= 50 && pass.sixty) {
+      var best = (run.passes || []).filter(function (x) { return x.sixty && x !== pass; }).reduce(function (a, x) { return Math.min(a, x.sixty); }, 99);
+      L.push('60 ft ' + pass.sixty.toFixed(3) + (best < 90 ? ' (your best today ' + best.toFixed(3) + ')' : ''));
+    }
+    var hc = P.heatCost(pass.et, pass.heat);
+    if (d >= 65 && hc >= 0.01) L.push('The hot engine cost about ' + hc.toFixed(2) + ': cool it down before the next one.');
+    if ((pass.shake > 0.35 || pass.spin > 0.15) && pass.et < 90) L.push('"Set it up for this track" in the pit would help.');
+    pass.read = { who: first, lines: L };
+    // a bracket race: the next dial, from today's clean passes (the last
+    // counts most), a hair under it; a tuner who reads data badly is further off
+    if (ev.type === 'bracket') {
+      var ok = (run.passes || []).filter(function (x) { return x.et < 90 && !x.red; }).slice(-3);
+      if (ok.length) {
+        var w = 0, sum = 0; ok.forEach(function (x, i) { var k = i + 1; sum += (x.et - P.heatCost(x.et, x.heat) * 0.5) * k; w += k; });
+        var dial = Math.floor((sum / w + gauss() * (1 - d / 100) * 0.06 - 0.01) * 100) / 100;
+        run.tunerDial = { dial: dial, who: first };
+        pass.read.lines.push('Dial ' + dial.toFixed(2) + ' for the next round.');
+      }
+    }
+    G.save();
+  };
+
   // ---------------------------------------------------------------- pit jobs
   // The work you can do here now. Each: { id, label, hours, why (blocked),
   // go() }. Hours: the garage's hours x the tools x the crew.
@@ -355,6 +391,13 @@
         return 'Spare tires on. The ones that came off go back on the trailer.';
       }, P.setFits(inst, z));
     });
+    // your drag tuner sets it up for this track (their chassis skill)
+    if (crew.tuner && DR.Tuner && DR.Tuner.pitSetup) out.push({ id: 'setup', label: 'Set it up for this track (' + crew.tuner.name.split(' ')[0] + ': tire pressure and the launch' + (crew.tuner.chs >= 65 ? ', the shocks' : '') + ')', hours: 1 / 3, why: '', go: function () {
+      var r = DR.Tuner.pitSetup(inst, crew.tuner, ev);
+      if (DR.Team.learnTuner) DR.Team.learnTuner(crew.tuner);
+      run.setupAt = (run.passes || []).length;
+      return r ? crew.tuner.name.split(' ')[0] + ': ' + r.lines.join(', ') + '.' : crew.tuner.name.split(' ')[0] + ' looked it over: it\'s right for this track as it is.';
+    } });
     // the bottle
     var hh = run.heat || {}, nosP = hh.nosP != null ? hh.nosP : 1;
     if (ld.bottles > 0 && DR.partId('nitrous', inst) !== 'stock') job('bottle', 'Swap in a full nitrous bottle (' + Math.round(nosP * 100) + '% pressure now)', 1 / 6 / 0.6, { tools: 1, crew: 0 }, function () {
@@ -389,6 +432,7 @@
     if (j.why) return UI.toast('Can\'t: ' + j.why);
     var nc = DR.Ladder.nextCall(ev, run);
     function go() {
+      if (j.id === 'setup' && !j.working) { j.working = true; UI.toast(P.crew().tuner.name.split(' ')[0] + ' is going over the car...'); return setTimeout(go, 60); }
       var news = G.advance(j.hours), msg = j.go();
       var c = P.crew(); if (c.mech && DR.Team.learnMech) DR.Team.learnMech(c.mech);
       G.save(); if (UI.timeNews) UI.timeNews(news);

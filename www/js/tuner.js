@@ -94,7 +94,7 @@
   TU.WHERE = { prep: { name: 'Strip', setup: 'Strip tune', night: false, dist: function () { return DR.QUARTER; } },
     street: { name: 'Street', setup: 'Street tune', night: true, dist: function () { return DR.EIGHTH; } } };
   TU.BOTH_K = 0.7;   // the second surface of a Strip + Street booking (1.7x in all)
-  function condOf(ss) { return DR.conditions(ss.surf || 'prep', TU.WHERE[ss.surf || 'prep'].night); }
+  function condOf(ss) { return ss.cond || DR.conditions(ss.surf || 'prep', TU.WHERE[ss.surf || 'prep'].night); }
   TU.session = function (inst, who, jobs, agg, drvId, surf) {
     var t0 = JSON.parse(JSON.stringify(inst.tune || {}));
     var S0 = G.spec(inst), d0 = DR.fullTune(inst, S0);
@@ -398,16 +398,16 @@
     if (k === 'shiftRpm') revWith(t, ss.inst, v);
     var key = JSON.stringify(t); ss.memo = ss.memo || {};
     if (ss.memo[key] != null) return ss.memo[key];
-    var S = DR.buildSpec(ss.inst, t), cond = condOf(ss), sum = 0, dist = TU.WHERE[ss.surf || 'prep'].dist();
+    var S = DR.buildSpec(ss.inst, t), cond = condOf(ss), sum = 0, dist = ss.dist || TU.WHERE[ss.surf || 'prep'].dist();
     ss.finfo = ss.finfo || {};
-    [0.7, 1, 1.3].forEach(function (sr) {
-      var sim = new DR.Sim(S, { cond: cond, shakeRnd: sr, dist: dist, tireT: S.tire.topt });
+    (ss.rolls || [0.7, 1, 1.3]).forEach(function (sr) {
+      var sim = new DR.Sim(S, { cond: cond, grip: ss.grip || 1, shakeRnd: sr, dist: dist, tireT: S.tire.topt });
       var ai = modelDriver(ss), dt = 1 / 400, tG = -1.2;
       while (!sim.finished && tG < 40 && !sim.crashed && !sim.blown) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
       sum += sim.finished ? sim.et : 30;
       if (sr === 1) ss.finfo[key] = { toppedOut: sim.gear >= S.ratios.length - 1 && sim.rpm() >= S.limit - 150, endRpm: sim.rpm(), peak: S.peakHpRpm };
     });
-    return (ss.memo[key] = sum / 3);
+    return (ss.memo[key] = sum / (ss.rolls || [0, 0, 0]).length);
   }
   TU.score = score;
   // the model's ET for the tune as it is on the car now
@@ -475,6 +475,25 @@
     keys.forEach(function (k) { setTune(ss, k, start[k]); });
     return moved ? { set: out, was: start } : null;
   }
+  // At a race day's pit (career ladder): your staff drag tuner sets the car
+  // up for this track (its surface, the temperature, the distance) from what
+  // they see, no test passes: the tire pressure and the launch, and a good
+  // chassis tuner (65+) the shocks too. How close: their chassis skill, as
+  // at test & tune (comboCall). Returns { set, was } or null (no change).
+  TU.PIT_KEYS = ['psi', 'launchRpm', 'launchThr', 'thrRamp', 'gb1', 'gb2', 'tcSlip', 'tcGain'];
+  TU.PIT_SHOCKS = ['rebF', 'rebR', 'bumpR'];
+  TU.pitSetup = function (inst, who, ev) {
+    var c = DR.evCond(ev), T = DR.EVENT_TYPES[ev.type], S = G.spec(inst);
+    var ss = { inst: inst, who: who, agg: TU.AGG.bal, aggKey: 'bal', cond: DR.conditions(c.surface, c.night), dist: ev.dist, surf: c.surface === 'prep' ? 'prep' : 'street',
+      grip: (T.grip || 1) / ((DR.Race && DR.Race.SURF_BASE[c.surface]) || 1), rolls: [1] };   // (one look per setting: a phone works it out in seconds)
+    ss.comboKeys = TU.PIT_KEYS.concat(who.chs >= 65 ? TU.PIT_SHOCKS : []).filter(function (k) { var dd = def(k); return dd && dd.show(S); });
+    var cb = comboCall(ss);
+    if (!cb) return null;
+    Object.keys(cb.set).forEach(function (k) { setTune(ss, k, cb.set[k]); });
+    G.save();
+    cb.lines = Object.keys(cb.set).map(function (k) { return label(k) + ' ' + fmt(k, cb.was[k]) + ' → ' + fmt(k, cb.set[k]); });
+    return cb;
+  };
   TU.nextPass = function (ss) {
     if (ss.broke) return null;
     if (ss.best == null) return { label: 'Baseline', k: null };

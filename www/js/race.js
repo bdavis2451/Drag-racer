@@ -116,6 +116,9 @@
         // a suggestion a little under your last time (rounded down, never up:
         // running quicker than your dial is a breakout)
         var dflt = lastP ? Math.floor(lastP.sp[key === 'q' ? '1/4' : '1/8'][0] * 20) / 20 : inst.best && inst.best[key] ? Math.floor(inst.best[key] * 20) / 20 : '';
+        // at a ladder event your drag tuner's call, from today's passes
+        var lrun = cfg.lad && DR.Ladder.runFor(ev), tDial = lrun && lrun.tunerDial;
+        if (tDial) dflt = tDial.dial.toFixed(2);
         dialIn = h('input', { type: 'number', step: '0.01', min: '3', max: '30', value: dflt, class: 'tinput', style: { width: '110px', minWidth: '90px', flex: 'none' } });
       }
       var canPink = ev && ev.type === 'callout' && G.state.cars.length > 1;
@@ -129,12 +132,12 @@
         if (pinkCb) pinkCb.addEventListener('change', function () { if (pinkCb.checked) seat.value = ''; seat.disabled = pinkCb.checked; });
       }
       // bracket: a hired driver picks their own dial (you can change it)
-      var dialNote = isBk ? h('span', { class: 'dim gsmall' }, 'Run quicker than it and you lose.') : null;
+      var dialNote = isBk ? h('span', { class: 'dim gsmall' }, (tDial ? tDial.who + '\'s call, from today\'s passes. ' : '') + 'Run quicker than it and you lose.') : null;
       if (isBk && seat) {
         var dialFor = function () {
           var d = seat.value && DR.Team.staff(seat.value);
           dialIn.value = d ? DR.Race.driverDial(inst, d, cfg, cond) : dflt;
-          dialNote.textContent = d ? d.name.split(' ')[0] + '\'s dial, from your logbook and today\'s weather. Run quicker than it and you lose.' : 'Run quicker than it and you lose.';
+          dialNote.textContent = d ? d.name.split(' ')[0] + '\'s dial, from your logbook and today\'s weather. Run quicker than it and you lose.' : (tDial ? tDial.who + '\'s call, from today\'s passes. ' : '') + 'Run quicker than it and you lose.';
         };
         seat.addEventListener('change', dialFor);
         if (seat.value) dialFor();
@@ -1057,9 +1060,13 @@
       // next callout) or ends (the purse by round reached, the standings)
       var lad = null;
       if (cfg.lad && !testDrive) {
+        // the pass, for your tuner's read in the pit: the 60-foot, wheelspin,
+        // shake, the engine's heat (gear.js)
+        var sx60 = you.sim.splits && you.sim.splits['60ft'];
+        var passData = { et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, sixty: sx60 ? sx60.t : null, spin: you.sim.wspin || 0, shake: you.sim.shakeMax || 0, heat: heat.eng || 0, red: !!me.red, driver: cfg.driver || null };
         // broken: you can't make the next call, so your day ends here
-        if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true, blown: !!damaged.engine, dmg: damaged }); } }
-        else lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99 });
+        if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true, blown: !!damaged.engine, dmg: damaged, pass: passData }); } }
+        else lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, pass: passData });
         if (lad) {
           lad.money.forEach(function (m) { money.push(m); moneyDelta += m[1]; });
           news = news.concat(lad.news); notes = notes.concat(lad.notes); unlocks = lad.unlocks || [];
