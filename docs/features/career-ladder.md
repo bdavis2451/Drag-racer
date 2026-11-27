@@ -617,6 +617,22 @@ repairs, built; chassis: setup; data: reads the slip). Not built yet.
 - **Left out:** converter and gear changes (parts and the Tune screen, as
   now); weather beyond the event's day / night (owner: weather not a big
   factor).
+- **Owner (Nov 27):** 1 A (the "Set it up for this track" job), 2 A (the
+  read after each pass and the bracket dial-in). Build 3: start now and
+  push it when it's ready.
+- **Built and shipped (Nov 27):** `tuner.js` `TU.pitSetup` (the test &
+  tune model, `comboCall`, on the event's conditions, surface grip and
+  distance; one simulated pass per setting so a phone works it out in a
+  few seconds: 0.3-3 s on desktop Chromium, AWD slowest); `gear.js`
+  `P.readPass` (per pass: spin > 0.15 s, shake > 0.35, the 60-foot from
+  data 50+, the heat cost from data 65+, the bracket dial = today's last
+  three clean passes weighted to the last, half the heat cost off, less
+  0.01, a miss of N(0, (1 - data/100) x 0.06)); the pit's read box and the
+  setup job; the race-day dial-in filled with the tuner's call. Fixed on
+  the way: `DR.evCond` gives only the surface and night, the full
+  conditions come from `DR.conditions`. Tests: a bracket day with a hired
+  tuner (psi 40 -> 33, the read, the dial 16.34 in the modal); the
+  regression suite.
 
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.

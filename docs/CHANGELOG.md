@@ -2,6 +2,26 @@
 
 Short notes for testing, newest first.
 
+## Your drag tuner works the pit
+
+- With a drag tuner on staff (Team), the pit has a new job: **Set it up
+  for this track** (20 minutes). They set the tire pressure and the launch
+  (2-step, launch throttle, boost in 1st and 2nd, traction control) for
+  today's surface and temperature; a good chassis tuner (65+) does the
+  shocks too. How close they get is their chassis skill. A no-prep night
+  wants a different launch than a prepped strip by day.
+- **After every pass they read it** (in the pit): it spun / shook / was
+  clean, your 60-foot against your best today, what the hot engine cost.
+  A better data skill reads more.
+- **At a bracket race they call your dial** for the next round from
+  today's passes, and it's filled in on the race-day screen (you can
+  change it). A tuner who reads data badly is further off.
+- Try: hire a drag tuner, set the tire pressure way off on purpose, enter
+  an event and run a pass: read the pit, then "Set it up for this track".
+  At a Bracket, check the dial-in after the time trials.
+- Look out for: the setup taking more than a few seconds to work out on
+  the phone, a dial that's clearly wrong for a good tuner.
+
 ## Race days by the clock, your pit, gear and trailers (drag, part 2 of 4)
 
 - **A race day runs by the clock.** Enter an event and you're in your pit:
