@@ -2,6 +2,41 @@
 
 Short notes for testing, newest first.
 
+## The circuit career is a ladder now (circuit, part 1 of 3)
+
+- **The circuit career starts over** (Career > Circuit): six classes, each
+  with its spec series: Club (Spec Miata), Touring (Spec E46), Sport
+  (Corvette Cup), GT (Porsche Carrera Cup), GT Pro (Lamborghini Super
+  Trofeo) and Unlimited (the World Final). Everything the old circuit race
+  days opened stays open; cars, parts, drivers and money are kept.
+- **A class limit:** a car may enter if its ideal lap at Pixel Raceway (its
+  rating) is no quicker than the class allows: Club 1:44, Touring 1:38,
+  Sport 1:34, GT 1:29, GT Pro 1:25, Unlimited any car.
+- **The road:** five sections of four events (Sprint, Spec, Endurance,
+  Night street), then the Championship. For now Sprints (Pixel Raceway,
+  Sunday race days) and Night races (a street circuit, Saturday nights)
+  run; win both in a section to open the next. Spec and Endurance show as
+  "coming" (next updates).
+- **Ten cars a race:** your driver and nine of the class's twelve regulars
+  (named, with their own cars), quicker each section. Only the win
+  finishes an event; the top five are paid (Club: $300 a win in section
+  1, $540 in section 5; P2-P5 60/40/25/15% of it). Each event once a week.
+- **The Championship:** after the five sections, the class's nine
+  quickest, led by its named rival (Maddie "Apex" Cole in Club). Win it
+  for the next class and the old Cup's unlocks.
+- **Fix:** a car's rating and the field's pace no longer change with your
+  tire wear (worn tires used to make the whole field slower).
+- Try:
+  - Career > Circuit: tap the stops on the road; the card shows the event,
+    the purse, what it opens, and the regulars.
+  - Send Danny out in a stock Miata for the Club Sprint (Sunday) and the
+    Night race (Saturday night): the Sprint is winnable; the night tracks
+    suit some cars better than others.
+  - A quick car in Club: it should say "Too quick for this class".
+- Look out for: an event you've won still blocking the next section, a
+  race you entered this week still showing as open, the purse or the
+  unlocks not matching the card, anything odd on an old save's circuit tab.
+
 ## The Bracket King and the No-Prep King have their own ladders (drag, part 4 of 4)
 
 - **Bracket points:** every Bracket event you race (any class) puts its

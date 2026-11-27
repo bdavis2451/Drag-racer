@@ -1101,6 +1101,17 @@ input[type=range]::-webkit-slider-thumb { width: 18px; height: 24px; margin-top:
 .rnode.t-street { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #ff6a00; }
 .rnode.t-bracket { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3a7bd2; }
 .rnode.t-noprep.won, .rnode.t-street.won, .rnode.t-bracket.won { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3ccf6e; }
+/* the circuit ladder's road (Career > Circuit) */
+.rnode.t-csprint { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #8a5cff; }
+.rnode.t-cnight { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #2fb3a8; }
+.rnode.t-cspec, .rnode.t-cendur { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #5a5e6a; }
+.rnode.t-cchamp { width: 54px; height: 50px; background: linear-gradient(180deg, #5a4a12, #2e260a); box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #ffcc00; }
+.rnode.t-cchamp .rglyph { color: #ffe27a; font-size: 7px; }
+.rnode.t-csprint .rglyph, .rnode.t-cnight .rglyph, .rnode.t-cspec .rglyph, .rnode.t-cendur .rglyph { font-size: 7px; }
+.rnode.soon { filter: saturate(.2) brightness(.6); background: repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 6px, transparent 6px 12px); }
+.rnode.soon .rglyph { color: #9aa0ab; }
+.rnode.t-csprint.won, .rnode.t-cnight.won, .rnode.t-cchamp.won { box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #3ccf6e; }
+.clbadge.sm { font-size: 7px; width: 36px; }
 /* the pit at a ladder event */
 .pit { display: flex; flex-direction: column; gap: 8px; }
 .pitnext { background: rgba(255,216,74,.08); border-left: 3px solid #ffd84a; padding: 6px 10px; }

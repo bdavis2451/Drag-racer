@@ -179,6 +179,49 @@ before building, all answered with the recommended option:
   running when the update lands finishes as an open race.
 - **Kept until C3:** open races, team races and invitations, the Night
   Series and the Circuit King (T.CLASSES D/C/B/A/O).
+- **Tire-wear fix (owner's yes, Nov 27):** found while balancing: a car's
+  rating (`T.idealLap`, cached per build) and the field's pace
+  (`sensitivity`) used the car's tires as they were when first worked
+  out, so worn tires made the whole field slower, or let a car under a
+  class limit only while worn. Both now use the car on fresh tires
+  (`T.freshCar`); the race itself still runs on the real tires. Affects
+  open races, team races and the Night Series too.
+
+## C1 build notes (Nov 27)
+- **Code:** `ccareer.js` (DR.CL: classes, themes, regulars, events,
+  locks, purses, unlocks, saves; wraps `T.enter` for ladder events: the
+  lock, the field, the week); `team.js` (`T.freshCar`, the floor for
+  ladder events, the event name in the away text); `circuitui.js`
+  (`careerCard` is the road; `cEventCard`, `cRegulars`; the entry modal,
+  watch view, live cards and recent results name the event); `screens.js`
+  (class chips "C1 Club"..., the status line); `schedule.js` (slot
+  `cnight`, Saturday 8 PM-midnight; the slot per event; the agenda per
+  slot with a class-limit check); `garage.js` (circuit section),
+  `home.js` (couch rent by `G.cbest`), `phone.js`, `ui.js`,
+  `tutorial.js` texts; CSS for the road's circuit nodes.
+- **Tested** (scratchpad `scrc/`): `c1a.js` (data: 21 events a class, ids,
+  tracks, money, 12 unique regulars, every regular's pace over the floor;
+  locks; entering: 10 cars, entry + wage; the purse by position; win ->
+  section; won again; the Championship -> next class and its unlocks; a
+  GT-R too quick for Club, fine in Unlimited; once a week; an old save
+  (old Cup wins -> their unlocks back, class 1, couch rent kept); an old
+  race day still running finishes as an open race). `c1ui.js` (phone and
+  wide: the road, a night stop, a "coming" stop, the Championship, the
+  entry modal, watching, the result, This Week, the garage). Rival
+  snapshot identical; the drag regression (ltest, web2-12) clean.
+- **Balance** (`c1bal.js`, 20 races each, fresh tires; win % / mean
+  finish): Club Sprint section 1: stock Miata with a rookie (30) 50% /
+  P1.5, with a 50 driver 95%; stock AE86 0% / P5 (needs parts); Miata with
+  suspension, brakes and track tires (1:46.5) 100%. Section 3: the modded
+  Miata 5% (rookie) / 45% (50 driver). Section 5 and the Championship need
+  a car near the limit and a good driver: a stock S2000 (1:44.97) wins
+  section 5 15% / 70% / 100% with a 50 / 65 / 80 driver, the Championship
+  0% / 10% / 95%. Night tracks favour different cars (the S2000 wins the
+  Route 99 race with a rookie, the Miata doesn't).
+- **Follow-ups (planned):** C2 makes Spec live (the series car, rent or
+  own) and the rule 3 of 4; licenses gate classes. C3: Endurance, then the
+  Night Series and the Circuit King fold in (class 5's Championship as the
+  way to the Circuit King); open races / team races then revisited.
 
 ## Detailed design (approved Nov 27)
 The plan above is approved (answers 1-7). This is the item-by-item

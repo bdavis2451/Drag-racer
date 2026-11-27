@@ -18,8 +18,8 @@
   // key: [from, text(data)]; once-only unless `again`
   var SCRIPT = {
     intro: ['ray', function () { return 'Couch is yours, kid. Bay three too, as long as you sweep up and don\'t touch my lathe. Your car runs. Barely. Go find out how barely: the strip\'s open for test and tune most days.'; }],
-    circuit: ['ray', function () { return 'Danny says he\'s ready for the Sunday Track Day. Your team\'s circuit races are under Race > Career > Circuit, and they pay. Better drivers are on the Team board when you can afford them.'; }],
-    cup: ['ray', function (n) { return 'Your team won the ' + (G.cupName ? G.cupName(n) : 'Cup') + '! The road course people will sell you their good stuff now: brakes, bars, wings.' + (n + 1 < DR.STAGES.length ? ' Next up for them: ' + G.cclassName(n + 1).replace(/^Circuit \d+: /, '') + '.' : ''); }],
+    circuit: ['ray', function () { return 'Danny says he\'s ready for his first Club race. Your team\'s circuit career is under Race > Career > Circuit: Sprints on Sundays, night street races on Saturday nights, and they pay. Better drivers are on the Team board when you can afford them.'; }],
+    cup: ['ray', function (n) { return 'Your team won the ' + (G.cupName ? G.cupName(n) : 'Cup') + '!' + (n < 4 ? ' The road course people will sell you their good stuff now: brakes, bars, wings.' : '') + (n + 1 < DR.STAGES.length ? ' Next up for them: ' + G.cclassName(n + 1).replace(/^Circuit \d+: /, '') + '.' : ''); }],
     invite: ['street', function (iv) { return (iv && iv.team ? iv.team : 'A team') + ' here. Two of ours against two of yours and one more crew, ' + (iv ? DR.TRACKS[iv.track].name : 'this weekend') + '. Team points. You in? (Race > Events)'; }, true],
     firstrace: ['ray', function () { return 'Saw your slip. Don\'t look at the ET, look at the 60 foot. That\'s where races are won and where yours isn\'t yet.'; }],
     nitrous: ['ray', function () { return 'Lost one? Half that field is on the bottle. A 50-shot dry kit is $500 and the cheapest horsepower there is (Upgrade > Parts > Power Adders). Spray it once the car\'s hooked, not off the line, and mind your injectors.'; }],

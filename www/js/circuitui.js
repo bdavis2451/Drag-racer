@@ -805,7 +805,7 @@
         var cls = T.classById(r.cls), d = T.driver(r.drv), t = T.clock(r), rows = T.standings(r, t), me = rows.filter(function (x) { return x.e.you; })[0];
         var car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0];
         lg.appendChild(h('div', { class: 'ecard livecard', onclick: function () { UI.watchRace = r.id; UI.refresh(); } },
-          h('div', { class: 'drow' }, helmet(d ? d.col : '#888', 22), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, cls.name), h('div', { class: 'gsmall dim' }, (d ? d.name : '') + ' • ' + (car ? DR.CARS[car.carId].name : ''))), h('span', { class: 'ewon live' }, 'LIVE')),
+          h('div', { class: 'drow' }, helmet(d ? d.col : '#888', 22), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, r.ev && G.cupEvent(r.ev) ? G.cupEvent(r.ev).name : cls.name), h('div', { class: 'gsmall dim' }, (d ? d.name : '') + ' • ' + (car ? DR.CARS[car.carId].name : ''))), h('span', { class: 'ewon live' }, 'LIVE')),
           h('div', { class: 'gst' }, h('span', { class: 'k' }, 'P' + (rows.indexOf(me) + 1) + ' • LAP ' + Math.min(r.laps, me.w.lap + 1) + '/' + r.laps), h('span', { class: 'v' }, 'back in ' + T.fmtLeft(T.left(r)))),
           h('div', { class: 'efoot' }, btn('⏩ 4×' + (r.ff ? ' ON' : ''), function (e) { e.stopPropagation(); T.setFast(r, !r.ff); UI.refresh(); }, 'small chip' + (r.ff ? ' on' : '')),
             btn('Watch', function () { UI.watchRace = r.id; UI.refresh(); }, 'small go'))));
@@ -846,43 +846,81 @@
     if (s.history.length) {
       out.push(h('div', { class: 'plvl secthead' }, 'RECENT RESULTS'));
       out.push(h('div', { class: 'trkcard' }, h('table', { class: 'trktab' }, s.history.slice(0, 6).map(function (x) {
-        return h('tr', {}, h('td', { class: x.pos === 1 ? 'acc' : '' }, 'P' + x.pos), h('td', {}, T.classById(x.cls).name, h('div', { class: 'gsmall dim' }, DR.TRACKS[x.track || 'pixel'].name)), h('td', {}, x.drv), h('td', { class: 'dim' }, DR.CARS[x.car] ? DR.CARS[x.car].name : ''),
+        return h('tr', {}, h('td', { class: x.pos === 1 ? 'acc' : '' }, 'P' + x.pos), h('td', {}, x.ev && G.cupEvent(x.ev) ? G.cupEvent(x.ev).name : T.classById(x.cls).name, h('div', { class: 'gsmall dim' }, DR.TRACKS[x.track || 'pixel'].name)), h('td', {}, x.drv), h('td', { class: 'dim' }, DR.CARS[x.car] ? DR.CARS[x.car].name : ''),
           h('td', { class: 'num' }, x.prize ? '+' + DR.money(x.prize) : '—'));
       }))));
     }
-    out.push(h('div', { class: 'gsmall dim trknote' }, 'Races run at 4x real time; ⏩ 4× time speeds a race up 4x more (16x), from the race card or while you watch. While a car is at the track it can\'t be drag raced, worked on, shown or sold. Open races pay prize money; the career\'s circuit race days (above) open circuit parts and the road-course cars, and each class\'s Cup opens the next circuit class.'));
+    out.push(h('div', { class: 'gsmall dim trknote' }, 'Races run at 4x real time; ⏩ 4× time speeds a race up 4x more (16x), from the race card or while you watch. While a car is at the track it can\'t be drag raced, worked on, shown or sold. Open races pay prize money; the circuit career (Career > Circuit) opens circuit parts and the road-course cars, and each class\'s Championship opens the next.'));
     return h('div', {}, out);
   }
 
   // a race that isn't on now: when it is, and go there
   function gateC(slot, what, go) { if (G.slotGate) G.slotGate(slot, what, go); else go(); }
-  // the stage's circuit race days and its Cup: half of what opens the next stage
-  var cupStage = null;
+  // ---------------------------------------------------------------- the circuit ladder
+  // The class as a road, like the strip's: five sections of four events
+  // (Sprint and Spec above, Endurance and Night below), then the
+  // Championship. Tap a stop to see it on the right.
+  var cSel = null;
+  var CGLYPH = { sprint: 'SPR', spec: 'SPEC', endur: 'END', night: 'NGT', champ: 'CHAMP' };
+  function cLive(ev) { return ev.champ || !!DR.CL.LIVE[ev.theme]; }
   function careerCard(si) {
-    var T = TM(), c = G.careerState(), embed = si != null;
-    if (embed) cupStage = si;
-    var cst = G.cstage ? G.cstage() : c.stage;
-    if (cupStage == null || cupStage > cst) cupStage = cst;
-    var cs = DR.CSTAGES[cupStage], st = DR.STAGES[cupStage], kingWon = G.eventWon(st.boss);
-    var chips = h('div', { class: 'schips' }, DR.STAGES.map(function (x, si) {
-      var un = si <= cst, done = G.cupWon(si);
-      return btn((done ? '✔ ' : un ? '' : '🔒 ') + 'Circuit ' + (si + 1), function () { if (!un) return UI.toast('Win the ' + G.cupName(si - 1) + ' first'); cupStage = si; UI.refresh(); }, 'chip' + (si === cupStage ? ' on' : '') + (un ? '' : ' nofit'));
-    }));
-    var grid = h('div', { class: 'egrid' }, cs.all.map(function (ev) {
-      var won = !!c.cwon[ev.id], lock = G.cupLock(ev), cls = T.classById(ev.cls), live = T.active().filter(function (r) { return r.ev === ev.id; })[0];
-      return h('div', { class: 'ecard clcard' + (ev.cup ? ' cupcard' : '') + (won ? ' won' : '') },
-        h('div', { class: 'drow' }, h('span', { class: 'clbadge' }, ev.cup ? '🏆' : cls.id), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, ev.name),
-          h('div', { class: 'gsmall dim' }, DR.TRACKS[ev.track].name + ' • ' + ev.laps + ' laps' + (ev.rival ? ' • ' + ev.rival.name : ''))), won ? h('span', { class: 'etype good' }, '✔') : null),
-        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'GOAL'), h('span', { class: 'v' }, ev.top === 1 ? 'Win' : 'Top ' + ev.top)),
-        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'ENTRY'), h('span', { class: 'v' }, DR.money(ev.fee) + ' + wage')),
-        h('div', { class: 'gst' }, h('span', { class: 'k' }, 'PURSE'), h('span', { class: 'v acc' }, DR.money(won ? Math.round(ev.cash * 0.35) : ev.cash))),
-        ev.unlocks.length && !won ? h('div', { class: 'gsmall eunl' }, '🔓 ' + ev.unlocks.map(function (u) { return DR.unlockChip(u).text; }).join(' • ')) : null,
-        h('div', { class: 'efoot' }, lock ? h('span', { class: 'gsmall dim' }, '🔒 ' + lock) : h('span', {}),
-          live ? btn('Watch', function () { UI.watchRace = live.id; UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); }, 'small go') : lock ? null : btn(won ? 'Rerun' : 'Enter', function () { gateC('cup', ev.name, function () { entryModal(cls, ev.track, false, false, ev); }); }, 'small go')));
-    }));
-    var need = h('div', { class: 'gsmall' }, h('span', { class: G.cupWon(cupStage) ? 'good' : 'dim' }, (G.cupWon(cupStage) ? '✔ ' : '✗ ') + 'the ' + cs.cup.name), ' opens the next circuit class.');
-    if (embed) return h('div', {}, h('div', { class: 'gsmall dim' }, 'Your team\'s side: your circuit drivers race these on Sunday race days. Early race days ask for a podium, later ones the win; the Cup opens the next circuit class.'), grid);
-    return h('div', {}, h('div', { class: 'plvl secthead' }, 'CAREER • ' + G.cclassName(cupStage) + ' • circuit race days'), chips, need, grid);
+    var T = TM(), CLD = DR.CL, cst = G.cstage();
+    if (si == null || si > cst) si = cst;
+    var cs = DR.CSTAGES[si], arriving = !UI.refreshing;
+    // the next event to race: the first open one still to win
+    var next = si <= cst ? cs.all.filter(function (ev) { return cLive(ev) && !G.cevWon(ev) && !G.cupLock(ev, { anyWeek: true }); })[0] || null : null;
+    if (arriving) cSel = null;
+    if (!cSel || cSel.stage !== si) cSel = next || cs.champ;
+    function node(ev) {
+      var live = cLive(ev), open = si <= cst && (ev.champ ? G.csec(si) >= CLD.SECTIONS : G.csecOpen(si, ev.sec));
+      var won = G.cevWon(ev), racing = T.active().some(function (r) { return r.ev === ev.id; });
+      var cls = 'rnode t-c' + ev.theme + (won ? ' won' : '') + (!live ? ' soon' : !open ? ' locked' : '') + (ev === next ? ' next' : '') + (ev === cSel ? ' sel' : '');
+      return h('div', { class: cls, title: ev.name, onclick: function () { cSel = ev; if (A.click) A.click(); UI.refresh(); } },
+        h('span', { class: 'rglyph' }, CGLYPH[ev.theme]), racing ? h('span', { class: 'rmark' }, '▶') : won ? h('span', { class: 'rmark good' }, '✔') : live && !open ? h('span', { class: 'rmark' }, '🔒') : null);
+    }
+    var cols = [], need = CLD.need();
+    for (var s = 0; s < CLD.SECTIONS; s++) {
+      var evs = cs.events.filter(function (ev) { return ev.sec === s; }), done = G.csecDone(si, s), open = si <= cst && G.csecOpen(si, s), w = G.csecWon(si, s);
+      cols.push(h('div', { class: 'secol' + (done ? ' done' : '') + (open ? '' : ' locked') },
+        h('div', { class: 'stop' }, evs.slice(0, 2).map(node)),
+        h('div', { class: 'slab' }, 'S' + (s + 1) + ' ' + (done ? '✔' : Math.min(w, need) + '/' + need)),
+        h('div', { class: 'sbot' }, evs.slice(2).map(node))));
+    }
+    cols.push(h('div', { class: 'secol king' }, h('div', { class: 'stop' }), h('div', { class: 'slab' }, 'CHAMP'), h('div', { class: 'sbot' }, node(cs.champ))));
+    var road = h('div', { class: 'sroad' }, cols), cur = G.csec(si);
+    var head = h('div', { class: 'rhead' },
+      h('div', { class: 'grow' }, h('span', { class: 'pix acc' }, cs.cls.name), ' ', h('span', { class: 'gsmall dim' }, cs.cls.series + ' • ' + G.cupWins(si) + ' / ' + CLD.liveEvents(si).length + ' races won'),
+        h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(Math.min(cur, CLD.SECTIONS) / CLD.SECTIONS * 100) + '%' } }))));
+    setTimeout(function () { var el = road.querySelector('.rnode.sel'); if (el && arriving) road.scrollLeft = Math.max(0, el.parentNode.parentNode.offsetLeft - road.clientWidth / 2 + 58); }, 0);
+    var tip = 'Win ' + CLD.secRule() + ' of a section to open the next (3 of its 4 once Spec and Endurance arrive). Only the win finishes an event; the top five are paid. Sprints run on Sunday race days, Night races on Saturday nights, each once a week. After the five sections, the Championship opens the next class.';
+    return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, road, h('div', { class: 'gsmall dim rtip' }, tip)), h('div', { class: 'rdetail' }, cEventCard(cSel), cRegulars(si, Math.min(cur, CLD.SECTIONS))));
+  }
+  function gst(k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v' + (cls ? ' ' + cls : '') }, v)); }
+  function cEventCard(ev) {
+    var T = TM(), CLD = DR.CL, th = CLD.theme(ev.theme), k = T.classById(ev.cls), won = G.cevWon(ev), lock = G.cupLock(ev), tr = DR.TRACKS[ev.track];
+    var live = T.active().filter(function (r) { return r.ev === ev.id; })[0], soon = !cLive(ev), unl = G.cupUnlocks(ev);
+    return h('div', { class: 'ecard clcard t-c' + ev.theme + (won ? ' won' : '') },
+      h('div', { class: 'drow' }, h('span', { class: 'clbadge' + (ev.champ ? '' : ' sm') }, ev.champ ? '🏆' : th.glyph), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, ev.name),
+        h('div', { class: 'gsmall dim' }, soon ? 'Coming soon' : tr.name + (tr.theme ? ' (night)' : '') + ' • ' + ev.laps + ' laps • ' + (CLD.FIELD + 1) + ' cars' + (ev.champ ? ' • led by ' + ev.rival.name : ''))), won ? h('span', { class: 'etype good' }, '✔') : null),
+      h('div', { class: 'gsmall' }, soon ? th.soon : ev.champ ? 'The class\'s nine best: one qualifying lap each sets the grid, then the feature race. ' + (ev.stage + 1 < DR.CSTAGES.length ? 'Win it to open the next class.' : 'The top of the circuit ladder.') : th.blurb),
+      soon ? null : gst('CARS', k.floor ? 'Ideal lap ' + T.fmtLap(k.floor) + ' or slower' : 'Any car'),
+      soon ? null : gst('ENTRY', DR.money(ev.fee) + ' + wage'),
+      soon ? null : gst('WIN', DR.money(ev.cash), 'acc'),
+      soon ? null : gst('P2-P5', [2, 3, 4, 5].map(function (p) { return DR.money(CLD.purse(ev, p)); }).join(' / ')),
+      !soon && unl.length ? h('div', { class: 'gsmall eunl' }, '🔓 ' + (ev.champ ? '' : 'First win in this section: ') + unl.map(function (u) { return DR.unlockChip(u).text; }).join(' • ')) : null,
+      soon ? null : h('div', { class: 'efoot' }, lock && !live ? h('span', { class: 'gsmall dim' }, '🔒 ' + lock) : h('span', {}),
+        live ? btn('Watch', function () { UI.watchRace = live.id; UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); }, 'small go') : lock ? null :
+          btn(won ? 'Race again' : 'Enter', function () { gateC(DR.CL.slotFor(ev), 'The ' + ev.name, function () { entryModal(k, ev.track, false, false, ev); }); }, 'small go')));
+  }
+  // the class's regulars: their cars and their pace at Pixel Raceway this section
+  function cRegulars(si, s) {
+    var CLD = DR.CL, rows = CLD.ROSTER[si].map(function (R, r) { return CLD.regEntry(si, r, s); });
+    return h('div', { class: 'ecard' }, h('div', { class: 'plvl' }, 'THE REGULARS' + (s >= CLD.SECTIONS ? ' • CHAMPIONSHIP' : ' • SECTION ' + (s + 1))),
+      h('table', { class: 'trktab' }, rows.map(function (e, i) {
+        return h('tr', {}, h('td', {}, h('span', { class: 'dot', style: { background: e.col } }), e.name, h('div', { class: 'gsmall dim' }, e.team)),
+          h('td', { class: 'dim' }, DR.CARS[e.car].name), h('td', { class: 'num dim', title: 'Their car\'s ideal lap at Pixel Raceway' }, TM().fmtLap(e.pace)));
+      })),
+      h('div', { class: 'gsmall dim' }, 'Nine of them race each event (the same nine every week); the Championship takes the nine quickest. Lap times: their car\'s ideal lap at Pixel Raceway; the driver adds to it.'));
   }
 
   // the Night Series: start a season, or its table and next round
@@ -965,7 +1003,7 @@
       sum.innerHTML = '';
       sum.appendChild(h('div', {}, 'Entry ' + DR.money(fees) + ' + wage' + (teams ? 's ' : ' ') + DR.money(wages) + ' = ', h('b', { class: 'acc' }, DR.money(cost))));
       if (teams) sum.appendChild(h('div', { class: 'gsmall dim' }, 'Your two against two teams of two. Points 25-18-15-12-10-8 for every car; the team with the most wins. Team prizes: ' + [1, 2, 3].map(function (p) { return (p === 1 ? '1st ' : p === 2 ? '2nd ' : '3rd ') + DR.money(T.teamPrize(cls, p, tid)); }).join(' • ') + '. The first car picked goes with the first driver.'));
-      else if (ev) sum.appendChild(h('div', { class: 'gsmall dim' }, (ev.top === 1 ? 'Win it' : 'Finish in the top ' + ev.top) + ' for the ' + DR.money(G.eventWon && G.careerState().cwon[ev.id] ? Math.round(ev.cash * 0.35) : ev.cash) + ' purse' + (ev.unlocks.length && !G.careerState().cwon[ev.id] ? ' and the unlocks' : '') + '. The field runs at the stage\'s pace' + (ev.rival ? ', led by ' + ev.rival.name : '') + ': no class limit on your car.'));
+      else if (ev) { var unl = G.cupUnlocks(ev); sum.appendChild(h('div', { class: 'gsmall dim' }, 'Win ' + DR.money(ev.cash) + ' • P2-P5 ' + [2, 3, 4, 5].map(function (p) { return DR.money(DR.CL.purse(ev, p)); }).join(' / ') + '. Only the win finishes the event' + (unl.length ? ' and opens ' + unl.map(function (u) { return DR.unlockChip(u).text; }).join(', ') : '') + '. The field: ' + (ev.champ ? 'the class\'s nine quickest regulars, led by ' + ev.rival.name : 'nine of the class\'s regulars') + '.')); }
       else sum.appendChild(h('div', { class: 'gsmall dim' }, 'Prizes: ' + cls.prize.filter(Boolean).map(function (p, i) { return 'P' + (i + 1) + ' ' + DR.money(T.prize(cls, i + 1, tid)); }).join(' • ') + (T.isNight(tid) ? ' (night race +25%)' : '')));
       if (series) sum.appendChild(h('div', { class: 'gsmall acc' }, 'Season: the same car and driver for all four rounds (Airfield, Route 99, Canyon, Downtown). Points 25-18-15-12-10-8; the champion wins ' + DR.money(Math.round(cls.prize[0] * T.TITLE[0] / 50) * 50) + '.'));
     }
@@ -980,7 +1018,7 @@
       }, 30);
     }, 'primary');
     // ideal laps take a moment the first time: draw after the modal shows
-    close = UI.modal([h('h2', {}, ev ? ev.name + ' • ' + DR.TRACKS[tid].name : series ? cls.name + ' • Night Series' : cls.name + (teams ? ' • Team race' : '') + ' • ' + DR.TRACKS[tid].name), h('div', { class: 'gsmall dim' }, (ev ? 'Career race day' : cls.floor ? 'Cars whose ideal lap at Pixel Raceway is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + (ev ? ev.laps : T.lapsAt(cls, tid)) + ' laps • 6 cars' + (teams ? ' in three teams of two' : '')),
+    close = UI.modal([h('h2', {}, ev ? ev.name + ' • ' + DR.TRACKS[tid].name : series ? cls.name + ' • Night Series' : cls.name + (teams ? ' • Team race' : '') + ' • ' + DR.TRACKS[tid].name), h('div', { class: 'gsmall dim' }, (ev ? G.cclassName(ev.stage) + ' • ' : '') + (cls.floor ? 'Cars whose ideal lap at Pixel Raceway is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + (ev ? ev.laps : T.lapsAt(cls, tid)) + ' laps • ' + (ev ? DR.CL.FIELD + 1 : 6) + ' cars' + (teams ? ' in three teams of two' : '')),
       h('div', { class: 'plvl' }, teams ? 'CARS (pick two)' : 'CAR'), carBox, h('div', { class: 'plvl' }, teams ? 'DRIVERS (pick two)' : 'DRIVER'), drvBox, sum,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Cancel', function () { close(); }), go)]);
     carBox.appendChild(h('div', { class: 'dim' }, 'Working out lap times…'));
@@ -989,7 +1027,7 @@
 
   // ---------------------------------------------------------------- watch
   function watchView(r) {
-    var T = TM(), track = DR.TRACKS[r.track || T.TRACK], cls = T.classById(r.cls), d = T.driver(r.drv);
+    var T = TM(), track = DR.TRACKS[r.track || T.TRACK], cls = T.classById(r.cls), d = T.driver(r.drv), rev = r.ev && G.cupEvent(r.ev);
     var cv = h('canvas', { class: 'trkcv', width: CW, height: CH }), table = h('div', { class: 'trkcard standings' }), head = h('div', { class: 'stagehead' });
     var base = drawBase(track), gm = base.gm, n = track.lx.length, lastTab = 0;
     function draw() {
@@ -1018,7 +1056,7 @@
       var me = st.rows.filter(function (x) { return x.e.you; })[0], lead = st.rows[0];
       var allDone = r.done || st.rows.every(function (x) { return x.w.done; });
       head.innerHTML = '';
-      head.appendChild(h('div', { class: 'grow' }, h('div', { class: 'plvl' }, cls.name.toUpperCase() + ' • ' + track.name),
+      head.appendChild(h('div', { class: 'grow' }, h('div', { class: 'plvl' }, (rev ? rev.name : cls.name).toUpperCase() + ' • ' + track.name),
         h('div', { class: 'pix acc' }, allDone ? 'FINISHED' : 'LAP ' + Math.min(r.laps, lead.w.lap + 1) + ' / ' + r.laps),
         h('div', { class: 'dim gsmall' }, allDone ? 'Results are in.' : 'Race time ' + T.fmtLeft(st.t) + ' • back in ' + T.fmtLeft(T.left(r)))));
       if (!allDone) head.appendChild(btn('⏩ 4× time' + (r.ff ? ' ON' : ''), function () { T.setFast(r, !r.ff); UI.refresh(); }, 'small chip' + (r.ff ? ' on' : '')));
@@ -1050,7 +1088,7 @@
         var pos = st.rows.indexOf(me) + 1, hist = T.state().history[0], cev = r.ev && G.cupEvent(r.ev), prize = cev ? (hist && hist.ev === r.ev ? hist.prize : 0) : T.prize(cls, pos, r.track);
         table.appendChild(h('div', { class: 'resline' }, h('span', { class: pos === 1 ? 'acc pix' : 'pix' }, 'P' + pos), ' ', (d ? d.name : 'Your driver'),
           prize ? h('span', { class: 'good' }, ' +' + DR.money(prize)) : null,
-          cev ? h('div', { class: 'gsmall ' + (pos <= cev.top ? 'acc' : 'dim') }, cev.name + ': ' + (hist && hist.ev === r.ev && hist.note ? hist.note : pos <= cev.top ? 'goal met' : 'goal missed')) : null,
+          cev ? h('div', { class: 'gsmall ' + (pos <= cev.top ? 'acc' : 'dim') }, cev.name + ': ' + (hist && hist.ev === r.ev && hist.note ? hist.note : pos <= cev.top ? 'won' : 'needed the win')) : null,
           hist && hist.grew && Object.keys(hist.grew).length ? h('div', { class: 'gsmall' }, 'Learned: ' + Object.keys(hist.grew).map(function (k) { return SKILLS.filter(function (s2) { return s2[0] === k; })[0][1] + ' +' + hist.grew[k]; }).join(', ')) : null,
           hist && hist.unl && hist.unl.length ? h('div', { class: 'gsmall acc' }, 'UNLOCKED: ' + hist.unl.join(' • ')) : null,
           me.e.err ? h('div', { class: 'gsmall dim' }, me.e.err + ' mistake' + (me.e.err > 1 ? 's' : '') + ' (off line or a lock-up): consistency improves with racing') : null,

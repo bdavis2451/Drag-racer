@@ -31,7 +31,7 @@
   // (the strip's or the circuit's), Ray asks for something toward the bills.
   // Family: what you can't pay goes on your tab, no late fee, no eviction.
   DR.COUCH_RENT = 400;
-  G.couchRent = function () { var c = G.careerState(); return (c.stage || 0) >= 2 || (G.cstage ? G.cstage() : 0) >= 2 ? DR.COUCH_RENT : 0; };
+  G.couchRent = function () { var c = G.careerState(); return (c.stage || 0) >= 2 || (G.cbest ? G.cbest() : G.cstage ? G.cstage() : 0) >= 2 ? DR.COUCH_RENT : 0; };
   Object.defineProperty(DR.HOMES[0], 'rent', { get: function () { return G.state && G.state.started ? G.couchRent() : 0; } });
   DR.HOMES[0].blurb = 'The couch in the office and one bay of the shop. Free while you find your feet; once you\'ve beaten class 2 (strip or circuit), $' + DR.COUCH_RENT + ' a month toward the bills.';
   DR.homeById = function (id) { return DR.HOMES.filter(function (x) { return x.id === id; })[0] || DR.HOMES[0]; };

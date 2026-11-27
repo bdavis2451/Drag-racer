@@ -303,19 +303,19 @@
       chip('Circuit', careerTab === 'circuit', function () { careerTab = 'circuit'; UI.refresh(); }),
       chip('Kings', careerTab === 'kings', function () { careerTab = 'kings'; UI.refresh(); }));
     // the class at a glance. The strip and the circuit are two ladders: a
-    // King opens the next drag class, a Cup the next circuit class.
+    // King opens the next drag class, a Championship the next circuit class.
     var circ = careerTab === 'circuit' && UI.circuitCareerView && G.cstage, st = DR.STAGES[selStage], kingDone = G.eventWon(st.boss), status, chips;
     if (circ) {
       var cs = G.cstage();
       if (selCStage == null || selCStage > cs) selCStage = cs;
       chips = h('div', { class: 'schips' }, DR.CSTAGES.map(function (x, si) {
         var un = si <= cs, done = G.cupWon(si);
-        return chip((done ? '✔ ' : un ? '' : '🔒 ') + 'Circuit ' + (si + 1), si === selCStage, function () { if (!un) return UI.toast('Win the ' + G.cupName(si - 1) + ' first'); selCStage = si; UI.refresh(); });
+        return chip((done ? '✔ ' : un ? '' : '🔒 ') + 'C' + (si + 1) + ' ' + x.cls.name, si === selCStage, function () { if (!un) return UI.toast('Win the ' + G.cupName(si - 1) + ' first'); selCStage = si; UI.refresh(); });
       }));
       var cupDone = G.cupWon(selCStage);
-      status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, G.cclassName(selCStage)), h('span', { class: 'gsmall' }, G.cupWins(selCStage) + '/4 race days'),
+      status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, G.cclassName(selCStage)), h('span', { class: 'gsmall' }, G.cladderLine(selCStage)),
         h('span', { class: cupDone ? 'good' : 'dim' }, (cupDone ? '✔' : '✗') + ' ' + G.cupName(selCStage)),
-        h('span', { class: 'gsmall dim grow' }, cupDone ? 'class done' : 'the Cup opens the next circuit class'));
+        h('span', { class: 'gsmall dim grow' }, cupDone ? 'class done' : 'the Championship opens the next circuit class'));
     } else {
       chips = careerTab === 'kings' ? null : stageChips();
       status = h('div', { class: 'cupline' }, h('span', { class: 'acc' }, st.name), h('span', { class: 'gsmall' }, G.ladderLine(selStage)),
@@ -547,7 +547,7 @@
     return h('div', {}, h('div', { class: 'stagehead' }, h('div', { class: 'grow' }, h('div', { class: 'plvl' }, 'CIRCUIT • ' + (t.len / 1000).toFixed(2) + ' KM • ' + t.corners.length + ' CORNERS' + (t.theme ? ' • NIGHT' : '')),
       h('div', { class: 'pix acc' }, t.name), h('div', { class: 'dim' }, p.blurb))),
       h('div', { class: 'ecard' }, h('div', { class: 'ecvwrap' }, thumb),
-        h('div', { class: 'gsmall dim' }, live.length ? live.length + ' of your cars racing here now' : 'Team races: your hired drivers in your cars, against five AI teams. Five classes, from Club Cup to Unlimited GP.'),
+        h('div', { class: 'gsmall dim' }, live.length ? live.length + ' of your cars racing here now' : 'Open races: your hired drivers in your cars, five classes from Club Cup to Unlimited GP. The circuit career is in Career > Circuit.'),
         h('div', { class: 'efoot' }, btn('Test lap', function () { UI.circuitTestTrack = p.circuit; practiceTab = 'circuit'; UI.show(UI.RaceMenu, 'practice'); }, 'small'),
           btn('Race here', function () { UI.circuitTrack = p.circuit; UI.watchRace = null; eventsTab = 'circuit'; UI.show(UI.RaceMenu, 'events'); }, 'small go'))));
   }
