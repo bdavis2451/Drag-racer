@@ -634,6 +634,47 @@ repairs, built; chassis: setup; data: reads the slip). Not built yet.
   tuner (psi 40 -> 33, the read, the dial 16.34 in the modal); the
   regression suite.
 
+### Build 3 design (Claude, Nov 27; owner: build it and push when ready)
+From the approved plan (Build 3: sponsors). Amounts are x the class's
+base (class 1 $300 ... class 6 $30,000).
+- **Brands:** the 18 sponsors. Product brands (they sell parts): Discount
+  Auto Parts, Slick Oil, Pixel Performance, Vortex Intakes (engine);
+  Torque Tires, GripCo, Apex Wheels (tires); BoostHouse, TurboTech
+  (power adders); Kingpin Customs (suspension); Volt Batteries (body);
+  Junkyard Joe's (drivetrain); Octane Race Fuel (fuel). Their product: the
+  one they name now (a turbo, drag tires, an intake, race fuel), else a
+  non-factory part from their group. The rest (Taco Shack, Nitro Cola,
+  Redline Radio, NightRunner Neon, Hot Rod Monthly) sell no parts.
+- **Primary (one per class, gates the King, as now):** signing, stipend,
+  per-win, the contract bonus and a free car, their discount and product
+  rule. New signings get ladder goals:
+  - the big check: win 2 Heads-Up events and 1 Bracket event;
+  - the looks: win 2 strip events (Heads-Up, Bracket or No-Prep), reach
+    the star rating, and show the car at a car show;
+  - the street: win 1 No-Prep event and 2 street list nights.
+  Contracts signed before keep their terms. No deadlines.
+- **Associates (2 decal slots):** any brand of your class or the classes
+  before, not your class primary. Each pays 4% per race day, and 10% on
+  an event win / 4% runner-up (with their product on the car, for a
+  product brand). Sign and drop any time. An associate on the car for 3
+  event wins in a class offers you a primary deal in the next class (25%
+  better than the plain offer).
+- **Decals and contingency (product brands):** post a brand's decals
+  (free; one brand per part group; not a rival of your primary's group).
+  Contingency: 5% on an event win, 2% runner-up, per brand, when their
+  product is on the car (NHRA's contingency: product installed, decals
+  on). Their parts discount grows with wins with their product: 5%, 10%
+  after 5 wins, 15% after 12 (the primary's discount and theirs: the
+  better one counts). Octane: the same on race fuel.
+- **Track awards (Heads-Up and Bracket eliminations):** the quickest 60
+  ft of the day (5%, against the field's estimated launches) and the
+  hard-luck award to a first-round loser (5%: yours if you lost round 1
+  by under 0.02 s or broke, else 1 in 8).
+- **Where:** a Sponsors tab on the Career screen (primary, associates,
+  decals and contingency, the track awards); the payouts on the slip.
+- **Saves:** nothing to convert (signed primaries keep their contracts).
+- **Rivals:** unchanged.
+
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.
 2. Fields: 16 cars (4 rounds) everywhere (rec.), or 32 (5 rounds) in
