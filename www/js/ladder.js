@@ -457,7 +457,7 @@
     var ev = cfg.ev, run = DR.Ladder.runFor(ev), out = { money: [], news: [], notes: [], unlocks: [], next: null, done: false };
     if (!run) return out;
     // the pass, for your tuner's read in the pit (gear.js)
-    if (res.pass) { run.passes = (run.passes || []).concat([res.pass]); if (DR.Pit && DR.Pit.readPass) DR.Pit.readPass(ev, run, res.pass); }
+    if (res.pass) { res.pass.phase = run.phase; res.pass.round = run.rounds || 0; res.pass.broke = !!res.broke; run.passes = (run.passes || []).concat([res.pass]); if (DR.Pit && DR.Pit.readPass) DR.Pit.readPass(ev, run, res.pass); }
     // a bye: a solo pass, and any pass down the track (no red light) wins
     if (!cfg.opp && run.phase === 'elim') res.win = !res.red && res.et < 90 && !res.broke;
     // an engine that let go on a strip or no-prep track: oil down, a cleanup
@@ -562,6 +562,8 @@
       out.news.push(ev.fmt === 'card' ? run.losses + ' losses: the night\'s over. It runs again next week.' : 'It runs again next week.');
     }
     if (run.pts) out.notes.push(['acc', 'Standings: +' + run.pts + ' points']);
+    // contingency, associates' bonuses, the track awards (sponsors.js)
+    if (G.ladderAwards) G.ladderAwards(ev, run, won, out);
     run.phase = 'done'; run.won = won;
     c.lastRun = run; c.run = null;
     out.done = true;

@@ -253,6 +253,9 @@
       // a career side event: the right placing wins it
       var career = null;
       if (ev && place < ev.top) career = G.winEvent(ev);
+      // shown while your class sponsor wants it shown (sponsors.js)
+      var shownMsg = G.showCounted ? G.showCounted() : '';
+      if (shownMsg) setTimeout(function () { UI.toast(shownMsg); }, 1200);
       G.earn(visitCash + prize + (career ? career.cash : 0)); G.save();
       if (visitCash + prize > 0 || career) A.cash();
       podiumT = 0;

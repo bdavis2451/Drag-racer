@@ -1063,7 +1063,8 @@
         // the pass, for your tuner's read in the pit: the 60-foot, wheelspin,
         // shake, the engine's heat (gear.js)
         var sx60 = you.sim.splits && you.sim.splits['60ft'];
-        var passData = { et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, sixty: sx60 ? sx60.t : null, spin: you.sim.wspin || 0, shake: you.sim.shakeMax || 0, heat: heat.eng || 0, red: !!me.red, driver: cfg.driver || null };
+        var passData = { et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, sixty: sx60 ? sx60.t : null, spin: you.sim.wspin || 0, shake: you.sim.shakeMax || 0, heat: heat.eng || 0, red: !!me.red, driver: cfg.driver || null,
+          margin: them && me.total < Infinity && them.total < Infinity && !me.red && !them.red ? Math.abs(bk ? them.pkg - me.pkg : them.total - me.total) : null };
         // broken: you can't make the next call, so your day ends here
         if (damaged) { var lr0 = DR.Ladder.runFor(ev); if (lr0 && lr0.phase !== 'done') { lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, broke: true, blown: !!damaged.engine, dmg: damaged, pass: passData }); } }
         else lad = DR.Ladder.after(cfg, { win: win, red: me.red, et: you.sim.finished && !you.sim.crashed ? you.sim.et : 99, pass: passData });
@@ -1110,6 +1111,8 @@
       // the sponsor's stipend: paid for every race day you turn up to
       var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) && (!cfg.lad || cfg.ladFirst) ? G.careerState().sponsor[ev.stage] : null;
       if (spn && spn.stipend && !testDrive) { moneyDelta += spn.stipend; money.push([DR.sponsorById(spn.id).name + ' stipend', spn.stipend]); }
+      // your associates' day money (sponsors.js): every race day, like the stipend
+      if (DR.Sponsor && !testDrive && cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) && (!cfg.lad || cfg.ladFirst)) DR.Sponsor.dayPay().forEach(function (m) { moneyDelta += m[1]; money.push(m); });
       if (moneyDelta) G.earn(moneyDelta);
       // the trip there (paid on the way: shown here)
       if (cfg.trip && !testDrive) { money = cfg.trip.money.concat(money); moneyDelta += cfg.trip.total; news = cfg.trip.news.concat(news); }
