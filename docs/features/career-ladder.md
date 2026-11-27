@@ -1,11 +1,11 @@
 # Career ladder rework (drag and circuit)
 
-Status: **Nov 27: builds 1 (the ladder), 2 (race day and the pit), the
-build 2 follow-up (the drag tuner at the pit) and 3 (sponsors) shipped
-to the tester; build 3's choices confirmed by the owner. Build 4
-(Bracket / No-Prep Kings) approved; being rechecked before it ships.
-Then the circuit ladder (`circuit-ladder.md`): its detailed design goes
-to the owner for item-by-item approval before any code.** Docs can be pushed any time. This
+Status: **Nov 27: the drag ladder is done: builds 1 (the ladder), 2
+(race day and the pit) with its follow-up (the drag tuner at the pit), 3
+(sponsors) and 4 (Bracket / No-Prep Kings) shipped to the tester, their
+choices confirmed by the owner. Next: the circuit ladder
+(`circuit-ladder.md`): its detailed design sent for item-by-item
+approval, no code until then.** Docs can be pushed any time. This
 replaces `career-rebalance.md`
 (the rival and money pass becomes part of this).
 
@@ -742,6 +742,26 @@ theme, each with its own ladder first").
 - **Saves:** a King already beaten stays beaten; bracket points start
   empty; the list starts with you off it.
 - **Rivals:** unchanged.
+
+### Build 4 notes (Claude, Nov 27; shipped Nov 27)
+- **Code:** `www/js/kings.js` (new): bracket points (`c.bkp`, from
+  `ladder.js` `award()` through `G.onAward`, the broke points too); the
+  King of the Track (`KL.kottPrepare`: the Bracket King event's opponents
+  become three of the list's top 7, drawn once a day, `c.kott`, then the
+  King; a loss sets `c.kott.lost` through a `G.afterRun` wrapper); the
+  no-prep list (`c.npl.order`: ten spots, 'me' where you are; `npcall`
+  events: 1/8, no-prep, night, no times; `KL.npLock`); the King locks
+  (`G.kingLock` for bracket and street); `UI.kingExtra` on the Kings tab;
+  the slip label (CALLOUT, KING OF THE TRACK); the agenda lines
+  (`schedule.js`); help and King blurbs.
+- **Tested:** the list (classes 3-6), its locks (3 No-Prep events, #10
+  first, 2 spots up, one a night), wins moving you up, #1 opening the
+  No-Prep King; a real callout race (no times, the night used); bracket
+  points from ladder results; the invitation (6 events, top 8); the day's
+  fixed draw, a loss locking the day, a new day lifting it, the Bracket
+  King win; the No-Prep King's lock after a loss; an old save without the
+  new state; the Kings tab at iPhone size; the regression suite; the rival
+  snapshot.
 
 ### Questions sent with the plan (Nov 26)
 1. Build order: ladder first, then the pit (rec.), or the pit first.

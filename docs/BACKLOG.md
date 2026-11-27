@@ -21,9 +21,10 @@ the top of each section.
   (set it up for this track, a read of every pass, the bracket dial).
   **Build 3 (sponsors) shipped Nov 27:** ladder contracts, associates,
   decals and contingency, track awards; its rules and amounts confirmed by
-  the owner Nov 27. **Build 4 (Bracket / No-Prep King ladders): approved
-  Nov 27, being rechecked before it ships.** Then the circuit ladder
-  (design to the owner first, item by item).
+  the owner Nov 27. **Build 4 (Bracket / No-Prep King ladders) shipped Nov
+  27:** bracket points and the King of the Track, the no-prep top-10 list
+  and its callouts. **Next: the circuit ladder: its detailed design sent
+  to the owner Nov 27 (three builds, C1-C3), no code until approved.**
 
 ## In progress
 
@@ -155,6 +156,9 @@ to answer later.
 - **Career ladder build 1** (Nov 26, `docs/features/career-ladder.md`):
   shipped. Race-day scoring (it was switched off), rep, the old callout
   ladder and side brackets are removed, folded into the ladder.
+
+- **Career ladder builds 3 and 4** (Nov 27): shipped; build 3's rules and
+  amounts and build 4's design confirmed by the owner (all A).
 
 - **Career ladder build 2** (Nov 26-27): shipped, with the owner's answers
   (vendor row at the last section's Heads-Up and No-Prep; the mechanic's

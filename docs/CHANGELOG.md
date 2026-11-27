@@ -2,6 +2,32 @@
 
 Short notes for testing, newest first.
 
+## The Bracket King and the No-Prep King have their own ladders (drag, part 4 of 4)
+
+- **Bracket points:** every Bracket event you race (any class) puts its
+  points on a bracket points list, yours and the field's. See it on the
+  Career > Kings tab.
+- **The King of the Track** (the last Sunday, noon-5 PM): finish 6 Bracket
+  events and be in the top 8 on bracket points to get invited. Three
+  rounds on dial-ins against three of the list's best regulars (in their
+  top builds), then the Bracket King, for their car and $40,000. A loss
+  ends your day: try again next month.
+- **The no-prep top-10 list:** after 3 No-Prep events you can call out #10
+  on no-prep nights (Saturday, 6 PM-1 AM): one callout a night, 1/8 from
+  a dig, no times. Win and you take their spot (they move down); then call
+  out anyone up to 2 spots above you. Each win pays 60% of that racer's
+  class base. The list runs from class 3's quickest (#10) to class 6's
+  (#1). Beat #1 and the No-Prep King races you on the last Friday night.
+  A loss to the King locks you out till the next one.
+- The week's agenda shows the King of the Track and your next callout.
+- Try:
+  - The Kings tab: the bracket points and the no-prep list.
+  - On a Saturday night after 3 No-Prep events: call out #10.
+  - After 6 Bracket events: the King of the Track on the last Sunday.
+- Look out for: a callout you should be able to make but can't, the list
+  shifting wrong after a win, the King of the Track field changing in the
+  middle of the day.
+
 ## Sponsors (drag, part 3 of 4)
 
 - **A new Sponsors tab** on the Career screen: your class sponsor, your

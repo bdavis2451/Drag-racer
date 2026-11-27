@@ -1,7 +1,8 @@
 # Circuit ladder (fresh)
 
-Status: **Nov 26: plan approved (questions answered). Built after all four
-drag ladder builds (owner's order). No code yet.** Replaces the circuit
+Status: **Nov 27: plan approved (Nov 26); the detailed design (below)
+sent to the owner for item-by-item approval. No code until approved.
+Built after the four drag ladder builds (owner's order).** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -114,6 +115,53 @@ rental prices about real, scaled per class (~$3,400 a weekend in class 1).
 the circuit career starts over at class 1 (cars, parts, drivers, money
 kept). 7 **B: all the drag builds (1-4) first**, then the circuit.
 
+## Detailed design (proposal, Nov 27: waiting on the owner, no code)
+The plan above is approved (answers 1-7). This is the item-by-item
+version to approve before building, split into three builds, smallest
+first.
+- **Build C1: the ladder and sprints.**
+  1. Six classes: Club (Spec Miata), Touring (Spec E46), Sport (Corvette
+     Cup C5), GT (Porsche Carrera Cup, the 911), GT Pro (Lamborghini Super
+     Trofeo), Unlimited (Super Trofeo World Final). Pace floor per class
+     (an ideal lap, as today's circuit classes).
+  2. Each class: 5 sections x 4 events (Sprint, Spec, Endurance, Night
+     street), 3 of 4 to open the next section, then the Championship
+     weekend (qualifying and a feature race). Finishing an event takes a
+     win (answer 2).
+  3. In C1: Sprint (qualifying lap sets the grid, then the race: today's
+     race model) and Night street (the airfield, Route 99, canyon,
+     downtown). Spec and Endurance events show as "coming" until C2/C3.
+  4. Rivals: ~12 named regulars per class with their own cars, pace
+     stepping up by section (like the drag rosters); they're the fields.
+  5. Money: purses by finishing position (the top 5 paid: 100 / 60 / 40 /
+     25 / 15%); the first win of each event opens road-course cars and
+     circuit parts (as now, spread over the sections).
+  6. Saves: the circuit career starts over at class 1 (answer 6); cars,
+     parts, drivers, money kept. The Night Series and Circuit King stay
+     until C3, then fold in (the Championship weekend of class 5 becomes
+     the Circuit King's path).
+- **Build C2: spec cars and licenses.**
+  7. Spec events: everyone in the series car. **Rent** (arrive-and-drive:
+     ~$3,400 a weekend in class 1, scaled per class like the purses; the
+     car's prep, tires and fuel in it; damage charged) or **your own**
+     built to the spec (the model, the spec suspension, wheels and tires,
+     a cage, the stock engine, the series' minimum weight).
+  8. Licenses per driver: a drivers' school ($495, a weekend: SCCA
+     regional school price, 2025) gives the novice permit (class 1); three
+     race weekends on it give the full license (class 2 up) (answer 5).
+- **Build C3: endurance.**
+  9. About 3x a sprint's laps, two of your drivers sharing the car
+     (answer 3), at least one pit stop: fuel (a stop of about 60 s at this
+     length; ChampCar's real minimum is 5 min for a 6+ hour race), a
+     driver change on it, new tires optional (+30 s). Each driver's stint
+     drives at their own skill; tire wear and fuel matter.
+- **Left out:** weather; safety cars; contact damage between cars; tire
+  compounds beyond what's on the car; a real 6-24 hour race.
+- **Questions for the owner:** the build split (C1 / C2 / C3); purses
+  (top 5 paid, or winner only); the rental price level; the school price;
+  the endurance stop length; what happens to the Night Series and the
+  Circuit King.
+
 ## Sources
 - scca.com: "I want to road race" (steps), Race Experience article,
   structure of road racing; raceschool.com blog (Novice Permit vs Full
@@ -124,6 +172,12 @@ kept). 7 **B: all the drag builds (1-4) first**, then the circuit.
 - automotiverestorations.com VRS rentals; Mazda Racers "Exploring the
   rental market" (search summary only: expired certificate).
 - champcar.org supplemental rules (via search; 2026 BCCR PDF not opened).
+- SCCA drivers' school price: motorsportreg.com, 2025 Hyler Craft Memorial
+  Driver School, Roebling Road (SCCA Buccaneer Region): $495; SCCA no
+  longer requires a novice permit to attend a school (scca.com). Porsche
+  Carrera Cup / Super Trofeo / Spec E46 rental prices: not published
+  (Porsche says contact them); the class 1 price scaled per class, as the
+  owner chose (answer 4).
 - nasaspeed.news: Corvette Cup announcement, Super Touring, Spec E46;
   thethirdturn / Hagerty: SCCA Corvette Challenge; racing.porsche.com and
   IMSA: Porsche Carrera Cup North America; Lamborghini / speedcafe: Super
