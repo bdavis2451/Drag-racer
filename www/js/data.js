@@ -234,10 +234,16 @@ DR.TIRES = {
     fr_26: { name: 'Front Runner 26x4.0-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.331, m: 11, topt: 40, cold: 0.05, price: 500, rim: 15, wmin: 3.5, wmax: 4, sec: 6.2, roll: 0.75 },
     fr_26b: { name: 'Front Runner 26x4.0-17', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.337, m: 10, topt: 40, cold: 0.05, price: 550, rim: 17, wmin: 3.5, wmax: 4, sec: 5.4, roll: 0.75 },
     fr_28: { name: 'Front Runner 28x4.5-15', kind: 'Front Runner', lat: 0.6, mu: 0.9, optP: 30, slip: 0.12, fall: 0.3, fk: 1, r: 0.356, m: 12, topt: 40, cold: 0.05, price: 600, rim: 15, wmin: 3.5, wmax: 4.5, sec: 7.2, roll: 0.75 },
-    fr_18: { name: 'Front Runner 26x6.0R18', kind: 'Front Runner', lat: 0.66, mu: 1.0, optP: 32, slip: 0.12, fall: 0.3, fk: 1, r: 0.330, m: 14, topt: 40, cold: 0.05, price: 650, rim: 18, wmin: 4.5, wmax: 6, sec: 7.0, roll: 0.8 }
+    fr_18: { name: 'Front Runner 26x6.0R18', kind: 'Front Runner', lat: 0.66, mu: 1.0, optP: 32, slip: 0.12, fall: 0.3, fk: 1, r: 0.330, m: 14, topt: 40, cold: 0.05, price: 650, rim: 18, wmin: 4.5, wmax: 6, sec: 7.0, roll: 0.8 },
+    // road-course R-compounds in the sizes the spec series run (Hoosier R7,
+    // tiresize.com Nov 2026): the Spec Miata 205/50R15 (15 x 5.5-7.5 in,
+    // 22.8 in tall, 17 lb, $225 a tire) and a 20 in one for big-brake cars
+    // (305/30R20: 20 x 10-11 in, 27.1 in tall, 27 lb, $586)
+    tr_205: { name: 'Track Tire 205/50R15 (R-Compound)', kind: 'Track', lat: 1.06, mu: 1.45, optP: 30, slip: 0.10, fall: 0.22, fk: 1.1, r: 0.290, m: 16, topt: 68, cold: 0.11, price: 900, lvl: 2, rim: 15, wmin: 5.5, wmax: 7.5, sec: 8.5 },
+    tr_305: { name: 'Track Tire 305/30R20 (R-Compound)', kind: 'Track', lat: 1.15, mu: 1.60, optP: 30, slip: 0.10, fall: 0.22, fk: 1.1, r: 0.344, m: 25, topt: 72, cold: 0.14, price: 2300, lvl: 3, rim: 20, wmin: 10, wmax: 11, sec: 12.2 }
   };
   for (k in add) DR.TIRES[k] = add[k];
-  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_255', 'tr_315', 'rr_slk', 'dr_225', 'dr_245', 'dr_255', 'dr_275s', 'dr_275', 'dr_295', 'dr_305', 'dr_315', 'dr_315b', 'dr_315c', 'dr_305t', 'rsl_28', 'rsl_31', 'sl_24', 'sl_265', 'sl_26', 'sl_28', 'ets_28', 'sl_295', 'sl_31', 'sl_32', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
+  DR.TIRE_SHOP = ['st_195', 'st_225', 'st_255', 'st_305', 'tr_205', 'tr_255', 'tr_315', 'tr_305', 'rr_slk', 'dr_225', 'dr_245', 'dr_255', 'dr_275s', 'dr_275', 'dr_295', 'dr_305', 'dr_315', 'dr_315b', 'dr_315c', 'dr_305t', 'rsl_28', 'rsl_31', 'sl_24', 'sl_265', 'sl_26', 'sl_28', 'ets_28', 'sl_295', 'sl_31', 'sl_32', 'sl_33', 'sl_36', 'fr_26', 'fr_26b', 'fr_28', 'fr_18'];
   // tire outside diameter (inches) from its rolling radius
   DR.tireOD = function (t) { return Math.round(t.r / 0.0127 * 10) / 10; };
 

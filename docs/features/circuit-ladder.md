@@ -1,8 +1,8 @@
 # Circuit ladder (fresh)
 
-Status: **C1 shipped Nov 27. C2 (spec cars and licenses): researched,
-the owner's answers in (Nov 27-28), building now (branch `circuit-c2`).
-C3 (endurance) after.** Replaces the circuit
+Status: **C1 shipped Nov 27; C2 (spec cars and licenses) built and
+tested Nov 28 (branch `circuit-c2`). Next: C3 (endurance; the Night
+Series and Circuit King fold in).** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -343,6 +343,45 @@ Aventador's brakes need 20 in wheels and no race tire came in 20 in:
    nothing else changes; the rival snapshot stays identical.
 - **Left out:** the Corvette Cup's exact rules (members-only); a 330i
   (backlog); real factory cup cars (later, with the owner's new cars).
+
+## C2 build notes (Nov 28)
+- **Code:** `cspec.js` (new, after `ccareer.js`): the series specs
+  (`CL.SPECS`, allow lists, the reference builds), `CL.specCheck` /
+  `specIssue`, `specRaceCar` (the M3's cap), `refInst` / `refIdeal`, the
+  rental (`rentPrice`, `rentInst`, damage rolled at entry, billed at the
+  finish), the spec field (the series car, `SPEC_GAP` 1.5 / 1.1 / 0.8 /
+  0.5 / 0.3 s + 0.15 x the regular's offset), licenses (`lic`, `licFor`,
+  `licOk`, `bookSchool`, the school slot, the tick, weekend credits),
+  `CL.need` 2 of 3. `team.js`: `opts.rentInst` / `opts.carFor`, the spec
+  check in `T.eligible`, the race passed to `G.cupFinish`. `physics.js`:
+  `inst.tune.capHp` scales the engine's torque (only set on Spec E46 race
+  cars). `data.js` / `parts.js`: `tr_205`, `tr_305`. `circuitui.js`: the
+  Spec card (car, rent, driver, "Spec rules" modal, your cars), the entry
+  list (rental row, Not to spec, license tags), driver cards (license line,
+  school button, SCHOOL status), the hiring board tag, the rental car in
+  live and watch views. `schedule.js`: the `school` slot, the school on the
+  calendar, no "no car fits" for Spec days. `ccareer.js`: the section-rule
+  wording. Texts: `ui.js`, `tutorial.js`, `phone.js`.
+- **Tested** (scratchpad `scrc/`, `scrc2/`): `c2a.js` (every reference
+  build legal and runnable; a stock Miata's check: cage, tires; a half-built
+  one: exhaust, coilovers, wheels; too light; the wrong car; Danny's
+  permit, the board's licenses, a rookie blocked, the school; renting: 10
+  Miatas, entry + wage + rental, damage billed; your own legal car; the
+  M3 at 265 hp in the race, 335 in the garage; the full license after 3
+  weekends; 2 of 3; the calendar school: busy on the weekend, the permit
+  after). `c2ui.js` (phone and wide: the Spec card, the rules, the entry
+  list, the result with the damage, the team's licenses, This Week).
+  `c2old.js` (a C1 save: Danny a permit, a 55-average hire and a 4-race
+  driver licensed, section 2 still open). Rival snapshot identical.
+- **Balance** (`c2bal.js`, rentals, 16 races each, win %): Club Spec
+  section 1: a rookie (30) 94%; section 3: 44% (30) / 81% (50); section 5:
+  13% (50) / 88% (65). Touring like Club. GT: section 1 75% (50); section 3
+  75% (65); section 5 13% (80). The Super Trofeo car (track tires, 3,840
+  lb) laps Pixel Raceway in 1:21.2, slower than the Carrera Cup 911 on
+  slicks (1:19.4): only matters within each class's own field.
+- **Note for the owner:** owning a spec car needs a roll cage, a shared
+  level-3 part that opens at drag class 2 section 1 or circuit class 2
+  section 2: early Club teams rent, as real club racers often do.
 **Questions sent:** the rental price against the C1 purses (as
 approved: $3,400 in class 1 vs a $300 win, ~$340,000 in class 6 if scaled
 like the purses); damage on a rental (the race has no contact); the

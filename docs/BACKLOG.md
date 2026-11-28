@@ -17,6 +17,11 @@ the top of each section.
   pace (owner's yes). **Next: C2 (spec cars: rent or own; drivers'
   school and licenses) once C1 has been played**, then C3 (endurance with
   pit stops and driver swaps; the Night Series and Circuit King fold in).
+  **Build C2 shipped Nov 28:** Spec races (rent or own, the spec check,
+  rental damage), licenses (drivers' school, novice permit, full license),
+  2 of 3 to open a section, two new track tires (205/50R15, 305/30R20).
+  **Next: C3 (endurance with pit stops and driver swaps; the Night Series
+  and the Circuit King fold in).**
 - **Career ladder rework** (`docs/features/career-ladder.md`, Nov 15):
   five builds, plan approved Nov 26. **Build 1 (the ladder) shipped Nov
   26:** 5 sections x 4 events per class (Heads-Up, Bracket, No-Prep,
@@ -164,6 +169,12 @@ to answer later.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Circuit ladder C2** (Nov 27-28): rental 1.5x the event's win; 1 in 5
+  mistakes bends a rental (25% each); the M3 power-capped for Spec E46
+  (a 330i parked); licenses: Danny a permit, hires 50+ licensed, rookies
+  the $495 school, old saves' drivers with 3+ races licensed; 2 of 3
+  events open a section; new 205/50R15 and 305/30R20 track tires.
 
 - **Circuit ladder C1** (Nov 27, `docs/features/circuit-ladder.md`): the
   detailed design (all A) and the build's own questions (sections open on

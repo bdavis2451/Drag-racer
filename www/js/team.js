@@ -295,6 +295,8 @@
   T.eligible = function (inst, cls, ev) {
     if (DR.CARS[inst.carId].cat === 'Pro') return 'Dragsters and Pro Mods don\'t turn: they can\'t race a circuit';
     if (ev && !ev.cl) return '';
+    // a spec event: the series car built to its spec (cspec.js), no floor
+    if (ev && ev.theme === 'spec' && DR.CL && DR.CL.specIssue) return DR.CL.specIssue(inst, ev.stage);
     if (cls.floor && T.idealLap(inst) < cls.floor) return 'Too quick for this class: its ideal lap is ' + fmtLap(T.idealLap(inst)) + ', the class allows ' + fmtLap(cls.floor) + ' or slower';
     return '';
   };
@@ -347,9 +349,13 @@
     for (var m = 0; m < mine.length; m++) {
       var mi = mine[m];
       mi.inst = G.state.cars.filter(function (c) { return c.uid === mi.uid; })[0]; mi.d = T.driver(mi.drv);
+      // a spec race: a rented series car (cspec.js), or your own car as it
+      // races there (the series' power cap)
+      if (m === 0 && opts.rentInst) { mi.inst = opts.rentInst; mi.uid = opts.rentInst.uid; }
+      else if (m === 0 && opts.carFor && mi.inst) mi.inst = opts.carFor(mi.inst);
       if (!mi.inst || !mi.d) return { msg: 'Pick ' + (mine.length > 1 ? 'two cars and two drivers' : 'a car and a driver') };
       if (mi.inst.damage) return { msg: 'Repair the ' + DR.CARS[mi.inst.carId].name + ' first' };
-      if (T.carAway(mi.uid)) return { msg: 'The ' + DR.CARS[mi.inst.carId].name + ' is already at the track' };
+      if (!opts.rentInst && T.carAway(mi.uid)) return { msg: 'The ' + DR.CARS[mi.inst.carId].name + ' is already at the track' };
       if (T.driverBusy(mi.drv)) return { msg: mi.d.name + ' is already racing' };
       var why = T.eligible(mi.inst, cls, opts.ev); if (why) return { msg: why };
       cost += (opts.ev ? opts.ev.fee : cls.fee) + mi.d.wage;
@@ -418,7 +424,7 @@
     }
     var end = Math.max.apply(null, order.map(function (e) { return e.cum[e.cum.length - 1]; }));
     G.pay(cost);
-    var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: uid, drv: d.id, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series, ev: opts.ev ? opts.ev.id : undefined,
+    var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: mine[0].uid, drv: d.id, rentInst: opts.rentInst || undefined, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series, ev: opts.ev ? opts.ev.id : undefined,
       cars: mine.length > 1 ? mine.map(function (x) { return x.uid; }) : undefined, drvs: mine.length > 1 ? mine.map(function (x) { return x.drv; }) : undefined, teams: mine.length > 1 || undefined,
       field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, drv: e.drv, uid: e.uid, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err, hot: e.hot ? +e.hot.toFixed(1) : 0, tires: e.tires ? +e.tires.toFixed(1) : 0 }; }),
       ideal: ideal, base: you.time, snd: snd };
@@ -456,7 +462,7 @@
       if (r.done || T.clock(r) < r.end) return;
       r.done = true;
       var cls = T.classById(r.cls), you = r.field.filter(function (e) { return e.you; })[0], pos = r.field.indexOf(you) + 1, prize = T.prize(cls, pos, r.track);
-      var d = T.driver(r.drv), car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0], grew, line;
+      var d = T.driver(r.drv), car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0] || r.rentInst, grew, line;
       if (r.teams) {
         // a team race: the team's points decide it, each driver learns from their own finish
         var tt = T.teamTable(r), tp = tt.findIndex(function (x) { return x.you; }) + 1, mine = tt[tp - 1];
@@ -467,7 +473,7 @@
         d = { name: mine.rows.map(function (e) { return e.name.split(' ')[0]; }).join(' & ') };
       } else {
         // a career race: its purse and unlocks if the goal was met
-        var cr = r.ev && G.cupFinish ? G.cupFinish(r.ev, pos) : null;
+        var cr = r.ev && G.cupFinish ? G.cupFinish(r.ev, pos, r) : null;
         if (cr) prize = cr.cash;
         if (prize) G.earn(prize);
         grew = d ? learn(d, pos, you) : null;

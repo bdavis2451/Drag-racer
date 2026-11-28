@@ -210,7 +210,11 @@
   // this week's window for an event (null with the calendar off)
   function windowFor(ev) { if (DR.SCHED_OFF || !G.slotWindow) return null; return G.slotWindow(CLD.slotFor(ev)); }
   G.centeredThisWeek = function (ev) { var w = windowFor(ev); return !!(w && CL().entered[ev.id] === w.start); };
-  function secRule() { return CLD.need() >= 3 ? '3 of the 4 events' : 'the ' + CLD.THEMES.filter(function (t) { return CLD.LIVE[t.id]; }).map(function (t) { return t.name; }).join(' and the ') + ' race'; }
+  // 'the Sprint and the Night race' (all of them), or '2 of the 3 events'
+  function secRule() {
+    var live = CLD.THEMES.filter(function (t) { return CLD.LIVE[t.id]; }), n = CLD.need();
+    return n >= live.length ? 'the ' + live.map(function (t) { return t.name; }).join(' and the ') + ' race' : n + ' of the ' + live.length + ' events';
+  }
   CLD.secRule = secRule;
   // why a circuit event can't be entered yet ('' = it can)
   // opt.anyWeek: leave out this week's entry (a later week on the calendar)
