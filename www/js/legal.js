@@ -70,7 +70,7 @@
   var origStart = DR.Race.start;
   DR.Race.start = function (cfg) {
     var inst = cfg.inst || G.car();
-    if (!cfg.inst && inst && (cfg.mode === 'career' || cfg.mode === 'street') && !(cfg.round > 0) && !cfg.trip && !cfg.tuner)
+    if (!cfg.inst && inst && (cfg.mode === 'career' || cfg.mode === 'street') && !(cfg.round > 0) && !cfg.sameDay && !cfg.trip && !cfg.tuner)
       cfg.trip = L.trip(inst, !!cfg.night || cfg.mode === 'street');
     return origStart.apply(this, arguments);
   };

@@ -45,6 +45,12 @@ the top of each section.
 
 ## In progress
 
+- **Debug run, circuit side** (owner, Nov 28: "the same bug fix pass but
+  for the circuit side", `docs/features/debug-circuit.md`): C1-C3 (the
+  ladder, spec events and rentals, licenses, endurance, the Circuit King),
+  the open races, team races and the Night Series around them. Findings
+  go to the owner before anything that changes money or balance.
+
 - **Wheel & tire sets for street / strip / circuit**
   (`docs/features/wheel-sets.md`): research done Nov 15, options with the
   owner. No code.
@@ -173,6 +179,14 @@ to answer later.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Drag debug run** (Nov 28, `docs/features/debug-nov28.md`): owner's yes
+  to fix everything found: a King night is one race day (trip, wage,
+  stipend, day money once); the style bonus on the purse only; the Kings
+  tab counter stops at what's needed; the tuner stops suggesting the setup
+  once it's done and says what would help; the hired drag driver reads the
+  spin instead of holding through it for 0.35 s (and their bracket dial
+  comes from their own driving).
 
 - **Circuit ladder C3** (Nov 28): the stop by fuel, your strategy (who
   starts, the stop lap, tires), 1.5x the Sprint's purse, your mechanic at
