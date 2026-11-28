@@ -20,8 +20,12 @@ the top of each section.
   **Build C2 shipped Nov 28:** Spec races (rent or own, the spec check,
   rental damage), licenses (drivers' school, novice permit, full license),
   2 of 3 to open a section, two new track tires (205/50R15, 305/30R20).
-  **Next: C3 (endurance with pit stops and driver swaps; the Night Series
-  and the Circuit King fold in).**
+  **Build C3 shipped Nov 28:** endurance races (two drivers, one stop by
+  fuel, your strategy, the mechanic at the stop), 3 of 4 to open a
+  section, the Circuit King race for their car. The circuit ladder's three
+  builds are done; next: the tester's notes. Open for the owner: the
+  class limits (a Spec Miata on the new 15 in track tires laps 1:39.7,
+  too quick for Club's 1:44, so it races only Club's Spec events).
 - **Career ladder rework** (`docs/features/career-ladder.md`, Nov 15):
   five builds, plan approved Nov 26. **Build 1 (the ladder) shipped Nov
   26:** 5 sections x 4 events per class (Heads-Up, Bracket, No-Prep,
@@ -169,6 +173,12 @@ to answer later.
   may surprise players. Revisit with the carb redo.
 
 ## Decided
+
+- **Circuit ladder C3** (Nov 28): the stop by fuel, your strategy (who
+  starts, the stop lap, tires), 1.5x the Sprint's purse, your mechanic at
+  the stops; the Circuit King race for their car and $120,000 after the
+  GT Pro Championship; the Night Series stays as an extra; open and team
+  races stay.
 
 - **Circuit ladder C2** (Nov 27-28): rental 1.5x the event's win; 1 in 5
   mistakes bends a rental (25% each); the M3 power-capped for Spec E46

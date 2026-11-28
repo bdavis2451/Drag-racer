@@ -86,7 +86,7 @@
     street: { name: 'No-Prep King', blurb: 'Bare asphalt, no traction compound, and the meanest car in the city. Climb the no-prep list to #1 first.',
       ev: { type: 'kingstreet', id: 'K.street', idx: 'Ks', king: 'street', needWins: 0, stars: 0, unlocks: [], cash: 120000,
         opps: [kingOpp(DR.STAGES[5].events[9].opps[0], { name: 'Asphalt Annie', skill: 0.95, color: '#ff2bd6' })] } },
-    circuit: { name: 'Circuit King', blurb: 'Your team\'s drivers against the best: win the Supercar Trophy Night Series (Race > Events).', circuit: true }
+    circuit: { name: 'Circuit King', blurb: 'Your team against the best: win the GT Pro Championship (Career > Circuit), then race the Circuit King for their car.', circuit: true }
   };
   DR.KING_EVENTS = 6;
   // events of a kind finished, every class

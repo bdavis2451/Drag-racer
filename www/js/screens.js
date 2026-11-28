@@ -365,9 +365,11 @@
         h('div', { class: 'pix acc' }, K.name), h('div', { class: 'dim gsmall' }, K.blurb),
         K.ev ? h('div', { class: 'gsmall' }, K.ev.opps[K.ev.opps.length - 1].name + ' • ' + DR.CARS[K.ev.opps[K.ev.opps.length - 1].carId].name) : null,
         d === 'bracket' || d === 'street' ? h('div', { class: 'gsmall' }, (d === 'street' ? 'No-Prep' : 'Bracket') + ' events finished: ' + G.themeDone(d === 'street' ? 'noprep' : 'bracket') + ' / ' + (d === 'street' && DR.KingLadders ? DR.KingLadders.NP_OPEN : DR.KING_EVENTS)) : null,
-        won ? h('div', { class: 'good' }, '♛ YOURS') : d === 'circuit' ? h('div', { class: 'dim gsmall' }, 'Not yet.') :
+        won ? h('div', { class: 'good' }, '♛ YOURS') : d === 'circuit' ? (UI.circuitKingRow ? null : h('div', { class: 'dim gsmall' }, 'Not yet.')) :
           lock ? h('div', { class: 'dim gsmall' }, '🔒 ' + lock) : btn(d === 'bracket' ? 'Race the King of the Track' : 'Race the King', function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), d === 'bracket' ? 'King of the Track' : K.name); }, 'small red'),
-        // the King's own ladder: the bracket points, the no-prep list (kings.js)
+        // the King's own ladder: the bracket points, the no-prep list (kings.js);
+        // the Circuit King race (cendur.js)
+        d === 'circuit' && UI.circuitKingRow ? UI.circuitKingRow(won) : null,
         UI.kingExtra ? UI.kingExtra(d) : null);
     }));
   }

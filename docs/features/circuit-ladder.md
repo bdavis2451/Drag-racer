@@ -1,8 +1,8 @@
 # Circuit ladder (fresh)
 
 Status: **C1 shipped Nov 27; C2 shipped Nov 28. C3 (endurance; the
-Circuit King race): the owner's answers in Nov 28, building now (branch
-`circuit-c3`).** Replaces the circuit
+Circuit King race) built and tested Nov 28 (branch `circuit-c3`). The
+three builds are done.** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -309,6 +309,43 @@ now.
    Circuit King).
 - **Left out:** fuel weight in lap times; a mechanic busy at the strip and
   the circuit the same Sunday; safety cars; more than one stop.
+
+## C3 build notes (Nov 28)
+- **Code:** `cendur.js` (new, after `cspec.js`): endurance events (3x laps,
+  1.5x purse), `stopRange`, `mechSave`, `stopEst`, the co-driver field
+  (seeded co-drivers, stops, tires, crew), the endurance `T.enter` wrapper
+  (the second driver's license, the mechanic's save and wage, the
+  mechanic learns), the Circuit King (`KING`, `KING_EV` id `CK`, class
+  `unl` so no limit, `kingEntry`, `G.cupEvent` / `cupLock` / `cupUnlocks` /
+  `kingLock` / `kingWon` / `cupFinish` for it, `G.awardCar`). `team.js`:
+  `T.PIT` (35 s, 0.042 gal/h per hp, 5 gal per 35 s, 30 s tires), the
+  second stint, the stop on the in-lap, cold new tires on the out-lap and
+  their wear from zero, `r.endur` / `r.drvs`, both drivers learn, the
+  stop recorded per car. `cspec.js`: the license credit for each driver in
+  the car. `circuitui.js`: the endurance entry (two drivers, stop-lap
+  chips, tires, swap, the estimate), the END card, PIT in the standings,
+  the stop and both names in the result, `UI.circuitKingRow`. `screens.js`
+  (the Kings tab row), `schedule.js` (the King on the agenda; two free
+  drivers), `season.js`, `phone.js` (`cking`), `ui.js` help.
+- **Tested** (scratchpad `scrc/`, `scrc3/`): `c3a.js` (endurance laps and
+  purses per class; 3 of 4; a race with Danny and a hire: cost entry + 2
+  wages + the mechanic's day, the stop 39.7 s with 2.7 s saved, both
+  drivers busy then both learning, the permit credited; the stop lap
+  clamped to the middle third; the AI stops; the King locked, then open,
+  his pace 1:18.4, a race, the title, the car, locked after). `c3ui.js`
+  (phone and wide: the END card, the entry with the strategy, PIT while
+  watching, the result, the Kings tab locked and open, the King's entry).
+  `c3old.js` (a C2 save: section 2 still open under 3 of 4, a Night Series
+  title still the Circuit King's, the King race still locked). Rival
+  snapshot identical.
+- **Balance** (`c3bal.js`, 12 races each): Club endurance in a stock S2000
+  (1:45.1) with a 50 + 65 pair: sections 1 and 3 100%, section 5 25% (the
+  Sprint's section 5: 15% with a 50, 70% with a 65). The King beat a
+  90 + 90 pair in a car like his by 29 s.
+- **For the owner:** a Spec Miata on the new 15 in track tires laps
+  1:39.7: too quick for Club's 1:44 limit, so it races Club's Spec events
+  only (not its Sprints, Endurance or Night races). Worth a look at the
+  class limits after play.
 
 ## C2 research and draft plan (Nov 27: research done, all answered, building)
 **Research (2026 rules):**

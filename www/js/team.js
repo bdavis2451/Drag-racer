@@ -308,6 +308,11 @@
   var TIRE_COLD = { Street: 0.006, Track: 0.012, 'Race Slick': 0.02, 'Drag Radial': 0.01, Slick: 0.02, 'Radial Slick': 0.02, 'Front Runner': 0.006 };
   var TIRE_DEG = { Street: 0.0005, Track: 0.0008, 'Race Slick': 0.0011, 'Drag Radial': 0.0014, Slick: 0.0022, 'Radial Slick': 0.0018, 'Front Runner': 0.0006 };
 
+  // an endurance stop (cendur.js): pit lane and the driver change (s); fuel
+  // on track ~0.04 US gal an hour per peak hp, poured at 5 gal per 35 s
+  // (club dump cans); four new tires
+  T.PIT = { base: 35, gph: 0.042, rate: 5 / 35, tires: 30 };
+
   // ---------------------------------------------------------------- the field
   var TEAMS = ['Apex Motorsport', 'Redline Racing', 'Kerbside', 'Slipstream', 'Late Apex', 'Grid Kings', 'Pit Lane Co.', 'Tarmac Union', 'Blue Flag', 'Chequered',
     'Night Shift', 'Torque Bros', 'Downforce', 'Heel & Toe', 'Hairpin Heroes'];
@@ -360,6 +365,14 @@
       var why = T.eligible(mi.inst, cls, opts.ev); if (why) return { msg: why };
       cost += (opts.ev ? opts.ev.fee : cls.fee) + mi.d.wage;
     }
+    // an endurance race (cendur.js): a second driver in the same car, one
+    // stop; their wage and the mechanic's day on top
+    var en = opts.endur, d2 = en ? T.driver(en.drv2) : null;
+    if (en) {
+      if (!d2 || d2.id === drvId) return { msg: 'Pick two drivers for the car' };
+      if (T.driverBusy(d2.id)) return { msg: d2.name + ' is already racing' };
+      cost += d2.wage + (en.mechWage || 0);
+    }
     if (!G.canAfford(cost)) return { msg: 'Entry and wages: ' + DR.money(cost) };
     var inst = mine[0].inst, d = mine[0].d;
     var tr = DR.TRACKS[tid], S = DR.buildSpec(T.circuitCar(inst)), ideal = T.idealLap(inst, tid), sens = sensitivity(inst, ideal, tid), laps = opts.ev ? opts.ev.laps : T.lapsAt(cls, tid);
@@ -383,6 +396,19 @@
         heat: Math.max(0, Math.min(1.5, (S.peakHp + S.nosHp) / S.coolHp - 1)), cold: TIRE_COLD[S.tire.kind] || 0.012, deg: (TIRE_DEG[S.tire.kind] || 0.0008) * powK };
     }
     var field = [entry(mine[0], S, you)];
+    // the stop: pit lane and the driver change, the fuel the second stint
+    // needs, new tires; your mechanic's hands (en.save, seconds)
+    function stopOf(e, hp, save) {
+      var laps2 = laps - e.stop, gal = T.PIT.gph * hp * laps2 * e.base2 / 3600;
+      e.gal = +gal.toFixed(1);
+      e.stopT = +Math.max(15, T.PIT.base + gal / T.PIT.rate + (e.newT ? T.PIT.tires : 0) - (save || 0)).toFixed(1);
+    }
+    if (en) {
+      var f2y = T.factors(d2), y = field[0];
+      y.f2 = f2y; y.base2 = DR.lapSim(T.circuitCar(inst), tr, S, { lat: f2y.lat, brk: f2y.brk }).time; y.d2 = d2.name; y.drv2 = d2.id;
+      y.stop = clamp(Math.round(en.stop || laps / 2), 1, laps - 1); y.newT = !!en.tires;
+      stopOf(y, S.peakHp, en.save);
+    }
     mine.slice(1).forEach(function (mi) {
       var ci = T.circuitCar(mi.inst), S2 = DR.buildSpec(ci), f2 = T.factors(mi.d);
       mi.S = S2; field.push(entry(mi, S2, DR.lapSim(ci, tr, S2, { lat: f2.lat, brk: f2.brk })));
@@ -391,7 +417,14 @@
       var of = T.factors(o.d);
       // their pace here: the same car's stock lap here vs on the reference track
       var k2 = stockT[o.car] && stock0[o.car] ? stockT[o.car] / stock0[o.car] : tr.len / DR.TRACKS[T.TRACK].len;
-      field.push({ name: o.name, team: o.team, car: o.car, col: o.col, base: o.pace * k2 * (1 + sens.lat * (1 - of.lat) + sens.brk * (1 - of.brk)), f: of, cold: TIRE_COLD.Track, deg: TIRE_DEG.Track });
+      var ae = { name: o.name, team: o.team, car: o.car, col: o.col, base: o.pace * k2 * (1 + sens.lat * (1 - of.lat) + sens.brk * (1 - of.brk)), f: of, cold: TIRE_COLD.Track, deg: TIRE_DEG.Track };
+      if (o.d2) {
+        var of2 = T.factors(o.d2);
+        ae.f2 = of2; ae.base2 = o.pace * k2 * (1 + sens.lat * (1 - of2.lat) + sens.brk * (1 - of2.brk)); ae.d2 = o.d2.name;
+        ae.stop = clamp(o.stop || Math.round(laps / 2), 1, laps - 1); ae.newT = !!o.tires;
+        stopOf(ae, o.hp || 300, o.save || 0);
+      }
+      field.push(ae);
     });
     // qualifying: one flying lap each
     field.forEach(function (e) { e.q = e.base * (1 + gauss() * e.f.sd) + (Math.random() < e.f.err * 0.5 ? rnd(0.5, 2.5) : 0); });
@@ -400,12 +433,17 @@
     var prev = order.map(function (e) { return 0; });
     for (var lap = 0; lap < laps; lap++) {
       var raw = order.map(function (e, k) {
-        var lt = e.base * (1 + gauss() * e.f.sd);
-        if (Math.random() < e.f.err) { lt += rnd(0.8, 3.5); e.err++; }
+        // (an endurance car: the second driver after the stop)
+        var two = e.stop && lap >= e.stop, base = two ? e.base2 : e.base, fx = two ? e.f2 : e.f;
+        var lt = base * (1 + gauss() * fx.sd);
+        if (Math.random() < fx.err) { lt += rnd(0.8, 3.5); e.err++; }
         if (lap === 0) lt += 3.0 + (e.grid - 1) * 0.25;   // standing start, from the grid
         // cold tires on the opening laps, worn ones later
         if (lap < 2) lt += e.base * e.cold * (lap === 0 ? 1 : 0.35);
-        var tl = e.base * e.deg * lap; lt += tl; e.tires = (e.tires || 0) + tl;
+        // the stop on the in-lap; new tires: cold on the out-lap, wear from zero
+        if (e.stop && lap === e.stop - 1) lt += e.stopT;
+        if (two && e.newT && lap === e.stop) lt += base * e.cold * 0.7;
+        var tl = base * e.deg * (two && e.newT ? lap - e.stop : lap); lt += tl; e.tires = (e.tires || 0) + tl;
         if (e.heat && lap >= 2) { var hl = e.base * Math.min(0.05, e.heat * 0.012 * (lap - 1)); lt += hl; e.hot = (e.hot || 0) + hl; }
         return { e: e, lt: lt, t: prev[k] + lt };
       });
@@ -425,8 +463,10 @@
     var end = Math.max.apply(null, order.map(function (e) { return e.cum[e.cum.length - 1]; }));
     G.pay(cost);
     var r = { id: 'r' + (s.nid++), cls: cls.id, track: tid, car: mine[0].uid, drv: d.id, rentInst: opts.rentInst || undefined, start: Date.now(), end: end + 2, laps: laps, prof: prof, cost: cost, series: opts.series, ev: opts.ev ? opts.ev.id : undefined,
-      cars: mine.length > 1 ? mine.map(function (x) { return x.uid; }) : undefined, drvs: mine.length > 1 ? mine.map(function (x) { return x.drv; }) : undefined, teams: mine.length > 1 || undefined,
-      field: order.map(function (e) { return { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, drv: e.drv, uid: e.uid, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err, hot: e.hot ? +e.hot.toFixed(1) : 0, tires: e.tires ? +e.tires.toFixed(1) : 0 }; }),
+      cars: mine.length > 1 ? mine.map(function (x) { return x.uid; }) : undefined, drvs: mine.length > 1 ? mine.map(function (x) { return x.drv; }) : en ? [d.id, d2.id] : undefined, teams: mine.length > 1 || undefined, endur: en ? true : undefined,
+      field: order.map(function (e) { var x = { name: e.name, team: e.team, car: e.car, col: e.col, you: !!e.you, drv: e.drv, uid: e.uid, grid: e.grid, cum: e.cum, best: +e.best.toFixed(3), err: e.err, hot: e.hot ? +e.hot.toFixed(1) : 0, tires: e.tires ? +e.tires.toFixed(1) : 0 };
+        if (e.stop) { x.stop = e.stop; x.stopT = e.stopT; x.newT = e.newT || undefined; x.gal = e.gal; x.d2 = e.d2; x.drv2 = e.drv2; }
+        return x; }),
       ideal: ideal, base: you.time, snd: snd };
     s.races.push(r);
     // the race distance comes off your car's tires
@@ -477,6 +517,9 @@
         if (cr) prize = cr.cash;
         if (prize) G.earn(prize);
         grew = d ? learn(d, pos, you) : null;
+        // an endurance race: the second driver learns from it too
+        var dB = r.endur && r.drvs ? T.driver(r.drvs[1]) : null;
+        if (dB) { var gB = learn(dB, pos, you); grew = grew || {}; Object.keys(gB).forEach(function (k) { grew[k] = (grew[k] || 0) + gB[k]; }); d = { name: (d ? d.name.split(' ')[0] : '?') + ' & ' + dB.name.split(' ')[0], id: d && d.id }; }
         line = (d ? d.name : 'Your driver') + ' finished P' + pos + ' in ' + (cr ? cr.name : 'the ' + cls.name) + ' at ' + DR.TRACKS[r.track || T.TRACK].name + (car ? ' (' + DR.CARS[car.carId].name + ')' : '') + (prize ? ': +' + DR.money(prize) : '') + (cr && cr.note ? ' • ' + cr.note : '');
       }
       // open class races pay prize money; the career's circuit races open parts and cars
