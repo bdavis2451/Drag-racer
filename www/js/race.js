@@ -66,7 +66,7 @@
       var grip = (cfg.grip || 1) / (DR.Race.SURF_BASE[cond.surface] || 1);
       var est = function (cd) { return G.estimate(inst, cfg.dist, grip, cd).et; };
       var same = JSON.stringify(inst.parts), lastP = (inst.log || []).filter(function (x) { return x.dist === key && !x.out && !x.lift && x.sp[mark] && x.engine === inst.engine && JSON.stringify(x.parts) === same; })[0];
-      var base = lastP ? lastP.sp[mark][0] : DR.Race.trial(inst, d.lau / 100, cfg, cond);
+      var base = lastP ? lastP.sp[mark][0] : DR.Race.trial(inst, d.lau / 100, cfg, cond, d);
       if (lastP && lastP.cond) base += est(cond) - est(Object.assign({}, cond, { surface: lastP.cond.s, night: !!lastP.cond.n, air: lastP.cond.a, trackT: lastP.cond.t }));
       return (Math.round((base + (1 - d.con / 100) * 0.03) * 100) / 100).toFixed(2);
     },
@@ -190,9 +190,10 @@
     },
     SURF_BASE: { prep: 1, noprep: 0.92, street: 0.85 },
     // a time-trial pass by an AI driver in the day's conditions: its ET
-    trial: function (inst, skill, cfg, cond) {
+    // (drv: your hired driver, driving it their way)
+    trial: function (inst, skill, cfg, cond, drv) {
       var S = G.spec(inst), sim = new DR.Sim(S, { grip: (cfg.grip || 1) / DR.Race.SURF_BASE[cond.surface], cond: cond, shakeRnd: 1, dist: cfg.dist, tireT: S.tire.topt });
-      var ai = new DR.AIDriver(skill, Math.random), dt = 1 / 400, tG = -1.2;
+      var ai = drv ? DR.AIDriver.fromDrag(drv) : new DR.AIDriver(skill, Math.random), dt = 1 / 400, tG = -1.2;
       while (!sim.finished && tG < 60 && !sim.crashed) { sim.step(dt, ai.input(sim, tG, dt)); tG += dt; }
       return sim.finished ? sim.et : 30;
     }
@@ -1072,7 +1073,8 @@
           lad.money.forEach(function (m) { money.push(m); moneyDelta += m[1]; });
           news = news.concat(lad.news); notes = notes.concat(lad.notes); unlocks = lad.unlocks || [];
           // style pays on the purse (as on every career win)
-          var lpurse = lad.money.reduce(function (a, m) { return a + Math.max(0, m[1]); }, 0), lsty = lad.done && lpurse ? G.styleBonus(lpurse) : 0;
+          // (the run's purse: the round money or the night's stakes, not the sponsors' money)
+          var lpurse = lad.purse != null ? lad.purse : lad.money.reduce(function (a, m) { return a + Math.max(0, m[1]); }, 0), lsty = lad.done && lpurse ? G.styleBonus(lpurse) : 0;
           if (lsty) { moneyDelta += lsty; money.push(['Style ' + DR.starText(DR.starRating(inst)), lsty]); }
         }
       }
@@ -1104,15 +1106,15 @@
       if (cfg.mode === 'street') { moneyDelta = win ? cfg.bet : -cfg.bet; money.push([win ? 'Bet won' : 'Bet lost', moneyDelta]); }
       // your driver: their wage for the race day, and they learn from every pass
       if (drv && !testDrive) {
-        if (!(cfg.round > 0) && !cfg.tuner && (!cfg.lad || cfg.ladFirst)) { moneyDelta -= drv.wage; money.push([drv.name + ' (driver)', -drv.wage]); }
+        if (!(cfg.round > 0) && !cfg.sameDay && !cfg.tuner && (!cfg.lad || cfg.ladFirst)) { moneyDelta -= drv.wage; money.push([drv.name + ' (driver)', -drv.wage]); }
         var grew = DR.Team.learnDrag(drv, !!win);
         news.push('Driven by ' + drv.name + (Object.keys(grew).length ? ' (getting better)' : ''));
       }
       // the sponsor's stipend: paid for every race day you turn up to
-      var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) && (!cfg.lad || cfg.ladFirst) ? G.careerState().sponsor[ev.stage] : null;
+      var spn = cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) && !cfg.sameDay && (!cfg.lad || cfg.ladFirst) ? G.careerState().sponsor[ev.stage] : null;
       if (spn && spn.stipend && !testDrive) { moneyDelta += spn.stipend; money.push([DR.sponsorById(spn.id).name + ' stipend', spn.stipend]); }
       // your associates' day money (sponsors.js): every race day, like the stipend
-      if (DR.Sponsor && !testDrive && cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) && (!cfg.lad || cfg.ladFirst)) DR.Sponsor.dayPay().forEach(function (m) { moneyDelta += m[1]; money.push(m); });
+      if (DR.Sponsor && !testDrive && cfg.mode === 'career' && ev && ev.stage != null && !(cfg.round > 0) && !cfg.sameDay && (!cfg.lad || cfg.ladFirst)) DR.Sponsor.dayPay().forEach(function (m) { moneyDelta += m[1]; money.push(m); });
       if (moneyDelta) G.earn(moneyDelta);
       // the trip there (paid on the way: shown here)
       if (cfg.trip && !testDrive) { money = cfg.trip.money.concat(money); moneyDelta += cfg.trip.total; news = cfg.trip.news.concat(news); }

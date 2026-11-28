@@ -332,7 +332,15 @@
     }
     var hc = P.heatCost(pass.et, pass.heat);
     if (d >= 65 && hc >= 0.01) L.push('The hot engine cost about ' + hc.toFixed(2) + ': cool it down before the next one.');
-    if ((pass.shake > 0.35 || pass.spin > 0.15) && pass.et < 90) L.push('"Set it up for this track" in the pit would help.');
+    // (once they've set it up for this track today, that isn't the answer
+    // any more: say what is)
+    if ((pass.shake > 0.35 || pass.spin > 0.15) && pass.et < 90) {
+      if (run.setupAt == null) L.push('"Set it up for this track" in the pit would help.');
+      else { var tk = G.car() ? G.spec(G.car()).tire.kind : '';
+        L.push(pass.shake > 0.35 ? 'It\'s set up as far as it goes: it still shakes, so it needs less at the hit.'
+          : /Drag|Slick/.test(tk) && tk !== 'Race Slick' ? 'It\'s set up as far as it goes: it needs more tire, or less at the hit.'
+          : 'It\'s set up as far as it goes on these tires: drag radials would hook it.'); }
+    }
     pass.read = { who: first, lines: L };
     // a bracket race: the next dial, from today's clean passes (the last
     // counts most), a hair under it; a tuner who reads data badly is further off
@@ -475,6 +483,25 @@
     st().last = { pick: pack && pack.pick ? pack.pick : null, way: { haul: w.haul, trailer: w.trailer || null }, noMech: !!(pack && pack.noMech) };
     G.save();
     return '';
+  };
+
+  // ---------------------------------------------------------------- King nights
+  // A King night is one race day however far up the ladder you go: the
+  // trip, your driver's wage, the sponsor's stipend and the associates' day
+  // money come with its first race only (the King-night window marks it).
+  function kingWin() { return !DR.SCHED_OFF && G.slotWindow ? G.slotWindow('king') : null; }
+  function kingNightEv(ev) { return ev && (ev.type === 'callout' || (ev.type === 'boss' && !ev.king)); }
+  var kcfg0 = DR.Race.eventCfg;
+  DR.Race.eventCfg = function (ev, round) {
+    var cfg = kcfg0.apply(this, arguments), w = kingWin();
+    if (kingNightEv(ev) && w && w.open && G.careerState().kingDay === w.start) cfg.sameDay = true;
+    return cfg;
+  };
+  var kafter0 = G.afterRun;
+  G.afterRun = function (cfg, r) {
+    var out = kafter0.apply(this, arguments), w = kingWin();
+    if (cfg && kingNightEv(cfg.ev) && r && !r.testDrive && w && w.open) { G.careerState().kingDay = w.start; G.save(); }
+    return out;
   };
 
   // ---------------------------------------------------------------- the haul, everywhere

@@ -511,7 +511,7 @@
     }
     if (run.phase === 'card') {
       var o2 = ev.opps[run.i], stake = Math.round(ev.cash * 1.25 / run.n / 10) * 10;
-      if (res.win) { run.wins++; run.earned += stake; out.money.push(['Callout won: ' + o2.name, stake]); }
+      if (res.win) { run.wins++; run.earned += stake; run.stakes = (run.stakes || 0) + stake; out.money.push(['Callout won: ' + o2.name, stake]); }
       else run.losses++;
       run.log.push([o2.name, !!res.win]);
       run.i++;
@@ -553,7 +553,8 @@
       award(ev, run);
       var mw = run.myWins || 0, pay = payFor(ev, mw, won);
       if (pay) { out.money.push([won ? 'Winner' : ['', 'Quarterfinal', 'Semifinal', 'Runner-up'][mw], pay]); run.earned += pay; }
-    }
+      out.purse = pay;
+    } else out.purse = run.stakes || 0;   // (style pays on the purse: the round money, or the night's stakes)
     if (won) {
       var res = G.finishLadderEvent(ev);
       out.money = out.money.concat(res.money || []);

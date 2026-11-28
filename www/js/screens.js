@@ -364,7 +364,9 @@
       return h('div', { class: 'kcard' + (won ? ' won' : '') },
         h('div', { class: 'pix acc' }, K.name), h('div', { class: 'dim gsmall' }, K.blurb),
         K.ev ? h('div', { class: 'gsmall' }, K.ev.opps[K.ev.opps.length - 1].name + ' • ' + DR.CARS[K.ev.opps[K.ev.opps.length - 1].carId].name) : null,
-        d === 'bracket' || d === 'street' ? h('div', { class: 'gsmall' }, (d === 'street' ? 'No-Prep' : 'Bracket') + ' events finished: ' + G.themeDone(d === 'street' ? 'noprep' : 'bracket') + ' / ' + (d === 'street' && DR.KingLadders ? DR.KingLadders.NP_OPEN : DR.KING_EVENTS)) : null,
+        // (the count up to what's needed, a tick once it's there)
+        d === 'bracket' || d === 'street' ? (function () { var have = G.themeDone(d === 'street' ? 'noprep' : 'bracket'), need = d === 'street' && DR.KingLadders ? DR.KingLadders.NP_OPEN : DR.KING_EVENTS;
+          return h('div', { class: 'gsmall' + (have >= need ? ' good' : '') }, (have >= need ? '✔ ' : '') + (d === 'street' ? 'No-Prep' : 'Bracket') + ' events finished: ' + Math.min(have, need) + ' / ' + need); })() : null,
         won ? h('div', { class: 'good' }, '♛ YOURS') : d === 'circuit' ? (UI.circuitKingRow ? null : h('div', { class: 'dim gsmall' }, 'Not yet.')) :
           lock ? h('div', { class: 'dim gsmall' }, '🔒 ' + lock) : btn(d === 'bracket' ? 'Race the King of the Track' : 'Race the King', function () { DR.Race.raceDay(DR.Race.eventCfg(K.ev, 0), d === 'bracket' ? 'King of the Track' : K.name); }, 'small red'),
         // the King's own ladder: the bracket points, the no-prep list (kings.js);

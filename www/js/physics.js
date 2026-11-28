@@ -2049,10 +2049,14 @@
     ai.launchErr = (rnd() - 0.5) * 1600 * (1 - l) * (0.5 + (1 - c));
     ai.shiftErr = (rnd() - 0.5) * 500 * (1 - c);
     ai.burnK = (rnd() - 0.5) * 24 * (1 - c);     // how far off the tire temperature they aim the burnout
-    // a drag driver stays in it through the spin at the hit (with a car
-    // tuned to hook, the tire bites); they pedal spin that keeps going, and
-    // once they've had to, they're on it straight away
-    ai.spinHold = 0.35;
+    // a drag driver reads the spin (see input): they pedal it straight away,
+    // lift further for a spin that won't come back, and in a spin take the
+    // gear the car can really pull (wait if the next one would bog, take it
+    // early if it can still overpower the tire). (They used to stay in it
+    // for 0.35 s to give the tire a chance to hook: held through a big spin,
+    // the car shifted into 2nd at walking pace and bogged, 0.26 s a pass on
+    // average, up to 3 s.)
+    ai.reads = true;
     return ai;
   };
 
@@ -2092,10 +2096,21 @@
     var over = sim.slip / S.tslip;
     // (a tire still has most of its grip a little past its peak, so it only
     // backs off for real wheelspin, and never to a bog)
-    var spinning = over > 3 + (1 - this.skill) * 3;
-    if (this.spinHold && !this.pedalled) { this.spinT = spinning ? (this.spinT || 0) + dt : 0; spinning = this.spinT > this.spinHold; if (spinning) this.pedalled = true; }
-    if (spinning) this.pedal = Math.max(Math.min(this.pedal, 0.45), this.pedal - dt * (1.5 + 3 * this.skill));
-    else if (over < 2) this.pedal = Math.min(1, this.pedal + dt * (2 + 3 * this.skill));
+    var lim = 3 + (1 - this.skill) * 3, spinning = over > lim, ttl = 9;
+    if (this.reads) {
+      // how the spin is going (over the last ~30 ms), and how long it would
+      // take to come back at that rate
+      var ovP = this.ovPrev == null ? over : this.ovPrev; this.ovPrev = over;
+      this.dOv = (this.dOv || 0) + ((over - ovP) / dt - (this.dOv || 0)) * Math.min(1, dt / 0.03);
+      if (this.dOv < -1) ttl = Math.max(0, over - lim) / -this.dOv;
+    }
+    if (spinning) {
+      // a spin that won't come back at 45%: they lift further (not on a
+      // turbo: lifting costs it the boost)
+      var floor = 0.45;
+      if (this.reads) { this.stuckT = ttl > 0.42 ? (this.stuckT || 0) + dt : 0; if (this.stuckT > 0.214 && S.fiType !== 'turbo') floor = 0.27; }
+      this.pedal = Math.max(Math.min(this.pedal, floor), this.pedal - dt * (1.5 + 3 * this.skill));
+    } else { this.stuckT = 0; if (over < 2) this.pedal = Math.min(1, this.pedal + dt * (2 + 3 * this.skill)); }
     if (sim.wheelie && sim.th > 0.2 + 0.15 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.3);
     // tire shake: a good driver pedals it the moment it starts
     if (sim.shake > 0.3 + 0.4 * (1 - this.skill)) this.pedal = Math.min(this.pedal, 0.25);
@@ -2105,7 +2120,18 @@
     var shiftAt = Math.min(S.red - 50, S.tune.shiftRpm + this.shiftErr);
     var lineRpm = sim.ww * S.ratios[sim.gear] * S.fd * 30 / Math.PI;
     var trig = S.trType === 'auto' ? Math.max(lineRpm / 0.95, rpm >= S.limit - 60 ? rpm : 0) : sim.locked ? rpm : lineRpm;
-    if (!sim.shifting && sim.sinceShift > 0.25 && trig >= shiftAt) sim.shiftUp();
+    var up = !sim.shifting && sim.sinceShift > 0.25 && trig >= shiftAt;
+    // a drag driver in a spin: the revs are the tires, not the car's speed.
+    // The next gear at the speed it's really doing: still more than the tire
+    // holds, so the taller gear calms it (take it now); or it would hook and
+    // bog (wait)
+    if (this.reads && over > lim && sim.gear < S.ratios.length - 1 && !sim.shifting && sim.sinceShift > 0.25) {
+      var rr = sim.rr || S.r, nRpm = sim.v / rr * S.ratios[sim.gear + 1] * S.fd * 30 / Math.PI;
+      var push = DR.boostedTorque(S, Math.max(nRpm, S.idle), sim.boost || 0) * S.ratios[sim.gear + 1] * S.fd * (S.eff || 0.85) / rr, grip = Math.abs(sim.F || 0);
+      if (push > 1.15 * grip || (this.stuckT > 0.214 && push > grip)) up = true;
+      else if (push <= 0.8 * grip) up = false;
+    }
+    if (up) sim.shiftUp();
     inp.nos = sim.gear >= 1 || sim.t > 1.5;
     if (this.bk) this.stripe(sim, inp);
     return inp;

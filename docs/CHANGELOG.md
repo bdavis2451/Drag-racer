@@ -2,6 +2,38 @@
 
 Short notes for testing, newest first.
 
+## Drag side fixes (debug run)
+
+- **Hired drag drivers launch much better.** They used to stay flat out
+  through any wheelspin for a third of a second, so the engine revved up on
+  the spinning tires, they shifted into 2nd at walking pace and the car
+  bogged: on average 0.25 s a pass, up to 3 s with a lot of power on street
+  tires. Now they pedal the spin straight away, lift further if it keeps
+  going (less on a turbo, where lifting costs the boost), wait to shift if
+  the next gear would bog the car, and short-shift when it has more power
+  than the tires can take. Example: an RX-7 after the tuner's setup, 85
+  driver: 13.51 before, 13.37 now. Rivals drive as before.
+- **A hired driver's bracket dial** (no pass in the car yet) now comes from
+  their own driving, so they don't run well under it or over it.
+- **King nights are one race day.** Each callout up the King ladder used to
+  charge the trip again and pay your driver, the sponsor's stipend and the
+  associates' day money again. Now only the first race of the night does.
+- **The style bonus on ladder events** pays on the purse (the round money,
+  or the night's callout stakes), not on the sponsor money on the slip too.
+  It was paying about $650 extra on a $7,200 contract with a 3-star car.
+- **The tuner's read after each pass:** once they've set the car up for the
+  track, they stop telling you to set it up and say what would help ("set up
+  as far as it goes on these tires: drag radials would hook it").
+- **Kings tab:** "No-Prep events finished" stops at what's needed, with a
+  tick ("✔ 3 / 3", it used to say "12 / 3").
+- **Try:** hire a drag driver and race a car with power on street tires (a
+  Fox or an RX-7 with the power package) in every event type; a bracket
+  race with the driver's first dial; a King night up several callouts (the
+  slip should show the driver and the stipend on the first race only); the
+  tuner's setup, then a pass that spins. **Look out for:** a hired driver
+  slower than you'd expect, a dial they break out under, money that looks
+  wrong on a King night.
+
 ## Endurance races and the Circuit King (circuit, part 3 of 3)
 
 - **Endurance races run** (the END stop of each circuit section, Sunday
