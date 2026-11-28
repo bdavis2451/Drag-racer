@@ -924,6 +924,11 @@
 
     // ---- summary numbers
     var dyno = DR.dyno(S);
+    // a spec series' power cap (Spec E46 rules on the M3: a spec ECU tune
+    // holds the engine to it, evenly across the revs). Only set on a car
+    // entered in such a race.
+    var capHp = inst.tune && inst.tune.capHp;
+    if (capHp > 0 && dyno.peakHp > capHp) { S.Tpk *= capHp / dyno.peakHp; dyno = DR.dyno(S); }
     // what the engine would make with all the fuel it wants (for lean risk)
     var fw = S.fuelW; S.fuelW = 1e12; S.fuelDemand = DR.dyno(S).peakHp; S.fuelW = fw;
     S.peakHp = dyno.peakHp; S.peakTq = dyno.peakTq; S.peakHpRpm = dyno.peakHpRpm;

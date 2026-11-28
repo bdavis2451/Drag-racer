@@ -1,8 +1,8 @@
 # Circuit ladder (fresh)
 
-Status: **Nov 27: plan approved (Nov 26); the detailed design approved
-item by item (all A, Nov 27). Building C1 now (branch `circuit-c1`); C2
-and C3 after C1 has been played.** Replaces the circuit
+Status: **C1 shipped Nov 27; C2 (spec cars and licenses) built and
+tested Nov 28 (branch `circuit-c2`). Next: C3 (endurance; the Night
+Series and Circuit King fold in).** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -223,7 +223,7 @@ before building, all answered with the recommended option:
   Night Series and the Circuit King fold in (class 5's Championship as the
   way to the Circuit King); open races / team races then revisited.
 
-## C2 research and draft plan (Nov 27: research done, 4 of 5 questions answered, no code)
+## C2 research and draft plan (Nov 27: research done, all answered, building)
 **Research (2026 rules):**
 - **Licenses** (SCCA 2026 GCR, Appendix C 2.7-2.8, downloaded from
   scca.com): a Novice Permit needs one drivers' school (at least 3 hours
@@ -277,7 +277,111 @@ the rental each; 3 Touring uses the M3 E46 power-capped to Spec E46-like
 rules **and a note to add a 330i later** (BACKLOG); 4 Danny starts with a
 novice permit, hires averaging 50+ skill come licensed, rookies need the
 $495 school, old saves' drivers with 3+ circuit races get the full
-license. Still to ask: the section rule with three events running.
+license. 5 (Nov 27): with Spec running, **2 of the 3** running events open
+the next section (3 of 4 once Endurance arrives). 6: build C2 now. 7 (Nov
+28, a question the build turned up): the game had no 15 in track tire, so
+a Miata on its spec 15 in wheels could only run street tires: **add a
+Track Tire 205/50R15** (the real Spec Miata size). 8 (Nov 28): the
+Aventador's brakes need 20 in wheels and no race tire came in 20 in:
+**add a 20 in track tire** (305/30R20).
+
+**C2 final plan (as built):**
+1. **Spec events run** (each section's Spec stop): Sunday race days at
+   Pixel Raceway, once a week, ten cars, the Sprint's purse. Everyone in
+   the class's series car; the regulars drive the series car built to the
+   reference spec: its ideal lap + a setup gap by section (1.5, 1.1, 0.8,
+   0.5, 0.3 s; the Championship isn't a Spec event) + a small personal
+   spread, their skill stepping up as in the Sprints.
+2. **The series spec per class** (from the 2026 rules; the game's parts):
+   - Club, Spec Miata: the Miata; stock engine (air filter and cat-back
+     exhaust allowed); the spec kit: lowering springs, sport shocks, sport
+     or adjustable anti-roll bars; brake pads; cast 15 in wheels; the new
+     Track Tire 205/50R15 all round; a cage; at least 2,275 lb with driver
+     (ballast if under).
+   - Touring, Spec E46 rules on the M3: stock engine held to 265 hp
+     (225 whp) for these races; coilovers, sport shocks, anti-roll bars;
+     pads; panel filter and cat-back exhaust; cast 17 in wheels; Track
+     Tire 255/40R17; a cage; at least 2,850 lb with driver.
+   - Sport, Corvette Cup: the C5; stock engine (filter, cat-back); no
+     aero; lowering springs or coilovers, sport shocks, anti-roll bars;
+     pads; cast 18 in wheels; Track Tire 315/30R18 all round (the real
+     series' size; theirs is a 200-treadwear street tire, the game's only
+     315/30R18 is the R-compound); the spare/A/C delete only (the series'
+     minimum weight isn't public).
+   - GT, Porsche Carrera Cup (factory cup cars; here the 911 built like
+     one): stock engine; race coilovers, double-adjustable shocks,
+     adjustable bars; big brakes; splitter and wing; the road race slick
+     on 18 in wheels; a cage; the interior strip.
+   - GT Pro and Unlimited, Super Trofeo: the Aventador built the same way
+     on 20 in wheels and the new Track Tire 305/30R20.
+   - Always free: data logger, battery, safety gear, ballast, cooling,
+     clutch, body paint and looks.
+3. **Rent** the series car for an event: 1.5x the event's win (class 1
+   $450-810 ... class 6 $45,000-81,000); the car built to the reference
+   spec, prepped, tires and fuel in. About 1 in 5 of your driver's
+   mistakes bends it: 25% of the rental each, charged after the race.
+4. **Your own car:** the series model passing the spec check (the event
+   card and the entry list show what's missing). In Touring the M3 is held
+   to 265 hp in Spec races (a spec ECU tune), rented or owned.
+5. **Licenses per circuit driver** (none / novice permit / full license):
+   class 1 ladder events need a permit or license, class 2 up the full
+   license; open races, team races and the Night Series need none (until
+   C3). The drivers' school: $495, the next Saturday 8 AM to Sunday 6 PM
+   at Pixel Raceway, the driver away; a novice permit after. Three race
+   weekends on the permit (a weekend with a circuit ladder race finished
+   counts once) give the full license. Danny starts with a permit; hires
+   averaging 50+ come licensed; old saves: drivers with 3+ circuit races
+   get the full license, Danny a permit at least.
+6. **Section rule:** 2 of the 3 running events.
+7. **New tires** (real Hoosier R7 sizes, tiresize.com): Track Tire
+   205/50R15 (15 x 5.5-7.5 in, 22.8 in tall, 8.5 in wide, 17 lb; $225 a
+   tire: $900 on the game's scale) and Track Tire 305/30R20 (20 x 10-11
+   in, 27.1 in tall, 12.2 in wide, 27 lb; $586: $2,300). Circuit parts,
+   open with the circuit career like the other track tires; a real option
+   for any 15 in or 20 in car.
+8. **Physics:** an optional power cap (only set for Spec E46 races);
+   nothing else changes; the rival snapshot stays identical.
+- **Left out:** the Corvette Cup's exact rules (members-only); a 330i
+  (backlog); real factory cup cars (later, with the owner's new cars).
+
+## C2 build notes (Nov 28)
+- **Code:** `cspec.js` (new, after `ccareer.js`): the series specs
+  (`CL.SPECS`, allow lists, the reference builds), `CL.specCheck` /
+  `specIssue`, `specRaceCar` (the M3's cap), `refInst` / `refIdeal`, the
+  rental (`rentPrice`, `rentInst`, damage rolled at entry, billed at the
+  finish), the spec field (the series car, `SPEC_GAP` 1.5 / 1.1 / 0.8 /
+  0.5 / 0.3 s + 0.15 x the regular's offset), licenses (`lic`, `licFor`,
+  `licOk`, `bookSchool`, the school slot, the tick, weekend credits),
+  `CL.need` 2 of 3. `team.js`: `opts.rentInst` / `opts.carFor`, the spec
+  check in `T.eligible`, the race passed to `G.cupFinish`. `physics.js`:
+  `inst.tune.capHp` scales the engine's torque (only set on Spec E46 race
+  cars). `data.js` / `parts.js`: `tr_205`, `tr_305`. `circuitui.js`: the
+  Spec card (car, rent, driver, "Spec rules" modal, your cars), the entry
+  list (rental row, Not to spec, license tags), driver cards (license line,
+  school button, SCHOOL status), the hiring board tag, the rental car in
+  live and watch views. `schedule.js`: the `school` slot, the school on the
+  calendar, no "no car fits" for Spec days. `ccareer.js`: the section-rule
+  wording. Texts: `ui.js`, `tutorial.js`, `phone.js`.
+- **Tested** (scratchpad `scrc/`, `scrc2/`): `c2a.js` (every reference
+  build legal and runnable; a stock Miata's check: cage, tires; a half-built
+  one: exhaust, coilovers, wheels; too light; the wrong car; Danny's
+  permit, the board's licenses, a rookie blocked, the school; renting: 10
+  Miatas, entry + wage + rental, damage billed; your own legal car; the
+  M3 at 265 hp in the race, 335 in the garage; the full license after 3
+  weekends; 2 of 3; the calendar school: busy on the weekend, the permit
+  after). `c2ui.js` (phone and wide: the Spec card, the rules, the entry
+  list, the result with the damage, the team's licenses, This Week).
+  `c2old.js` (a C1 save: Danny a permit, a 55-average hire and a 4-race
+  driver licensed, section 2 still open). Rival snapshot identical.
+- **Balance** (`c2bal.js`, rentals, 16 races each, win %): Club Spec
+  section 1: a rookie (30) 94%; section 3: 44% (30) / 81% (50); section 5:
+  13% (50) / 88% (65). Touring like Club. GT: section 1 75% (50); section 3
+  75% (65); section 5 13% (80). The Super Trofeo car (track tires, 3,840
+  lb) laps Pixel Raceway in 1:21.2, slower than the Carrera Cup 911 on
+  slicks (1:19.4): only matters within each class's own field.
+- **Note for the owner:** owning a spec car needs a roll cage, a shared
+  level-3 part that opens at drag class 2 section 1 or circuit class 2
+  section 2: early Club teams rent, as real club racers often do.
 **Questions sent:** the rental price against the C1 purses (as
 approved: $3,400 in class 1 vs a $300 win, ~$340,000 in class 6 if scaled
 like the purses); damage on a rental (the race has no contact); the

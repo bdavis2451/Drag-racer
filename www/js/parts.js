@@ -734,7 +734,7 @@
     wheels: { wh3: 'drag' }, brakes: { br1: 'drag', br3: 'circuit', br2: 'circuit' },
     ftires: { ft1: 'drag', ft2: 'circuit' },
     rtires: { dr_245: 'drag', dr_275: 'drag', dr_315: 'drag', ets_28: 'drag', sl_31: 'drag', sl_33: 'drag', sl_36: 'drag',
-      dr_255: 'drag', dr_295: 'drag', dr_315b: 'drag', dr_315c: 'drag', dr_305t: 'drag', sl_265: 'drag', sl_28: 'drag', sl_295: 'drag', sl_32: 'drag', tr_255: 'circuit', tr_315: 'circuit', rr_slk: 'circuit' },
+      dr_255: 'drag', dr_295: 'drag', dr_315b: 'drag', dr_315c: 'drag', dr_305t: 'drag', sl_265: 'drag', sl_28: 'drag', sl_295: 'drag', sl_32: 'drag', tr_205: 'circuit', tr_255: 'circuit', tr_315: 'circuit', tr_305: 'circuit', rr_slk: 'circuit' },
     cooling: { co2: 'circuit', co3: 'circuit' }, oiling: { o2: 'circuit' },
     fueltype: { meth: 'drag' }, safety: { sf2: 'drag' }, weight: { w4: 'drag' }, chassis: { ct: 'drag' }
   };

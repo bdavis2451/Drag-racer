@@ -2,6 +2,42 @@
 
 Short notes for testing, newest first.
 
+## Spec races and licenses (circuit, part 2 of 3)
+
+- **Spec races run** (the SPEC stop of each circuit section, Sunday race
+  days at Pixel Raceway): everyone in the class's series car. Club: Spec
+  Miata; Touring: Spec E46 rules on the M3 (held to 265 hp); Sport:
+  Corvette Cup; GT: Porsche Carrera Cup (the 911); GT Pro and Unlimited:
+  Super Trofeo (the Lamborghini).
+- **Rent one** for the race (1.5x the win: Club $450-810), built to the
+  spec, prepped, tires and fuel in. About 1 in 5 of your driver's mistakes
+  bends it: 25% of the rental each, after the race.
+- **Or bring your own** built to the series rules: the "Spec rules" button
+  on the event card lists them and what each of your cars still needs (a
+  cage, the series tire, the right wheels, the weight...).
+- **A section opens with 2 of its 3 running events** now (Sprint, Spec,
+  Night).
+- **Licenses:** the circuit career wants one. Class 1 (Club): a novice
+  permit or a license; class 2 up: the full license. The drivers' school
+  ($495, Team screen) runs the next Saturday 8 AM-Sunday 6 PM at Pixel
+  Raceway and gives a novice permit; three race weekends on it earn the
+  full license. Danny has a permit; drivers averaging 50+ come licensed
+  (the hiring board says so); on old saves, drivers with 3+ circuit races
+  have the full license. Open races, team races and the Night Series need
+  none.
+- **Two new tires** (Wheels & Tires): Track Tire 205/50R15 (the real Spec
+  Miata size, $900) and Track Tire 305/30R20 ($2,300), for any 15 in or
+  20 in car; circuit parts, opened by the circuit career.
+- Try:
+  - Career > Circuit: tap a SPEC stop, read the Spec rules, rent the car
+    and send Danny out.
+  - Hire a rookie and book the drivers' school; check they can't race the
+    circuit career until the weekend is over.
+  - Build your own Spec Miata (once a roll cage opens) and see it pass.
+- Look out for: a car that should be to spec but isn't (or the other way
+  round), a rental charged twice, a driver stuck at school, a license that
+  doesn't upgrade after three race weekends.
+
 ## The circuit career is a ladder now (circuit, part 1 of 3)
 
 - **The circuit career starts over** (Career > Circuit): six classes, each

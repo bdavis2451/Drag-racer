@@ -736,6 +736,7 @@
         h('div', { class: 'gsmall dim' }, (d.kind === 'tuner' ? TM().ROLES[d.role] + ' • ' : d.kind === 'drag' ? 'Drag driver • ' : d.kind === 'mech' ? 'Mechanic • ' : '') + 'Age ' + d.age + ' • potential ', starsEl(TM().stars(d)))),
         status || null),
       bars(d),
+      !d.kind && DR.CL && DR.CL.licLabel ? h('div', { class: 'gsmall' }, d.id ? DR.CL.licLabel(d) + (d.school ? ': ' + DR.CL.schoolText(d) : '') : DR.CL.licFor(d) === 'full' ? 'Comes with a full license' : 'Needs the drivers\' school (' + DR.money(DR.CL.SCHOOL) + ') to race the circuit career') : null,
       h('div', { class: 'gsmall dim' }, d.kind === 'tuner' || d.kind === 'mech' ? (d.jobs ? d.jobs + ' jobs' : 'No jobs yet') : d.races ? d.races + ' races • ' + d.wins + ' wins' + (d.kind === 'drag' ? '' : ' • ' + d.podiums + ' podiums') : 'No races yet', ' • ',
         h('span', { class: 'acc' }, (d.kind === 'tuner' && G.salary ? DR.money(G.salary(d)) + '/month' : d.kind === 'mech' ? DR.money(d.wage) + '/race day' : DR.money(d.wage) + '/race'))),
       foot ? h('div', { class: 'efoot' }, foot) : null);
@@ -749,10 +750,13 @@
       var g = h('div', { class: 'egrid dgrid' });
       list.forEach(function (d) {
         var busy = d.kind ? null : T.active().filter(function (r) { return T.drvsOf(r).indexOf(d.id) >= 0; })[0];
+        var school = !d.kind && DR.CL && DR.CL.bookSchool && DR.CL.lic(d) === 'none' && !d.school ? btn('Drivers\' school ' + DR.money(DR.CL.SCHOOL), function () {
+          UI.confirm('Send ' + d.name + ' to the drivers\' school? ' + DR.money(DR.CL.SCHOOL) + ', the next weekend at Pixel Raceway (Saturday 8 AM to Sunday 6 PM): they\'re away for it, and come back with a novice permit for class 1 races. Three race weekends on it earn the full license.', function () { var w = DR.CL.bookSchool(d.id); if (w) UI.toast(w); else { A.cash && A.cash(); UI.toast(d.name + (d.lic === 'novice' ? ' has a novice permit' : ' is booked for the drivers\' school')); } UI.refresh(); }, 'Book');
+        }, 'small go') : null;
         g.appendChild(driverCard(d,
           busy ? btn('Watch', function () { UI.circuitTab = 'races'; UI.watchRace = busy.id; UI.refresh(); }, 'small') :
-            btn('Release', function () { UI.confirm('Release ' + d.name + '? They leave the team (no refund).', function () { var w = release(d.id); if (w) UI.toast(w); UI.refresh(); }, 'Release'); }, 'small red'),
-          busy ? h('span', { class: 'ewon' }, 'RACING') : h('span', { class: 'etype good' }, 'FREE')));
+            h('div', { class: 'row', style: { gap: '6px' } }, school, btn('Release', function () { UI.confirm('Release ' + d.name + '? They leave the team (no refund).', function () { var w = release(d.id); if (w) UI.toast(w); UI.refresh(); }, 'Release'); }, 'small red')),
+          busy ? h('span', { class: 'ewon' }, 'RACING') : d.school ? h('span', { class: 'ewon' }, 'SCHOOL') : h('span', { class: 'etype good' }, 'FREE')));
       });
       for (var i = list.length; i < max; i++) g.appendChild(h('div', { class: 'ecard dcard empty' }, h('div', { class: 'dim' }, empty), h('div', { class: 'gsmall dim' }, 'Hire from the board below.')));
       return g;
@@ -803,7 +807,7 @@
       var lg = h('div', { class: 'egrid' });
       live.forEach(function (r) {
         var cls = T.classById(r.cls), d = T.driver(r.drv), t = T.clock(r), rows = T.standings(r, t), me = rows.filter(function (x) { return x.e.you; })[0];
-        var car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0];
+        var car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0] || r.rentInst;
         lg.appendChild(h('div', { class: 'ecard livecard', onclick: function () { UI.watchRace = r.id; UI.refresh(); } },
           h('div', { class: 'drow' }, helmet(d ? d.col : '#888', 22), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, r.ev && G.cupEvent(r.ev) ? G.cupEvent(r.ev).name : cls.name), h('div', { class: 'gsmall dim' }, (d ? d.name : '') + ' • ' + (car ? DR.CARS[car.carId].name : ''))), h('span', { class: 'ewon live' }, 'LIVE')),
           h('div', { class: 'gst' }, h('span', { class: 'k' }, 'P' + (rows.indexOf(me) + 1) + ' • LAP ' + Math.min(r.laps, me.w.lap + 1) + '/' + r.laps), h('span', { class: 'v' }, 'back in ' + T.fmtLeft(T.left(r)))),
@@ -892,7 +896,7 @@
       h('div', { class: 'grow' }, h('span', { class: 'pix acc' }, cs.cls.name), ' ', h('span', { class: 'gsmall dim' }, cs.cls.series + ' • ' + G.cupWins(si) + ' / ' + CLD.liveEvents(si).length + ' races won'),
         h('div', { class: 'pbar' }, h('b', { style: { width: Math.round(Math.min(cur, CLD.SECTIONS) / CLD.SECTIONS * 100) + '%' } }))));
     setTimeout(function () { var el = road.querySelector('.rnode.sel'); if (el && arriving) road.scrollLeft = Math.max(0, el.parentNode.parentNode.offsetLeft - road.clientWidth / 2 + 58); }, 0);
-    var tip = 'Win ' + CLD.secRule() + ' of a section to open the next (3 of its 4 once Spec and Endurance arrive). Only the win finishes an event; the top five are paid. Sprints run on Sunday race days, Night races on Saturday nights, each once a week. After the five sections, the Championship opens the next class.';
+    var tip = 'Win ' + CLD.secRule() + ' of a section to open the next' + (CLD.LIVE.endur ? '' : ' (3 of its 4 once Endurance arrives)') + '. Only the win finishes an event; the top five are paid. Sprints' + (CLD.LIVE.spec ? ' and Spec races' : '') + ' run on Sunday race days, Night races on Saturday nights, each once a week. After the five sections, the Championship opens the next class.';
     return h('div', { class: 'rwrap' }, h('div', { class: 'rleft' }, head, road, h('div', { class: 'gsmall dim rtip' }, tip)), h('div', { class: 'rdetail' }, cEventCard(cSel), cRegulars(si, Math.min(cur, CLD.SECTIONS))));
   }
   function gst(k, v, cls) { return h('div', { class: 'gst' }, h('span', { class: 'k' }, k), h('span', { class: 'v' + (cls ? ' ' + cls : '') }, v)); }
@@ -903,14 +907,37 @@
       h('div', { class: 'drow' }, h('span', { class: 'clbadge' + (ev.champ ? '' : ' sm') }, ev.champ ? '🏆' : th.glyph), h('div', { class: 'grow' }, h('div', { class: 'acc ename' }, ev.name),
         h('div', { class: 'gsmall dim' }, soon ? 'Coming soon' : tr.name + (tr.theme ? ' (night)' : '') + ' • ' + ev.laps + ' laps • ' + (CLD.FIELD + 1) + ' cars' + (ev.champ ? ' • led by ' + ev.rival.name : ''))), won ? h('span', { class: 'etype good' }, '✔') : null),
       h('div', { class: 'gsmall' }, soon ? th.soon : ev.champ ? 'The class\'s nine best: one qualifying lap each sets the grid, then the feature race. ' + (ev.stage + 1 < DR.CSTAGES.length ? 'Win it to open the next class.' : 'The top of the circuit ladder.') : th.blurb),
-      soon ? null : gst('CARS', k.floor ? 'Ideal lap ' + T.fmtLap(k.floor) + ' or slower' : 'Any car'),
+      soon ? null : ev.theme === 'spec' ? gst('CAR', DR.CL.specOf(ev.stage).series + ': ' + DR.CARS[DR.CL.specOf(ev.stage).car].name) : gst('CARS', k.floor ? 'Ideal lap ' + T.fmtLap(k.floor) + ' or slower' : 'Any car'),
+      soon || ev.theme !== 'spec' ? null : gst('RENT', DR.money(DR.CL.rentPrice(ev)) + ' (or your own)'),
       soon ? null : gst('ENTRY', DR.money(ev.fee) + ' + wage'),
+      soon ? null : gst('DRIVER', ev.stage === 0 ? 'Novice permit or license' : 'Full license'),
       soon ? null : gst('WIN', DR.money(ev.cash), 'acc'),
       soon ? null : gst('P2-P5', [2, 3, 4, 5].map(function (p) { return DR.money(CLD.purse(ev, p)); }).join(' / ')),
       !soon && unl.length ? h('div', { class: 'gsmall eunl' }, '🔓 ' + (ev.champ ? '' : 'First win in this section: ') + unl.map(function (u) { return DR.unlockChip(u).text; }).join(' • ')) : null,
+      soon || ev.theme !== 'spec' ? null : h('div', { class: 'gsmall' }, specMine(ev), ' ', btn('Spec rules', function () { specRules(ev.stage); }, 'small')),
       soon ? null : h('div', { class: 'efoot' }, lock && !live ? h('span', { class: 'gsmall dim' }, '🔒 ' + lock) : h('span', {}),
         live ? btn('Watch', function () { UI.watchRace = live.id; UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); }, 'small go') : lock ? null :
           btn(won ? 'Race again' : 'Enter', function () { gateC(DR.CL.slotFor(ev), 'The ' + ev.name, function () { entryModal(k, ev.track, false, false, ev); }); }, 'small go')));
+  }
+  // your cars of the series model and whether they're to spec
+  function specMine(ev) {
+    var sp = DR.CL.specOf(ev.stage), mine = G.state.cars.filter(function (c) { return c.carId === sp.car; });
+    if (!mine.length) return h('span', { class: 'dim' }, 'You don\'t own a ' + DR.CARS[sp.car].name + ': rent one.');
+    var ok = mine.filter(function (c) { return !DR.CL.specIssue(c, ev.stage); });
+    return h('span', { class: ok.length ? 'good' : 'dim' }, ok.length ? 'Your ' + DR.CARS[sp.car].name + ' is to spec.' : 'Your ' + DR.CARS[sp.car].name + ' isn\'t to spec yet.');
+  }
+  // the series' rules, and what each of your cars of the model still needs
+  function specRules(si) {
+    var sp = DR.CL.specOf(si), close, mine = G.state.cars.filter(function (c) { return c.carId === sp.car; });
+    close = UI.modal([h('h2', {}, sp.series + ' rules'),
+      h('div', { class: 'gsmall dim' }, 'Everything else stays as the car came. Always free: data logger, battery, safety gear, ballast, cooling, clutch, engine mounts, paint and looks.'),
+      h('ul', { class: 'gsmall' }, sp.rules.map(function (r) { return h('li', {}, r); })),
+      h('div', { class: 'plvl' }, 'YOUR CARS'),
+      mine.length ? mine.map(function (c) {
+        var l = DR.CL.specCheck(c, si);
+        return h('div', { class: 'gsmall' }, h('b', {}, DR.CARS[c.carId].name), l.length ? h('span', { class: 'bad' }, ': needs ' + l.join('; ')) : h('span', { class: 'good' }, ': to spec'));
+      }) : h('div', { class: 'gsmall dim' }, 'None: the rental is built to these rules.'),
+      h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Close', function () { close(); }))]);
   }
   // the class's regulars: their cars and their pace at Pixel Raceway this section
   function cRegulars(si, s) {
@@ -920,7 +947,7 @@
         return h('tr', {}, h('td', {}, h('span', { class: 'dot', style: { background: e.col } }), e.name, h('div', { class: 'gsmall dim' }, e.team)),
           h('td', { class: 'dim' }, DR.CARS[e.car].name), h('td', { class: 'num dim', title: 'Their car\'s ideal lap at Pixel Raceway' }, TM().fmtLap(e.pace)));
       })),
-      h('div', { class: 'gsmall dim' }, 'Nine of them race each event (the same nine every week); the Championship takes the nine quickest. Lap times: their car\'s ideal lap at Pixel Raceway; the driver adds to it.'));
+      h('div', { class: 'gsmall dim' }, 'Nine of them race each event (the same nine every week); the Championship takes the nine quickest. Lap times: their car\'s ideal lap at Pixel Raceway; the driver adds to it. In Spec events they all race the series car.'));
   }
 
   // the Night Series: start a season, or its table and next round
@@ -979,29 +1006,38 @@
       if (inst.damage) return 'Broken';
       var Sfit = G.spec(inst); if (Sfit.noRun || Sfit.noRunFit) return 'Can\'t run';
       var why = T.eligible(inst, cls, ev);
-      return why ? (/turn/.test(why) ? 'Can\'t turn' : 'Too quick') : '';
+      return why ? (/turn/.test(why) ? 'Can\'t turn' : /^Not to spec/.test(why) ? (/series car/.test(why) ? 'Not the series car' : 'Not to spec') : 'Too quick') : '';
     }
+    // a Spec event: rent the series car, or your own built to the spec;
+    // a ladder event: the driver's license
+    var spec = ev && ev.theme === 'spec' && DR.CL, rentP = spec ? DR.CL.rentPrice(ev) : 0;
+    function licOk(d) { return !ev || !DR.CL || !DR.CL.licOk || DR.CL.licOk(d, ev.stage); }
     function render() {
       carBox.innerHTML = ''; drvBox.innerHTML = '';
+      if (spec) carBox.appendChild(h('div', { class: 'entrow' + (selCar === 'rent' ? ' on' : ''), onclick: function () { selCar = 'rent'; render(); } },
+        h('span', { class: 'grow' }, 'Rent the series car: ' + DR.CARS[DR.CL.specOf(ev.stage).car].name), h('span', { class: 'dim' }, 'built to the spec, prepped'), h('span', { class: 'acc' }, DR.money(rentP))));
       G.state.cars.forEach(function (inst) {
         var why = status(inst), lap = T.idealLap(inst);
         if (teams) { if (!why && cars2.length < 2 && !render.did) cars2.push(inst.uid); }
-        else if (!selCar && !why) selCar = inst.uid;
+        else if (!selCar && !why && !render.did) selCar = inst.uid;
         var on = teams ? cars2.indexOf(inst.uid) >= 0 : selCar === inst.uid;
-        carBox.appendChild(h('div', { class: 'entrow' + (on ? ' on' : '') + (why ? ' off' : ''), onclick: function () { if (why) return UI.toast(why === 'Can\'t run' ? DR.noRunText(G.spec(inst)) : why === 'Too quick' || why === 'Can\'t turn' ? T.eligible(inst, cls, ev) : why); if (teams) pick2(cars2, inst.uid); else selCar = inst.uid; render(); } },
+        carBox.appendChild(h('div', { class: 'entrow' + (on ? ' on' : '') + (why ? ' off' : ''), onclick: function () { if (why) return UI.toast(why === 'Can\'t run' ? DR.noRunText(G.spec(inst)) : why === 'Too quick' || why === 'Can\'t turn' || why === 'Not to spec' || why === 'Not the series car' ? T.eligible(inst, cls, ev) : why); if (teams) pick2(cars2, inst.uid); else selCar = inst.uid; render(); } },
           h('span', { class: 'grow' }, DR.CARS[inst.carId].name), inst.ctune && inst.ctune.set ? h('span', { class: 'acc', title: 'Circuit setup by ' + inst.ctune.by }, '⚙') : null, h('span', { class: 'dim' }, 'rating ' + T.fmtLap(lap)), why ? h('span', { class: 'bad' }, why) : null));
       });
-      free.forEach(function (d) { if (teams) { if (drvs2.length < 2 && !render.did) drvs2.push(d.id); } else if (!selDrv) selDrv = d.id; });
+      if (spec && !selCar && !render.did) selCar = 'rent';
+      free.forEach(function (d) { if (teams) { if (drvs2.length < 2 && !render.did) drvs2.push(d.id); } else if (!selDrv && licOk(d)) selDrv = d.id; });
       render.did = true;
       s.drivers.forEach(function (d) {
-        var busy = T.driverBusy(d.id), on = teams ? drvs2.indexOf(d.id) >= 0 : selDrv === d.id;
-        drvBox.appendChild(h('div', { class: 'entrow' + (on ? ' on' : '') + (busy ? ' off' : ''), onclick: function () { if (busy) return UI.toast(d.name + ' is racing'); if (teams) pick2(drvs2, d.id); else selDrv = d.id; render(); } },
+        var busy = T.driverBusy(d.id), on = teams ? drvs2.indexOf(d.id) >= 0 : selDrv === d.id, lok = licOk(d);
+        drvBox.appendChild(h('div', { class: 'entrow' + (on ? ' on' : '') + (busy || !lok ? ' off' : ''), onclick: function () { if (busy) return UI.toast(d.name + (d.school ? ' is at the drivers\' school' : ' is racing')); if (!lok) return UI.toast(DR.CL.licWhy(d, ev.stage)); if (teams) pick2(drvs2, d.id); else selDrv = d.id; render(); } },
           helmet(d.col, 18), h('span', { class: 'grow' }, d.name), teams && on ? h('span', { class: 'dim' }, '→ ' + (cars2[drvs2.indexOf(d.id)] ? DR.CARS[G.state.cars.filter(function (c) { return c.uid === cars2[drvs2.indexOf(d.id)]; })[0].carId].name : '?')) : null,
+          ev && DR.CL && DR.CL.licLabel ? h('span', { class: lok ? 'dim' : 'bad' }, lok ? (DR.CL.lic(d) === 'full' ? 'licensed' : 'permit') : DR.CL.lic(d) === 'novice' ? 'permit: class 1 only' : 'no license') : null,
           h('span', { class: 'dim' }, 'B' + Math.floor(d.brk) + ' C' + Math.floor(d.cor) + ' K' + Math.floor(d.con)), h('span', { class: 'acc' }, DR.money(d.wage))));
       });
-      var ds = teams ? drvs2.map(T.driver) : [T.driver(selDrv)], wages = ds.reduce(function (a, d) { return a + (d ? d.wage : 0); }, 0), fees = (ev ? ev.fee : cls.fee) * ds.length, cost = fees + wages;
+      var ds = teams ? drvs2.map(T.driver) : [T.driver(selDrv)], wages = ds.reduce(function (a, d) { return a + (d ? d.wage : 0); }, 0), fees = (ev ? ev.fee : cls.fee) * ds.length, rent = selCar === 'rent' ? rentP : 0, cost = fees + wages + rent;
       sum.innerHTML = '';
-      sum.appendChild(h('div', {}, 'Entry ' + DR.money(fees) + ' + wage' + (teams ? 's ' : ' ') + DR.money(wages) + ' = ', h('b', { class: 'acc' }, DR.money(cost))));
+      sum.appendChild(h('div', {}, 'Entry ' + DR.money(fees) + ' + wage' + (teams ? 's ' : ' ') + DR.money(wages) + (rent ? ' + rental ' + DR.money(rent) : '') + ' = ', h('b', { class: 'acc' }, DR.money(cost))));
+      if (rent) sum.appendChild(h('div', { class: 'gsmall dim' }, 'The rental: the ' + DR.CL.specOf(ev.stage).series + ' car built to the spec, prepped, with tires and fuel. About 1 in 5 of your driver\'s mistakes bends it: ' + DR.money(Math.round(rentP * DR.CL.DMG_K / 10) * 10) + ' each, after the race.'));
       if (teams) sum.appendChild(h('div', { class: 'gsmall dim' }, 'Your two against two teams of two. Points 25-18-15-12-10-8 for every car; the team with the most wins. Team prizes: ' + [1, 2, 3].map(function (p) { return (p === 1 ? '1st ' : p === 2 ? '2nd ' : '3rd ') + DR.money(T.teamPrize(cls, p, tid)); }).join(' • ') + '. The first car picked goes with the first driver.'));
       else if (ev) { var unl = G.cupUnlocks(ev); sum.appendChild(h('div', { class: 'gsmall dim' }, 'Win ' + DR.money(ev.cash) + ' • P2-P5 ' + [2, 3, 4, 5].map(function (p) { return DR.money(DR.CL.purse(ev, p)); }).join(' / ') + '. Only the win finishes the event' + (unl.length ? ' and opens ' + unl.map(function (u) { return DR.unlockChip(u).text; }).join(', ') : '') + '. The field: ' + (ev.champ ? 'the class\'s nine quickest regulars, led by ' + ev.rival.name : 'nine of the class\'s regulars') + '.')); }
       else sum.appendChild(h('div', { class: 'gsmall dim' }, 'Prizes: ' + cls.prize.filter(Boolean).map(function (p, i) { return 'P' + (i + 1) + ' ' + DR.money(T.prize(cls, i + 1, tid)); }).join(' • ') + (T.isNight(tid) ? ' (night race +25%)' : '')));
@@ -1009,16 +1045,17 @@
     }
     go = btn('Send to the track', function () {
       if (teams ? cars2.length < 2 || drvs2.length < 2 : !selCar) return UI.toast(teams ? 'Pick two cars and two drivers' : 'No car can enter this class');
+      if (!teams && !selDrv) return UI.toast(ev ? 'None of your free drivers has the license for this class (Team: the drivers\' school)' : 'Pick a driver');
       go.classList.add('busy'); go.textContent = 'Qualifying…';
       setTimeout(function () {
-        var res = series ? T.startSeries(cls.id, selCar, selDrv) : ev ? T.enter(cls.id, selCar, selDrv, tid, { ev: ev }) : teams ? T.enter(cls.id, cars2[0], drvs2[0], tid, { mate: { uid: cars2[1], drv: drvs2[1] } }) : T.enter(cls.id, selCar, selDrv, tid);
+        var res = series ? T.startSeries(cls.id, selCar, selDrv) : ev ? T.enter(cls.id, selCar === 'rent' ? null : selCar, selDrv, tid, { ev: ev, rent: selCar === 'rent' }) : teams ? T.enter(cls.id, cars2[0], drvs2[0], tid, { mate: { uid: cars2[1], drv: drvs2[1] } }) : T.enter(cls.id, selCar, selDrv, tid);
         if (!res.race) { go.classList.remove('busy'); go.textContent = 'Send to the track'; return UI.toast(res.msg); }
         if (teams && s.invite) s.invite = null;
         close(); UI.watchRace = res.race.id; A.cash && A.cash(); UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit');
       }, 30);
     }, 'primary');
     // ideal laps take a moment the first time: draw after the modal shows
-    close = UI.modal([h('h2', {}, ev ? ev.name + ' • ' + DR.TRACKS[tid].name : series ? cls.name + ' • Night Series' : cls.name + (teams ? ' • Team race' : '') + ' • ' + DR.TRACKS[tid].name), h('div', { class: 'gsmall dim' }, (ev ? G.cclassName(ev.stage) + ' • ' : '') + (cls.floor ? 'Cars whose ideal lap at Pixel Raceway is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + (ev ? ev.laps : T.lapsAt(cls, tid)) + ' laps • ' + (ev ? DR.CL.FIELD + 1 : 6) + ' cars' + (teams ? ' in three teams of two' : '')),
+    close = UI.modal([h('h2', {}, ev ? ev.name + ' • ' + DR.TRACKS[tid].name : series ? cls.name + ' • Night Series' : cls.name + (teams ? ' • Team race' : '') + ' • ' + DR.TRACKS[tid].name), h('div', { class: 'gsmall dim' }, (ev ? G.cclassName(ev.stage) + ' • ' : '') + (ev && ev.theme === 'spec' && DR.CL ? DR.CL.specOf(ev.stage).series + ' cars: rent one, or your own built to the spec' : cls.floor ? 'Cars whose ideal lap at Pixel Raceway is ' + T.fmtLap(cls.floor) + ' or slower' : 'Any car') + ' • ' + (ev ? ev.laps : T.lapsAt(cls, tid)) + ' laps • ' + (ev ? DR.CL.FIELD + 1 : 6) + ' cars' + (teams ? ' in three teams of two' : '')),
       h('div', { class: 'plvl' }, teams ? 'CARS (pick two)' : 'CAR'), carBox, h('div', { class: 'plvl' }, teams ? 'DRIVERS (pick two)' : 'DRIVER'), drvBox, sum,
       h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '8px' } }, btn('Cancel', function () { close(); }), go)]);
     carBox.appendChild(h('div', { class: 'dim' }, 'Working out lap times…'));
@@ -1035,7 +1072,7 @@
       c.imageSmoothingEnabled = false; c.drawImage(base.cv, 0, 0);
       var rows = T.standings(r, t);
       // your car's engine, while it's racing (silent at 16x: too fast to follow)
-      var mine = rows.filter(function (x) { return x.e.you && (!x.e.uid || x.e.uid === r.car); })[0], car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0];
+      var mine = rows.filter(function (x) { return x.e.you && (!x.e.uid || x.e.uid === r.car); })[0], car = G.state.cars.filter(function (c) { return c.uid === r.car; })[0] || r.rentInst;
       if (mine && r.snd && car && !mine.w.done && !r.done && !r.ff && cv.isConnected) {
         if (!eng) engineStart(G.spec(car));
         var si = Math.min(r.snd.v.length - 1, Math.floor(mine.w.frac * r.snd.v.length));

@@ -40,6 +40,7 @@
     circ:   { name: 'circuit open races', where: 'the circuits', win: [{ wd: [0], from: 10, to: 18 }, { wd: [4], from: 18, to: 23 }] },
     series: { name: 'Night Series rounds', where: 'the street circuits', win: [{ wd: [6], from: 20, to: 24 }] },
     cnight: { name: 'Saturday night street circuit race', where: 'the street circuits', win: [{ wd: [6], from: 20, to: 24 }] },
+    school: { name: 'drivers\' school (Saturday 8 AM to Sunday 6 PM)', where: 'Pixel Raceway', win: [{ wd: [6], from: 8, to: 42 }] },
     testday:{ name: 'Monday to Thursday, 9 AM to 5 PM', where: 'Pixel Raceway', win: [{ wd: [1, 2, 3, 4], from: 9, to: 17 }] },
     king:   { name: 'King race (2nd & 4th Saturday night)', where: 'Pixel Dragway', win: [{ wd: [6], from: 21, to: 24, nth: [2, 4] }] },
     kingb:  { name: 'Bracket King (last Sunday)', where: 'Pixel Dragway', win: [{ wd: [0], from: 12, to: 17, last: true }] },
@@ -295,11 +296,17 @@
           if (s.drivers.every(function (d) { return T.driverBusy(d.id); })) return { msg: 'Your drivers are all racing', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
           var free = G.state.cars.filter(function (x) { return !x.damage && !T.carAway(x.uid) && !(G.carBusy && G.carBusy(x)); });
           if (!free.length) return { msg: 'No car free to send', fix: ['Garage', function () { UI.show(UI.Garage); }] };
-          if (!free.some(function (x) { return !T.eligible(x, ccls, todoC[0]); })) return { msg: 'No free car fits ' + ccls.name + (ccls.floor ? ' (an ideal lap of ' + T.fmtLap(ccls.floor) + ' or slower)' : ''), fix: ['Garage', function () { UI.show(UI.Garage); }] };
+          // (a Spec event can always be raced in a rental)
+          if (!todoC.some(function (ev) { return ev.theme === 'spec'; }) && !free.some(function (x) { return !T.eligible(x, ccls, todoC[0]); })) return { msg: 'No free car fits ' + ccls.name + (ccls.floor ? ' (an ideal lap of ' + T.fmtLap(ccls.floor) + ' or slower)' : ''), fix: ['Garage', function () { UI.show(UI.Garage); }] };
           return null;
         });
       });
     }
+    // a driver at the drivers' school (cspec.js)
+    if (DR.Team && DR.CL && DR.CL.bookSchool) DR.Team.state().drivers.forEach(function (d) {
+      var w = windowOn('school', d0);
+      if (d.school && w && Math.abs(w.start - d.school.start) < 0.01) add('school', 'circuit', 'Drivers\' school: ' + d.name, function () { UI.show(UI.TeamScreen); }, 'Pixel Raceway, Saturday 8 AM to Sunday 6 PM (your team)');
+    });
     if (DR.Team) {
       var se = DR.Team.series && DR.Team.series(); if (se && !se.done) add('series', 'circuit', 'Night Series round ' + (se.round + 1), function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });
       var iv = DR.Team.invite && DR.Team.invite(); if (iv) add('cup', 'circuit', 'Team race invitation (' + iv.team + ')', function () { UI.circuitTab = 'races'; UI.show(UI.RaceMenu, 'circuit'); });
