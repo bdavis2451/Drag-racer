@@ -1,8 +1,8 @@
 # Circuit ladder (fresh)
 
-Status: **C1 shipped Nov 27; C2 (spec cars and licenses) built and
-tested Nov 28 (branch `circuit-c2`). Next: C3 (endurance; the Night
-Series and Circuit King fold in).** Replaces the circuit
+Status: **C1 shipped Nov 27; C2 shipped Nov 28. C3 (endurance; the
+Night Series and Circuit King fold in): researched Nov 28, draft plan and
+questions to the owner, no code.** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -222,6 +222,49 @@ before building, all answered with the recommended option:
   own) and the rule 3 of 4; licenses gate classes. C3: Endurance, then the
   Night Series and the Circuit King fold in (class 5's Championship as the
   way to the Circuit King); open races / team races then revisited.
+
+## C3 research and draft plan (Nov 28: questions to the owner, no code)
+**Research:**
+- **What an endurance race is** (SCCA 2026 GCR 3.1.2 B): more than one
+  driver in the same car, meant to test equipment and people, with at
+  least one mandatory pit stop.
+- **Club enduro stops:** SCCA Enduro Nationals: any stop with fueling at
+  least 5 minutes, driver changes during fueling, repair-only stops no
+  minimum (scca.com "Enduro: Let's Talk Pit Stops"). SCCA Central Florida
+  Region 2025: races of 65+ minutes with at least one mandatory 5-minute
+  stop. HSR B.R.M Endurance Challenge 2026: a 1-hour enduro has one
+  mandatory 5-minute stop, started within 40 minutes; a 90-minute one two
+  (HSR bulletin, Sept 2026). ChampCar: a fuel stop at least 5 minutes, a
+  driver change alone no minimum, 2 hours a driver at most. (Our races are
+  about 3x a sprint, so the owner's ~60 s stop scales that down.)
+- **Fuel on track:** Spec Miata about 4-8 US gal an hour (forums:
+  mazdaracers, Lemons, rennlist; ~2 hours on a stock tank at Mid-Ohio);
+  C5 Corvette about 8-10 mpg on track (corvetteforum owners). A rule of
+  thumb that fits both: ~0.04 gal an hour per peak hp (half the power on
+  average at ~0.5 lb/hp/h): Miata ~5 gph, C5 ~15, a 770 hp Lamborghini
+  ~32. At our race lengths no car needs a second stop (the Lamborghini's
+  half of the Unlimited endurance is ~13 gal of a ~24 gal tank).
+- **Refueling:** amateur dump cans 5 gal in about 25-45 s (Lemons forums);
+  pro dump cans ~1.5 gal/s, a GT3 dry break ~2 L/s (Lexus GT3 article).
+
+**Draft plan:**
+1. **Endurance events run** (each section's END stop): Sunday race days
+   at Pixel Raceway, once a week, ten cars, 3x the Sprint's laps (Club 15,
+   Touring and Sport 18, GT 24, GT Pro 30, Unlimited 36), your own car
+   under the class limit (like the Sprint).
+2. **Two of your drivers share the car**, both licensed for the class; one
+   mandatory stop with the driver change. Each stint runs at its driver's
+   skills; tire wear builds as in every race, new tires reset it.
+3. **The stop:** pit lane and the driver change, plus the fuel the second
+   stint needs, plus 30 s for four new tires (questions: fixed or by fuel;
+   your choices; the mechanic).
+4. **The field:** each regular with a co-driver (a teammate of similar
+   skill); they stop near halfway, and most take tires in the long races.
+5. **Section rule:** 3 of 4 (open sections stay open).
+6. **The Night Series and the Circuit King fold in** (owner, Nov 27: class
+   5's Championship as the way to the Circuit King). Questions: what the
+   King race is and what it's for; what happens to the Night Series (and
+   a season under way); open races, team races and invitations.
 
 ## C2 research and draft plan (Nov 27: research done, all answered, building)
 **Research (2026 rules):**
