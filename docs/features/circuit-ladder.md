@@ -1,8 +1,8 @@
 # Circuit ladder (fresh)
 
 Status: **C1 shipped Nov 27; C2 shipped Nov 28. C3 (endurance; the
-Night Series and Circuit King fold in): researched Nov 28, draft plan and
-questions to the owner, no code.** Replaces the circuit
+Circuit King race): the owner's answers in Nov 28, building now (branch
+`circuit-c3`).** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -223,7 +223,7 @@ before building, all answered with the recommended option:
   Night Series and the Circuit King fold in (class 5's Championship as the
   way to the Circuit King); open races / team races then revisited.
 
-## C3 research and draft plan (Nov 28: questions to the owner, no code)
+## C3 research, answers and plan (Nov 28)
 **Research:**
 - **What an endurance race is** (SCCA 2026 GCR 3.1.2 B): more than one
   driver in the same car, meant to test equipment and people, with at
@@ -265,6 +265,50 @@ before building, all answered with the recommended option:
    5's Championship as the way to the Circuit King). Questions: what the
    King race is and what it's for; what happens to the Night Series (and
    a season under way); open races, team races and invitations.
+
+**Owner's answers (Nov 28):** 1 the stop **by fuel**; 2 you choose **who
+starts, the stop lap and tires**; 3 endurance pays **1.5x the Sprint's
+purse**; 4 **your mechanic works the stops** (skill counts); 5 the
+**Circuit King race is for their car** (and $120,000), opened by the GT Pro
+Championship; old saves keep a title already won; 6 **the Night Series
+stays** as a prize-money extra on Events, no longer tied to the Circuit
+King; 7 open races, team races and invitations stay as they are; 8 build
+now.
+
+**C3 final plan (as built):**
+1. **Endurance events run** (the END stop of each section): Sunday race
+   days at Pixel Raceway, once a week, ten cars, 3x the Sprint's laps,
+   your own car under the class limit. Purse 1.5x the Sprint's (Club
+   section 1: $450), the entry 10% of the win, plus both drivers' wages
+   and your mechanic's day.
+2. **Two of your drivers**, both licensed for the class: you pick who
+   starts, the stop lap (any lap in the middle third; halfway by default)
+   and new tires or not. Each stint runs at its driver's skills; both
+   drivers learn and both count the race weekend toward their license.
+3. **The stop** = 35 s (pit lane and the driver change) + the fuel the
+   second stint needs (about 0.04 gal an hour per peak hp, poured at 5 gal
+   per 35 s, club dump cans) + 30 s for four new tires (cold for the
+   out-lap; the wear starts again). Your mechanic takes up to 10 s off the
+   driver change and tires, by wrenching skill. Examples at halfway: a
+   Club Miata ~43 s, a Sport Corvette ~59 s, a GT Pro Lamborghini ~110 s
+   (+30 s tires).
+4. **The field:** each regular with a co-driver (a teammate, their skill
+   within 10 of the regular's); they stop within a lap or two of halfway;
+   they take tires in races of 24 laps and up (GT and above), else 1 in 3.
+5. **Section rule:** 3 of 4 (sections already open stay open).
+6. **The Circuit King:** after the GT Pro Championship, call out the
+   Circuit King (Viktor Halvorsen, co-driver Mara Engstrom) in their
+   Porsche 911 GT racer: one endurance-format race at Pixel Raceway (30
+   laps, one stop each), your car (any car, no class limit) and two
+   drivers with full licenses against their team, Sundays, once a week, no
+   entry fee. Win: the title, their car (in your garage, as a pink-slip
+   win) and $120,000. The Kings tab shows it; an old save's Night Series
+   title still counts as the Circuit King title, and can still race for
+   the car.
+7. **The Night Series** stays on Events (texts no longer tie it to the
+   Circuit King).
+- **Left out:** fuel weight in lap times; a mechanic busy at the strip and
+  the circuit the same Sunday; safety cars; more than one stop.
 
 ## C2 research and draft plan (Nov 27: research done, all answered, building)
 **Research (2026 rules):**
