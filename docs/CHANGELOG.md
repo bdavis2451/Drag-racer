@@ -2,6 +2,39 @@
 
 Short notes for testing, newest first.
 
+## Endurance races and the Circuit King (circuit, part 3 of 3)
+
+- **Endurance races run** (the END stop of each circuit section, Sunday
+  race days at Pixel Raceway): three times a Sprint (Club 15 laps ...
+  Unlimited 36) in your own car under the class limit, with **two of your
+  drivers** sharing it and **one pit stop**. They pay 1.5x the Sprint (Club
+  section 1: $450).
+- **You pick** who starts, the stop lap (any lap in the middle third) and
+  whether to take new tires (+30 s). The entry card estimates the stop.
+- **The stop:** 35 s for the pit lane and the driver change, plus the fuel
+  the second stint needs (thirsty cars take longer: a Miata ~40 s, a
+  Corvette ~60 s, a Lamborghini ~110 s), plus the tires. **Your mechanic**
+  (Team) takes up to 10 s off and is paid for the day.
+- Both drivers learn, and the race counts toward both drivers' licenses.
+- **A circuit section now opens with 3 of its 4 events** (sections already
+  open stay open).
+- **The Circuit King:** win the GT Pro Championship (circuit class 5),
+  then call out Viktor Halvorsen and Mara Engstrom (Career > Kings): one
+  endurance race at Pixel Raceway, your car (any car) and two drivers with
+  full licenses against their Porsche 911 GT racer, Sundays, no entry fee.
+  Win their car (into your garage) and $120,000. A Night Series title
+  already won still counts as the Circuit King title, and you can still
+  race them for the car.
+- The Night Series, open races and team races stay on the Events tab as
+  they were.
+- Try:
+  - Career > Circuit: tap an END stop, enter with Danny and a second
+    driver, try different stop laps and tires, watch the PIT in the table.
+  - Hire a mechanic and compare the stop time.
+- Look out for: a stop that seems far too long or short, a driver who
+  should be busy but isn't (or the other way round), the second driver not
+  learning, the King race offered too early.
+
 ## Spec races and licenses (circuit, part 2 of 3)
 
 - **Spec races run** (the SPEC stop of each circuit section, Sunday race

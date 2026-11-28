@@ -1,8 +1,8 @@
 # Circuit ladder (fresh)
 
-Status: **C1 shipped Nov 27; C2 (spec cars and licenses) built and
-tested Nov 28 (branch `circuit-c2`). Next: C3 (endurance; the Night
-Series and Circuit King fold in).** Replaces the circuit
+Status: **C1 shipped Nov 27; C2 shipped Nov 28. C3 (endurance; the
+Circuit King race) built and tested Nov 28 (branch `circuit-c3`). The
+three builds are done.** Replaces the circuit
 career (`ccareer.js`, the Night Series and the Circuit King as they are
 now).
 
@@ -222,6 +222,130 @@ before building, all answered with the recommended option:
   own) and the rule 3 of 4; licenses gate classes. C3: Endurance, then the
   Night Series and the Circuit King fold in (class 5's Championship as the
   way to the Circuit King); open races / team races then revisited.
+
+## C3 research, answers and plan (Nov 28)
+**Research:**
+- **What an endurance race is** (SCCA 2026 GCR 3.1.2 B): more than one
+  driver in the same car, meant to test equipment and people, with at
+  least one mandatory pit stop.
+- **Club enduro stops:** SCCA Enduro Nationals: any stop with fueling at
+  least 5 minutes, driver changes during fueling, repair-only stops no
+  minimum (scca.com "Enduro: Let's Talk Pit Stops"). SCCA Central Florida
+  Region 2025: races of 65+ minutes with at least one mandatory 5-minute
+  stop. HSR B.R.M Endurance Challenge 2026: a 1-hour enduro has one
+  mandatory 5-minute stop, started within 40 minutes; a 90-minute one two
+  (HSR bulletin, Sept 2026). ChampCar: a fuel stop at least 5 minutes, a
+  driver change alone no minimum, 2 hours a driver at most. (Our races are
+  about 3x a sprint, so the owner's ~60 s stop scales that down.)
+- **Fuel on track:** Spec Miata about 4-8 US gal an hour (forums:
+  mazdaracers, Lemons, rennlist; ~2 hours on a stock tank at Mid-Ohio);
+  C5 Corvette about 8-10 mpg on track (corvetteforum owners). A rule of
+  thumb that fits both: ~0.04 gal an hour per peak hp (half the power on
+  average at ~0.5 lb/hp/h): Miata ~5 gph, C5 ~15, a 770 hp Lamborghini
+  ~32. At our race lengths no car needs a second stop (the Lamborghini's
+  half of the Unlimited endurance is ~13 gal of a ~24 gal tank).
+- **Refueling:** amateur dump cans 5 gal in about 25-45 s (Lemons forums);
+  pro dump cans ~1.5 gal/s, a GT3 dry break ~2 L/s (Lexus GT3 article).
+
+**Draft plan:**
+1. **Endurance events run** (each section's END stop): Sunday race days
+   at Pixel Raceway, once a week, ten cars, 3x the Sprint's laps (Club 15,
+   Touring and Sport 18, GT 24, GT Pro 30, Unlimited 36), your own car
+   under the class limit (like the Sprint).
+2. **Two of your drivers share the car**, both licensed for the class; one
+   mandatory stop with the driver change. Each stint runs at its driver's
+   skills; tire wear builds as in every race, new tires reset it.
+3. **The stop:** pit lane and the driver change, plus the fuel the second
+   stint needs, plus 30 s for four new tires (questions: fixed or by fuel;
+   your choices; the mechanic).
+4. **The field:** each regular with a co-driver (a teammate of similar
+   skill); they stop near halfway, and most take tires in the long races.
+5. **Section rule:** 3 of 4 (open sections stay open).
+6. **The Night Series and the Circuit King fold in** (owner, Nov 27: class
+   5's Championship as the way to the Circuit King). Questions: what the
+   King race is and what it's for; what happens to the Night Series (and
+   a season under way); open races, team races and invitations.
+
+**Owner's answers (Nov 28):** 1 the stop **by fuel**; 2 you choose **who
+starts, the stop lap and tires**; 3 endurance pays **1.5x the Sprint's
+purse**; 4 **your mechanic works the stops** (skill counts); 5 the
+**Circuit King race is for their car** (and $120,000), opened by the GT Pro
+Championship; old saves keep a title already won; 6 **the Night Series
+stays** as a prize-money extra on Events, no longer tied to the Circuit
+King; 7 open races, team races and invitations stay as they are; 8 build
+now.
+
+**C3 final plan (as built):**
+1. **Endurance events run** (the END stop of each section): Sunday race
+   days at Pixel Raceway, once a week, ten cars, 3x the Sprint's laps,
+   your own car under the class limit. Purse 1.5x the Sprint's (Club
+   section 1: $450), the entry 10% of the win, plus both drivers' wages
+   and your mechanic's day.
+2. **Two of your drivers**, both licensed for the class: you pick who
+   starts, the stop lap (any lap in the middle third; halfway by default)
+   and new tires or not. Each stint runs at its driver's skills; both
+   drivers learn and both count the race weekend toward their license.
+3. **The stop** = 35 s (pit lane and the driver change) + the fuel the
+   second stint needs (about 0.04 gal an hour per peak hp, poured at 5 gal
+   per 35 s, club dump cans) + 30 s for four new tires (cold for the
+   out-lap; the wear starts again). Your mechanic takes up to 10 s off the
+   driver change and tires, by wrenching skill. Examples at halfway: a
+   Club Miata ~43 s, a Sport Corvette ~59 s, a GT Pro Lamborghini ~110 s
+   (+30 s tires).
+4. **The field:** each regular with a co-driver (a teammate, their skill
+   within 10 of the regular's); they stop within a lap or two of halfway;
+   they take tires in races of 24 laps and up (GT and above), else 1 in 3.
+5. **Section rule:** 3 of 4 (sections already open stay open).
+6. **The Circuit King:** after the GT Pro Championship, call out the
+   Circuit King (Viktor Halvorsen, co-driver Mara Engstrom) in their
+   Porsche 911 GT racer: one endurance-format race at Pixel Raceway (30
+   laps, one stop each), your car (any car, no class limit) and two
+   drivers with full licenses against their team, Sundays, once a week, no
+   entry fee. Win: the title, their car (in your garage, as a pink-slip
+   win) and $120,000. The Kings tab shows it; an old save's Night Series
+   title still counts as the Circuit King title, and can still race for
+   the car.
+7. **The Night Series** stays on Events (texts no longer tie it to the
+   Circuit King).
+- **Left out:** fuel weight in lap times; a mechanic busy at the strip and
+  the circuit the same Sunday; safety cars; more than one stop.
+
+## C3 build notes (Nov 28)
+- **Code:** `cendur.js` (new, after `cspec.js`): endurance events (3x laps,
+  1.5x purse), `stopRange`, `mechSave`, `stopEst`, the co-driver field
+  (seeded co-drivers, stops, tires, crew), the endurance `T.enter` wrapper
+  (the second driver's license, the mechanic's save and wage, the
+  mechanic learns), the Circuit King (`KING`, `KING_EV` id `CK`, class
+  `unl` so no limit, `kingEntry`, `G.cupEvent` / `cupLock` / `cupUnlocks` /
+  `kingLock` / `kingWon` / `cupFinish` for it, `G.awardCar`). `team.js`:
+  `T.PIT` (35 s, 0.042 gal/h per hp, 5 gal per 35 s, 30 s tires), the
+  second stint, the stop on the in-lap, cold new tires on the out-lap and
+  their wear from zero, `r.endur` / `r.drvs`, both drivers learn, the
+  stop recorded per car. `cspec.js`: the license credit for each driver in
+  the car. `circuitui.js`: the endurance entry (two drivers, stop-lap
+  chips, tires, swap, the estimate), the END card, PIT in the standings,
+  the stop and both names in the result, `UI.circuitKingRow`. `screens.js`
+  (the Kings tab row), `schedule.js` (the King on the agenda; two free
+  drivers), `season.js`, `phone.js` (`cking`), `ui.js` help.
+- **Tested** (scratchpad `scrc/`, `scrc3/`): `c3a.js` (endurance laps and
+  purses per class; 3 of 4; a race with Danny and a hire: cost entry + 2
+  wages + the mechanic's day, the stop 39.7 s with 2.7 s saved, both
+  drivers busy then both learning, the permit credited; the stop lap
+  clamped to the middle third; the AI stops; the King locked, then open,
+  his pace 1:18.4, a race, the title, the car, locked after). `c3ui.js`
+  (phone and wide: the END card, the entry with the strategy, PIT while
+  watching, the result, the Kings tab locked and open, the King's entry).
+  `c3old.js` (a C2 save: section 2 still open under 3 of 4, a Night Series
+  title still the Circuit King's, the King race still locked). Rival
+  snapshot identical.
+- **Balance** (`c3bal.js`, 12 races each): Club endurance in a stock S2000
+  (1:45.1) with a 50 + 65 pair: sections 1 and 3 100%, section 5 25% (the
+  Sprint's section 5: 15% with a 50, 70% with a 65). The King beat a
+  90 + 90 pair in a car like his by 29 s.
+- **For the owner:** a Spec Miata on the new 15 in track tires laps
+  1:39.7: too quick for Club's 1:44 limit, so it races Club's Spec events
+  only (not its Sprints, Endurance or Night races). Worth a look at the
+  class limits after play.
 
 ## C2 research and draft plan (Nov 27: research done, all answered, building)
 **Research (2026 rules):**

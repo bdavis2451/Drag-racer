@@ -247,13 +247,14 @@
   G.cupFinish = function (id, pos, r) {
     var out = finish0.apply(this, arguments);
     if (!out || !r) return out;
-    var d = T.driver(r.drv), lic = credit(d), extra = [];
+    var extra = [];
     if (r.rent && r.rent.dmg) {
       var bill = r10(r.rent.price * CLD.DMG_K) * r.rent.dmg;
       G.pay(bill); r.rent.bill = bill;
       extra.push('bent the rental' + (r.rent.dmg > 1 ? ' ' + r.rent.dmg + ' times' : '') + ': -' + DR.money(bill));
     }
-    if (lic) extra.push(lic);
+    // the race weekend counts for each driver in the car
+    (r.drvs || [r.drv]).forEach(function (id) { var lic = credit(T.driver(id)); if (lic) extra.push(lic); });
     if (extra.length) out.note = (out.note ? out.note + ' • ' : '') + extra.join(' • ');
     G.save();
     return out;

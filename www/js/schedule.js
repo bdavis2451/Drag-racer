@@ -294,6 +294,8 @@
           var T = DR.Team, s = T && T.state();
           if (!s || !s.drivers.length) return { msg: 'Your team needs a circuit driver', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
           if (s.drivers.every(function (d) { return T.driverBusy(d.id); })) return { msg: 'Your drivers are all racing', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
+          // (an endurance race, if it's all that's left: two free drivers)
+          if (todoC.every(function (ev) { return ev.theme === 'endur'; }) && s.drivers.filter(function (d) { return !T.driverBusy(d.id); }).length < 2) return { msg: 'An endurance race needs two free drivers', fix: ['Team', function () { UI.show(UI.TeamScreen); }] };
           var free = G.state.cars.filter(function (x) { return !x.damage && !T.carAway(x.uid) && !(G.carBusy && G.carBusy(x)); });
           if (!free.length) return { msg: 'No car free to send', fix: ['Garage', function () { UI.show(UI.Garage); }] };
           // (a Spec event can always be raced in a rental)
@@ -302,6 +304,9 @@
         });
       });
     }
+    // the Circuit King, once the GT Pro Championship is won (cendur.js)
+    if (DR.CL && DR.CL.KING_EV && !DR.CL.kingBeaten()) { var kev = DR.CL.KING_EV, kw = windowOn('cup', d0), kcur = G.slotWindow('cup');
+      if (!G.cupLock(kev, { anyWeek: kw && kcur && kw.start > kcur.start })) add('cup', 'king', 'The Circuit King: ' + DR.CL.KING.name + ' (your team)', function () { UI.careerSub = 'kings'; UI.show(UI.RaceMenu, 'career'); }, 'One endurance race for their car and ' + DR.money(DR.CL.KING.cash), true); }
     // a driver at the drivers' school (cspec.js)
     if (DR.Team && DR.CL && DR.CL.bookSchool) DR.Team.state().drivers.forEach(function (d) {
       var w = windowOn('school', d0);
